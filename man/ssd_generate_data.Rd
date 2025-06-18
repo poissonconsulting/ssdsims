@@ -11,15 +11,15 @@
 \usage{
 ssd_generate_data(x, ...)
 
-\method{ssd_generate_data}{data.frame}(x, ..., replace = FALSE, nrow = 6L, nsims = 100L)
+\method{ssd_generate_data}{data.frame}(x, ..., replace = FALSE, nrow = 6L, nsim = 100L)
 
-\method{ssd_generate_data}{fitdists}(x, ..., dist = "top", nrow = 6L, nsims = 100L)
+\method{ssd_generate_data}{fitdists}(x, ..., dist = "top", nrow = 6L, nsim = 100L)
 
-\method{ssd_generate_data}{tmbfit}(x, ..., nrow = 6L, nsims = 100L)
+\method{ssd_generate_data}{tmbfit}(x, ..., nrow = 6L, nsim = 100L)
 
-\method{ssd_generate_data}{character}(x, ..., pars = list(), nrow = 6L, nsims = 100L)
+\method{ssd_generate_data}{character}(x, ..., pars = list(), nrow = 6L, nsim = 100L)
 
-\method{ssd_generate_data}{`function`}(x, ..., args = list(), nrow = 6L, nsims = 100L)
+\method{ssd_generate_data}{`function`}(x, ..., args = list(), nrow = 6L, nsim = 100L)
 }
 \arguments{
 \item{x}{The object to use for generating the data.}
@@ -30,7 +30,7 @@ ssd_generate_data(x, ...)
 
 \item{nrow}{A integer vector of the number of rows in the generated data.}
 
-\item{nsims}{A count of the number of data sets to generate.}
+\item{nsim}{A count of the number of data sets to generate.}
 
 \item{dist}{A string specifying the distribution in the fitdists object or
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
@@ -60,16 +60,16 @@ Generate Data for Simulations
 
 }}
 \examples{
-ssd_generate_data(ssddata::ccme_boron, nrow = 5, nsims = 3)
+ssd_generate_data(ssddata::ccme_boron, nrow = 5, nsim = 3)
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
-ssd_generate_data(fit, nrow = 5, nsims = 3)
+ssd_generate_data(fit, nrow = 5, nsim = 3)
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
-ssd_generate_data(fit[[1]], nrow = 5, nsims = 3)
+ssd_generate_data(fit[[1]], nrow = 5, nsim = 3)
 
-ssd_generate_data("lnorm", nrow = 5, nsims = 3)
+ssd_generate_data("lnorm", nrow = 5, nsim = 3)
 
-ssd_generate_data(ssdtools::ssd_rlnorm, nrow = 5, nsims = 3)
+ssd_generate_data(ssdtools::ssd_rlnorm, nrow = 5, nsim = 3)
 
 }
