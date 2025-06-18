@@ -13,7 +13,7 @@ ssd_generate_data.fitdists <- function(x, ..., dist = "top", nrow = 6L, nsims = 
   
   wch <- dist
   if(dist == "top") {
-    weight <- glance(x, wt = TRUE)$wt
+    weight <- ssdtools::glance(x, wt = TRUE)$wt
     wch <- which.max(weight)
   }
   
@@ -22,7 +22,9 @@ ssd_generate_data.fitdists <- function(x, ..., dist = "top", nrow = 6L, nsims = 
 
 #' @export
 ssd_generate_data.tmbfit <- function(x, ..., nrow = 6L, nsims = 100L) {
-  ssd_generate_data(x$dist, pars = estimates(x), nrow = nrow, nsims = nsims)
+  pars <- ssdtools::estimates(x)
+  x <- x$dist
+  ssd_generate_data(x, pars = pars, nrow = nrow, nsims = nsims)
 }
 
 #' @export
@@ -31,7 +33,7 @@ ssd_generate_data.character <- function(x, ..., pars = list(), nrow = 6L, nsims 
   chk::chk_subset(x, ssdtools::ssd_dists_all())
   chk::chk_list(pars)
   
-  fun <- paste0("ssd_r", x)
+  fun <- paste0("ssdtools::ssd_r", x)
   fun <- eval(parse(text = fun))
   
   ssd_generate_data(fun, args = as.list(pars), nrow = nrow, nsims = nsims)
