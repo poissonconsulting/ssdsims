@@ -8,7 +8,7 @@
 #' @export
 ssd_generate_data <- function(x, ...) UseMethod("ssd_generate_data")
 
-#' @describeIn ssd_generate_data Generate Data using data.frame
+#' @describeIn ssd_generate_data Generate data from data.frame
 #' @param replace A flag specifying whether to sample with replacement.
 #' @export
 #' @examples
@@ -42,8 +42,10 @@ ssd_generate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, nsi
     dplyr::bind_rows()
 }
 
-#' @describeIn ssd_generate_data Generate Data using fitdists Object
-#' @param dist A string specifying the distribution in ssdtools.
+#' @describeIn ssd_generate_data Generate data from fitdists object
+#' @param dist A string specifying the distribution in the fitdists object or
+#' `"top"` to use the distribution with most weight or `"multi"` to treat
+#' the distributions as a single distribution.
 #' @export
 #' @examples
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
@@ -54,6 +56,10 @@ ssd_generate_data.fitdists <- function(x, ..., dist = "top", nrow = 6L, nsims = 
   chk::chk_subset(dist, c("multi", "top", names(x)))
   chk::chk_unused(...)
   
+  if(dist == "multi") {
+    ## TODO: implement multi method
+    .NotYetImplemented()
+  }
   wch <- dist
   if(dist == "top") {
     weight <- ssdtools::glance(x, wt = TRUE)$wt
@@ -63,7 +69,7 @@ ssd_generate_data.fitdists <- function(x, ..., dist = "top", nrow = 6L, nsims = 
   ssd_generate_data(x[[wch]], nrow = nrow, nsims = nsims)
 }
 
-#' @describeIn ssd_generate_data Generate Data using tmbfit Object
+#' @describeIn ssd_generate_data Generate data from tmbfit object
 #' @export
 #' @examples
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
@@ -77,7 +83,7 @@ ssd_generate_data.tmbfit <- function(x, ..., nrow = 6L, nsims = 100L) {
   ssd_generate_data(x, pars = pars, nrow = nrow, nsims = nsims)
 }
 
-#' @describeIn ssd_generate_data Generate Data using string of distribution
+#' @describeIn ssd_generate_data Generate data using distribution name
 #' @param pars A named list of the parameter values.
 #' @export
 #' @examples
@@ -95,7 +101,7 @@ ssd_generate_data.character <- function(x, ..., pars = list(), nrow = 6L, nsims 
   ssd_generate_data(fun, args = as.list(pars), nrow = nrow, nsims = nsims)
 }
 
-#' @describeIn ssd_generate_data Generate Data using function
+#' @describeIn ssd_generate_data Generate data using function
 #' @param args A named list of the argument values.
 #' @export
 #' @examples

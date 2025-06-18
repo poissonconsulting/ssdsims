@@ -32,7 +32,9 @@ ssd_generate_data(x, ...)
 
 \item{nsims}{A count of the number of data sets to generate.}
 
-\item{dist}{A string specifying the distribution in ssdtools.}
+\item{dist}{A string specifying the distribution in the fitdists object or
+\code{"top"} to use the distribution with most weight or \code{"multi"} to treat
+the distributions as a single distribution.}
 
 \item{pars}{A named list of the parameter values.}
 
@@ -46,15 +48,15 @@ Generate Data for Simulations
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{ssd_generate_data(data.frame)}: Generate Data using data.frame
+\item \code{ssd_generate_data(data.frame)}: Generate data from data.frame
 
-\item \code{ssd_generate_data(fitdists)}: Generate Data using fitdists Object
+\item \code{ssd_generate_data(fitdists)}: Generate data from fitdists object
 
-\item \code{ssd_generate_data(tmbfit)}: Generate Data using tmbfit Object
+\item \code{ssd_generate_data(tmbfit)}: Generate data from tmbfit object
 
-\item \code{ssd_generate_data(character)}: Generate Data using string of distribution
+\item \code{ssd_generate_data(character)}: Generate data using distribution name
 
-\item \code{ssd_generate_data(`function`)}: Generate Data using function
+\item \code{ssd_generate_data(`function`)}: Generate data using function
 
 }}
 \examples{
