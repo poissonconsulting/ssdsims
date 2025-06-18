@@ -7,18 +7,26 @@ ssd_generate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, nsi
     x, values = list(Conc = c(0,Inf,NA_real_)), nrow = c(5, 10000)
   )
   chk::chk_flag(replace)
-  chk::chk_count(nrow)
-  chk::chk_gte(nrow, 5)
-  chk::chk_lte(nrow, nrow(x))
+  chk::chk_whole_numeric(nrow)
+  chk::chk_range(nrow, c(5, 1000))
+  chk::chk_length(nrow, upper = 100)
+  chk::chk_not_any_na(nrow)
   chk::chk_count(nsims)
   chk::chk_range(nsims, c(1, 10000))
   chk::chk_unused(...)
   
-  nsims |>
-    seq_len() |>
-    purrr::map(\(n) dplyr::slice_sample(x, n = nrow, replace = replace)) |>
-    purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
-    purrr::map2(seq_len(nsims), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
+  if(length(nrow) == 1) {
+    data <- nsims |>
+      seq_len() |>
+      purrr::map(\(n) dplyr::slice_sample(x, n = nrow, replace = replace)) |>
+      purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
+      purrr::map2(seq_len(nsims), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
+      dplyr::bind_rows() |>
+      dplyr::mutate(nrow = nrow)
+    return(data)
+  }
+  nrow |>
+    purrr::map(\(.x) ssd_generate_data(x, replace = replace, nrow = .x, nsims = nsims)) |>
     dplyr::bind_rows()
 }
 

@@ -53,3 +53,9 @@ test_that("ssd_generate_data.data.frame works", {
   data <- ssd_generate_data(ssddata::ccme_boron, nrow = 5, nsims = 10)
   expect_snapshot_data(data, "data.frame")
 })
+
+test_that("ssd_generate_data.data.frame works multiple nrow", {
+  withr::local_seed(42)
+  data <- ssd_generate_data(ssddata::ccme_boron, nrow =c(5,7), nsims = 2)
+  expect_snapshot_data(data, "data.frame2")
+})
