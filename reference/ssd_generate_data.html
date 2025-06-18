@@ -41,19 +41,19 @@
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'data.frame'</span></span>
-<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, replace <span class="op">=</span> <span class="cn">FALSE</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsims <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
+<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, replace <span class="op">=</span> <span class="cn">FALSE</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsim <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'fitdists'</span></span>
-<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, dist <span class="op">=</span> <span class="st">"top"</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsims <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
+<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, dist <span class="op">=</span> <span class="st">"top"</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsim <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'tmbfit'</span></span>
-<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsims <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
+<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsim <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'character'</span></span>
-<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsims <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
+<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsim <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class '`function`'</span></span>
-<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsims <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span>, args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">6L</span>, nsim <span class="op">=</span> <span class="fl">100L</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -76,7 +76,7 @@
 <dd><p>A integer vector of the number of rows in the generated data.</p></dd>
 
 
-<dt id="arg-nsims">nsims<a class="anchor" aria-label="anchor" href="#arg-nsims"></a></dt>
+<dt id="arg-nsim">nsim<a class="anchor" aria-label="anchor" href="#arg-nsim"></a></dt>
 <dd><p>A count of the number of data sets to generate.</p></dd>
 
 
@@ -110,7 +110,7 @@ the distributions as a single distribution.</p></dd>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsims <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 15 × 9</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    Chemical Species                   Conc Group Units   row   sim  nrow replace</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>                    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;fct&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>  </span>
@@ -131,11 +131,11 @@ the distributions as a single distribution.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">15</span> Boron    Rana pipiens              20.4 Amph… mg/L      5     3     5 FALSE  </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_fit_dists.html" class="external-link">ssd_fit_dists</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">fit</span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsims <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">fit</span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in glance.fitdists(x, wt = TRUE):</span> `...` must be unused.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_fit_dists.html" class="external-link">ssd_fit_dists</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">fit</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsims <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="va">fit</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 15 × 5</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      Conc   row   sim  nrow args            </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          </span>
@@ -155,7 +155,7 @@ the distributions as a single distribution.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">14</span> 14.8       4     3     5 <span style="color: #949494;">&lt;named list [3]&gt;</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">15</span>  0.801     5     3     5 <span style="color: #949494;">&lt;named list [3]&gt;</span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="st">"lnorm"</span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsims <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="st">"lnorm"</span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 15 × 5</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      Conc   row   sim  nrow args            </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          </span>
@@ -175,7 +175,7 @@ the distributions as a single distribution.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">14</span>  0.784     4     3     5 <span style="color: #949494;">&lt;named list [1]&gt;</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">15</span>  0.814     5     3     5 <span style="color: #949494;">&lt;named list [1]&gt;</span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_r.html" class="external-link">ssd_rlnorm</a></span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsims <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ssd_generate_data</span><span class="op">(</span><span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_r.html" class="external-link">ssd_rlnorm</a></span>, nrow <span class="op">=</span> <span class="fl">5</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 15 × 5</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      Conc   row   sim  nrow args            </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>          </span>
