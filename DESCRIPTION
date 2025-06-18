@@ -1,9 +1,11 @@
 Package: ssdsims
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
-Authors@R: 
-    person("Joe", "Thorley", , "joe@pissonconsulting.ca", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0002-7683-4592"))
+Authors@R: c(
+    person("Joe", "Thorley", , "joe@poissonconsulting.ca", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7683-4592")),
+    person("Rebecca", "Fisher", , "R.Fisher@aims.gov.au", role = "aut")
+  )
 Description: What the package does (one paragraph).
 License: Apache License (== 2.0) | file LICENSE
 Depends: R (>= 4.1)
