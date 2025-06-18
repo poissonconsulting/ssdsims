@@ -33,3 +33,9 @@ test_that("ssd_generate_data.tmbfit works", {
   data <- ssd_generate_data(tmbfit, nrow = 5, nsim = 10)
   expect_snapshot_data(data, "tmbfit")
 })
+
+test_that("ssd_generate_data.data.frame works", {
+  withr::local_seed(42)
+  data <- ssd_generate_data(ssddata::ccme_boron, nrow = 5, nsim = 10)
+  expect_snapshot_data(data, "data.frame")
+})

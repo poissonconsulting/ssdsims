@@ -2,8 +2,21 @@
 ssd_generate_data <- function(x, ...) UseMethod("ssd_generate_data")
 
 #' @export
-ssd_generate_data.data.frame <- function(x, ..., replacement = FALSE, nrow = 6L, nsims = 100L) {
- # non-parameteric sampling with and without replacement
+ssd_generate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, nsims = 100L) {
+  chk::check_dim(x, dim = base::nrow, values = c(5, 10000))
+  chk::chk_flag(replace)
+  chk::chk_count(nrow)
+  chk::chk_gte(nrow, 5)
+  chk::chk_lte(nrow, nrow(x))
+  chk::chk_count(nsims)
+  chk::chk_range(nsims, c(1, 10000))
+  
+  nsims |>
+    seq_len() |>
+    purrr::map(\(n) dplyr::slice_sample(x, n = nrow, replace = replace)) |>
+    purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
+    purrr::map2(seq_len(nsims), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
+    dplyr::bind_rows()
 }
 
 #' @export
@@ -49,7 +62,9 @@ ssd_generate_data.function <- function(x, ..., args = list(), nrow = 6L, nsims =
   
   args$n <- nrow
   
-  purrr::map(seq_len(nsims), \(n) do.call(x, args = args)) |>
+  nsims |>
+    seq_len() |>
+    purrr::map(\(n) do.call(x, args = args)) |>
     purrr::map(\(.x) dplyr::tibble(Conc = .x)) |>
     purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
     purrr::map2(seq_len(nsims), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
