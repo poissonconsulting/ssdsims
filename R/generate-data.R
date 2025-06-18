@@ -34,7 +34,8 @@ ssd_generate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, nsi
       purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
       purrr::map2(seq_len(nsims), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
       dplyr::bind_rows() |>
-      dplyr::mutate(nrow = nrow)
+      dplyr::mutate(nrow = nrow,
+                    replace = replace)
     return(data)
   }
   nrow |>
@@ -127,7 +128,8 @@ ssd_generate_data.function <- function(x, ..., args = list(), nrow = 6L, nsims =
       purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
       purrr::map2(seq_len(nsims), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
       dplyr::bind_rows() |>
-      dplyr::mutate(nrow = nrow)
+      dplyr::mutate(nrow = nrow,
+                    args = list(args))
     return(data)
   }
   nrow |>
