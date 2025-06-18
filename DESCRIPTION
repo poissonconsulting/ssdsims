@@ -6,17 +6,17 @@ Authors@R:
            comment = c(ORCID = "0000-0002-7683-4592"))
 Description: What the package does (one paragraph).
 License: Apache License (== 2.0) | file LICENSE
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2.9000
+Imports: 
+    chk,
+    dplyr,
+    purrr,
+    ssdtools
 Suggests: 
     readr,
     ssddata,
     testthat (>= 3.0.0),
     withr
 Config/testthat/edition: 3
-Imports: 
-    chk,
-    dplyr,
-    purrr,
-    ssdtools
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2.9000
