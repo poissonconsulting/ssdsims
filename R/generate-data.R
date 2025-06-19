@@ -119,6 +119,7 @@ ssd_generate_data.function <- function(x, ..., args = list(), nrow = 6L, nsim = 
   chk::chk_range(nrow, c(5, 1000))
   chk::chk_length(nrow, upper = 100)
   chk::chk_not_any_na(nrow)
+  chk::chk_unique(nrow)
   chk::chk_count(nsim)
   chk::chk_range(nsim, c(1, 10000))
   chk::chk_unused(...)
