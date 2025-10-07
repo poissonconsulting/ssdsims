@@ -12,6 +12,7 @@ What the package does (one paragraph).
 Useful links:
 \itemize{
   \item \url{https://poissonconsulting.github.io/ssdsims/}
+  \item Report bugs at \url{https://github.com/poissonconsulting/ssdsims/issues}
 }
 
 }
