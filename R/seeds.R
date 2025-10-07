@@ -19,8 +19,8 @@ get_seed <- function ()
         inherits = FALSE), rng_kind = RNGkind())
 }
 
-# from withr
-set_seed <- function (seed) 
+# modified from withr
+set_seed <- function (seed, advance = FALSE) 
 {
     restore_rng_kind(seed$rng_kind)
     if (is.null(seed$seed)) {
@@ -29,7 +29,12 @@ set_seed <- function (seed)
     else {
         set.seed(seed$seed)
     }
-}
+    if (advance) {
+      fun <- if (is.null(seed)) suppressWarnings else identity
+      fun(stats::runif(1))
+    }
+  invisible(get_seed())
+ }
 
 restore_rng_kind <- function (kind) 
 {
@@ -114,8 +119,8 @@ ssd_get_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, skip =
     return(list())
   }
 
-  oseed <- get_random_seed()
-  on.exit(set_random_seed(oseed, advance = TRUE))
+  oseed <- get_seed()
+  on.exit(set_seed(oseed, advance = TRUE))
 
   if(!is.null(seed)) {
     stop()
@@ -132,3 +137,4 @@ ssd_get_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, skip =
   }
   seeds
 }
+  
