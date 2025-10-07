@@ -50,26 +50,12 @@ restore_rng_kind <- function (kind)
     NULL
 }
 
-get_random_seed <- function() {
-  globalenv()$.Random.seed
-}
-
-set_random_seed <- function(seed, advance = FALSE) {
-  env <- globalenv()
-  env$.Random.seed <- seed
-  if (advance) {
-    fun <- if (is.null(seed)) suppressWarnings else identity
-    fun(stats::runif(1))
-  }
-  invisible(env$.Random.seed)
-}
-
 get_lecyer_cmrg_seed <- function() {
-  seed <- get_random_seed()
-  on.exit(set_random_seed(seed))
+  seed <- get_seed()
+  on.exit(set_seed(seed))
   RNGkind("L'Ecuyer-CMRG")
   set.seed(rinteger(1))
-  get_random_seed()
+  globalenv()$.Random.seed
 }
 
 get_sub_seeds <- function(seed, skip, nseeds) {
