@@ -9,6 +9,7 @@ Authors@R: c(
 Description: What the package does (one paragraph).
 License: Apache License (== 2.0) | file LICENSE
 URL: https://poissonconsulting.github.io/ssdsims/
+BugReports: https://github.com/poissonconsulting/ssdsims/issues
 Depends: 
     R (>= 4.1)
 Imports: 
