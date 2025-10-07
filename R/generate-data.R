@@ -1,10 +1,12 @@
 #' Generate Data for Simulations
 #'
+#' A family of functions to generate a tibble of nested data sets.
+#' 
 #' @param x The object to use for generating the data.
 #' @param nrow A integer vector of the number of rows in the generated data.
 #' @param nsim A count of the number of data sets to generate.
 #' @param ... Unused.
-#' @return A tibble of generate datasets.
+#' @return A tibble of nested data sets.
 #' @export
 ssd_generate_data <- function(x, ...) UseMethod("ssd_generate_data")
 
@@ -34,8 +36,9 @@ ssd_generate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, nsi
       purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
       purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
       dplyr::bind_rows() |>
-      dplyr::mutate(nrow = nrow,
-                    replace = replace)
+      dplyr::select("sim", "Conc") |>
+      tidyr::nest(data = "Conc")
+
     return(data)
   }
   nrow |>
@@ -131,11 +134,9 @@ ssd_generate_data.function <- function(x, ..., args = list(), nrow = 6L, nsim = 
       seq_len() |>
       purrr::map(\(n) do.call(x, args = args)) |>
       purrr::map(\(.x) dplyr::tibble(Conc = .x)) |>
-      purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
       purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
       dplyr::bind_rows() |>
-      dplyr::mutate(nrow = nrow,
-                    args = list(args))
+      tidyr::nest(data = "Conc")
     return(data)
   }
   nrow |>

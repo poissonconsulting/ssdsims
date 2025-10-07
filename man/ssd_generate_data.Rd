@@ -41,10 +41,10 @@ the distributions as a single distribution.}
 \item{args}{A named list of the argument values.}
 }
 \value{
-A tibble of generate datasets.
+A tibble of nested data sets.
 }
 \description{
-Generate Data for Simulations
+A family of functions to generate a tibble of nested data sets.
 }
 \section{Methods (by class)}{
 \itemize{

@@ -51,11 +51,11 @@ test_that("ssd_generate_data.tmbfit works", {
 test_that("ssd_generate_data.data.frame works", {
   withr::local_seed(42)
   data <- ssd_generate_data(ssddata::ccme_boron, nrow = 5, nsim = 10)
-  expect_snapshot_data(data, "data.frame")
+  expect_snapshot_data(data, "data_frame")
 })
 
 test_that("ssd_generate_data.data.frame works multiple nrow", {
   withr::local_seed(42)
   data <- ssd_generate_data(ssddata::ccme_boron, nrow =c(5,7), nsim = 2)
-  expect_snapshot_data(data, "data.frame2")
+  expect_snapshot_data(data, "data_frame2")
 })

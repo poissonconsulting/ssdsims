@@ -13,6 +13,7 @@ Imports:
     chk,
     dplyr,
     purrr,
+    tidyr,
     ssdtools
 Suggests: 
     readr,
