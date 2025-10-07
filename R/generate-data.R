@@ -57,14 +57,9 @@ ssd_generate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, nsi
 #' 
 ssd_generate_data.fitdists <- function(x, ..., dist = "top", nrow = 6L, nsim = 100L) {
   chk::chk_string(dist)
-  chk::chk_subset(dist, c("all", "multi", "top", names(x)))
+  chk::chk_subset(dist, c("multi", "top", names(x)))
   chk::chk_unused(...)
-  
-  if(dist == "all") {
-    ## TODO: implement multi method
-    .NotYetImplemented()
-  }
-  
+
   if(dist == "multi") {
     ## TODO: implement multi method
     .NotYetImplemented()
