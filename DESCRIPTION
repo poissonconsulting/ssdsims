@@ -8,14 +8,17 @@ Authors@R: c(
   )
 Description: What the package does (one paragraph).
 License: Apache License (== 2.0) | file LICENSE
-Depends: R (>= 4.1)
+URL: https://poissonconsulting.github.io/ssdsims/
+BugReports: https://github.com/poissonconsulting/ssdsims/issues
+Depends: 
+    R (>= 4.1)
 Imports: 
     chk,
     dplyr,
     parallel,
     purrr,
-    tidyr,
-    ssdtools
+    ssdtools,
+    tidyr
 Suggests: 
     readr,
     ssddata,
@@ -25,4 +28,3 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3.9000
-URL: https://poissonconsulting.github.io/ssdsims/
