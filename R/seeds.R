@@ -109,7 +109,7 @@ ssd_get_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, skip =
   on.exit(set_seed(oseed, advance = TRUE))
 
   if(!is.null(seed)) {
-    stop()
+    set.seed(seed)
   }
 
   seed <- get_lecyer_cmrg_seed()

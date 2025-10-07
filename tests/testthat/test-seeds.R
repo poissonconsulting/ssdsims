@@ -6,7 +6,6 @@ test_that("ssd_get_seeds no streams or seeds", {
 })
 
 test_that("ssd_get_seeds streams and skip", {
- #expect_snapshot(ssd_get_seeds(as.integer(10), nseeds = 2L))
   expect_snapshot(withr::with_seed(10, ssd_get_seeds(nseeds = 2L)))
   expect_snapshot(withr::with_seed(10, ssd_get_seeds(nseeds = 2L, nstreams = 2L)))
   expect_snapshot(withr::with_seed(10, ssd_get_seeds(nseeds = 1L, nstreams = 2L, skip = 1L))) 
@@ -27,4 +26,9 @@ test_that("ssd_get_seeds advances seed by 1", {
     expect_identical(seed2, globalenv()$.Random.seed)
   }
   )
+})
+
+test_that("ssd_get_seeds pass seed", {
+ expect_snapshot(ssd_get_seeds(10, nseeds = 2L))
+ expect_identical(ssd_get_seeds(10, nseeds = 2L), withr::with_seed(10, ssd_get_seeds(10, nseeds = 2L)))
 })
