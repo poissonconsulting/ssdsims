@@ -12,6 +12,7 @@ Depends: R (>= 4.1)
 Imports: 
     chk,
     dplyr,
+    parallel,
     purrr,
     tidyr,
     ssdtools
