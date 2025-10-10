@@ -88,13 +88,13 @@ get_sub_seeds <- function(seed, skip, nseeds) {
 #'
 #' @examples
 #' withr::with_seed(10,
-#' ssd_get_seeds(nseeds = 2, nstreams = 2)
+#' sdd_get_streams_seeds(nseeds = 2, nstreams = 2)
 #')
 #' withr::with_seed(10,
-#' ssd_get_seeds(nseeds = 1, nstreams = 2, skip = 2)
+#' sdd_get_streams_seeds(nseeds = 1, nstreams = 2, skip = 2)
 #')
 # inspired by furrr:::generate_seed_streams
-ssd_get_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, skip = 0L) {
+sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, skip = 0L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
   chk::chk_count(nseeds)
