@@ -15,7 +15,7 @@
 
 \item{seed}{An integer of the starting seed or NULL.}
 
-\item{start_seeds}{A count of the number of the seed to start getting seeds from.}
+\item{start_seed}{A count of the number of the seed to start getting seeds from.}
 
 \item{start_stream}{A count of the number of the stream to start getting streams from.}
 }

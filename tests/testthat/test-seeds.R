@@ -5,12 +5,12 @@ test_that("sdd_get_streams_seeds no streams or seeds", {
   expect_identical(sdd_get_streams_seeds(nseeds = 0L, nstreams = 2L), list(list(),list()))
 })
 
-test_that("sdd_get_streams_seeds streams and start_seeds", {
+test_that("sdd_get_streams_seeds streams and start_seed", {
   expect_snapshot(withr::with_seed(10, sdd_get_streams_seeds(nseeds = 2L)))
   expect_snapshot(withr::with_seed(10, sdd_get_streams_seeds(nseeds = 2L, nstreams = 2L)))
-  expect_snapshot(withr::with_seed(10, sdd_get_streams_seeds(nseeds = 1L, nstreams = 2L, start_seeds= 1L))) 
+  expect_snapshot(withr::with_seed(10, sdd_get_streams_seeds(nseeds = 1L, nstreams = 2L, start_seed= 1L))) 
   expect_identical(withr::with_seed(10, sdd_get_streams_seeds(nseeds = 2L, nstreams = 2L))[[2]][2],
-                   withr::with_seed(10, sdd_get_streams_seeds(nseeds = 1L, nstreams = 2L, start_seeds= 2L))[[2]])
+                   withr::with_seed(10, sdd_get_streams_seeds(nseeds = 1L, nstreams = 2L, start_seed= 2L))[[2]])
 })
 
 test_that("sdd_get_streams_seeds advances seed by 1", {

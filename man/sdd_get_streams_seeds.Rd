@@ -9,7 +9,7 @@ sdd_get_streams_seeds(
   ...,
   nseeds = 1L,
   nstreams = 1L,
-  start_seeds = 1L,
+  start_seed = 1L,
   start_stream = 1L
 )
 }
@@ -22,7 +22,7 @@ sdd_get_streams_seeds(
 
 \item{nstreams}{A count of the number of streams.}
 
-\item{start_seeds}{A count of the number of the seed to start getting seeds from.}
+\item{start_seed}{A count of the number of the seed to start getting seeds from.}
 
 \item{start_stream}{A count of the number of the stream to start getting streams from.}
 }
@@ -37,6 +37,6 @@ withr::with_seed(10,
 sdd_get_streams_seeds(nseeds = 2, nstreams = 2)
 )
 withr::with_seed(10,
-sdd_get_streams_seeds(nseeds = 1, nstreams = 2, start_seeds= 2)
+sdd_get_streams_seeds(nseeds = 1, nstreams = 2, start_seed= 2)
 )
 }
