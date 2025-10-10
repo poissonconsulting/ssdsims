@@ -44,7 +44,7 @@
 <span>  <span class="va">...</span>,</span>
 <span>  nseeds <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>  nstreams <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  skip <span class="op">=</span> <span class="fl">0L</span></span>
+<span>  start_seeds <span class="op">=</span> <span class="fl">0L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -68,8 +68,8 @@
 <dd><p>A count of the number of streams.</p></dd>
 
 
-<dt id="arg-skip">skip<a class="anchor" aria-label="anchor" href="#arg-skip"></a></dt>
-<dd><p>A count of number of seeds to skip before generating new seeds for each stream.</p></dd>
+<dt id="arg-start-seeds">start_seeds<a class="anchor" aria-label="anchor" href="#arg-start-seeds"></a></dt>
+<dd><p>A count of number of seeds to start_seedsbefore generating new seeds for each stream.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -102,7 +102,7 @@
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu">withr</span><span class="fu">::</span><span class="fu"><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">with_seed</a></span><span class="op">(</span><span class="fl">10</span>,</span></span>
-<span class="r-in"><span><span class="fu">sdd_get_streams_seeds</span><span class="op">(</span>nseeds <span class="op">=</span> <span class="fl">1</span>, nstreams <span class="op">=</span> <span class="fl">2</span>, skip <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">sdd_get_streams_seeds</span><span class="op">(</span>nseeds <span class="op">=</span> <span class="fl">1</span>, nstreams <span class="op">=</span> <span class="fl">2</span>, start_seeds<span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]][[1]]</span>
