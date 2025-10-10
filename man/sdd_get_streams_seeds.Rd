@@ -7,7 +7,7 @@
 sdd_get_streams_seeds(
   seed = NULL,
   ...,
-  nseeds = 100L,
+  nseeds = 1L,
   nstreams = 1L,
   start_seeds = 1L,
   start_stream = 1L
