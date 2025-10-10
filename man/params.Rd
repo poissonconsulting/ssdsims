@@ -15,7 +15,9 @@
 
 \item{seed}{An integer of the starting seed or NULL.}
 
-\item{start_seeds}{A count of the number of the seed to start get new seeds from.}
+\item{start_seeds}{A count of the number of the seed to start getting seeds from.}
+
+\item{start_stream}{A count of the number of the stream to start getting streams from.}
 }
 \description{
 Default parameter descriptions which may be overridden in individual

@@ -9,7 +9,8 @@ sdd_get_streams_seeds(
   ...,
   nseeds = 100L,
   nstreams = 1L,
-  start_seeds = 1L
+  start_seeds = 1L,
+  start_stream = 1L
 )
 }
 \arguments{
@@ -21,7 +22,9 @@ sdd_get_streams_seeds(
 
 \item{nstreams}{A count of the number of streams.}
 
-\item{start_seeds}{A count of the number of the seed to start get new seeds from.}
+\item{start_seeds}{A count of the number of the seed to start getting seeds from.}
+
+\item{start_stream}{A count of the number of the stream to start getting streams from.}
 }
 \value{
 A list of lists of L'Ecuyer-CMRG seeds.

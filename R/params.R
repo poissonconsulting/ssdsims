@@ -11,7 +11,8 @@
 #' @param nseeds A count of the number of new seeds to get for each stream.
 #' @param nstreams A count of the number of streams.
 #' @param seed An integer of the starting seed or NULL.
-#' @param start_seeds A count of the number of the seed to start get new seeds from.
+#' @param start_seeds A count of the number of the seed to start getting seeds from.
+#' @param start_stream A count of the number of the stream to start getting streams from.
 #' @param ... Unused.
 #' @keywords internal
 #' @aliases parameters arguments args

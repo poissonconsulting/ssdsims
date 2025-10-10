@@ -90,13 +90,15 @@ get_sub_seeds <- function(seed, start_seeds, nseeds) {
 #' sdd_get_streams_seeds(nseeds = 1, nstreams = 2, start_seeds= 2)
 #')
 # inspired by furrr:::generate_seed_streams
-sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, start_seeds = 1L) {
+sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, start_seeds = 1L, start_stream = 1L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
   chk::chk_count(nseeds)
   chk::chk_count(nstreams)
   chk::chk_count(start_seeds)
   chk::chk_gt(start_seeds)
+  chk::chk_count(start_stream)
+  chk::chk_gt(start_stream)
 
   if(nstreams == 0L) {
     return(list())
@@ -112,6 +114,9 @@ sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L
   seed <- get_lecyer_cmrg_seed()
   seeds <- vector("list", length = nstreams)
   seeds[[1]] <- parallel::nextRNGStream(seed)
+  for(i in seq_len(start_stream - 1)) {
+    seed[[1]] <- parallel::nextRNGStream(seed[[1]])
+  }
   for (i in seq_len(nstreams - 1)) {
     seeds[[i+1]] <- parallel::nextRNGStream(seeds[[i]])
   }
