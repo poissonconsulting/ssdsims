@@ -62,7 +62,7 @@ get_sub_seeds <- function(seed, start_seeds, nseeds) {
   if(nseeds == 0) {
     return(list())
   }
-  for(i in seq_len(start_seeds)) {
+  for(i in seq_len(start_seeds - 1)) {
     seed <- parallel::nextRNGSubStream(seed)
   }
   seeds <- vector("list", length = nseeds)
@@ -73,15 +73,11 @@ get_sub_seeds <- function(seed, start_seeds, nseeds) {
   seeds
 }
 
-#' Get L'Ecuyer-CMRG Seeds
+#' Get L'Ecuyer-CMRG Streams Seeds
 #'
-#' Generates a list of streams of L'Ecuyer-CMRG seeds.
+#' Gets a list of streams of L'Ecuyer-CMRG seeds.
 #'
-#' @param seed An integer of the starting seed or NULL.
-#' @param ... Unused.
-#' @param nseeds A count of the number of new seeds to generate for each stream.
-#' @param nstreams A count of the number of streams.
-#' @param start_seeds A count of number of seeds to start_seedsbefore generating new seeds for each stream.
+#' @inheritParams params
 #'
 #' @return A list of lists of L'Ecuyer-CMRG seeds.
 #' @export
@@ -94,12 +90,13 @@ get_sub_seeds <- function(seed, start_seeds, nseeds) {
 #' sdd_get_streams_seeds(nseeds = 1, nstreams = 2, start_seeds= 2)
 #')
 # inspired by furrr:::generate_seed_streams
-sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, start_seeds = 0L) {
+sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, start_seeds = 1L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
   chk::chk_count(nseeds)
   chk::chk_count(nstreams)
   chk::chk_count(start_seeds)
+  chk::chk_gt(start_seeds)
 
   if(nstreams == 0L) {
     return(list())

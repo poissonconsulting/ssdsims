@@ -7,7 +7,15 @@
 \alias{args}
 \title{Parameter Descriptions for Package}
 \arguments{
-\item{...}{These dots are for future extensions and must be empty.}
+\item{...}{Unused.}
+
+\item{nseeds}{A count of the number of new seeds to get for each stream.}
+
+\item{nstreams}{A count of the number of streams.}
+
+\item{seed}{An integer of the starting seed or NULL.}
+
+\item{start_seeds}{A count of the number of the seed to start get new seeds from.}
 }
 \description{
 Default parameter descriptions which may be overridden in individual

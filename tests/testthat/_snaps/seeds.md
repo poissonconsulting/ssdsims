@@ -1,7 +1,7 @@
-# ssd_get_seeds streams and skip
+# sdd_get_streams_seeds streams and start_seeds
 
     Code
-      withr::with_seed(10, ssd_get_seeds(nseeds = 2L))
+      withr::with_seed(10, sdd_get_streams_seeds(nseeds = 2L))
     Output
       [[1]]
       [[1]][[1]]
@@ -16,7 +16,7 @@
 ---
 
     Code
-      withr::with_seed(10, ssd_get_seeds(nseeds = 2L, nstreams = 2L))
+      withr::with_seed(10, sdd_get_streams_seeds(nseeds = 2L, nstreams = 2L))
     Output
       [[1]]
       [[1]][[1]]
@@ -41,21 +41,23 @@
 ---
 
     Code
-      withr::with_seed(10, ssd_get_seeds(nseeds = 1L, nstreams = 2L, skip = 1L))
+      withr::with_seed(10, sdd_get_streams_seeds(nseeds = 1L, nstreams = 2L,
+        start_seeds = 1L))
     Output
       [[1]]
       [[1]][[1]]
-      [1]      10407 -523009245 2009368735  379397622   26024764 -450628420 -210045713
+      [1]       10407 -1852613690  1473416771  -413238268    -5614164   596817356
+      [7] -2081937358
       
       
       [[2]]
       [[2]][[1]]
-      [1]       10407   230991481  -256723208   -88519410   725862280  1903914935
-      [7] -1657458893
+      [1]       10407 -1042938847   -13114459 -1935556892   592316643  -438891301
+      [7]   955739111
       
       
 
-# ssd_get_seeds advances seed by 1
+# sdd_get_streams_seeds advances seed by 1
 
     Code
       globalenv()$.Random.seed
@@ -277,10 +279,10 @@
       [619] -2114566600  1302189590 -1088845277  -782752283   462388226   843488880
       [625]  1605749785  -381429566
 
-# ssd_get_seeds pass seed
+# sdd_get_streams_seeds pass seed
 
     Code
-      ssd_get_seeds(10, nseeds = 2L)
+      sdd_get_streams_seeds(10, nseeds = 2L)
     Output
       [[1]]
       [[1]][[1]]

@@ -2,14 +2,14 @@
 % Please edit documentation in R/seeds.R
 \name{sdd_get_streams_seeds}
 \alias{sdd_get_streams_seeds}
-\title{Get L'Ecuyer-CMRG Seeds}
+\title{Get L'Ecuyer-CMRG Streams Seeds}
 \usage{
 sdd_get_streams_seeds(
   seed = NULL,
   ...,
   nseeds = 100L,
   nstreams = 1L,
-  start_seeds = 0L
+  start_seeds = 1L
 )
 }
 \arguments{
@@ -17,17 +17,17 @@ sdd_get_streams_seeds(
 
 \item{...}{Unused.}
 
-\item{nseeds}{A count of the number of new seeds to generate for each stream.}
+\item{nseeds}{A count of the number of new seeds to get for each stream.}
 
 \item{nstreams}{A count of the number of streams.}
 
-\item{start_seeds}{A count of number of seeds to start_seedsbefore generating new seeds for each stream.}
+\item{start_seeds}{A count of the number of the seed to start get new seeds from.}
 }
 \value{
 A list of lists of L'Ecuyer-CMRG seeds.
 }
 \description{
-Generates a list of streams of L'Ecuyer-CMRG seeds.
+Gets a list of streams of L'Ecuyer-CMRG seeds.
 }
 \examples{
 withr::with_seed(10,
