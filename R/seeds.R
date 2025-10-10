@@ -58,11 +58,11 @@ get_lecyer_cmrg_seed <- function() {
   globalenv()$.Random.seed
 }
 
-get_sub_seeds <- function(seed, skip, nseeds) {
+get_sub_seeds <- function(seed, start_seeds, nseeds) {
   if(nseeds == 0) {
     return(list())
   }
-  for(i in seq_len(skip)) {
+  for(i in seq_len(start_seeds)) {
     seed <- parallel::nextRNGSubStream(seed)
   }
   seeds <- vector("list", length = nseeds)
@@ -81,7 +81,7 @@ get_sub_seeds <- function(seed, skip, nseeds) {
 #' @param ... Unused.
 #' @param nseeds A count of the number of new seeds to generate for each stream.
 #' @param nstreams A count of the number of streams.
-#' @param skip A count of number of seeds to skip before generating new seeds for each stream.
+#' @param start_seeds A count of number of seeds to start_seedsbefore generating new seeds for each stream.
 #'
 #' @return A list of lists of L'Ecuyer-CMRG seeds.
 #' @export
@@ -91,15 +91,15 @@ get_sub_seeds <- function(seed, skip, nseeds) {
 #' sdd_get_streams_seeds(nseeds = 2, nstreams = 2)
 #')
 #' withr::with_seed(10,
-#' sdd_get_streams_seeds(nseeds = 1, nstreams = 2, skip = 2)
+#' sdd_get_streams_seeds(nseeds = 1, nstreams = 2, start_seeds= 2)
 #')
 # inspired by furrr:::generate_seed_streams
-sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, skip = 0L) {
+sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L, start_seeds = 0L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
   chk::chk_count(nseeds)
   chk::chk_count(nstreams)
-  chk::chk_count(skip)
+  chk::chk_count(start_seeds)
 
   if(nstreams == 0L) {
     return(list())
@@ -119,7 +119,7 @@ sdd_get_streams_seeds <- function(seed = NULL, ..., nseeds = 100L, nstreams = 1L
     seeds[[i+1]] <- parallel::nextRNGStream(seeds[[i]])
   }
   for(i in seq_len(nstreams)) {
-    seeds[[i]] <- get_sub_seeds(seeds[[i]], skip = skip, nseeds = nseeds)
+    seeds[[i]] <- get_sub_seeds(seeds[[i]], start_seeds = start_seeds, nseeds = nseeds)
   }
   seeds
 }

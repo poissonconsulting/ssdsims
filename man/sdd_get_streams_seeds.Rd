@@ -9,7 +9,7 @@ sdd_get_streams_seeds(
   ...,
   nseeds = 100L,
   nstreams = 1L,
-  skip = 0L
+  start_seeds = 0L
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ sdd_get_streams_seeds(
 
 \item{nstreams}{A count of the number of streams.}
 
-\item{skip}{A count of number of seeds to skip before generating new seeds for each stream.}
+\item{start_seeds}{A count of number of seeds to start_seedsbefore generating new seeds for each stream.}
 }
 \value{
 A list of lists of L'Ecuyer-CMRG seeds.
@@ -34,6 +34,6 @@ withr::with_seed(10,
 sdd_get_streams_seeds(nseeds = 2, nstreams = 2)
 )
 withr::with_seed(10,
-sdd_get_streams_seeds(nseeds = 1, nstreams = 2, skip = 2)
+sdd_get_streams_seeds(nseeds = 1, nstreams = 2, start_seeds= 2)
 )
 }
