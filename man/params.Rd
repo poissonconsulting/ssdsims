@@ -9,15 +9,23 @@
 \arguments{
 \item{...}{Unused.}
 
+\item{datas}{A list of simulated data.}
+
 \item{nseeds}{A count of the number of new seeds to get for each stream.}
 
 \item{nstreams}{A count of the number of streams.}
+
+\item{return_items}{A flag specifying whether to return a list of the generated items.}
+
+\item{save_to}{A string of the existing directory to save objects to or NULL.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 
 \item{start_seed}{A count of the number of the seed to start getting seeds from.}
 
 \item{start_stream}{A count of the number of the stream to start getting streams from.}
+
+\item{stream}{A count of the stream number.}
 }
 \description{
 Default parameter descriptions which may be overridden in individual

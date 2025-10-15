@@ -18,6 +18,7 @@ Imports:
     parallel,
     purrr,
     ssdtools,
+    stringr,
     tidyr
 Suggests: 
     readr,

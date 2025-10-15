@@ -1,7 +1,7 @@
-# sdd_get_streams_seeds streams and start_seeds
+# ssd_get_seeds_streams streams and start_seed
 
     Code
-      withr::with_seed(10, sdd_get_streams_seeds(nseeds = 2L))
+      withr::with_seed(10, ssd_get_seeds_streams(nseeds = 2L))
     Output
       [[1]]
       [[1]][[1]]
@@ -16,7 +16,7 @@
 ---
 
     Code
-      withr::with_seed(10, sdd_get_streams_seeds(nseeds = 2L, nstreams = 2L))
+      withr::with_seed(10, ssd_get_seeds_streams(nseeds = 2L, nstreams = 2L))
     Output
       [[1]]
       [[1]][[1]]
@@ -41,8 +41,8 @@
 ---
 
     Code
-      withr::with_seed(10, sdd_get_streams_seeds(nseeds = 1L, nstreams = 2L,
-        start_seeds = 1L))
+      withr::with_seed(10, ssd_get_seeds_streams(nseeds = 1L, nstreams = 2L,
+        start_seed = 1L))
     Output
       [[1]]
       [[1]][[1]]
@@ -57,7 +57,7 @@
       
       
 
-# sdd_get_streams_seeds advances seed by 1
+# ssd_get_seeds_streams advances seed by 1
 
     Code
       globalenv()$.Random.seed
@@ -279,10 +279,10 @@
       [619] -2114566600  1302189590 -1088845277  -782752283   462388226   843488880
       [625]  1605749785  -381429566
 
-# sdd_get_streams_seeds pass seed
+# ssd_get_seeds_streams pass seed
 
     Code
-      sdd_get_streams_seeds(10, nseeds = 2L)
+      ssd_get_seeds_streams(10, nseeds = 2L)
     Output
       [[1]]
       [[1]][[1]]
