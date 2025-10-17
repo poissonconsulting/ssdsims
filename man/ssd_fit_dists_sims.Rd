@@ -5,7 +5,7 @@
 \title{Fit SSD Distributions to Simulated Data}
 \usage{
 ssd_fit_dists_sims(
-  datas,
+  sims,
   dists = ssdtools::ssd_dists_bcanz(),
   ...,
   silent = TRUE,
@@ -17,7 +17,7 @@ ssd_fit_dists_sims(
 )
 }
 \arguments{
-\item{datas}{A list of simulated data.}
+\item{sims}{A list of simulated data.}
 
 \item{dists}{A character vector of the distribution names.}
 

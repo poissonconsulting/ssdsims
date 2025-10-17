@@ -7,7 +7,7 @@
 #'
 #' A string is a non-missing character scalar.
 #'
-#' @param datas A list of simulated data.
+#' @param sims A list of simulated data.
 #' @param nseeds A count of the number of new seeds to get for each stream.
 #' @param nstreams A count of the number of streams.
 #' @param return_items A flag specifying whether to return a list of the generated items.

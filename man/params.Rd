@@ -9,7 +9,7 @@
 \arguments{
 \item{...}{Unused.}
 
-\item{datas}{A list of simulated data.}
+\item{sims}{A list of simulated data.}
 
 \item{nseeds}{A count of the number of new seeds to get for each stream.}
 
