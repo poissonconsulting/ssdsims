@@ -4,56 +4,10 @@ rinteger <- function(n = 1L) {
   as.integer(stats::runif(n, -mx, mx))
 }
 
-# from withr
-has_seed <- function () {
-    exists(".Random.seed", globalenv(), mode = "integer", inherits = FALSE)
-}
-
-# from withr
-get_seed <- function () 
-{
-    if (!has_seed()) {
-        return(NULL)
-    }
-    list(random_seed = get(".Random.seed", globalenv(), mode = "integer", 
-        inherits = FALSE), rng_kind = RNGkind())
-}
-
-# modified from withr
-set_seed <- function (seed, advance = FALSE) 
-{
-    restore_rng_kind(seed$rng_kind)
-    if (is.null(seed$seed)) {
-        assign(".Random.seed", seed$random_seed, globalenv())
-    }
-    else {
-        set.seed(seed$seed)
-    }
-    if (advance) {
-      fun <- if (is.null(seed)) suppressWarnings else identity
-      fun(stats::runif(1))
-    }
-  invisible(get_seed())
- }
-
-restore_rng_kind <- function (kind) 
-{
-    RNGkind <- get("RNGkind")
-    RNGkind(kind[[1]], normal.kind = kind[[2]])
-    sample_kind <- kind[[3]]
-    if (identical(sample_kind, "Rounding")) {
-        suppressWarnings(RNGkind(sample.kind = sample_kind))
-    }
-    else {
-        RNGkind(sample.kind = sample_kind)
-    }
-    NULL
-}
-
 get_lecyer_cmrg_seed <- function() {
   seed <- get_seed()
   on.exit(set_seed(seed))
-  RNGkind("L'Ecuyer-CMRG")
+  RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
   set.seed(rinteger(1))
   globalenv()$.Random.seed
 }
@@ -73,22 +27,6 @@ get_sub_seeds <- function(seed, start_seed, nseeds) {
   seeds
 }
 
-#' Get L'Ecuyer-CMRG Streams Seeds
-#'
-#' Gets a list of streams of L'Ecuyer-CMRG seeds.
-#'
-#' @inheritParams params
-#'
-#' @return A list of lists of L'Ecuyer-CMRG seeds.
-#' @export
-#'
-#' @examples
-#' withr::with_seed(10,
-#' ssd_get_seeds_streams(nseeds = 2, nstreams = 2)
-#')
-#' withr::with_seed(10,
-#' ssd_get_seeds_streams(nseeds = 1, nstreams = 2, start_seed= 2)
-#')
 # inspired by furrr:::generate_seed_streams
 ssd_get_seeds_streams <- function(seed = NULL, ..., nseeds = 1L, nstreams = 1L, start_seed = 1L, start_stream = 1L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
