@@ -28,7 +28,7 @@ get_sub_seeds <- function(seed, start_seed, nseeds) {
 }
 
 # inspired by furrr:::generate_seed_streams
-ssd_get_seeds_streams <- function(seed = NULL, ..., nseeds = 1L, nstreams = 1L, start_seed = 1L, start_stream = 1L) {
+get_seeds_streams <- function(seed = NULL, ..., nseeds = 1L, nstreams = 1L, start_seed = 1L, start_stream = 1L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
   chk::chk_count(nseeds)

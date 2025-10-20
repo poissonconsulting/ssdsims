@@ -11,7 +11,16 @@
 \usage{
 ssd_simulate_data(x, ...)
 
-\method{ssd_simulate_data}{data.frame}(x, ..., replace = FALSE, nrow = 6L, nsim = 100L)
+\method{ssd_simulate_data}{data.frame}(
+  x,
+  ...,
+  replace = FALSE,
+  nrow = 6L,
+  seed = NULL,
+  nsims = 1000L,
+  stream = 1L,
+  start_sim = 1L
+)
 
 \method{ssd_simulate_data}{fitdists}(x, ..., dist = "top", nrow = 6L, nsim = 100L)
 
@@ -30,11 +39,11 @@ ssd_simulate_data(x, ...)
 
 \item{nrow}{A integer vector of the number of rows in the generated data.}
 
-\item{nsim}{A count of the number of data sets to generate.}
-
 \item{dist}{A string specifying the distribution in the fitdists object or
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
 the distributions as a single distribution.}
+
+\item{nsim}{A count of the number of data sets to generate.}
 
 \item{pars}{A named list of the parameter values.}
 

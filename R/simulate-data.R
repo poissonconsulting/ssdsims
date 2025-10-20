@@ -16,34 +16,34 @@ ssd_simulate_data <- function(x, ...) UseMethod("ssd_simulate_data")
 #' @examples
 #' ssd_simulate_data(ssddata::ccme_boron, nrow = 5, nsim = 3)
 #' 
-ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, nsim = 100L) {
+ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, seed = NULL, nsims = 1000L, stream = 1L, start_sim = 1L) {
   chk::check_data(
     x, values = list(Conc = c(0,Inf,NA_real_)), nrow = c(5, 10000)
   )
+  chk::chk_unused(...)
   chk::chk_flag(replace)
-  chk::chk_whole_numeric(nrow)
+  chk::chk_whole_number(nrow)
   chk::chk_range(nrow, c(5, 1000))
   chk::chk_length(nrow, upper = 100)
   chk::chk_not_any_na(nrow)
-  chk::chk_count(nsim)
-  chk::chk_range(nsim, c(1, 10000))
-  chk::chk_unused(...)
+  chk::chk_null_or(seed, vld = chk::vld_whole_number)
+
+  chk::chk_count(nsims)
+  chk::chk_count(start_sim)
+  chk::chk_gt(start_sim)
+
+  seeds <- get_seeds_streams(seed = seed, nseeds = nsims, start_seed = start_sim, start_stream = stream)
   
-  if(length(nrow) == 1) {
     data <- nsim |>
-      seq_len() |>
-      purrr::map(\(n) dplyr::slice_sample(x, n = nrow, replace = replace)) |>
-      purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
-      purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
+      seq(start_sim, start_sim + nsims - 1L) |>
+      purrr::map(\(n, seeds) slice_sample_seed(x, n = nrow, replace = replace)) |>
+      # purrr::map(\(.x) dplyr::mutate(.x, row = seq_len(nrow))) |>
+      # purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
       dplyr::bind_rows() |>
       dplyr::select("sim", "Conc") |>
       tidyr::nest(data = "Conc")
 
-    return(data)
-  }
-  nrow |>
-    purrr::map(\(.x) ssd_simulate_data(x, replace = replace, nrow = .x, nsim = nsim)) |>
-    dplyr::bind_rows()
+    data
 }
 
 #' @describeIn ssd_simulate_data Generate data from fitdists object

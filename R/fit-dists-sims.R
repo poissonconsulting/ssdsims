@@ -29,7 +29,7 @@ ssd_fit_dists_sims <- function(sims, dists = ssdtools::ssd_dists_bcanz(), ..., s
   }
 
   n <- length(sims)
-  seeds <- ssd_get_seeds_streams(seed = seed, nseeds = n, start_stream = stream, start_seed = start_seed)
+  seeds <- get_seeds_streams(seed = seed, nseeds = n, start_stream = stream, start_seed = start_seed)
   seq <- start_seed:(start_seed + n - 1L)
   purrr::pmap(list(sims, seeds, seq), \(.x, .s, .i) fit_dists_sim(.x, .s, .i, dists = dists, silent = silent, save_to = save_to, return_items = return_items, ...))
 }
