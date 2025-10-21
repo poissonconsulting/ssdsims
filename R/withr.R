@@ -46,11 +46,20 @@ set_seed <- function (seed, advance = FALSE)
   invisible(get_seed())
 }
 
-local_lecyer_cmrg_seed <- function(seed, local_envir = parent.frame()) 
+local_lecuyer_cmrg_seed <- function(seed, local_envir = parent.frame()) 
 {
   withr::local_seed(seed, 
     local_envir = local_envir,
-    rng_kind =  "L'Ecuyer-CMRG",
+    .rng_kind =  "L'Ecuyer-CMRG",
     .rng_normal_kind = "Inversion",
     .rng_sample_kind = "Rejection")
-  }
+}
+
+with_lecuyer_cmrg_seed <- function(seed, code) {
+  force(seed)
+  withr::with_seed(seed, 
+    code,
+    .rng_kind =  "L'Ecuyer-CMRG",
+    .rng_normal_kind = "Inversion",
+    .rng_sample_kind = "Rejection")
+}

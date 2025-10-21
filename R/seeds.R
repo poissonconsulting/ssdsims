@@ -4,7 +4,7 @@ rinteger <- function(n = 1L) {
   as.integer(stats::runif(n, -mx, mx))
 }
 
-get_lecyer_cmrg_seed <- function() {
+get_lecuyer_cmrg_seed <- function() {
   seed <- get_seed()
   on.exit(set_seed(seed))
   RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
@@ -12,33 +12,17 @@ get_lecyer_cmrg_seed <- function() {
   globalenv()$.Random.seed
 }
 
-get_sub_seeds <- function(seed, start_seed, nseeds) {
-  if(nseeds == 0) {
-    return(list())
-  }
-  for(i in seq_len(start_seed - 1)) {
-    seed <- parallel::nextRNGSubStream(seed)
-  }
-  seeds <- vector("list", length = nseeds)
-  seeds[[1]] <- seed
-  for(i in seq_len(nseeds-1)) {
-    seeds[[i+1]] <- parallel::nextRNGSubStream(seeds[[i]])
-  }
-  seeds
-}
-
 # inspired by furrr:::generate_seed_streams
-get_seeds_streams <- function(seed = NULL, ..., nseeds = 1L, nstreams = 1L, start_seed = 1L, start_stream = 1L) {
+get_seed_stream <- function(seed = NULL, ..., nseeds = 1L, stream = 1L, start_seed = 1L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
   chk::chk_count(nseeds)
-  chk::chk_count(nstreams)
+  chk::chk_count(stream)
+  chk::chk_gt(stream)
   chk::chk_count(start_seed)
   chk::chk_gt(start_seed)
-  chk::chk_count(start_stream)
-  chk::chk_gt(start_stream)
 
-  if(nstreams == 0L) {
+  if(nseeds == 0) {
     return(list())
   }
 
@@ -49,17 +33,16 @@ get_seeds_streams <- function(seed = NULL, ..., nseeds = 1L, nstreams = 1L, star
     set.seed(seed)
   }
 
-  seed <- get_lecyer_cmrg_seed()
-  seeds <- vector("list", length = nstreams)
-  seeds[[1]] <- parallel::nextRNGStream(seed)
-  for(i in seq_len(start_stream - 1)) {
-    seed[[1]] <- parallel::nextRNGStream(seed[[1]])
+  seeds <- vector("list", length = nseeds)
+  seeds[[1]] <- parallel::nextRNGStream(get_lecuyer_cmrg_seed())
+  for(i in seq_len(stream - 1)) {
+    seeds[[1]] <- parallel::nextRNGStream(seeds[[1]])
   }
-  for (i in seq_len(nstreams - 1)) {
-    seeds[[i+1]] <- parallel::nextRNGStream(seeds[[i]])
+  for(i in seq_len(start_seed - 1)) {
+    seeds[[1]] <- parallel::nextRNGSubStream(seeds[[1]])
   }
-  for(i in seq_len(nstreams)) {
-    seeds[[i]] <- get_sub_seeds(seeds[[i]], start_seed = start_seed, nseeds = nseeds)
+  for(i in seq_len(nseeds-1)) {
+    seeds[[i+1]] <- parallel::nextRNGSubStream(seeds[[i]])
   }
   seeds
 }

@@ -1,23 +1,56 @@
-test_that("get_seeds_streams no streams or seeds", {
-  expect_identical(get_seeds_streams(nstreams = 0L), list())
-  expect_identical(get_seeds_streams(nseeds = 0L), list(list()))
-  expect_identical(get_seeds_streams(nseeds = 0L, nstreams = 0L), list())
-  expect_identical(get_seeds_streams(nseeds = 0L, nstreams = 2L), list(list(),list()))
+test_that("get_seed_stream no seeds", {
+  expect_identical(get_seed_stream(nseeds = 0L), list())
 })
 
-test_that("get_seeds_streams streams and start_seed", {
-  expect_snapshot(withr::with_seed(10, get_seeds_streams(nseeds = 2L)))
-  expect_snapshot(withr::with_seed(10, get_seeds_streams(nseeds = 2L, nstreams = 2L)))
-  expect_snapshot(withr::with_seed(10, get_seeds_streams(nseeds = 1L, nstreams = 2L, start_seed= 1L))) 
-  expect_identical(withr::with_seed(10, get_seeds_streams(nseeds = 2L, nstreams = 2L))[[2]][2],
-                   withr::with_seed(10, get_seeds_streams(nseeds = 1L, nstreams = 2L, start_seed= 2L))[[2]])
+test_that("get_seed_stream repeatable", {
+  expect_snapshot(withr::with_seed(10, get_seed_stream()))
+  expect_identical(withr::with_seed(10, get_seed_stream()),
+                  withr::with_seed(10, get_seed_stream()))
 })
 
-test_that("get_seeds_streams advances seed by 1", {
+test_that("get_seed_stream repeatable multiple seeds", {
+  expect_snapshot(withr::with_seed(10, get_seed_stream(nseeds = 2L)))
+  expect_identical(withr::with_seed(10, get_seed_stream(nseeds = 2L))[2],
+                   withr::with_seed(10, get_seed_stream(nseeds = 1L, start_seed= 2L)))
+})
+
+test_that("get_seed_stream differs multiple seeds", {
+  expect_false(identical(withr::with_seed(10, get_seed_stream()),
+                  withr::with_seed(10, get_seed_stream(start_seed = 2L))))
+})
+
+test_that("get_seed_stream repeatable other starts", {
+  expect_snapshot(withr::with_seed(42, get_seed_stream()))
+  expect_identical(withr::with_seed(42, get_seed_stream()),
+                  withr::with_seed(42, get_seed_stream()))
+})
+
+test_that("get_seed_stream differs other starts seeds", {
+  expect_false(identical(withr::with_seed(10, get_seed_stream()),
+                  withr::with_seed(42, get_seed_stream())))
+})
+
+test_that("get_seed_stream seeds repeatable with other seed types", {
+  expect_snapshot(with_lecuyer_cmrg_seed(10, get_seed_stream()))
+  expect_identical(with_lecuyer_cmrg_seed(10, get_seed_stream()),
+                  with_lecuyer_cmrg_seed(10, get_seed_stream()))
+})
+
+test_that("get_seed_stream seeds differ with other seed types", {
+  expect_false(identical(withr::with_seed(10, get_seed_stream()),
+                  with_lecuyer_cmrg_seed(10, get_seed_stream())))
+})
+
+test_that("get_seed_stream passses seed", {
+ expect_identical(withr::with_seed(37, get_seed_stream(10)), 
+                  withr::with_seed(42, get_seed_stream(10)))
+})
+
+test_that("get_seed_stream advances seed by 1", {
   withr::with_seed(10, {
     seed <- globalenv()$.Random.seed
     expect_snapshot(globalenv()$.Random.seed)
-    get_seeds_streams(nseeds = 2L)
+    get_seed_stream(nseeds = 2L)
     seed2 <- globalenv()$.Random.seed 
     expect_snapshot(globalenv()$.Random.seed)
     set.seed(10)
@@ -28,7 +61,4 @@ test_that("get_seeds_streams advances seed by 1", {
   )
 })
 
-test_that("get_seeds_streams pass seed", {
- expect_snapshot(get_seeds_streams(10, nseeds = 2L))
- expect_identical(get_seeds_streams(10, nseeds = 2L), withr::with_seed(10, get_seeds_streams(10, nseeds = 2L)))
-})
+

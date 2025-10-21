@@ -32,7 +32,7 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
   chk::chk_count(start_sim)
   chk::chk_gt(start_sim)
 
-  seeds <- get_seeds_streams(seed = seed, nseeds = nsims, start_seed = start_sim, start_stream = stream)
+  seeds <- get_seed_stream(seed = seed, nseeds = nsims, start_seed = start_sim, start_stream = stream)
   
     data <- nsim |>
       seq(start_sim, start_sim + nsims - 1L) |>
