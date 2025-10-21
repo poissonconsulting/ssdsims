@@ -18,7 +18,7 @@ ssd_simulate_data(x, ...)
   nrow = 6L,
   seed = NULL,
   nsim = 100L,
-  stream = 1L,
+  stream = getOption("ssdsims.stream", 1L),
   start_sim = 1L
 )
 
@@ -29,7 +29,7 @@ ssd_simulate_data(x, ...)
   nrow = 6L,
   seed = NULL,
   nsim = 100L,
-  stream = 1L,
+  stream = getOption("ssdsims.stream", 1L),
   start_sim = 1L
 )
 
@@ -39,7 +39,7 @@ ssd_simulate_data(x, ...)
   nrow = 6L,
   seed = NULL,
   nsim = 100L,
-  stream = 1L,
+  stream = getOption("ssdsims.stream", 1L),
   start_sim = 1L
 )
 
@@ -50,7 +50,7 @@ ssd_simulate_data(x, ...)
   nrow = 6L,
   seed = NULL,
   nsim = 100L,
-  stream = 1L,
+  stream = getOption("ssdsims.stream", 1L),
   start_sim = 1L
 )
 
@@ -61,7 +61,7 @@ ssd_simulate_data(x, ...)
   nrow = 6L,
   seed = NULL,
   nsim = 100L,
-  stream = 1L,
+  stream = getOption("ssdsims.stream", 1L),
   start_sim = 1L
 )
 }
