@@ -72,7 +72,7 @@ get_lecuyer_cmrg_seed <- function() {
 }
 
 # inspired by furrr:::generate_seed_streams
-get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., nsim = 1L, stream = 1L, start_sim = 1L) {
+get_lecuyer_cmrg_seeds_stream <- function(seed = NULL, ..., nsim = 1L, stream = 1L, start_sim = 1L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
   chk::chk_count(nsim)
@@ -105,4 +105,7 @@ get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., nsim = 1L, stream = 1
   }
   seeds
 }
-  
+
+get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., stream, start_sim) {
+  get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = 1L, stream = stream, start_sim = start_sim)[[1]] 
+}

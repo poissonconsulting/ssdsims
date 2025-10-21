@@ -18,13 +18,12 @@ Imports:
     parallel,
     purrr,
     ssdtools,
-    stringr,
-    tidyr
+    tidyr,
+    withr
 Suggests: 
     readr,
     ssddata,
-    testthat (>= 3.0.0),
-    withr
+    testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

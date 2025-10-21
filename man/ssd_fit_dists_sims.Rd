@@ -9,8 +9,7 @@ ssd_fit_dists_sims(
   dists = ssdtools::ssd_dists_bcanz(),
   ...,
   seed = NULL,
-  silent = TRUE,
-  save_to = NULL
+  silent = TRUE
 )
 }
 \arguments{
@@ -23,8 +22,6 @@ ssd_fit_dists_sims(
 \item{seed}{An integer of the starting seed or NULL.}
 
 \item{silent}{A flag indicating whether fits should fail silently.}
-
-\item{save_to}{A string of the existing directory to save objects to or NULL.}
 }
 \value{
 The x tibble with a list column fits of fistdist objects.
