@@ -8,11 +8,9 @@ ssd_fit_dists_sims(
   sims,
   dists = ssdtools::ssd_dists_bcanz(),
   ...,
-  silent = TRUE,
-  save_to = NULL,
   seed = NULL,
-  stream = 1L,
-  start_sim = 1L
+  silent = TRUE,
+  save_to = NULL
 )
 }
 \arguments{
@@ -22,15 +20,11 @@ ssd_fit_dists_sims(
 
 \item{...}{Additional arguments passed to \code{ssdtools::ssd_fit_dists()}.}
 
+\item{seed}{An integer of the starting seed or NULL.}
+
 \item{silent}{A flag indicating whether fits should fail silently.}
 
 \item{save_to}{A string of the existing directory to save objects to or NULL.}
-
-\item{seed}{An integer of the starting seed or NULL.}
-
-\item{stream}{A count of the stream number.}
-
-\item{start_sim}{A count of the number of the simulation to start from.}
 }
 \value{
 The sims tibble with a list column fits of fistdist objects.

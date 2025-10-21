@@ -1,12 +1,16 @@
-filename <- function(i, prefix, ext = NULL, sep = "_") {
-  paste0(prefix, sep, stringr::str_pad(i, width = 9, pad = "0"), sep, ext)
+filename <- function(stream, sim, prefix, ext = NULL, sep = "_") {
+  stream <- stringr::str_pad(stream, width = 9, pad = "0") 
+  sim <- stringr::str_pad(sim, width = 9, pad = "0")
+  paste(prefix, stream, sim, sep = sep) |>
+    paste0(ext)
 }
 
-filepath <- function(i, save_to, prefix = "fit", ext = ".rds") {
-  file.path(save_to, filename(i, prefix = prefix, ext = ext))
+filepath <- function(stream, sim, dir, prefix = "fit", ext = ".rds") {
+  file.path(dir, filename(stream, sim, prefix = prefix, ext = ext))
 }
 
 slice_sample_seed <- function(data, n, replace, seed) {
+  print(seed)
   with_lecuyer_cmrg_seed(seed, {
     data |>
       dplyr::slice_sample(n = n, replace = replace)
@@ -19,13 +23,16 @@ do_call_seed <- function(what, args, seed) {
   })
 }
 
-fit_dists_seed <- function(data, seed, i, dists, silent, save_to, ...) {
+fit_dists_seed <- function(data, sim, stream, seed, dists, silent, save_to, ...) {
+  print(seed)
+  seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_seed = sim, stream = stream)[[1]]
   ## TODO: handle failure of all model to fit!!
+  print(seed)
   with_lecuyer_cmrg_seed(seed, {
     fit <- ssdtools::ssd_fit_dists(data, dists = dists, silent = silent, ...)
   })
-  if(chk::vld_dir(save_to)) {
-    saveRDS(fit, filepath(i, save_to, prefix = "fit", ext = ".rds"))
+  if(!is.null(save_to)) {
+    saveRDS(fit, filepath(stream, sim, dir = save_to, prefix = "fit", ext = ".rds"))
   }
   fit
 }
