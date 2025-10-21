@@ -17,18 +17,53 @@ ssd_simulate_data(x, ...)
   replace = FALSE,
   nrow = 6L,
   seed = NULL,
-  nsims = 1000L,
+  nsim = 100L,
   stream = 1L,
   start_sim = 1L
 )
 
-\method{ssd_simulate_data}{fitdists}(x, ..., dist = "top", nrow = 6L, nsim = 100L)
+\method{ssd_simulate_data}{fitdists}(
+  x,
+  ...,
+  dist = "top",
+  nrow = 6L,
+  seed = NULL,
+  nsim = 100L,
+  stream = 1L,
+  start_sim = 1L
+)
 
-\method{ssd_simulate_data}{tmbfit}(x, ..., nrow = 6L, nsim = 100L)
+\method{ssd_simulate_data}{tmbfit}(
+  x,
+  ...,
+  nrow = 6L,
+  seed = NULL,
+  nsim = 100L,
+  stream = 1L,
+  start_sim = 1L
+)
 
-\method{ssd_simulate_data}{character}(x, ..., pars = list(), nrow = 6L, nsim = 100L)
+\method{ssd_simulate_data}{character}(
+  x,
+  ...,
+  pars = list(),
+  nrow = 6L,
+  seed = NULL,
+  nsim = 100L,
+  stream = 1L,
+  start_sim = 1L
+)
 
-\method{ssd_simulate_data}{`function`}(x, ..., args = list(), nrow = 6L, nsim = 100L)
+\method{ssd_simulate_data}{`function`}(
+  x,
+  ...,
+  args = list(),
+  nrow = 6L,
+  seed = NULL,
+  nsim = 100L,
+  stream = 1L,
+  start_sim = 1L
+)
 }
 \arguments{
 \item{x}{The object to use for generating the data.}
@@ -39,11 +74,17 @@ ssd_simulate_data(x, ...)
 
 \item{nrow}{A integer vector of the number of rows in the generated data.}
 
+\item{seed}{An integer of the starting seed or NULL.}
+
+\item{nsim}{A count of the number of data sets to generate.}
+
+\item{stream}{A count of the stream number.}
+
+\item{start_sim}{A count of the number of the simulation to start from.}
+
 \item{dist}{A string specifying the distribution in the fitdists object or
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
 the distributions as a single distribution.}
-
-\item{nsim}{A count of the number of data sets to generate.}
 
 \item{pars}{A named list of the parameter values.}
 
@@ -65,7 +106,7 @@ A family of functions to generate a tibble of nested data sets.
 
 \item \code{ssd_simulate_data(character)}: Generate data using distribution name
 
-\item \code{ssd_simulate_data(`function`)}: Generate data using function
+\item \code{ssd_simulate_data(`function`)}: Generate data using function to generate sequence of random numbers
 
 }}
 \examples{

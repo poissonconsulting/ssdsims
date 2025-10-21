@@ -3,7 +3,7 @@ fit_dists_sim <- function(data, seed, i, dists, silent, save_to, return_items, .
   ## TODO: handle failure of all model to fit!!
   fit <- ssdtools::ssd_fit_dists(data, dists = dists, silent = silent, ...)
   if(chk::vld_string(save_to)) {
-    saveRDS(fit, filepath(i, save_to, prefix = "fit", ext = ".rds"))
+    saveRDS(fit, filepath(i, dists, save_to, prefix = "fit", ext = ".rds"))
   }
   if(!return_items) {
     return(list())

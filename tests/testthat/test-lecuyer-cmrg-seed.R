@@ -37,7 +37,7 @@ test_that("get_lecuyer_cmrg_seed_stream seeds repeatable with other seed types",
 })
 
 test_that("get_lecuyer_cmrg_seed_stream seeds differ with other seed types", {
-  expect_false(identical(withr::with_seed(10, get_lecuyer_cmrg_seed_stream()),
+  expect_false(identical(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(), .rng_kind = "Mersenne-Twister"),
                   with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seed_stream())))
 })
 
