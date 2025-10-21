@@ -9,15 +9,29 @@
 \arguments{
 \item{...}{Unused.}
 
-\item{nseeds}{A count of the number of new seeds to get for each stream.}
+\item{dist}{A string specifying the distribution in the fitdists object or
+\code{"top"} to use the distribution with most weight or \code{"multi"} to treat
+the distributions as a single distribution.}
 
-\item{nstreams}{A count of the number of streams.}
+\item{nrow}{A integer vector of the number of rows in the generated data.}
+
+\item{nsim}{A count of the number of data sets to generate.}
+
+\item{sims}{A list of simulated data.}
+
+\item{nseed}{A count of the number of new seeds to get for each stream.}
+
+\item{return_items}{A flag specifying whether to return a list of the generated items.}
+
+\item{save_to}{A string of the existing directory to save objects to or NULL.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 
+\item{start_sim}{A count of the number of the simulation to start from.}
+
 \item{start_seed}{A count of the number of the seed to start getting seeds from.}
 
-\item{start_stream}{A count of the number of the stream to start getting streams from.}
+\item{stream}{A count of the stream number.}
 }
 \description{
 Default parameter descriptions which may be overridden in individual
