@@ -105,4 +105,7 @@ get_lecuyer_cmrg_seeds_stream <- function(seed = NULL, ..., nsim = 1L, stream = 
   }
   seeds
 }
-  
+
+get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., stream, start_sim) {
+  get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = 1L, stream = stream, start_sim = start_sim)[[1]] 
+}
