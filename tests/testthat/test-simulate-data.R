@@ -8,7 +8,7 @@ test_that("ssd_simulate_data.function works", {
 
 test_that("ssd_simulate_data.character works", {
   withr::local_seed(42)
-  data <- ssd_simulate_data("lnorm", nrow = 5, nsim = 10)
+  data <- ssd_simulate_data("rlnorm", nrow = 5, nsim = 10)
   expect_snapshot_data(data, "character")
   data <- tidyr::unnest(data, cols = c(data))
   expect_snapshot_data(data, "character_unnest")

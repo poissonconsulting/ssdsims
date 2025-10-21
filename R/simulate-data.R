@@ -70,23 +70,21 @@ ssd_simulate_data.tmbfit <- function(x, ..., nrow = 6L, seed = NULL, nsim = 100L
   chk::chk_unused(...)
   
   pars <- ssdtools::estimates(x)
-  x <- x$dist
+  x <- paste0("ssdtools::ssd_r", x$dist)
   ssd_simulate_data(x, pars = pars, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim)
 }
 
 #' @describeIn ssd_simulate_data Generate data using distribution name
 #' @export
 #' @examples
-#' ssd_simulate_data("lnorm", nrow = 5, nsim = 3)
+#' ssd_simulate_data("rnorm", nrow = 5, nsim = 3)
 #' 
 ssd_simulate_data.character <- function(x, ..., pars = list(), nrow = 6L, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L) {
   chk::chk_string(x)
-  chk::chk_subset(x, ssdtools::ssd_dists_all())
   chk::chk_list(pars)
   chk::chk_unused(...)
   
-  fun <- paste0("ssdtools::ssd_r", x)
-  fun <- eval(parse(text = fun))
+  fun <- eval(parse(text = x))
   
   ssd_simulate_data(fun, args = as.list(pars), nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim)
 }
@@ -97,6 +95,8 @@ ssd_simulate_data.character <- function(x, ..., pars = list(), nrow = 6L, seed =
 #' ssd_simulate_data(ssdtools::ssd_rlnorm, nrow = 5, nsim = 3)
 #'
 ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L) {
+  chk::chk_function(x)
+  chk::chk_unused(...)
   chk::chk_list(args)
   chk::chk_whole_number(nrow)
   chk::chk_range(nrow, c(5, 1000))
