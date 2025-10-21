@@ -28,7 +28,3 @@ hc_seed <- function(data, sim, stream, seed, proportion, save_to, ...) {
   })
   fit 
 }
-
-sim_seq <- function(nsim = 1L, start_sim = 1L) {
-  seq(start_sim, start_sim + nsim - 1L)
-}

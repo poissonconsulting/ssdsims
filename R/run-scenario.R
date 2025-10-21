@@ -30,7 +30,7 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(5L, 10
   chk::chk_unique(nrow)
   chk::chk_length(nrow, upper = 995)
 
-  sims <- sim_seq(nsim = nsim, start_sim = start_sim)
+  sims <- sim_seq(start_sim, nsim)
   data <- tidyr::expand_grid(sim = sims, stream = stream, replace = replace, nrow = nrow)
   data
 }
@@ -57,7 +57,7 @@ ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), 
 
   ## TODO: need to vectorize args
 
-  sims <- sim_seq(nsim = nsim, start_sim = start_sim)
+  sims <- sim_seq(start_sim, nsim)
   data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)
   data
 }

@@ -25,7 +25,7 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
   chk::chk_count(start_sim)
   chk::chk_gt(start_sim)
 
-  sims <- seq(start_sim, start_sim + nsim - 1L) 
+  sims <- sim_seq(start_sim, nsim) 
   seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
  
   stream <- as.integer(stream)
@@ -104,7 +104,7 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
   chk::chk_count(start_sim)
   chk::chk_gt(start_sim)
 
-  sims <- seq(start_sim, start_sim + nsim - 1L) 
+  sims <- sim_seq(start_sim, nsim) 
   seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
 
   stream <- as.integer(stream)
