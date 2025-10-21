@@ -1,5 +1,5 @@
 test_that("get_lecuyer_cmrg_seed_stream no seeds", {
-  expect_identical(get_lecuyer_cmrg_seed_stream(nseeds = 0L), list())
+  expect_identical(get_lecuyer_cmrg_seed_stream(nseed = 0L), list())
 })
 
 test_that("get_lecuyer_cmrg_seed_stream repeatable", {
@@ -9,9 +9,9 @@ test_that("get_lecuyer_cmrg_seed_stream repeatable", {
 })
 
 test_that("get_lecuyer_cmrg_seed_stream repeatable multiple seeds", {
-  expect_snapshot(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseeds = 2L)))
-  expect_identical(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseeds = 2L))[2],
-                   withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseeds = 1L, start_seed= 2L)))
+  expect_snapshot(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseed = 2L)))
+  expect_identical(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseed = 2L))[2],
+                   withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseed = 1L, start_seed= 2L)))
 })
 
 test_that("get_lecuyer_cmrg_seed_stream differs multiple seeds", {
@@ -49,7 +49,7 @@ test_that("get_lecuyer_cmrg_seed_stream passses seed", {
 test_that("get_lecuyer_cmrg_seed_stream does not advance seed", {
   withr::with_seed(10, {
     seed <- globalenv()$.Random.seed
-    get_lecuyer_cmrg_seed_stream(nseeds = 100L)
+    get_lecuyer_cmrg_seed_stream(nseed = 100L)
     expect_identical(globalenv()$.Random.seed, seed)
   }
   )

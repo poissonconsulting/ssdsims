@@ -50,7 +50,7 @@ test_that("ssd_simulate_data.tmbfit works", {
 
 test_that("ssd_simulate_data.data.frame works", {
   withr::local_seed(42)
-  data <- ssd_simulate_data(ssddata::ccme_boron, nrow = 5, nsim = 10)
+  data <- ssd_simulate_data(ssddata::ccme_boron, nrow = 5, nsims = 10)
   expect_snapshot_data(data, "data_frame")
 })
 

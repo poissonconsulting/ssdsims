@@ -16,7 +16,7 @@ ssd_simulate_data <- function(x, ...) UseMethod("ssd_simulate_data")
 #' @examples
 #' ssd_simulate_data(ssddata::ccme_boron, nrow = 5, nsim = 3)
 #' 
-ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, seed = NULL, nsims = 1000L, stream = 1L, start_sim = 1L) {
+ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, seed = NULL, nsims = 100L, stream = 1L, start_sim = 1L) {
   chk::check_data(
     x, values = list(Conc = c(0,Inf,NA_real_)), nrow = c(5, 10000)
   )
@@ -27,12 +27,11 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
   chk::chk_length(nrow, upper = 100)
   chk::chk_not_any_na(nrow)
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
-
   chk::chk_count(nsims)
   chk::chk_count(start_sim)
   chk::chk_gt(start_sim)
 
-  seeds <- get_lecuyer_cmrg_seed_stream(seed = seed, nseeds = nsims, start_seed = start_sim, start_stream = stream)
+  seeds <- get_lecuyer_cmrg_seed_stream(seed = seed, nseeds = nsims, start_seed = start_sim, stream = stream)
   
     data <- nsim |>
       seq(start_sim, start_sim + nsims - 1L) |>

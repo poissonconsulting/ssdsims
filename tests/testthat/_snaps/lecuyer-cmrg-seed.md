@@ -11,7 +11,7 @@
 # get_lecuyer_cmrg_seed_stream repeatable multiple seeds
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseeds = 2L))
+      withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseed = 2L))
     Output
       [[1]]
       [1]       10407 -1852613690  1473416771  -413238268    -5614164   596817356

@@ -71,16 +71,16 @@ get_lecuyer_cmrg_seed <- function() {
 }
 
 # inspired by furrr:::generate_seed_streams
-get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., nseeds = 1L, stream = 1L, start_seed = 1L) {
+get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., nseed = 1L, stream = 1L, start_seed = 1L) {
   chk::chk_null_or(seed, vld = chk::vld_whole_number)
   chk::chk_unused(...)
-  chk::chk_count(nseeds)
+  chk::chk_count(nseed)
   chk::chk_count(stream)
   chk::chk_gt(stream)
   chk::chk_count(start_seed)
   chk::chk_gt(start_seed)
 
-  if(nseeds == 0) {
+  if(nseed == 0) {
     return(list())
   }
 
@@ -91,7 +91,7 @@ get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., nseeds = 1L, stream =
     set.seed(seed)
   }
 
-  seeds <- vector("list", length = nseeds)
+  seeds <- vector("list", length = nseed)
   seeds[[1]] <- parallel::nextRNGStream(get_lecuyer_cmrg_seed())
   for(i in seq_len(stream - 1)) {
     seeds[[1]] <- parallel::nextRNGStream(seeds[[1]])
@@ -99,7 +99,7 @@ get_lecuyer_cmrg_seed_stream <- function(seed = NULL, ..., nseeds = 1L, stream =
   for(i in seq_len(start_seed - 1)) {
     seeds[[1]] <- parallel::nextRNGSubStream(seeds[[1]])
   }
-  for(i in seq_len(nseeds-1)) {
+  for(i in seq_len(nseed-1)) {
     seeds[[i+1]] <- parallel::nextRNGSubStream(seeds[[i]])
   }
   seeds
