@@ -8,6 +8,24 @@ test_that("get_lecuyer_cmrg_seed_stream repeatable", {
                   withr::with_seed(10, get_lecuyer_cmrg_seed_stream()))
 })
 
+test_that("get_lecuyer_cmrg_seed_stream seed fast enough", {
+  expect_snapshot(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(start_seed = 10^5)))
+})
+
+test_that("get_lecuyer_cmrg_seed_stream stream fast enough", {
+  expect_snapshot(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(stream = 10^5)))
+})
+
+test_that("get_lecuyer_cmrg_seed_stream seed stream fast enough", {
+  expect_snapshot(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(start_seed = 10^5, stream = 10^5)))
+})
+
+test_that("get_lecuyer_cmrg_seed_stream seeds stream fast enough", {
+  seeds <- withr::with_seed(10, get_lecuyer_cmrg_seed_stream(start_seed = 10^5, stream = 10^5, nseed = 10^5))
+  expect_length(seeds, 10^5)
+  expect_snapshot(seeds[[10^5]])
+})
+
 test_that("get_lecuyer_cmrg_seed_stream repeatable multiple seeds", {
   expect_snapshot(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseed = 2L)))
   expect_identical(withr::with_seed(10, get_lecuyer_cmrg_seed_stream(nseed = 2L))[2],
