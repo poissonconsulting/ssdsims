@@ -65,8 +65,6 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
 }
 
 get_lecuyer_cmrg_seed <- function() {
-  seed <- get_seed()
-  on.exit(set_seed(seed))
   RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
   set.seed(rinteger(1))
   globalenv()$.Random.seed
