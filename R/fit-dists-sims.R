@@ -2,18 +2,19 @@
 #' 
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams params
+#' @param x A data frame with sim and stream integer columns and a list column of the data frames to fit distributions to.
 #' @param ... Additional arguments passed to `ssdtools::ssd_fit_dists()`.
-#' @return The sims tibble with a list column fits of fistdist objects.
+#' @return The x tibble with a list column fits of fistdist objects.
 #' @export
-ssd_fit_dists_sims <- function(sims, dists = ssdtools::ssd_dists_bcanz(), ..., seed = NULL, silent = TRUE, save_to = NULL) {
-  chk::check_data(sims, values = list(sim = c(1L, 10000000L), stream = c(1L, 10000000L)), key = c("sim", "stream"))
-  chk::check_names(sims, "data")
+ssd_fit_dists_sims <- function(x, dists = ssdtools::ssd_dists_bcanz(), ..., seed = NULL, silent = TRUE, save_to = NULL) {
+  chk::check_data(x, values = list(sim = c(1L, 10000000L), stream = c(1L, 10000000L)), key = c("sim", "stream"))
+  chk::check_names(x, "data")
   chk::chk_flag(silent)
   chk::chk_null_or(save_to, vld = chk::vld_dir)
 
-  if(!nrow(sims)) {
-    return(dplyr::mutate(sims, dists = list()))
+  if(!nrow(x)) {
+    return(dplyr::mutate(x, dists = list()))
   }
-  sims$fits <- purrr::pmap(list(sims$data, sims$sim, sims$stream), \(.x, .sim, .stream) fit_dists_seed(.x, .sim, .stream, seed = seed, dists = dists, silent = silent, save_to = save_to, ...))
-  sims
+  x$fits <- purrr::pmap(list(x$data, x$sim, x$stream), \(.x, .sim, .stream) fit_dists_seed(.x, .sim, .stream, seed = seed, dists = dists, silent = silent, save_to = save_to, ...))
+  x
 }

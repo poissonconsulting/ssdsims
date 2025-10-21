@@ -4,21 +4,21 @@
 \alias{ssd_hc_sims}
 \title{Fit SSD Distributions to Simulated Data}
 \usage{
-ssd_hc_sims(sims, proportion = 0.05, ..., seed = NULL, save_to = NULL)
+ssd_hc_sims(x, proportion = 0.05, ..., seed = NULL, save_to = NULL)
 }
 \arguments{
-\item{sims}{A list of simulated data.}
+\item{x}{A data frame with sim and stream integer columns and a list column of fitdists objects.}
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 
-\item{...}{Additional arguments passed to \code{ssdtools::ssd_fit_dists()}.}
+\item{...}{Additional arguments passed to \code{ssdtools::ssd_hc()}.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 
 \item{save_to}{NULL or a string specifying a directory to save where the bootstrap datasets and parameter estimates (when successfully converged) to.}
 }
 \value{
-The sims tibble with a list column fits of fistdist objects.
+The x tibble with a list column hc of data frames produced by applying ssd_hc() to fits.
 }
 \description{
 Fit SSD Distributions to Simulated Data
