@@ -50,7 +50,7 @@ test_that("get_seed_stream advances seed by 1", {
   withr::with_seed(10, {
     seed <- globalenv()$.Random.seed
     expect_snapshot(globalenv()$.Random.seed)
-    get_seed_stream(nseeds = 2L)
+    get_seed_stream(nseeds = 100L)
     seed2 <- globalenv()$.Random.seed 
     expect_snapshot(globalenv()$.Random.seed)
     set.seed(10)
@@ -61,4 +61,10 @@ test_that("get_seed_stream advances seed by 1", {
   )
 })
 
-
+test_that("get_seed_stream local withr work", {
+  local_lecuyer_cmrg_seed(10)
+  seed <- get_seed_stream()
+  with_lecuyer_cmrg_seed(10, {
+    expect_identical(seed, get_seed_stream())
+})
+})
