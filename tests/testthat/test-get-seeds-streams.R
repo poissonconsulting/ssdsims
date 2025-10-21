@@ -46,17 +46,11 @@ test_that("get_seed_stream passses seed", {
                   withr::with_seed(42, get_seed_stream(10)))
 })
 
-test_that("get_seed_stream advances seed by 1", {
+test_that("get_seed_stream does not advance seed", {
   withr::with_seed(10, {
     seed <- globalenv()$.Random.seed
-    expect_snapshot(globalenv()$.Random.seed)
     get_seed_stream(nseeds = 100L)
-    seed2 <- globalenv()$.Random.seed 
-    expect_snapshot(globalenv()$.Random.seed)
-    set.seed(10)
-    expect_identical(seed, globalenv()$.Random.seed)
-    runif(1)
-    expect_identical(seed2, globalenv()$.Random.seed)
+    expect_identical(globalenv()$.Random.seed, seed)
   }
   )
 })

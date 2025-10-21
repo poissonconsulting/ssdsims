@@ -29,8 +29,7 @@ restore_rng_kind <- function (kind)
     NULL
 }
 
-# internal function from withr modified to include option to advance
-set_seed <- function (seed, advance = FALSE) 
+set_seed <- function (seed) 
 {
   restore_rng_kind(seed$rng_kind)
   if (is.null(seed$seed)) {
@@ -38,10 +37,6 @@ set_seed <- function (seed, advance = FALSE)
   }
   else {
     set.seed(seed$seed)
-  }
-  if (advance) {
-    fun <- if (is.null(seed)) suppressWarnings else identity
-    fun(stats::runif(1))
   }
   invisible(get_seed())
 }

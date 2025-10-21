@@ -27,7 +27,7 @@ get_seed_stream <- function(seed = NULL, ..., nseeds = 1L, stream = 1L, start_se
   }
 
   oseed <- get_seed()
-  on.exit(set_seed(oseed, advance = TRUE))
+  on.exit(set_seed(oseed))
 
   if(!is.null(seed)) {
     set.seed(seed)
