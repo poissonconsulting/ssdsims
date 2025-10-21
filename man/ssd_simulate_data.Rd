@@ -72,7 +72,7 @@ ssd_simulate_data(x, ...)
 
 \item{replace}{A flag specifying whether to sample with replacement.}
 
-\item{nrow}{A integer vector of the number of rows in the generated data.}
+\item{nrow}{A count of the number of rows in the generated data which must be between 5 and 1,000,}
 
 \item{seed}{An integer of the starting seed or NULL.}
 
