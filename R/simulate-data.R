@@ -4,7 +4,6 @@
 #' 
 #' @inheritParams params
 #' @param x The object to use for generating the data.
-#' @param ... Unused.
 #' @return A tibble of nested data sets.
 #' @export
 ssd_simulate_data <- function(x, ...) UseMethod("ssd_simulate_data")
@@ -76,7 +75,6 @@ ssd_simulate_data.tmbfit <- function(x, ..., nrow = 6L, seed = NULL, nsim = 100L
 }
 
 #' @describeIn ssd_simulate_data Generate data using distribution name
-#' @param pars A named list of the parameter values.
 #' @export
 #' @examples
 #' ssd_simulate_data("lnorm", nrow = 5, nsim = 3)
@@ -94,7 +92,6 @@ ssd_simulate_data.character <- function(x, ..., pars = list(), nrow = 6L, seed =
 }
 
 #' @describeIn ssd_simulate_data Generate data using function to generate sequence of random numbers
-#' @param args A named list of the argument values.
 #' @export
 #' @examples
 #' ssd_simulate_data(ssdtools::ssd_rlnorm, nrow = 5, nsim = 3)

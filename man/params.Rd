@@ -9,6 +9,8 @@
 \arguments{
 \item{...}{Unused.}
 
+\item{args}{A named list of the argument values.}
+
 \item{dist}{A string specifying the distribution in the fitdists object or
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
 the distributions as a single distribution.}
@@ -16,6 +18,8 @@ the distributions as a single distribution.}
 \item{nrow}{A count of the number of rows in the generated data which must be between 5 and 1,000,}
 
 \item{nsim}{A count of the number of data sets to generate.}
+
+\item{pars}{A named list of the parameter values.}
 
 \item{replace}{A flag specifying whether to sample with replacement.}
 
