@@ -29,11 +29,13 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
 
   sims <- seq(start_sim, start_sim + nsim - 1L) 
   seeds <- get_lecuyer_cmrg_seed_stream(seed = seed, nseed = nsim, start_seed = start_sim, stream = stream)
-  
+ 
+  stream <- as.integer(stream)
+
    purrr::map(seeds, \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed)) |>
-      purrr::map2(sims, \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
+      purrr::map2(sims, \(.x, .y) dplyr::mutate(.x, sim = .y, stream = stream)) |>
       dplyr::bind_rows() |>
-      tidyr::nest(data = !c("sim"))
+      tidyr::nest(data = !c("sim", "stream"))
 }
 
 #' @describeIn ssd_simulate_data Generate data from fitdists object
@@ -108,12 +110,14 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
 
   sims <- seq(start_sim, start_sim + nsim - 1L) 
   seeds <- get_lecuyer_cmrg_seed_stream(seed = seed, nseed = nsim, start_seed = start_sim, stream = stream)
-  
+
+  stream <- as.integer(stream)
   args$n <- nrow
     
   purrr::map(sims, \(seed) do_call_seed(x, args = args, seed = seed)) |>
       purrr::map(\(.x) dplyr::tibble(Conc = .x)) |>
-      purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
+      purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y, stream = stream)) |>
       dplyr::bind_rows() |>
-      tidyr::nest(data = "Conc")
+      tidyr::nest(data = !c("sim", "stream"))
+
 }
