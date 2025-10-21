@@ -24,10 +24,8 @@ do_call_seed <- function(what, args, seed) {
 }
 
 fit_dists_seed <- function(data, sim, stream, seed, dists, silent, save_to, ...) {
-  print(seed)
-  seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_seed = sim, stream = stream)[[1]]
+   seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_seed = sim, stream = stream)[[1]]
   ## TODO: handle failure of all model to fit!!
-  print(seed)
   with_lecuyer_cmrg_seed(seed, {
     fit <- ssdtools::ssd_fit_dists(data, dists = dists, silent = silent, ...)
   })
@@ -35,4 +33,17 @@ fit_dists_seed <- function(data, sim, stream, seed, dists, silent, save_to, ...)
     saveRDS(fit, filepath(stream, sim, dir = save_to, prefix = "fit", ext = ".rds"))
   }
   fit
+}
+
+hc_seed <- function(data, sim, stream, seed, proportion, save_to, ...) {
+  seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_seed = sim, stream = stream)[[1]]
+  ## TODO: handle failure of all model to fit!!
+  with_lecuyer_cmrg_seed(seed, {
+    fit <- ssdtools::ssd_hc(data, proportion = proportion, ...)
+  })
+  # work out what to do with save_to
+  # if(!is.null(save_to)) {
+  #   saveRDS(fit, filepath(stream, sim, dir = save_to, prefix = "fit", ext = ".rds"))
+  # }
+  fit 
 }
