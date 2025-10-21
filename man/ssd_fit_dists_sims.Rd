@@ -5,7 +5,7 @@
 \title{Fit SSD Distributions to Simulated Data}
 \usage{
 ssd_fit_dists_sims(
-  sims,
+  x,
   dists = ssdtools::ssd_dists_bcanz(),
   ...,
   seed = NULL,
@@ -14,7 +14,7 @@ ssd_fit_dists_sims(
 )
 }
 \arguments{
-\item{sims}{A list of simulated data.}
+\item{x}{A data frame with sim and stream integer columns and a list column of the data frames to fit distributions to.}
 
 \item{dists}{A character vector of the distribution names.}
 
@@ -27,7 +27,7 @@ ssd_fit_dists_sims(
 \item{save_to}{A string of the existing directory to save objects to or NULL.}
 }
 \value{
-The sims tibble with a list column fits of fistdist objects.
+The x tibble with a list column fits of fistdist objects.
 }
 \description{
 Fit SSD Distributions to Simulated Data
