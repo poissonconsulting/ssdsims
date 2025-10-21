@@ -10,10 +10,9 @@ ssd_fit_dists_sims(
   ...,
   silent = TRUE,
   save_to = NULL,
-  return_items = TRUE,
   seed = NULL,
   stream = 1L,
-  start_seed = 1L
+  start_sim = 1L
 )
 }
 \arguments{
@@ -21,22 +20,20 @@ ssd_fit_dists_sims(
 
 \item{dists}{A character vector of the distribution names.}
 
-\item{...}{Unused.}
+\item{...}{Additional arguments passed to \code{ssdtools::ssd_fit_dists()}.}
 
 \item{silent}{A flag indicating whether fits should fail silently.}
 
 \item{save_to}{A string of the existing directory to save objects to or NULL.}
 
-\item{return_items}{A flag specifying whether to return a list of the generated items.}
-
 \item{seed}{An integer of the starting seed or NULL.}
 
 \item{stream}{A count of the stream number.}
 
-\item{start_seed}{A count of the number of the seed to start getting seeds from.}
+\item{start_sim}{A count of the number of the simulation to start from.}
 }
 \value{
-A list of fitdists objects unless \code{return_items = FALSE}.
+The sims tibble with a list column fits of fistdist objects.
 }
 \description{
 Fit SSD Distributions to Simulated Data
