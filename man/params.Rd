@@ -17,6 +17,8 @@ the distributions as a single distribution.}
 
 \item{nsim}{A count of the number of data sets to generate.}
 
+\item{replace}{A flag specifying whether to sample with replacement.}
+
 \item{seed}{An integer of the starting seed or NULL.}
 
 \item{start_sim}{A count of the number of the simulation to start from.}

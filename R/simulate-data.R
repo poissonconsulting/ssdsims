@@ -10,7 +10,6 @@
 ssd_simulate_data <- function(x, ...) UseMethod("ssd_simulate_data")
 
 #' @describeIn ssd_simulate_data Generate data from data.frame
-#' @param replace A flag specifying whether to sample with replacement.
 #' @export
 #' @examples
 #' ssd_simulate_data(ssddata::ccme_boron, nrow = 5, nsim = 3)

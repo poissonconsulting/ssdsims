@@ -12,6 +12,7 @@
 #' the distributions as a single distribution.
 #' @param nrow A count of the number of rows in the generated data which must be between 5 and 1,000,
 #' @param nsim A count of the number of data sets to generate. 
+#' @param replace A flag specifying whether to sample with replacement.
 #' @param seed An integer of the starting seed or NULL.
 #' @param start_sim A count of the number of the simulation to start from.
 #' @param stream A count of the stream number.
