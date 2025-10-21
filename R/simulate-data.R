@@ -33,8 +33,7 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
    purrr::map(seeds, \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed)) |>
       purrr::map2(sims, \(.x, .y) dplyr::mutate(.x, sim = .y)) |>
       dplyr::bind_rows() |>
-      dplyr::select("sim", "Conc") |>
-      tidyr::nest(data = "Conc")
+      tidyr::nest(data = !c("sim"))
 }
 
 #' @describeIn ssd_simulate_data Generate data from fitdists object
