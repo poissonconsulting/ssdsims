@@ -4,7 +4,7 @@
 \alias{ssd_hc_sims}
 \title{Fit SSD Distributions to Simulated Data}
 \usage{
-ssd_hc_sims(x, proportion = 0.05, ..., seed = NULL, save_to = NULL)
+ssd_hc_sims(x, proportion = 0.05, ..., ci = FALSE, seed = NULL, save_to = NULL)
 }
 \arguments{
 \item{x}{A data frame with sim and stream integer columns and a list column of fitdists objects.}
@@ -12,6 +12,8 @@ ssd_hc_sims(x, proportion = 0.05, ..., seed = NULL, save_to = NULL)
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 
 \item{...}{Additional arguments passed to \code{ssdtools::ssd_hc()}.}
+
+\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
 
 \item{seed}{An integer of the starting seed or NULL.}
 

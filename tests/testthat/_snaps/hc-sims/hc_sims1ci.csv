@@ -1,0 +1,1334 @@
+sim,stream,data,fits,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
+1,1,"list(Conc = c(1.58535887905803, 3.83090877340542, 2.71059533395263, 0.692377319352428, 0.876356155726321, 5.91268079141089))","list(gamma = list(dist = ""gamma"", model = list(par = c(log_shape = 0.518780089662888, log_scale = 0.437261807784766), fn = function (x = last.par[lfixed()], ...) 
+{
+    if (tracepar) {
+        cat(""par:\n"")
+        print(x)
+    }
+    if (!validpar(x)) 
+        return(NaN)
+    if (is.null(random)) {
+        ans <- f(x, order = 0)
+        if (!ADreport) {
+            if (is.finite(ans) && ans < value.best) {
+                last.par.best <<- x
+                value.best <<- ans
+            }
+        }
+    }
+    else {
+        ans <- try({
+            if (MCcontrol$doMC) {
+                ff(x, order = 0)
+                MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 0)
+            }
+            else ff(x, order = 0)
+        }, silent = silent)
+        if (is.character(ans)) 
+            ans <- NaN
+    }
+    ans
+}, gr = function (x = last.par[lfixed()], ...) 
+{
+    if (is.null(random)) {
+        ans <- f(x, order = 1)
+    }
+    else {
+        ans <- try({
+            if (MCcontrol$doMC) {
+                ff(x, order = 0)
+                MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 1)
+            }
+            else ff(x, order = 1)
+        }, silent = silent)
+        if (is.character(ans)) 
+            ans <- rep(NaN, length(x))
+    }
+    if (tracemgc) 
+        cat(""outer mgc: "", max(abs(ans)), ""\n"")
+    ans
+}, he = function (x = last.par[lfixed()], atomic = usingAtomics()) 
+{
+    if (is.null(random)) {
+        if (!atomic) 
+            return(f(x, order = 2))
+        if (is.null(ADGrad)) 
+            retape_adgrad()
+        return(f(x, type = ""ADGrad"", order = 1))
+    }
+    else {
+        stop(""Hessian not yet implemented for models with random effects."")
+    }
+}, hessian = FALSE, method = ""BFGS"", retape = function (set.defaults = TRUE) 
+{
+    omp <- config(DLL = DLL)
+    random <<- .random
+    if (atomic) {
+        Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+        out <- EvalDoubleFunObject(Fun, unlist(parameters), get_reportdims = TRUE)
+        ADreportDims <<- attr(out, ""reportdims"")
+    }
+    if (is.character(profile)) {
+        random <<- c(random, profile)
+    }
+    if (is.character(random)) {
+        if (!regexp) {
+            if (!all(random %in% names(parameters))) {
+                cat(""Some 'random' effect names does not match 'parameter' list:\n"")
+                print(setdiff(random, names(parameters)))
+                cat(""(Note that regular expression match is disabled by default)\n"")
+                stop()
+            }
+            if (any(duplicated(random))) {
+                cat(""Duplicates in 'random' - will be removed\n"")
+                random <<- unique(random)
+            }
+            tmp <- lapply(parameters, function(x) x * 0)
+            tmp[random] <- lapply(tmp[random], function(x) x * 0 + 1)
+            random <<- which(as.logical(unlist(tmp)))
+            if (length(random) == 0) 
+                random <<- NULL
+        }
+        if (regexp) {
+            random <<- grepRandomParameters(parameters, random)
+            if (length(random) == 0) {
+                cat(""Selected random effects did not match any model parameters.\n"")
+                random <<- NULL
+            }
+        }
+        if (is.character(profile)) {
+            tmp <- lapply(parameters, function(x) x * 0)
+            tmp[profile] <- lapply(tmp[profile], function(x) x * 0 + 1)
+            profile <<- match(which(as.logical(unlist(tmp))), random)
+            if (length(profile) == 0) 
+                random <<- NULL
+            if (any(duplicated(profile))) 
+                stop(""Profile parameter vector not unique."")
+            tmp <- rep(0, length(random))
+            tmp[profile] <- 1
+            profile <<- tmp
+        }
+        if (set.defaults) {
+            par <<- unlist(parameters)
+        }
+    }
+    if (""ADFun"" %in% type) {
+        if (omp$autopar) 
+            openmp(1, DLL = DLL)
+        ADFun <<- MakeADFunObject(data, parameters, reportenv, ADreport = ADreport, DLL = DLL)
+        if (omp$autopar) 
+            openmp(omp$nthreads, DLL = DLL)
+        if (!is.null(integrate)) {
+            nm <- sapply(parameters, length)
+            nmpar <- rep(names(nm), nm)
+            for (i in seq_along(integrate)) {
+                I <- integrate[i]
+                if (is.null(names(I)) || names(I) == """") {
+                  I <- I[[1]]
+                }
+                ok <- all(names(I) %in% nmpar[random])
+                if (!ok) 
+                  stop(""Names to be 'integrate'd must be among the random parameters"")
+                w <- which(nmpar[random] %in% names(I))
+                arg_which <- I[[1]]$which
+                if (!is.null(arg_which)) 
+                  w <- w[arg_which]
+                method <- sapply(I, function(x) x$method)
+                ok <- all(duplicated(method)[-1])
+                if (!ok) 
+                  stop(""Grouping only allowed for identical methods"")
+                method <- method[1]
+                cfg <- NULL
+                if (method == ""marginal_sr"") {
+                  fac <- factor(nmpar[random[w]], levels = names(I))
+                  cfg <- list(grid = I, random2grid = fac)
+                }
+                else {
+                  cfg <- I[[1]]
+                }
+                stopifnot(is.list(cfg))
+                TransformADFunObject(ADFun, method = method, random_order = random[w], config = cfg, mustWork = 1)
+                activeDomain <- as.logical(info(ADFun)$activeDomain)
+                random_remove <- random[w][!activeDomain[random[w]]]
+                TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random_remove, mustWork = 1)
+                attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random_remove]
+                par_mask <- rep(FALSE, length(attr(ADFun$ptr, ""par"")))
+                par_mask[random] <- TRUE
+                par <<- par[-random_remove]
+                nmpar <- nmpar[-random_remove]
+                par_mask <- par_mask[-random_remove]
+                random <<- which(par_mask)
+                if (length(random) == 0) {
+                  random <<- NULL
+                  type <<- setdiff(type, ""ADGrad"")
+                }
+                if (config(DLL = DLL)$optimize.instantly) {
+                  TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                }
+            }
+        }
+        if (intern) {
+            cfg <- inner.control
+            if (is.null(cfg$sparse)) 
+                cfg$sparse <- TRUE
+            cfg <- lapply(cfg, as.double)
+            TransformADFunObject(ADFun, method = ""laplace"", config = cfg, random_order = random, mustWork = 1)
+            TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random, mustWork = 1)
+            attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random]
+            par <<- par[-random]
+            random <<- NULL
+            if (config(DLL = DLL)$optimize.instantly) {
+                TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+            }
+        }
+        if (set.defaults) {
+            par <<- attr(ADFun$ptr, ""par"")
+            last.par <<- par
+            last.par1 <<- par
+            last.par2 <<- par
+            last.par.best <<- par
+            value.best <<- Inf
+        }
+    }
+    if (omp$autopar && !ADreport) {
+        TransformADFunObject(ADFun, method = ""parallel_accumulate"", num_threads = as.integer(openmp(DLL = DLL)), mustWork = 0)
+    }
+    if (length(random) > 0) {
+        TransformADFunObject(ADFun, method = ""reorder_random"", random_order = random, mustWork = 0)
+    }
+    if (""Fun"" %in% type) {
+        Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+    }
+    if (""ADGrad"" %in% type) {
+        retape_adgrad(lazy = TRUE)
+    }
+    env$skipFixedEffects <- !is.null(ADGrad)
+    delayedAssign(""spHess"", sparseHessianFun(env, skipFixedEffects = skipFixedEffects), assign.env = env)
+}, env = <environment>, report = function (par = last.par) 
+{
+    f(par, order = 0, type = ""double"")
+    as.list(reportenv)
+}, simulate = function (par = last.par, complete = FALSE) 
+{
+    f(par, order = 0, type = ""double"", do_simulate = TRUE)
+    sim <- as.list(reportenv)
+    if (complete) {
+        ans <- data
+        ans[names(sim)] <- sim
+    }
+    else {
+        ans <- sim
+    }
+    ans
+}), optim = list(par = c(log_shape = 0.672968855128749, log_scale = 0.283073509653298), value = 11.0754487116769, counts = c(`function` = 8, gradient = 8), convergence = 0, message = ""CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"", hessian = c(15.2476860621103, 11.7602877145024, 11.7602877145024, 11.7602831985411)), est = c(scale = 1.3272027204432, shape = 1.96004778907978), pars = list(log_scale = 0.283073509653298, log_shape = 0.672968855128749), flags = list(at_boundary = FALSE, computable = TRUE)), 
+    lgumbel = list(dist = ""lgumbel"", model = list(par = c(locationlog = 0.679762260982086, log_scalelog = 0.0774363712824645), fn = function (x = last.par[lfixed()], ...) 
+    {
+        if (tracepar) {
+            cat(""par:\n"")
+            print(x)
+        }
+        if (!validpar(x)) 
+            return(NaN)
+        if (is.null(random)) {
+            ans <- f(x, order = 0)
+            if (!ADreport) {
+                if (is.finite(ans) && ans < value.best) {
+                  last.par.best <<- x
+                  value.best <<- ans
+                }
+            }
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 0)
+                }
+                else ff(x, order = 0)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- NaN
+        }
+        ans
+    }, gr = function (x = last.par[lfixed()], ...) 
+    {
+        if (is.null(random)) {
+            ans <- f(x, order = 1)
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 1)
+                }
+                else ff(x, order = 1)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- rep(NaN, length(x))
+        }
+        if (tracemgc) 
+            cat(""outer mgc: "", max(abs(ans)), ""\n"")
+        ans
+    }, he = function (x = last.par[lfixed()], atomic = usingAtomics()) 
+    {
+        if (is.null(random)) {
+            if (!atomic) 
+                return(f(x, order = 2))
+            if (is.null(ADGrad)) 
+                retape_adgrad()
+            return(f(x, type = ""ADGrad"", order = 1))
+        }
+        else {
+            stop(""Hessian not yet implemented for models with random effects."")
+        }
+    }, hessian = FALSE, method = ""BFGS"", retape = function (set.defaults = TRUE) 
+    {
+        omp <- config(DLL = DLL)
+        random <<- .random
+        if (atomic) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+            out <- EvalDoubleFunObject(Fun, unlist(parameters), get_reportdims = TRUE)
+            ADreportDims <<- attr(out, ""reportdims"")
+        }
+        if (is.character(profile)) {
+            random <<- c(random, profile)
+        }
+        if (is.character(random)) {
+            if (!regexp) {
+                if (!all(random %in% names(parameters))) {
+                  cat(""Some 'random' effect names does not match 'parameter' list:\n"")
+                  print(setdiff(random, names(parameters)))
+                  cat(""(Note that regular expression match is disabled by default)\n"")
+                  stop()
+                }
+                if (any(duplicated(random))) {
+                  cat(""Duplicates in 'random' - will be removed\n"")
+                  random <<- unique(random)
+                }
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[random] <- lapply(tmp[random], function(x) x * 0 + 1)
+                random <<- which(as.logical(unlist(tmp)))
+                if (length(random) == 0) 
+                  random <<- NULL
+            }
+            if (regexp) {
+                random <<- grepRandomParameters(parameters, random)
+                if (length(random) == 0) {
+                  cat(""Selected random effects did not match any model parameters.\n"")
+                  random <<- NULL
+                }
+            }
+            if (is.character(profile)) {
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[profile] <- lapply(tmp[profile], function(x) x * 0 + 1)
+                profile <<- match(which(as.logical(unlist(tmp))), random)
+                if (length(profile) == 0) 
+                  random <<- NULL
+                if (any(duplicated(profile))) 
+                  stop(""Profile parameter vector not unique."")
+                tmp <- rep(0, length(random))
+                tmp[profile] <- 1
+                profile <<- tmp
+            }
+            if (set.defaults) {
+                par <<- unlist(parameters)
+            }
+        }
+        if (""ADFun"" %in% type) {
+            if (omp$autopar) 
+                openmp(1, DLL = DLL)
+            ADFun <<- MakeADFunObject(data, parameters, reportenv, ADreport = ADreport, DLL = DLL)
+            if (omp$autopar) 
+                openmp(omp$nthreads, DLL = DLL)
+            if (!is.null(integrate)) {
+                nm <- sapply(parameters, length)
+                nmpar <- rep(names(nm), nm)
+                for (i in seq_along(integrate)) {
+                  I <- integrate[i]
+                  if (is.null(names(I)) || names(I) == """") {
+                    I <- I[[1]]
+                  }
+                  ok <- all(names(I) %in% nmpar[random])
+                  if (!ok) 
+                    stop(""Names to be 'integrate'd must be among the random parameters"")
+                  w <- which(nmpar[random] %in% names(I))
+                  arg_which <- I[[1]]$which
+                  if (!is.null(arg_which)) 
+                    w <- w[arg_which]
+                  method <- sapply(I, function(x) x$method)
+                  ok <- all(duplicated(method)[-1])
+                  if (!ok) 
+                    stop(""Grouping only allowed for identical methods"")
+                  method <- method[1]
+                  cfg <- NULL
+                  if (method == ""marginal_sr"") {
+                    fac <- factor(nmpar[random[w]], levels = names(I))
+                    cfg <- list(grid = I, random2grid = fac)
+                  }
+                  else {
+                    cfg <- I[[1]]
+                  }
+                  stopifnot(is.list(cfg))
+                  TransformADFunObject(ADFun, method = method, random_order = random[w], config = cfg, mustWork = 1)
+                  activeDomain <- as.logical(info(ADFun)$activeDomain)
+                  random_remove <- random[w][!activeDomain[random[w]]]
+                  TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random_remove, mustWork = 1)
+                  attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random_remove]
+                  par_mask <- rep(FALSE, length(attr(ADFun$ptr, ""par"")))
+                  par_mask[random] <- TRUE
+                  par <<- par[-random_remove]
+                  nmpar <- nmpar[-random_remove]
+                  par_mask <- par_mask[-random_remove]
+                  random <<- which(par_mask)
+                  if (length(random) == 0) {
+                    random <<- NULL
+                    type <<- setdiff(type, ""ADGrad"")
+                  }
+                  if (config(DLL = DLL)$optimize.instantly) {
+                    TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                  }
+                }
+            }
+            if (intern) {
+                cfg <- inner.control
+                if (is.null(cfg$sparse)) 
+                  cfg$sparse <- TRUE
+                cfg <- lapply(cfg, as.double)
+                TransformADFunObject(ADFun, method = ""laplace"", config = cfg, random_order = random, mustWork = 1)
+                TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random, mustWork = 1)
+                attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random]
+                par <<- par[-random]
+                random <<- NULL
+                if (config(DLL = DLL)$optimize.instantly) {
+                  TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                }
+            }
+            if (set.defaults) {
+                par <<- attr(ADFun$ptr, ""par"")
+                last.par <<- par
+                last.par1 <<- par
+                last.par2 <<- par
+                last.par.best <<- par
+                value.best <<- Inf
+            }
+        }
+        if (omp$autopar && !ADreport) {
+            TransformADFunObject(ADFun, method = ""parallel_accumulate"", num_threads = as.integer(openmp(DLL = DLL)), mustWork = 0)
+        }
+        if (length(random) > 0) {
+            TransformADFunObject(ADFun, method = ""reorder_random"", random_order = random, mustWork = 0)
+        }
+        if (""Fun"" %in% type) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+        }
+        if (""ADGrad"" %in% type) {
+            retape_adgrad(lazy = TRUE)
+        }
+        env$skipFixedEffects <- !is.null(ADGrad)
+        delayedAssign(""spHess"", sparseHessianFun(env, skipFixedEffects = skipFixedEffects), assign.env = env)
+    }, env = <environment>, report = function (par = last.par) 
+    {
+        f(par, order = 0, type = ""double"")
+        as.list(reportenv)
+    }, simulate = function (par = last.par, complete = FALSE) 
+    {
+        f(par, order = 0, type = ""double"", do_simulate = TRUE)
+        sim <- as.list(reportenv)
+        if (complete) {
+            ans <- data
+            ans[names(sim)] <- sim
+        }
+        else {
+            ans <- sim
+        }
+        ans
+    }), optim = list(par = c(locationlog = 0.296802411959905, log_scalelog = -0.38331847938149), value = 11.1498109860176, counts = c(`function` = 9, gradient = 9), convergence = 0, message = ""CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"", hessian = c(12.9150994592457, -3.85693533208831, -3.85693533208831, 10.729854449394)), est = c(locationlog = 0.296802411959905, scalelog = 0.681595790509704), pars = list(locationlog = 0.296802411959905, log_scalelog = -0.38331847938149), flags = list(at_boundary = FALSE, 
+        computable = TRUE)), llogis = list(dist = ""llogis"", model = list(par = c(locationlog = 0.679762260982086, log_scalelog = 0.424009961562437), fn = function (x = last.par[lfixed()], ...) 
+    {
+        if (tracepar) {
+            cat(""par:\n"")
+            print(x)
+        }
+        if (!validpar(x)) 
+            return(NaN)
+        if (is.null(random)) {
+            ans <- f(x, order = 0)
+            if (!ADreport) {
+                if (is.finite(ans) && ans < value.best) {
+                  last.par.best <<- x
+                  value.best <<- ans
+                }
+            }
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 0)
+                }
+                else ff(x, order = 0)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- NaN
+        }
+        ans
+    }, gr = function (x = last.par[lfixed()], ...) 
+    {
+        if (is.null(random)) {
+            ans <- f(x, order = 1)
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 1)
+                }
+                else ff(x, order = 1)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- rep(NaN, length(x))
+        }
+        if (tracemgc) 
+            cat(""outer mgc: "", max(abs(ans)), ""\n"")
+        ans
+    }, he = function (x = last.par[lfixed()], atomic = usingAtomics()) 
+    {
+        if (is.null(random)) {
+            if (!atomic) 
+                return(f(x, order = 2))
+            if (is.null(ADGrad)) 
+                retape_adgrad()
+            return(f(x, type = ""ADGrad"", order = 1))
+        }
+        else {
+            stop(""Hessian not yet implemented for models with random effects."")
+        }
+    }, hessian = FALSE, method = ""BFGS"", retape = function (set.defaults = TRUE) 
+    {
+        omp <- config(DLL = DLL)
+        random <<- .random
+        if (atomic) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+            out <- EvalDoubleFunObject(Fun, unlist(parameters), get_reportdims = TRUE)
+            ADreportDims <<- attr(out, ""reportdims"")
+        }
+        if (is.character(profile)) {
+            random <<- c(random, profile)
+        }
+        if (is.character(random)) {
+            if (!regexp) {
+                if (!all(random %in% names(parameters))) {
+                  cat(""Some 'random' effect names does not match 'parameter' list:\n"")
+                  print(setdiff(random, names(parameters)))
+                  cat(""(Note that regular expression match is disabled by default)\n"")
+                  stop()
+                }
+                if (any(duplicated(random))) {
+                  cat(""Duplicates in 'random' - will be removed\n"")
+                  random <<- unique(random)
+                }
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[random] <- lapply(tmp[random], function(x) x * 0 + 1)
+                random <<- which(as.logical(unlist(tmp)))
+                if (length(random) == 0) 
+                  random <<- NULL
+            }
+            if (regexp) {
+                random <<- grepRandomParameters(parameters, random)
+                if (length(random) == 0) {
+                  cat(""Selected random effects did not match any model parameters.\n"")
+                  random <<- NULL
+                }
+            }
+            if (is.character(profile)) {
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[profile] <- lapply(tmp[profile], function(x) x * 0 + 1)
+                profile <<- match(which(as.logical(unlist(tmp))), random)
+                if (length(profile) == 0) 
+                  random <<- NULL
+                if (any(duplicated(profile))) 
+                  stop(""Profile parameter vector not unique."")
+                tmp <- rep(0, length(random))
+                tmp[profile] <- 1
+                profile <<- tmp
+            }
+            if (set.defaults) {
+                par <<- unlist(parameters)
+            }
+        }
+        if (""ADFun"" %in% type) {
+            if (omp$autopar) 
+                openmp(1, DLL = DLL)
+            ADFun <<- MakeADFunObject(data, parameters, reportenv, ADreport = ADreport, DLL = DLL)
+            if (omp$autopar) 
+                openmp(omp$nthreads, DLL = DLL)
+            if (!is.null(integrate)) {
+                nm <- sapply(parameters, length)
+                nmpar <- rep(names(nm), nm)
+                for (i in seq_along(integrate)) {
+                  I <- integrate[i]
+                  if (is.null(names(I)) || names(I) == """") {
+                    I <- I[[1]]
+                  }
+                  ok <- all(names(I) %in% nmpar[random])
+                  if (!ok) 
+                    stop(""Names to be 'integrate'd must be among the random parameters"")
+                  w <- which(nmpar[random] %in% names(I))
+                  arg_which <- I[[1]]$which
+                  if (!is.null(arg_which)) 
+                    w <- w[arg_which]
+                  method <- sapply(I, function(x) x$method)
+                  ok <- all(duplicated(method)[-1])
+                  if (!ok) 
+                    stop(""Grouping only allowed for identical methods"")
+                  method <- method[1]
+                  cfg <- NULL
+                  if (method == ""marginal_sr"") {
+                    fac <- factor(nmpar[random[w]], levels = names(I))
+                    cfg <- list(grid = I, random2grid = fac)
+                  }
+                  else {
+                    cfg <- I[[1]]
+                  }
+                  stopifnot(is.list(cfg))
+                  TransformADFunObject(ADFun, method = method, random_order = random[w], config = cfg, mustWork = 1)
+                  activeDomain <- as.logical(info(ADFun)$activeDomain)
+                  random_remove <- random[w][!activeDomain[random[w]]]
+                  TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random_remove, mustWork = 1)
+                  attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random_remove]
+                  par_mask <- rep(FALSE, length(attr(ADFun$ptr, ""par"")))
+                  par_mask[random] <- TRUE
+                  par <<- par[-random_remove]
+                  nmpar <- nmpar[-random_remove]
+                  par_mask <- par_mask[-random_remove]
+                  random <<- which(par_mask)
+                  if (length(random) == 0) {
+                    random <<- NULL
+                    type <<- setdiff(type, ""ADGrad"")
+                  }
+                  if (config(DLL = DLL)$optimize.instantly) {
+                    TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                  }
+                }
+            }
+            if (intern) {
+                cfg <- inner.control
+                if (is.null(cfg$sparse)) 
+                  cfg$sparse <- TRUE
+                cfg <- lapply(cfg, as.double)
+                TransformADFunObject(ADFun, method = ""laplace"", config = cfg, random_order = random, mustWork = 1)
+                TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random, mustWork = 1)
+                attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random]
+                par <<- par[-random]
+                random <<- NULL
+                if (config(DLL = DLL)$optimize.instantly) {
+                  TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                }
+            }
+            if (set.defaults) {
+                par <<- attr(ADFun$ptr, ""par"")
+                last.par <<- par
+                last.par1 <<- par
+                last.par2 <<- par
+                last.par.best <<- par
+                value.best <<- Inf
+            }
+        }
+        if (omp$autopar && !ADreport) {
+            TransformADFunObject(ADFun, method = ""parallel_accumulate"", num_threads = as.integer(openmp(DLL = DLL)), mustWork = 0)
+        }
+        if (length(random) > 0) {
+            TransformADFunObject(ADFun, method = ""reorder_random"", random_order = random, mustWork = 0)
+        }
+        if (""Fun"" %in% type) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+        }
+        if (""ADGrad"" %in% type) {
+            retape_adgrad(lazy = TRUE)
+        }
+        env$skipFixedEffects <- !is.null(ADGrad)
+        delayedAssign(""spHess"", sparseHessianFun(env, skipFixedEffects = skipFixedEffects), assign.env = env)
+    }, env = <environment>, report = function (par = last.par) 
+    {
+        f(par, order = 0, type = ""double"")
+        as.list(reportenv)
+    }, simulate = function (par = last.par, complete = FALSE) 
+    {
+        f(par, order = 0, type = ""double"", do_simulate = TRUE)
+        sim <- as.list(reportenv)
+        if (complete) {
+            ans <- data
+            ans[names(sim)] <- sim
+        }
+        else {
+            ans <- sim
+        }
+        ans
+    }), optim = list(par = c(locationlog = 0.685837980702908, log_scalelog = -0.743770301087676), value = 11.3407349552588, counts = c(`function` = 7, gradient = 7), convergence = 0, message = ""CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"", hessian = c(8.16470969502081, 0.125964352303982, 0.125964352303982, 9.42132989951453)), est = c(locationlog = 0.685837980702908, scalelog = 0.475318439276335), pars = list(locationlog = 0.685837980702908, log_scalelog = -0.743770301087676), flags = list(at_boundary = FALSE, 
+        computable = TRUE)), lnorm = list(dist = ""lnorm"", model = list(par = c(meanlog = 0.686559883591907, log_sdlog = -0.169699642153379), fn = function (x = last.par[lfixed()], ...) 
+    {
+        if (tracepar) {
+            cat(""par:\n"")
+            print(x)
+        }
+        if (!validpar(x)) 
+            return(NaN)
+        if (is.null(random)) {
+            ans <- f(x, order = 0)
+            if (!ADreport) {
+                if (is.finite(ans) && ans < value.best) {
+                  last.par.best <<- x
+                  value.best <<- ans
+                }
+            }
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 0)
+                }
+                else ff(x, order = 0)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- NaN
+        }
+        ans
+    }, gr = function (x = last.par[lfixed()], ...) 
+    {
+        if (is.null(random)) {
+            ans <- f(x, order = 1)
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 1)
+                }
+                else ff(x, order = 1)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- rep(NaN, length(x))
+        }
+        if (tracemgc) 
+            cat(""outer mgc: "", max(abs(ans)), ""\n"")
+        ans
+    }, he = function (x = last.par[lfixed()], atomic = usingAtomics()) 
+    {
+        if (is.null(random)) {
+            if (!atomic) 
+                return(f(x, order = 2))
+            if (is.null(ADGrad)) 
+                retape_adgrad()
+            return(f(x, type = ""ADGrad"", order = 1))
+        }
+        else {
+            stop(""Hessian not yet implemented for models with random effects."")
+        }
+    }, hessian = FALSE, method = ""BFGS"", retape = function (set.defaults = TRUE) 
+    {
+        omp <- config(DLL = DLL)
+        random <<- .random
+        if (atomic) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+            out <- EvalDoubleFunObject(Fun, unlist(parameters), get_reportdims = TRUE)
+            ADreportDims <<- attr(out, ""reportdims"")
+        }
+        if (is.character(profile)) {
+            random <<- c(random, profile)
+        }
+        if (is.character(random)) {
+            if (!regexp) {
+                if (!all(random %in% names(parameters))) {
+                  cat(""Some 'random' effect names does not match 'parameter' list:\n"")
+                  print(setdiff(random, names(parameters)))
+                  cat(""(Note that regular expression match is disabled by default)\n"")
+                  stop()
+                }
+                if (any(duplicated(random))) {
+                  cat(""Duplicates in 'random' - will be removed\n"")
+                  random <<- unique(random)
+                }
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[random] <- lapply(tmp[random], function(x) x * 0 + 1)
+                random <<- which(as.logical(unlist(tmp)))
+                if (length(random) == 0) 
+                  random <<- NULL
+            }
+            if (regexp) {
+                random <<- grepRandomParameters(parameters, random)
+                if (length(random) == 0) {
+                  cat(""Selected random effects did not match any model parameters.\n"")
+                  random <<- NULL
+                }
+            }
+            if (is.character(profile)) {
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[profile] <- lapply(tmp[profile], function(x) x * 0 + 1)
+                profile <<- match(which(as.logical(unlist(tmp))), random)
+                if (length(profile) == 0) 
+                  random <<- NULL
+                if (any(duplicated(profile))) 
+                  stop(""Profile parameter vector not unique."")
+                tmp <- rep(0, length(random))
+                tmp[profile] <- 1
+                profile <<- tmp
+            }
+            if (set.defaults) {
+                par <<- unlist(parameters)
+            }
+        }
+        if (""ADFun"" %in% type) {
+            if (omp$autopar) 
+                openmp(1, DLL = DLL)
+            ADFun <<- MakeADFunObject(data, parameters, reportenv, ADreport = ADreport, DLL = DLL)
+            if (omp$autopar) 
+                openmp(omp$nthreads, DLL = DLL)
+            if (!is.null(integrate)) {
+                nm <- sapply(parameters, length)
+                nmpar <- rep(names(nm), nm)
+                for (i in seq_along(integrate)) {
+                  I <- integrate[i]
+                  if (is.null(names(I)) || names(I) == """") {
+                    I <- I[[1]]
+                  }
+                  ok <- all(names(I) %in% nmpar[random])
+                  if (!ok) 
+                    stop(""Names to be 'integrate'd must be among the random parameters"")
+                  w <- which(nmpar[random] %in% names(I))
+                  arg_which <- I[[1]]$which
+                  if (!is.null(arg_which)) 
+                    w <- w[arg_which]
+                  method <- sapply(I, function(x) x$method)
+                  ok <- all(duplicated(method)[-1])
+                  if (!ok) 
+                    stop(""Grouping only allowed for identical methods"")
+                  method <- method[1]
+                  cfg <- NULL
+                  if (method == ""marginal_sr"") {
+                    fac <- factor(nmpar[random[w]], levels = names(I))
+                    cfg <- list(grid = I, random2grid = fac)
+                  }
+                  else {
+                    cfg <- I[[1]]
+                  }
+                  stopifnot(is.list(cfg))
+                  TransformADFunObject(ADFun, method = method, random_order = random[w], config = cfg, mustWork = 1)
+                  activeDomain <- as.logical(info(ADFun)$activeDomain)
+                  random_remove <- random[w][!activeDomain[random[w]]]
+                  TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random_remove, mustWork = 1)
+                  attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random_remove]
+                  par_mask <- rep(FALSE, length(attr(ADFun$ptr, ""par"")))
+                  par_mask[random] <- TRUE
+                  par <<- par[-random_remove]
+                  nmpar <- nmpar[-random_remove]
+                  par_mask <- par_mask[-random_remove]
+                  random <<- which(par_mask)
+                  if (length(random) == 0) {
+                    random <<- NULL
+                    type <<- setdiff(type, ""ADGrad"")
+                  }
+                  if (config(DLL = DLL)$optimize.instantly) {
+                    TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                  }
+                }
+            }
+            if (intern) {
+                cfg <- inner.control
+                if (is.null(cfg$sparse)) 
+                  cfg$sparse <- TRUE
+                cfg <- lapply(cfg, as.double)
+                TransformADFunObject(ADFun, method = ""laplace"", config = cfg, random_order = random, mustWork = 1)
+                TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random, mustWork = 1)
+                attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random]
+                par <<- par[-random]
+                random <<- NULL
+                if (config(DLL = DLL)$optimize.instantly) {
+                  TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                }
+            }
+            if (set.defaults) {
+                par <<- attr(ADFun$ptr, ""par"")
+                last.par <<- par
+                last.par1 <<- par
+                last.par2 <<- par
+                last.par.best <<- par
+                value.best <<- Inf
+            }
+        }
+        if (omp$autopar && !ADreport) {
+            TransformADFunObject(ADFun, method = ""parallel_accumulate"", num_threads = as.integer(openmp(DLL = DLL)), mustWork = 0)
+        }
+        if (length(random) > 0) {
+            TransformADFunObject(ADFun, method = ""reorder_random"", random_order = random, mustWork = 0)
+        }
+        if (""Fun"" %in% type) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+        }
+        if (""ADGrad"" %in% type) {
+            retape_adgrad(lazy = TRUE)
+        }
+        env$skipFixedEffects <- !is.null(ADGrad)
+        delayedAssign(""spHess"", sparseHessianFun(env, skipFixedEffects = skipFixedEffects), assign.env = env)
+    }, env = <environment>, report = function (par = last.par) 
+    {
+        f(par, order = 0, type = ""double"")
+        as.list(reportenv)
+    }, simulate = function (par = last.par, complete = FALSE) 
+    {
+        f(par, order = 0, type = ""double"", do_simulate = TRUE)
+        sim <- as.list(reportenv)
+        if (complete) {
+            ans <- data
+            ans[names(sim)] <- sim
+        }
+        else {
+            ans <- sim
+        }
+        ans
+    }), optim = list(par = c(meanlog = 0.679767346676092, log_sdlog = -0.26257550350974), value = 11.0167574151578, counts = c(`function` = 6, gradient = 6), convergence = 0, message = ""CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"", hessian = c(10.1442848328368, -0.000103181491450193, -0.000103181491450193, 12.0000306843988)), est = c(meanlog = 0.679767346676092, sdlog = 0.769068294820882), pars = list(meanlog = 0.679767346676092, log_sdlog = -0.26257550350974), flags = list(at_boundary = FALSE, 
+        computable = TRUE)), lnorm_lnorm = list(dist = ""lnorm_lnorm"", model = list(par = c(meanlog1 = -0.0130613567557379, log_sdlog1 = -0.84279575919664, meanlog2 = 1.38618112393955, log_sdlog2 = -0.930180839661385, pmix = 0.5), fn = function (x = last.par[lfixed()], ...) 
+    {
+        if (tracepar) {
+            cat(""par:\n"")
+            print(x)
+        }
+        if (!validpar(x)) 
+            return(NaN)
+        if (is.null(random)) {
+            ans <- f(x, order = 0)
+            if (!ADreport) {
+                if (is.finite(ans) && ans < value.best) {
+                  last.par.best <<- x
+                  value.best <<- ans
+                }
+            }
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 0)
+                }
+                else ff(x, order = 0)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- NaN
+        }
+        ans
+    }, gr = function (x = last.par[lfixed()], ...) 
+    {
+        if (is.null(random)) {
+            ans <- f(x, order = 1)
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 1)
+                }
+                else ff(x, order = 1)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- rep(NaN, length(x))
+        }
+        if (tracemgc) 
+            cat(""outer mgc: "", max(abs(ans)), ""\n"")
+        ans
+    }, he = function (x = last.par[lfixed()], atomic = usingAtomics()) 
+    {
+        if (is.null(random)) {
+            if (!atomic) 
+                return(f(x, order = 2))
+            if (is.null(ADGrad)) 
+                retape_adgrad()
+            return(f(x, type = ""ADGrad"", order = 1))
+        }
+        else {
+            stop(""Hessian not yet implemented for models with random effects."")
+        }
+    }, hessian = FALSE, method = ""BFGS"", retape = function (set.defaults = TRUE) 
+    {
+        omp <- config(DLL = DLL)
+        random <<- .random
+        if (atomic) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+            out <- EvalDoubleFunObject(Fun, unlist(parameters), get_reportdims = TRUE)
+            ADreportDims <<- attr(out, ""reportdims"")
+        }
+        if (is.character(profile)) {
+            random <<- c(random, profile)
+        }
+        if (is.character(random)) {
+            if (!regexp) {
+                if (!all(random %in% names(parameters))) {
+                  cat(""Some 'random' effect names does not match 'parameter' list:\n"")
+                  print(setdiff(random, names(parameters)))
+                  cat(""(Note that regular expression match is disabled by default)\n"")
+                  stop()
+                }
+                if (any(duplicated(random))) {
+                  cat(""Duplicates in 'random' - will be removed\n"")
+                  random <<- unique(random)
+                }
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[random] <- lapply(tmp[random], function(x) x * 0 + 1)
+                random <<- which(as.logical(unlist(tmp)))
+                if (length(random) == 0) 
+                  random <<- NULL
+            }
+            if (regexp) {
+                random <<- grepRandomParameters(parameters, random)
+                if (length(random) == 0) {
+                  cat(""Selected random effects did not match any model parameters.\n"")
+                  random <<- NULL
+                }
+            }
+            if (is.character(profile)) {
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[profile] <- lapply(tmp[profile], function(x) x * 0 + 1)
+                profile <<- match(which(as.logical(unlist(tmp))), random)
+                if (length(profile) == 0) 
+                  random <<- NULL
+                if (any(duplicated(profile))) 
+                  stop(""Profile parameter vector not unique."")
+                tmp <- rep(0, length(random))
+                tmp[profile] <- 1
+                profile <<- tmp
+            }
+            if (set.defaults) {
+                par <<- unlist(parameters)
+            }
+        }
+        if (""ADFun"" %in% type) {
+            if (omp$autopar) 
+                openmp(1, DLL = DLL)
+            ADFun <<- MakeADFunObject(data, parameters, reportenv, ADreport = ADreport, DLL = DLL)
+            if (omp$autopar) 
+                openmp(omp$nthreads, DLL = DLL)
+            if (!is.null(integrate)) {
+                nm <- sapply(parameters, length)
+                nmpar <- rep(names(nm), nm)
+                for (i in seq_along(integrate)) {
+                  I <- integrate[i]
+                  if (is.null(names(I)) || names(I) == """") {
+                    I <- I[[1]]
+                  }
+                  ok <- all(names(I) %in% nmpar[random])
+                  if (!ok) 
+                    stop(""Names to be 'integrate'd must be among the random parameters"")
+                  w <- which(nmpar[random] %in% names(I))
+                  arg_which <- I[[1]]$which
+                  if (!is.null(arg_which)) 
+                    w <- w[arg_which]
+                  method <- sapply(I, function(x) x$method)
+                  ok <- all(duplicated(method)[-1])
+                  if (!ok) 
+                    stop(""Grouping only allowed for identical methods"")
+                  method <- method[1]
+                  cfg <- NULL
+                  if (method == ""marginal_sr"") {
+                    fac <- factor(nmpar[random[w]], levels = names(I))
+                    cfg <- list(grid = I, random2grid = fac)
+                  }
+                  else {
+                    cfg <- I[[1]]
+                  }
+                  stopifnot(is.list(cfg))
+                  TransformADFunObject(ADFun, method = method, random_order = random[w], config = cfg, mustWork = 1)
+                  activeDomain <- as.logical(info(ADFun)$activeDomain)
+                  random_remove <- random[w][!activeDomain[random[w]]]
+                  TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random_remove, mustWork = 1)
+                  attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random_remove]
+                  par_mask <- rep(FALSE, length(attr(ADFun$ptr, ""par"")))
+                  par_mask[random] <- TRUE
+                  par <<- par[-random_remove]
+                  nmpar <- nmpar[-random_remove]
+                  par_mask <- par_mask[-random_remove]
+                  random <<- which(par_mask)
+                  if (length(random) == 0) {
+                    random <<- NULL
+                    type <<- setdiff(type, ""ADGrad"")
+                  }
+                  if (config(DLL = DLL)$optimize.instantly) {
+                    TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                  }
+                }
+            }
+            if (intern) {
+                cfg <- inner.control
+                if (is.null(cfg$sparse)) 
+                  cfg$sparse <- TRUE
+                cfg <- lapply(cfg, as.double)
+                TransformADFunObject(ADFun, method = ""laplace"", config = cfg, random_order = random, mustWork = 1)
+                TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random, mustWork = 1)
+                attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random]
+                par <<- par[-random]
+                random <<- NULL
+                if (config(DLL = DLL)$optimize.instantly) {
+                  TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                }
+            }
+            if (set.defaults) {
+                par <<- attr(ADFun$ptr, ""par"")
+                last.par <<- par
+                last.par1 <<- par
+                last.par2 <<- par
+                last.par.best <<- par
+                value.best <<- Inf
+            }
+        }
+        if (omp$autopar && !ADreport) {
+            TransformADFunObject(ADFun, method = ""parallel_accumulate"", num_threads = as.integer(openmp(DLL = DLL)), mustWork = 0)
+        }
+        if (length(random) > 0) {
+            TransformADFunObject(ADFun, method = ""reorder_random"", random_order = random, mustWork = 0)
+        }
+        if (""Fun"" %in% type) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+        }
+        if (""ADGrad"" %in% type) {
+            retape_adgrad(lazy = TRUE)
+        }
+        env$skipFixedEffects <- !is.null(ADGrad)
+        delayedAssign(""spHess"", sparseHessianFun(env, skipFixedEffects = skipFixedEffects), assign.env = env)
+    }, env = <environment>, report = function (par = last.par) 
+    {
+        f(par, order = 0, type = ""double"")
+        as.list(reportenv)
+    }, simulate = function (par = last.par, complete = FALSE) 
+    {
+        f(par, order = 0, type = ""double"", do_simulate = TRUE)
+        sim <- as.list(reportenv)
+        if (complete) {
+            ans <- data
+            ans[names(sim)] <- sim
+        }
+        else {
+            ans <- sim
+        }
+        ans
+    }), optim = list(par = c(meanlog1 = -0.0182869711915506, log_sdlog1 = -1.03219840397756, meanlog2 = 1.34802270470149, log_sdlog2 = -1.04715715411901, pmix = 0.5), value = 10.0704826946716, counts = c(`function` = 13, gradient = 13), convergence = 0, message = ""CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"", hessian = c(20.1522952682531, -1.8642982873774, -2.8970001023996, 1.70865022396371, -2.14925762185539, -1.8642982873774, 4.34533978308639, -1.02677068201541, 0.356958049758749, -1.06268145690422, 
+    -2.8970001023996, -1.02677068201541, 20.2711386849588, 3.31227383431584, -2.74183715293366, 1.70865022396371, 0.356958049758749, 3.31227383431584, 3.62897928185312, 1.82898981402591, -2.14925762185539, -1.06268145690422, -2.74183715293366, 1.82898981402591, 22.213086565092)), est = c(meanlog1 = -0.0182869711915506, meanlog2 = 1.34802270470149, pmix = 0.5, sdlog1 = 0.35622297711893, sdlog2 = 0.350933983599431), pars = list(meanlog1 = -0.0182869711915506, meanlog2 = 1.34802270470149, pmix = 0.5, 
+        log_sdlog1 = -1.03219840397756, log_sdlog2 = -1.04715715411901), flags = list(at_boundary = TRUE, computable = TRUE)), weibull = list(dist = ""weibull"", model = list(par = c(log_shape = 0.204807128577247, log_scale = 1.0876346818222), fn = function (x = last.par[lfixed()], ...) 
+    {
+        if (tracepar) {
+            cat(""par:\n"")
+            print(x)
+        }
+        if (!validpar(x)) 
+            return(NaN)
+        if (is.null(random)) {
+            ans <- f(x, order = 0)
+            if (!ADreport) {
+                if (is.finite(ans) && ans < value.best) {
+                  last.par.best <<- x
+                  value.best <<- ans
+                }
+            }
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 0)
+                }
+                else ff(x, order = 0)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- NaN
+        }
+        ans
+    }, gr = function (x = last.par[lfixed()], ...) 
+    {
+        if (is.null(random)) {
+            ans <- f(x, order = 1)
+        }
+        else {
+            ans <- try({
+                if (MCcontrol$doMC) {
+                  ff(x, order = 0)
+                  MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, order = 1)
+                }
+                else ff(x, order = 1)
+            }, silent = silent)
+            if (is.character(ans)) 
+                ans <- rep(NaN, length(x))
+        }
+        if (tracemgc) 
+            cat(""outer mgc: "", max(abs(ans)), ""\n"")
+        ans
+    }, he = function (x = last.par[lfixed()], atomic = usingAtomics()) 
+    {
+        if (is.null(random)) {
+            if (!atomic) 
+                return(f(x, order = 2))
+            if (is.null(ADGrad)) 
+                retape_adgrad()
+            return(f(x, type = ""ADGrad"", order = 1))
+        }
+        else {
+            stop(""Hessian not yet implemented for models with random effects."")
+        }
+    }, hessian = FALSE, method = ""BFGS"", retape = function (set.defaults = TRUE) 
+    {
+        omp <- config(DLL = DLL)
+        random <<- .random
+        if (atomic) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+            out <- EvalDoubleFunObject(Fun, unlist(parameters), get_reportdims = TRUE)
+            ADreportDims <<- attr(out, ""reportdims"")
+        }
+        if (is.character(profile)) {
+            random <<- c(random, profile)
+        }
+        if (is.character(random)) {
+            if (!regexp) {
+                if (!all(random %in% names(parameters))) {
+                  cat(""Some 'random' effect names does not match 'parameter' list:\n"")
+                  print(setdiff(random, names(parameters)))
+                  cat(""(Note that regular expression match is disabled by default)\n"")
+                  stop()
+                }
+                if (any(duplicated(random))) {
+                  cat(""Duplicates in 'random' - will be removed\n"")
+                  random <<- unique(random)
+                }
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[random] <- lapply(tmp[random], function(x) x * 0 + 1)
+                random <<- which(as.logical(unlist(tmp)))
+                if (length(random) == 0) 
+                  random <<- NULL
+            }
+            if (regexp) {
+                random <<- grepRandomParameters(parameters, random)
+                if (length(random) == 0) {
+                  cat(""Selected random effects did not match any model parameters.\n"")
+                  random <<- NULL
+                }
+            }
+            if (is.character(profile)) {
+                tmp <- lapply(parameters, function(x) x * 0)
+                tmp[profile] <- lapply(tmp[profile], function(x) x * 0 + 1)
+                profile <<- match(which(as.logical(unlist(tmp))), random)
+                if (length(profile) == 0) 
+                  random <<- NULL
+                if (any(duplicated(profile))) 
+                  stop(""Profile parameter vector not unique."")
+                tmp <- rep(0, length(random))
+                tmp[profile] <- 1
+                profile <<- tmp
+            }
+            if (set.defaults) {
+                par <<- unlist(parameters)
+            }
+        }
+        if (""ADFun"" %in% type) {
+            if (omp$autopar) 
+                openmp(1, DLL = DLL)
+            ADFun <<- MakeADFunObject(data, parameters, reportenv, ADreport = ADreport, DLL = DLL)
+            if (omp$autopar) 
+                openmp(omp$nthreads, DLL = DLL)
+            if (!is.null(integrate)) {
+                nm <- sapply(parameters, length)
+                nmpar <- rep(names(nm), nm)
+                for (i in seq_along(integrate)) {
+                  I <- integrate[i]
+                  if (is.null(names(I)) || names(I) == """") {
+                    I <- I[[1]]
+                  }
+                  ok <- all(names(I) %in% nmpar[random])
+                  if (!ok) 
+                    stop(""Names to be 'integrate'd must be among the random parameters"")
+                  w <- which(nmpar[random] %in% names(I))
+                  arg_which <- I[[1]]$which
+                  if (!is.null(arg_which)) 
+                    w <- w[arg_which]
+                  method <- sapply(I, function(x) x$method)
+                  ok <- all(duplicated(method)[-1])
+                  if (!ok) 
+                    stop(""Grouping only allowed for identical methods"")
+                  method <- method[1]
+                  cfg <- NULL
+                  if (method == ""marginal_sr"") {
+                    fac <- factor(nmpar[random[w]], levels = names(I))
+                    cfg <- list(grid = I, random2grid = fac)
+                  }
+                  else {
+                    cfg <- I[[1]]
+                  }
+                  stopifnot(is.list(cfg))
+                  TransformADFunObject(ADFun, method = method, random_order = random[w], config = cfg, mustWork = 1)
+                  activeDomain <- as.logical(info(ADFun)$activeDomain)
+                  random_remove <- random[w][!activeDomain[random[w]]]
+                  TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random_remove, mustWork = 1)
+                  attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random_remove]
+                  par_mask <- rep(FALSE, length(attr(ADFun$ptr, ""par"")))
+                  par_mask[random] <- TRUE
+                  par <<- par[-random_remove]
+                  nmpar <- nmpar[-random_remove]
+                  par_mask <- par_mask[-random_remove]
+                  random <<- which(par_mask)
+                  if (length(random) == 0) {
+                    random <<- NULL
+                    type <<- setdiff(type, ""ADGrad"")
+                  }
+                  if (config(DLL = DLL)$optimize.instantly) {
+                    TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                  }
+                }
+            }
+            if (intern) {
+                cfg <- inner.control
+                if (is.null(cfg$sparse)) 
+                  cfg$sparse <- TRUE
+                cfg <- lapply(cfg, as.double)
+                TransformADFunObject(ADFun, method = ""laplace"", config = cfg, random_order = random, mustWork = 1)
+                TransformADFunObject(ADFun, method = ""remove_random_parameters"", random_order = random, mustWork = 1)
+                attr(ADFun$ptr, ""par"") <- attr(ADFun$ptr, ""par"")[-random]
+                par <<- par[-random]
+                random <<- NULL
+                if (config(DLL = DLL)$optimize.instantly) {
+                  TransformADFunObject(ADFun, method = ""optimize"", mustWork = 1)
+                }
+            }
+            if (set.defaults) {
+                par <<- attr(ADFun$ptr, ""par"")
+                last.par <<- par
+                last.par1 <<- par
+                last.par2 <<- par
+                last.par.best <<- par
+                value.best <<- Inf
+            }
+        }
+        if (omp$autopar && !ADreport) {
+            TransformADFunObject(ADFun, method = ""parallel_accumulate"", num_threads = as.integer(openmp(DLL = DLL)), mustWork = 0)
+        }
+        if (length(random) > 0) {
+            TransformADFunObject(ADFun, method = ""reorder_random"", random_order = random, mustWork = 0)
+        }
+        if (""Fun"" %in% type) {
+            Fun <<- MakeDoubleFunObject(data, parameters, reportenv, DLL = DLL)
+        }
+        if (""ADGrad"" %in% type) {
+            retape_adgrad(lazy = TRUE)
+        }
+        env$skipFixedEffects <- !is.null(ADGrad)
+        delayedAssign(""spHess"", sparseHessianFun(env, skipFixedEffects = skipFixedEffects), assign.env = env)
+    }, env = <environment>, report = function (par = last.par) 
+    {
+        f(par, order = 0, type = ""double"")
+        as.list(reportenv)
+    }, simulate = function (par = last.par, complete = FALSE) 
+    {
+        f(par, order = 0, type = ""double"", do_simulate = TRUE)
+        sim <- as.list(reportenv)
+        if (complete) {
+            ans <- data
+            ans[names(sim)] <- sim
+        }
+        else {
+            ans <- sim
+        }
+        ans
+    }), optim = list(par = c(log_shape = 0.385716843449679, log_scale = 1.06102655771602), value = 11.128552130261, counts = c(`function` = 9, gradient = 9), convergence = 0, message = ""CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"", hessian = c(10.8425344959725, -3.87628167181952, -3.87628167181952, 12.9771941030584)), est = c(scale = 2.88933553705765, shape = 1.4706681825226), pars = list(log_scale = 1.06102655771602, log_shape = 0.385716843449679), flags = list(at_boundary = FALSE, computable = TRUE)))",average,0.05,0.514363,0.379049,0.137094,1.63033,1,0.95,multi,weighted_samples,parametric,1000,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)

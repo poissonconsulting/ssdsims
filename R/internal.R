@@ -20,11 +20,11 @@ fit_dists_seed <- function(data, sim, stream, seed, dists, silent, ...) {
   fit
 }
 
-hc_seed <- function(data, sim, stream, seed, proportion, save_to, ...) {
+hc_seed <- function(data, sim, stream, seed, proportion, ci, save_to, ...) {
   seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_sim = sim, stream = stream)
   ## TODO: handle failures
   with_lecuyer_cmrg_seed(seed, {
-    fit <- ssdtools::ssd_hc(data, proportion = proportion, ...)
+    fit <- ssdtools::ssd_hc(data, proportion = proportion, ci = ci, ...)
   })
   fit 
 }
