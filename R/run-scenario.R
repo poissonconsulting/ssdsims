@@ -34,7 +34,10 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(5L, 10
   sims <- sim_seq(start_sim, nsim)
   data <- tidyr::expand_grid(sim = sims, stream = stream, replace = replace, nrow = nrow)
 
-  data$data <- purrr::pmap(as.list(data), \(replace, nrow, sim, stream) ssd_simulate_data(x, replace = replace, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> dplyr::bind_rows() |> dplyr::pull("data")
+  data$data <- purrr::pmap(as.list(data), \(replace, nrow, sim, stream) ssd_simulate_data(x, replace = replace, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
+    dplyr::bind_rows() |> 
+    dplyr::pull("data")
+
   data |> 
     ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
     ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
@@ -45,7 +48,7 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(5L, 10
 #' @examples
 #' ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 #'
-ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   chk::chk_function(x)
   chk::chk_unused(...)
 
@@ -64,5 +67,12 @@ ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), 
 
   sims <- sim_seq(start_sim, nsim)
   data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)
-  data
+
+  data$data <- purrr::pmap(as.list(data), \(nrow, sim, stream) ssd_simulate_data(x, args = args, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
+    dplyr::bind_rows() |> 
+    dplyr::pull("data")
+
+  data |> 
+    ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
+    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
 }
