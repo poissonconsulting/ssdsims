@@ -46,7 +46,38 @@
 <span>  <span class="va">x</span>,</span>
 <span>  <span class="va">...</span>,</span>
 <span>  replace <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
+<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
+<span>  dists <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">100L</span>,</span>
+<span>  stream <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"ssdsims.stream"</span>, <span class="fl">1L</span><span class="op">)</span>,</span>
+<span>  start_sim <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'fitdists'</span></span>
+<span><span class="fu">ssd_run_scenario</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  dist <span class="op">=</span> <span class="st">"top"</span>,</span>
+<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
+<span>  dists <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">100L</span>,</span>
+<span>  stream <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"ssdsims.stream"</span>, <span class="fl">1L</span><span class="op">)</span>,</span>
+<span>  start_sim <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'tmbfit'</span></span>
+<span><span class="fu">ssd_run_scenario</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">6L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
 <span>  dists <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -142,6 +173,12 @@
 <dd><p>Whether to show a <code>purrr::progress bar</code>.</p></dd>
 
 
+<dt id="arg-dist">dist<a class="anchor" aria-label="anchor" href="#arg-dist"></a></dt>
+<dd><p>A string specifying the distribution in the fitdists object or
+<code>"top"</code> to use the distribution with most weight or <code>"multi"</code> to treat
+the distributions as a single distribution.</p></dd>
+
+
 <dt id="arg-args">args<a class="anchor" aria-label="anchor" href="#arg-args"></a></dt>
 <dd><p>A named list of the argument values.</p></dd>
 
@@ -153,9 +190,11 @@
     <div class="section level2">
     <h2 id="methods-by-class-">Methods (by class)<a class="anchor" aria-label="anchor" href="#methods-by-class-"></a></h2>
 
-<ul><li><p><code>ssd_run_scenario(data.frame)</code>: Run from data.frame</p></li>
-<li><p><code>ssd_run_scenario(character)</code>: Generate data using name of function to generate sequence of random numbers</p></li>
-<li><p><code>ssd_run_scenario(`function`)</code>: Generate data using function to generate sequence of random numbers</p></li>
+<ul><li><p><code>ssd_run_scenario(data.frame)</code>: Run scenario using data.frame to sample data</p></li>
+<li><p><code>ssd_run_scenario(fitdists)</code>: Run scenario using fitdists object to generate data</p></li>
+<li><p><code>ssd_run_scenario(tmbfit)</code>: Run scenario using tmbfit object to generate data</p></li>
+<li><p><code>ssd_run_scenario(character)</code>: Run scenario using name of function to generate sequence of random numbers</p></li>
+<li><p><code>ssd_run_scenario(`function`)</code>: Run scenario data using function to generate sequence of random numbers</p></li>
 </ul></div>
 
     <div class="section level2">
@@ -164,10 +203,34 @@
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 7</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream replace  nrow data              fits       hc               </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1 FALSE       5 <span style="color: #949494;">&lt;tibble [5 × 5]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1 FALSE       6 <span style="color: #949494;">&lt;tibble [6 × 5]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     1      1 FALSE      10 <span style="color: #949494;">&lt;tibble [10 × 5]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1 FALSE       5 <span style="color: #949494;">&lt;tibble [5 × 5]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1 FALSE       6 <span style="color: #949494;">&lt;tibble [6 × 5]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     2      1 FALSE      10 <span style="color: #949494;">&lt;tibble [10 × 5]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_fit_dists.html" class="external-link">ssd_fit_dists</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="va">fit</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 7</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream dist_sim  nrow data              fits       hc               </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1 top          6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     1      1 top         10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1 top          6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     2      1 top         10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>     3      1 top          6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>     3      1 top         10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_fit_dists.html" class="external-link">ssd_fit_dists</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="va">fit</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 6</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream  nrow data              fits       hc               </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     1      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     2      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>     3      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span>  <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>     3      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="st">"rlnorm"</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 6</span></span>
