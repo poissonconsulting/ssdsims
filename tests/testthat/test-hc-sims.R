@@ -4,6 +4,7 @@ test_that("hc_sims 1 sim", {
   sims <- ssd_fit_dists_sims(sims, seed = 10)
   sims <- ssd_hc_sims(sims)
   })
+  sims$fits <- NULL
   sims <- tidyr::unnest(sims, cols = c(hc))
   expect_snapshot_data(sims, "hc_sims1")
 })
@@ -14,6 +15,7 @@ test_that("hc_sims 1 sim ci", {
   sims <- ssd_fit_dists_sims(sims, seed = 10)
   sims <- ssd_hc_sims(sims, ci = TRUE)
   })
+  sims$fits <- NULL
   sims <- tidyr::unnest(sims, cols = c(hc))
   expect_snapshot_data(sims, "hc_sims1ci")
 })
