@@ -39,7 +39,15 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ssd_hc_sims</span><span class="op">(</span><span class="va">x</span>, proportion <span class="op">=</span> <span class="fl">0.05</span>, <span class="va">...</span>, ci <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="cn">NULL</span>, save_to <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ssd_hc_sims</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  <span class="va">...</span>,</span>
+<span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  save_to <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  .progress <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -68,6 +76,10 @@
 
 <dt id="arg-save-to">save_to<a class="anchor" aria-label="anchor" href="#arg-save-to"></a></dt>
 <dd><p>NULL or a string specifying a directory to save where the bootstrap datasets and parameter estimates (when successfully converged) to.</p></dd>
+
+
+<dt id="arg--progress">.progress<a class="anchor" aria-label="anchor" href="#arg--progress"></a></dt>
+<dd><p>Whether to show a <code>purrr::progress bar</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
