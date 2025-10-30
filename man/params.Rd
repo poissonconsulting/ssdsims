@@ -13,7 +13,7 @@
 
 \item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
 
-\item{dist_sims}{A string specifying the distribution in the fitdists object or
+\item{dist_sim}{A string specifying the distribution in the fitdists object or
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
 the distributions as a single distribution.}
 

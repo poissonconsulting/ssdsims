@@ -9,7 +9,7 @@
 #'
 #' @param args A named list of the argument values.
 #' @param ci A flag specifying whether to estimate confidence intervals (by bootstrapping).
-#' @param dist_sims A string specifying the distribution in the fitdists object or
+#' @param dist_sim A string specifying the distribution in the fitdists object or
 #' `"top"` to use the distribution with most weight or `"multi"` to treat
 #' the distributions as a single distribution.
 #' @param nrow A count of the number of rows in the generated data which must be between 5 and 1,000,

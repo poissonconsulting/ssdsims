@@ -42,17 +42,17 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 #' ssd_simulate_data(fit, nrow = 5, nsim = 3)
 #' 
-ssd_simulate_data.fitdists <- function(x, ..., dist_sims = "top", nrow = 6L, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
-  chk::chk_string(dist_sims)
-  chk::chk_subset(dist_sims, c("multi", "top", names(x)))
+ssd_simulate_data.fitdists <- function(x, ..., dist_sim = "top", nrow = 6L, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+  chk::chk_string(dist_sim)
+  chk::chk_subset(dist_sim, c("multi", "top", names(x)))
   chk::chk_unused(...)
 
-  if(dist_sims == "multi") {
+  if(dist_sim == "multi") {
     ## TODO: implement multi method
     .NotYetImplemented()
   }
-  wch <- dist_sims
-  if(dist_sims == "top") {
+  wch <- dist_sim
+  if(dist_sim == "top") {
     weight <- ssdtools::glance(x, wt = TRUE)$wt
     wch <- which.max(weight)
   }
