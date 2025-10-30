@@ -83,7 +83,7 @@
 <span><span class="fu">ssd_simulate_data</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  <span class="va">...</span>,</span>
-<span>  pars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  args <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fl">6L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">100L</span>,</span>
@@ -152,10 +152,6 @@
 the distributions as a single distribution.</p></dd>
 
 
-<dt id="arg-pars">pars<a class="anchor" aria-label="anchor" href="#arg-pars"></a></dt>
-<dd><p>A named list of the parameter values.</p></dd>
-
-
 <dt id="arg-args">args<a class="anchor" aria-label="anchor" href="#arg-args"></a></dt>
 <dd><p>A named list of the argument values.</p></dd>
 
@@ -170,7 +166,7 @@ the distributions as a single distribution.</p></dd>
 <ul><li><p><code>ssd_simulate_data(data.frame)</code>: Generate data from data.frame</p></li>
 <li><p><code>ssd_simulate_data(fitdists)</code>: Generate data from fitdists object</p></li>
 <li><p><code>ssd_simulate_data(tmbfit)</code>: Generate data from tmbfit object</p></li>
-<li><p><code>ssd_simulate_data(character)</code>: Generate data using distribution name</p></li>
+<li><p><code>ssd_simulate_data(character)</code>: Generate data using name of function</p></li>
 <li><p><code>ssd_simulate_data(`function`)</code>: Generate data using function to generate sequence of random numbers</p></li>
 </ul></div>
 
