@@ -11,6 +11,8 @@
 
 \item{args}{A named list of the argument values.}
 
+\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
+
 \item{dist}{A string specifying the distribution in the fitdists object or
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
 the distributions as a single distribution.}
@@ -28,6 +30,8 @@ the distributions as a single distribution.}
 \item{start_sim}{A count of the number of the simulation to start from.}
 
 \item{stream}{A count of the stream number.}
+
+\item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 }
 \description{
 Default parameter descriptions which may be overridden in individual

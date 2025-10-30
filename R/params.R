@@ -8,6 +8,7 @@
 #' A string is a non-missing character scalar.
 #'
 #' @param args A named list of the argument values.
+#' @param ci A flag specifying whether to estimate confidence intervals (by bootstrapping).
 #' @param dist A string specifying the distribution in the fitdists object or
 #' `"top"` to use the distribution with most weight or `"multi"` to treat
 #' the distributions as a single distribution.
@@ -18,6 +19,7 @@
 #' @param seed An integer of the starting seed or NULL.
 #' @param start_sim A count of the number of the simulation to start from.
 #' @param stream A count of the stream number.
+#' @param .progress Whether to show a `purrr::progress bar`.
 #' @param ... Unused.
 #' @keywords internal
 #' @aliases parameters arguments args

@@ -15,7 +15,7 @@ fit_dists_seed <- function(data, sim, stream, seed, dists, silent, ...) {
    seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_sim = sim, stream = stream)
   ## TODO: handle failure of all model to fit!!
   with_lecuyer_cmrg_seed(seed, {
-    fit <- ssdtools::ssd_fit_dists(data, dists = dists, silent = silent, ...)
+    fit <- ssdtools::ssd_fit_dists(data, dists = dists, silent = silent, nrow = 5L, ...)
   })
   fit
 }

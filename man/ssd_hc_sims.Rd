@@ -4,7 +4,15 @@
 \alias{ssd_hc_sims}
 \title{Fit SSD Distributions to Simulated Data}
 \usage{
-ssd_hc_sims(x, proportion = 0.05, ..., ci = FALSE, seed = NULL, save_to = NULL)
+ssd_hc_sims(
+  x,
+  proportion = 0.05,
+  ...,
+  ci = FALSE,
+  seed = NULL,
+  save_to = NULL,
+  .progress = FALSE
+)
 }
 \arguments{
 \item{x}{A data frame with sim and stream integer columns and a list column of fitdists objects.}
@@ -18,6 +26,8 @@ ssd_hc_sims(x, proportion = 0.05, ..., ci = FALSE, seed = NULL, save_to = NULL)
 \item{seed}{An integer of the starting seed or NULL.}
 
 \item{save_to}{NULL or a string specifying a directory to save where the bootstrap datasets and parameter estimates (when successfully converged) to.}
+
+\item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 }
 \value{
 The x tibble with a list column hc of data frames produced by applying ssd_hc() to fits.

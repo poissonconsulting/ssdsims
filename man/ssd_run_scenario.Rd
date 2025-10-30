@@ -3,6 +3,7 @@
 \name{ssd_run_scenario}
 \alias{ssd_run_scenario}
 \alias{ssd_run_scenario.data.frame}
+\alias{ssd_run_scenario.function}
 \title{Run Scenario}
 \usage{
 ssd_run_scenario(x, ...)
@@ -12,10 +13,26 @@ ssd_run_scenario(x, ...)
   ...,
   replace = FALSE,
   nrow = c(5L, 10L),
+  dists = ssdtools::ssd_dists_bcanz(),
+  proportion = 0.05,
+  ci = FALSE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
-  start_sim = 1L
+  start_sim = 1L,
+  .progress = FALSE
+)
+
+\method{ssd_run_scenario}{`function`}(
+  x,
+  ...,
+  args = list(),
+  nrow = c(6L, 10L),
+  seed = NULL,
+  nsim = 100L,
+  stream = getOption("ssdsims.stream", 1L),
+  start_sim = 1L,
+  .progress = FALSE
 )
 }
 \arguments{
@@ -25,7 +42,13 @@ ssd_run_scenario(x, ...)
 
 \item{replace}{A flag specifying whether to sample with replacement.}
 
-\item{nrow}{A count of the number of rows in the generated data which must be between 5 and 1,000,}
+\item{nrow}{A positive whole number of the minimum number of non-missing rows.}
+
+\item{dists}{A character vector of the distribution names.}
+
+\item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
+
+\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
 
 \item{seed}{An integer of the starting seed or NULL.}
 
@@ -34,6 +57,10 @@ ssd_run_scenario(x, ...)
 \item{stream}{A count of the stream number.}
 
 \item{start_sim}{A count of the number of the simulation to start from.}
+
+\item{.progress}{Whether to show a \verb{purrr::progress bar}.}
+
+\item{args}{A named list of the argument values.}
 }
 \value{
 A tibble of nested data sets.
@@ -45,8 +72,12 @@ Run Scenario
 \itemize{
 \item \code{ssd_run_scenario(data.frame)}: Run from data.frame
 
+\item \code{ssd_run_scenario(`function`)}: Generate data using function to generate sequence of random numbers
+
 }}
 \examples{
 ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
+
+ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 
 }

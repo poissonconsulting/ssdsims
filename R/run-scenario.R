@@ -1,6 +1,7 @@
 #' Run Scenario
 #'
-#' 
+#' @inheritParams ssdtools::ssd_fit_dists
+#' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
 #' @param x The object to use for the scenario.
 #' @param ... Unused.
@@ -13,7 +14,7 @@ ssd_run_scenario <- function(x, ...) UseMethod("ssd_run_scenario")
 #' @examples
 #' ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
 #' 
-ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(5L, 10L), seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L) {
+ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(5L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
 
   chk::check_data(
     x, values = list(Conc = c(0,Inf,NA_real_)), nrow = c(5, 10000)
@@ -32,15 +33,19 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(5L, 10
 
   sims <- sim_seq(start_sim, nsim)
   data <- tidyr::expand_grid(sim = sims, stream = stream, replace = replace, nrow = nrow)
-  data
+
+  data$data <- purrr::pmap(as.list(data), \(replace, nrow, sim, stream) ssd_simulate_data(x, replace = replace, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> dplyr::bind_rows() |> dplyr::pull("data")
+  data |> 
+    ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
+    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
 }
 
-#' @describeIn ssd_simulate_data Generate data using function to generate sequence of random numbers
+#' @describeIn ssd_run_scenario Generate data using function to generate sequence of random numbers
 #' @export
 #' @examples
 #' ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 #'
-ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L) {
+ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   chk::chk_function(x)
   chk::chk_unused(...)
 
