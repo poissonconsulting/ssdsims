@@ -43,6 +43,21 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(5L, 10
     ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
 }
 
+
+#' @describeIn ssd_run_scenario Generate data using name of function to generate sequence of random numbers
+#' @export
+#' @examples
+#' ssd_run_scenario("rlnorm", nsim = 3)
+#'
+ssd_run_scenario.character <- function(x, ..., args = list(), nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+  chk::chk_string(x)
+
+  fun <- eval(parse(text = x))
+
+  ssd_run_scenario(fun, ..., args = args, nrow = nrow, dists = dists, proportion = proportion, ci = ci, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
+}
+
+
 #' @describeIn ssd_run_scenario Generate data using function to generate sequence of random numbers
 #' @export
 #' @examples
@@ -63,7 +78,7 @@ ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), 
   chk::chk_unique(nrow)
   chk::chk_length(nrow, upper = 995)
 
-  ## TODO: need to vectorize args
+  ## TODO: need to vectorize args?
 
   sims <- sim_seq(start_sim, nsim)
   data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)

@@ -49,7 +49,7 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{character}(
   x,
   ...,
-  pars = list(),
+  args = list(),
   nrow = 6L,
   seed = NULL,
   nsim = 100L,
@@ -93,8 +93,6 @@ ssd_simulate_data(x, ...)
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
 the distributions as a single distribution.}
 
-\item{pars}{A named list of the parameter values.}
-
 \item{args}{A named list of the argument values.}
 }
 \value{
@@ -111,7 +109,7 @@ A family of functions to generate a tibble of nested data sets.
 
 \item \code{ssd_simulate_data(tmbfit)}: Generate data from tmbfit object
 
-\item \code{ssd_simulate_data(character)}: Generate data using distribution name
+\item \code{ssd_simulate_data(character)}: Generate data using name of function
 
 \item \code{ssd_simulate_data(`function`)}: Generate data using function to generate sequence of random numbers
 

@@ -20,3 +20,13 @@ test_that("ssd_run_scenario.function works", {
    expect_snapshot_data(scenario, "scenarioFun2_data")
 })
 
+test_that("ssd_run_scenario.character works", {
+  with_lecuyer_cmrg_seed(10, {
+    scenario <- ssd_run_scenario("rlnorm", nsim = 2)
+  })
+  scenario <- tidyr::unnest(scenario, cols = hc)
+   expect_snapshot_data(scenario, "scenarioStr2")
+  
+  scenario <- tidyr::unnest(scenario, cols = data)
+   expect_snapshot_data(scenario, "scenarioStr2_data")
+})

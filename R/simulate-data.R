@@ -69,24 +69,23 @@ ssd_simulate_data.fitdists <- function(x, ..., dist = "top", nrow = 6L, seed = N
 ssd_simulate_data.tmbfit <- function(x, ..., nrow = 6L, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   chk::chk_unused(...)
   
-  pars <- ssdtools::estimates(x)
+  args <- ssdtools::estimates(x)
   x <- paste0("ssdtools::ssd_r", x$dist)
-  ssd_simulate_data(x, pars = pars, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
+  ssd_simulate_data(x, args = args, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 
-#' @describeIn ssd_simulate_data Generate data using distribution name
+#' @describeIn ssd_simulate_data Generate data using name of function
 #' @export
 #' @examples
 #' ssd_simulate_data("rnorm", nrow = 5, nsim = 3)
 #' 
-ssd_simulate_data.character <- function(x, ..., pars = list(), nrow = 6L, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_simulate_data.character <- function(x, ..., args = list(), nrow = 6L, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   chk::chk_string(x)
-  chk::chk_list(pars)
   chk::chk_unused(...)
   
   fun <- eval(parse(text = x))
   
-  ssd_simulate_data(fun, args = as.list(pars), nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
+  ssd_simulate_data(fun, args = args, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 
 #' @describeIn ssd_simulate_data Generate data using function to generate sequence of random numbers

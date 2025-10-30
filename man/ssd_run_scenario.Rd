@@ -3,6 +3,7 @@
 \name{ssd_run_scenario}
 \alias{ssd_run_scenario}
 \alias{ssd_run_scenario.data.frame}
+\alias{ssd_run_scenario.character}
 \alias{ssd_run_scenario.function}
 \title{Run Scenario}
 \usage{
@@ -13,6 +14,21 @@ ssd_run_scenario(x, ...)
   ...,
   replace = FALSE,
   nrow = c(5L, 10L),
+  dists = ssdtools::ssd_dists_bcanz(),
+  proportion = 0.05,
+  ci = FALSE,
+  seed = NULL,
+  nsim = 100L,
+  stream = getOption("ssdsims.stream", 1L),
+  start_sim = 1L,
+  .progress = FALSE
+)
+
+\method{ssd_run_scenario}{character}(
+  x,
+  ...,
+  args = list(),
+  nrow = c(6L, 10L),
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
   ci = FALSE,
@@ -75,11 +91,15 @@ Run Scenario
 \itemize{
 \item \code{ssd_run_scenario(data.frame)}: Run from data.frame
 
+\item \code{ssd_run_scenario(character)}: Generate data using name of function to generate sequence of random numbers
+
 \item \code{ssd_run_scenario(`function`)}: Generate data using function to generate sequence of random numbers
 
 }}
 \examples{
 ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
+
+ssd_run_scenario("rlnorm", nsim = 3)
 
 ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 
