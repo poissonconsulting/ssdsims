@@ -1,4 +1,4 @@
-sim,stream,dist_sim,nrow,Conc,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
+sim,stream,dist_sims,nrow,Conc,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
 1,1,lnorm,6,22.9602,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
 1,1,lnorm,6,68.6597,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
 1,1,lnorm,6,44.6865,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)

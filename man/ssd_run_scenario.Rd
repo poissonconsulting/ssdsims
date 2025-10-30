@@ -29,7 +29,7 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{fitdists}(
   x,
   ...,
-  dist = "top",
+  dist_sims = "top",
   nrow = c(6L, 10L),
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
@@ -110,7 +110,7 @@ ssd_run_scenario(x, ...)
 
 \item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 
-\item{dist}{A string specifying the distribution in the fitdists object or
+\item{dist_sims}{A string specifying the distribution in the fitdists object or
 \code{"top"} to use the distribution with most weight or \code{"multi"} to treat
 the distributions as a single distribution.}
 
@@ -139,7 +139,7 @@ Run Scenario
 ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
-ssd_run_scenario(fit, nsim = 3)
+ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 ssd_run_scenario(fit[[1]], nsim = 3)

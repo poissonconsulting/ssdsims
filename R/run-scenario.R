@@ -47,25 +47,24 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(6L, 10
 #' @export
 #' @examples
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
-#' ssd_run_scenario(fit, nsim = 3)
+#' ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
 #'
-ssd_run_scenario.fitdists <- function(x, ..., dist = "top", nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
-  chk::chk_character(dist)
-  chk::chk_not_any_na(dist)
-  chk::chk_length(dist, upper = Inf)
-  chk::chk_subset(dist, c("multi", "top", names(x)))
+ssd_run_scenario.fitdists <- function(x, ..., dist_sims = "top", nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+  chk::chk_character(dist_sims)
+  chk::chk_not_any_na(dist_sims)
+  chk::chk_length(dist_sims, upper = Inf)
+  chk::chk_subset(dist_sims, c("multi", "top", names(x)))
 
   sims <- sim_seq(start_sim, nsim)
-  data <- tidyr::expand_grid(sim = sims, stream = stream, dist = dist, nrow = nrow)
+  data <- tidyr::expand_grid(sim = sims, stream = stream, dist_sims = dist_sims, nrow = nrow)
 
-  data$data <- purrr::pmap(as.list(data), \(dist, nrow, sim, stream) ssd_simulate_data(x, dist = dist, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
+  data$data <- purrr::pmap(as.list(data), \(dist_sims, nrow, sim, stream) ssd_simulate_data(x, dist_sims = dist_sims, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
     dplyr::bind_rows() |> 
     dplyr::pull("data")
 
   data |> 
     ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
-    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress) |>
-    dplyr::rename(dist_sim = .data$dist)
+    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
 }
 
 #' @describeIn ssd_run_scenario Run scenario using tmbfit object to generate data
