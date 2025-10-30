@@ -103,7 +103,7 @@ A family of functions to generate a tibble of nested data sets.
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{ssd_simulate_data(data.frame)}: Generate data from data.frame
+\item \code{ssd_simulate_data(data.frame)}: Generate data by sampling from data.frame
 
 \item \code{ssd_simulate_data(fitdists)}: Generate data from fitdists object
 

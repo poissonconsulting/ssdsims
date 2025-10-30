@@ -8,7 +8,7 @@
 #' @export
 ssd_simulate_data <- function(x, ...) UseMethod("ssd_simulate_data")
 
-#' @describeIn ssd_simulate_data Generate data from data.frame
+#' @describeIn ssd_simulate_data Generate data by sampling from data.frame
 #' @export
 #' @examples
 #' ssd_simulate_data(ssddata::ccme_boron, nrow = 5, nsim = 3)
@@ -83,9 +83,9 @@ ssd_simulate_data.character <- function(x, ..., args = list(), nrow = 6L, seed =
   chk::chk_string(x)
   chk::chk_unused(...)
   
-  fun <- eval(parse(text = x))
+  x <- eval(parse(text = x))
   
-  ssd_simulate_data(fun, args = args, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
+  ssd_simulate_data(x, args = args, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 
 #' @describeIn ssd_simulate_data Generate data using function to generate sequence of random numbers
