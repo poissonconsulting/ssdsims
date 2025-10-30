@@ -43,17 +43,42 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(6L, 10
     ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
 }
 
+#' @describeIn ssd_run_scenario Run scenario using fitdists object to generate data
+#' @export
+#' @examples
+#' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
+#' ssd_run_scenario(fit, nsim = 3)
+#'
+ssd_run_scenario.fitdists <- function(x, ..., dist = "top", nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+  chk::chk_character(dist)
+  chk::chk_not_any_na(dist)
+  chk::chk_length(dist, upper = Inf)
+  chk::chk_subset(dist, c("multi", "top", names(x)))
+
+  sims <- sim_seq(start_sim, nsim)
+  data <- tidyr::expand_grid(sim = sims, stream = stream, dist = dist, nrow = nrow)
+
+  data$data <- purrr::pmap(as.list(data), \(dist, nrow, sim, stream) ssd_simulate_data(x, dist = dist, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
+    dplyr::bind_rows() |> 
+    dplyr::pull("data")
+
+  data |> 
+    ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
+    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress) |>
+    dplyr::rename(dist_sim = .data$dist)
+}
+
 #' @describeIn ssd_run_scenario Run scenario using tmbfit object to generate data
 #' @export
 #' @examples
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 #' ssd_run_scenario(fit[[1]], nsim = 3)
 #'
-ssd_run_scenario.tmbfit <- function(x, ..., args = list(), nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_run_scenario.tmbfit <- function(x, ..., nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   args <- ssdtools::estimates(x)
   x <- paste0("ssdtools::ssd_r", x$dist)
 
-  ssd_run_scenario(x, ..., args = args, nrow = nrow, dists = dists, proportion = proportion, ci = ci, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
+  ssd_run_scenario(x, ..., nrow = nrow, dists = dists, proportion = proportion, ci = ci, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 
 #' @describeIn ssd_run_scenario Run scenario using name of function to generate sequence of random numbers
@@ -89,8 +114,6 @@ ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), 
   chk::chk_range(nrow, c(5, 1000))
   chk::chk_unique(nrow)
   chk::chk_length(nrow, upper = 995)
-
-  ## TODO: need to vectorize args?
 
   sims <- sim_seq(start_sim, nsim)
   data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)

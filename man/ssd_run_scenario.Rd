@@ -3,6 +3,7 @@
 \name{ssd_run_scenario}
 \alias{ssd_run_scenario}
 \alias{ssd_run_scenario.data.frame}
+\alias{ssd_run_scenario.fitdists}
 \alias{ssd_run_scenario.tmbfit}
 \alias{ssd_run_scenario.character}
 \alias{ssd_run_scenario.function}
@@ -25,10 +26,24 @@ ssd_run_scenario(x, ...)
   .progress = FALSE
 )
 
+\method{ssd_run_scenario}{fitdists}(
+  x,
+  ...,
+  dist = "top",
+  nrow = c(6L, 10L),
+  dists = ssdtools::ssd_dists_bcanz(),
+  proportion = 0.05,
+  ci = FALSE,
+  seed = NULL,
+  nsim = 100L,
+  stream = getOption("ssdsims.stream", 1L),
+  start_sim = 1L,
+  .progress = FALSE
+)
+
 \method{ssd_run_scenario}{tmbfit}(
   x,
   ...,
-  args = list(),
   nrow = c(6L, 10L),
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
@@ -95,6 +110,10 @@ ssd_run_scenario(x, ...)
 
 \item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 
+\item{dist}{A string specifying the distribution in the fitdists object or
+\code{"top"} to use the distribution with most weight or \code{"multi"} to treat
+the distributions as a single distribution.}
+
 \item{args}{A named list of the argument values.}
 }
 \value{
@@ -107,6 +126,8 @@ Run Scenario
 \itemize{
 \item \code{ssd_run_scenario(data.frame)}: Run scenario using data.frame to sample data
 
+\item \code{ssd_run_scenario(fitdists)}: Run scenario using fitdists object to generate data
+
 \item \code{ssd_run_scenario(tmbfit)}: Run scenario using tmbfit object to generate data
 
 \item \code{ssd_run_scenario(character)}: Run scenario using name of function to generate sequence of random numbers
@@ -116,6 +137,9 @@ Run Scenario
 }}
 \examples{
 ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
+
+fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
+ssd_run_scenario(fit, nsim = 3)
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 ssd_run_scenario(fit[[1]], nsim = 3)

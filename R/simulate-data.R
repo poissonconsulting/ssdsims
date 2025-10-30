@@ -56,8 +56,8 @@ ssd_simulate_data.fitdists <- function(x, ..., dist = "top", nrow = 6L, seed = N
     weight <- ssdtools::glance(x, wt = TRUE)$wt
     wch <- which.max(weight)
   }
-  
-  ssd_simulate_data(x[[wch]], nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
+  x <- x[[wch]] 
+  ssd_simulate_data(x, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 
 #' @describeIn ssd_simulate_data Generate data from tmbfit object

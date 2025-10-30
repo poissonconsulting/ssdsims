@@ -46,3 +46,16 @@ test_that("ssd_run_scenario.tmbfit works", {
   scenario <- tidyr::unnest(scenario, cols = data)
    expect_snapshot_data(scenario, "scenarioTMB2_data")
 })
+
+test_that("ssd_run_scenario.fitdist works", {
+  with_lecuyer_cmrg_seed(10, {
+    fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron) 
+    scenario <- ssd_run_scenario(fit, dist = c("lnorm", "top"), nsim = 2)
+  })
+  scenario$fits <- NULL
+  scenario <- tidyr::unnest(scenario, cols = hc)
+   expect_snapshot_data(scenario, "scenarioFit2")
+  
+  scenario <- tidyr::unnest(scenario, cols = data)
+   expect_snapshot_data(scenario, "scenarioFit2_data")
+})
