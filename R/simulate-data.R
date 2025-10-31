@@ -48,15 +48,18 @@ ssd_simulate_data.fitdists <- function(x, ..., dist_sim = "top", nrow = 6L, seed
   chk::chk_unused(...)
 
   if(dist_sim == "multi") {
-    ## TODO: implement multi method
-    .NotYetImplemented()
+    fun <- ssdtools::ssd_rmulti_fitdists
+    args <- list(fitdists = x)
+    datas <- ssd_simulate_data(fun, args = args, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
+    return(datas)
   }
   wch <- dist_sim
   if(dist_sim == "top") {
     weight <- ssdtools::glance(x, wt = TRUE)$wt
     wch <- which.max(weight)
   }
-  x <- x[[wch]] 
+  x <- x[[wch]]
+  print(x)
   ssd_simulate_data(x, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 

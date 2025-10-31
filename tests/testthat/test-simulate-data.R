@@ -24,6 +24,16 @@ test_that("ssd_simulate_data.fitdists works top", {
   expect_snapshot_data(data, "fitdists_top_unnest")
 })
 
+test_that("ssd_simulate_data.fitdists works multi", {
+  data <- ssddata::ccme_boron
+  fit <- ssdtools::ssd_fit_dists(data, dists = c("lnorm", "gamma"))
+  withr::local_seed(42)
+  data <- ssd_simulate_data(fit, dist_sim = "multi", nrow = 5, nsim = 10)
+  expect_snapshot_data(data, "fitdists_multi")
+  data <- tidyr::unnest(data, cols = c(data))
+  expect_snapshot_data(data, "fitdists_multi_unnest")
+})
+
 test_that("ssd_simulate_data.fitdists works name", {
   data <- ssddata::ccme_boron
   fit <- ssdtools::ssd_fit_dists(data, dists = c("lnorm", "gamma"))
