@@ -1,7 +1,8 @@
 # get_lecuyer_cmrg_seeds_stream repeatable
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream())
+      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+        stream = 1L, start_sim = 1L))
     Output
       [[1]]
       [1]       10407   115614581  1315917716   768866738 -1769155862  1955826369
@@ -11,7 +12,8 @@
 # get_lecuyer_cmrg_seeds_stream seed fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(start_sim = 10^5))
+      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+        stream = 1L, start_sim = 10^5))
     Output
       [[1]]
       [1]       10407    96217785   989876424   891017701   949736748 -1097908781
@@ -21,7 +23,8 @@
 # get_lecuyer_cmrg_seeds_stream stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(stream = 10^5))
+      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+        start_sim = 1L, stream = 10^5))
     Output
       [[1]]
       [1]       10407   432652119  -575981330 -1961021926 -1445990401   245217999
@@ -31,8 +34,8 @@
 # get_lecuyer_cmrg_seeds_stream seed stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(start_sim = 10^5, stream = 10^
-        5))
+      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+        start_sim = 10^5, stream = 10^5))
     Output
       [[1]]
       [1]       10407  -624102422   647544610  -953698482 -1630547158 -1602554452
@@ -50,7 +53,8 @@
 # get_lecuyer_cmrg_seeds_stream repeatable multiple seeds
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(nsim = 2L))
+      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 2L,
+        stream = 1L, start_sim = 1L))
     Output
       [[1]]
       [1]       10407   115614581  1315917716   768866738 -1769155862  1955826369
@@ -64,7 +68,8 @@
 # get_lecuyer_cmrg_seeds_stream repeatable other starts
 
     Code
-      withr::with_seed(42, get_lecuyer_cmrg_seeds_stream())
+      withr::with_seed(42, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+        stream = 1L, start_sim = 1L))
     Output
       [[1]]
       [1]       10407  -922606465   891908805  2065540205  1561987267  1325379220
@@ -74,7 +79,8 @@
 # get_lecuyer_cmrg_seeds_stream seeds repeatable with other seed types
 
     Code
-      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream())
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+        stream = 1L, start_sim = 1L))
     Output
       [[1]]
       [1]       10407   115614581  1315917716   768866738 -1769155862  1955826369
