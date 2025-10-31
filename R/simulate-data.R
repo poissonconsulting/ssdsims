@@ -59,7 +59,6 @@ ssd_simulate_data.fitdists <- function(x, ..., dist_sim = "top", nrow = 6L, seed
     wch <- which.max(weight)
   }
   x <- x[[wch]]
-  print(x)
   ssd_simulate_data(x, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 
