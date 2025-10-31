@@ -10,6 +10,21 @@ test_that("ssd_run_scenario.data.frame works", {
    expect_snapshot_data(scenario, "scenarioTF2_data")
 })
 
+test_that("ssd_run_scenario.data.frame errors unknown argument", {
+  chk::expect_chk_error(ssd_run_scenario(ssddata::ccme_boron, replace = c(TRUE, FALSE), nsim = 2, thingy = 1), "thingy")
+})
+
+test_that("ssd_run_scenario.data.frame passes arguments fits", {
+  scenario <- ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, rescale = TRUE)
+  coef <- coef(scenario$fits[[1]])
+  expect_snapshot_data(coef, "coef_rescale")
+})
+
+test_that("ssd_run_scenario.data.frame passes arguments hc", {
+  scenario <- ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, ci = TRUE, nboot = 3, min_pboot = 0)
+  expect_equal(scenario$hc[[1]]$nboot, 3L)
+})
+
 test_that("ssd_run_scenario.function works", {
   with_lecuyer_cmrg_seed(10, {
     scenario <- ssd_run_scenario(rlnorm, nsim = 2)

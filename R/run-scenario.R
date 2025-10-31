@@ -19,7 +19,6 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(6L, 10
   chk::check_data(
     x, values = list(Conc = c(0,Inf,NA_real_)), nrow = c(5, 10000)
   )
-  chk::chk_unused(...)
   chk::chk_logical(replace)
   chk::chk_not_any_na(replace)
   chk::chk_unique(replace)
@@ -38,9 +37,30 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(6L, 10
     dplyr::bind_rows() |> 
     dplyr::pull("data")
 
-  data |> 
-    ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
-    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
+  .args <- list(...)
+
+  fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
+  hc_formals <- methods::formalArgs(utils::argsAnywhere("ssd_hc.fitdists"))
+
+  .args_fit <- .args[names(.args) %in% fit_dists_formals]
+  .args_hc <- .args[names(.args) %in% hc_formals]
+
+  .args_unused <- names(.args[!names(.args) %in% c(fit_dists_formals, hc_formals)])
+  .n <- length(.args_unused)
+  if(.n) {
+      chk::abort_chk("the following %n argument%s %r unrecognised: ", chk::cc(.args_unused), n = .n)
+  }
+
+  .args_fit <- list(x = data, dists = dists, .progress = .progress) |>
+    c(.args_fit)
+
+  print(.args_fit)
+  data <- do.call("ssd_fit_dists_sims", .args_fit)
+
+  .args_hc <- list(x = data, proportion = proportion, ci = ci, .progress = .progress) |>
+    c(.args_hc)
+
+  do.call("ssd_hc_sims", .args_hc)
 }
 
 #' @describeIn ssd_run_scenario Run scenario using fitdists object to generate data
