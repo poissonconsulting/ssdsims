@@ -200,22 +200,6 @@ the distributions as a single distribution.</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nsim <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 5</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream replace  nrow data             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1 FALSE       6 <span style="color: #949494;">&lt;tibble [6 × 5]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     1      1 FALSE      10 <span style="color: #949494;">&lt;tibble [10 × 5]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1 FALSE       6 <span style="color: #949494;">&lt;tibble [6 × 5]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     2      1 FALSE      10 <span style="color: #949494;">&lt;tibble [10 × 5]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $dists</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "gamma"       "lgumbel"     "llogis"      "lnorm"       "lnorm_lnorm"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [6] "weibull"    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $.progress</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 7</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream replace  nrow data              fits       hc               </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
@@ -226,78 +210,6 @@ the distributions as a single distribution.</p></dd>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_fit_dists.html" class="external-link">ssd_fit_dists</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="va">fit</span>, dist_sim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lnorm"</span>, <span class="st">"top"</span><span class="op">)</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'lnorm'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   meanlog 2.56165</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   sdlog 1.24154</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'lnorm'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   meanlog 2.56165</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   sdlog 1.24154</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'weibull'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   scale 23.514</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   shape 0.9661</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'weibull'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   scale 23.514</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   shape 0.9661</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'lnorm'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   meanlog 2.56165</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   sdlog 1.24154</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'lnorm'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   meanlog 2.56165</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   sdlog 1.24154</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'weibull'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   scale 23.514</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   shape 0.9661</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'weibull'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   scale 23.514</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   shape 0.9661</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'lnorm'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   meanlog 2.56165</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   sdlog 1.24154</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'lnorm'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   meanlog 2.56165</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   sdlog 1.24154</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'weibull'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   scale 23.514</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   shape 0.9661</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Distribution 'weibull'</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   scale 23.514</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   shape 0.9661</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 12 × 5</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      sim stream dist_sim  nrow data             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span>     1      1 lnorm        6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span>     1      1 lnorm       10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span>     1      1 top          6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span>     1      1 top         10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span>     2      1 lnorm        6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span>     2      1 lnorm       10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span>     2      1 top          6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span>     2      1 top         10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span>     3      1 lnorm        6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span>     3      1 lnorm       10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">11</span>     3      1 top          6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">12</span>     3      1 top         10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $dists</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "gamma"       "lgumbel"     "llogis"      "lnorm"       "lnorm_lnorm"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [6] "weibull"    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $.progress</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 12 × 7</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      sim stream dist_sim  nrow data              fits       hc               </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
@@ -316,24 +228,6 @@ the distributions as a single distribution.</p></dd>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_fit_dists.html" class="external-link">ssd_fit_dists</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="va">fit</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream  nrow data             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     1      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     2      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>     3      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>     3      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $dists</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "gamma"       "lgumbel"     "llogis"      "lnorm"       "lnorm_lnorm"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [6] "weibull"    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $.progress</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 6</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream  nrow data              fits       hc               </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
@@ -345,24 +239,6 @@ the distributions as a single distribution.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>     3      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="st">"rlnorm"</span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream  nrow data             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     1      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     2      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>     3      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>     3      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $dists</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "gamma"       "lgumbel"     "llogis"      "lnorm"       "lnorm_lnorm"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [6] "weibull"    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $.progress</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 6</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream  nrow data              fits       hc               </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
@@ -374,24 +250,6 @@ the distributions as a single distribution.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>     3      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span> <span style="color: #949494;">&lt;fitdists&gt;</span> <span style="color: #949494;">&lt;tibble [1 × 15]&gt;</span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">ssd_run_scenario</span><span class="op">(</span><span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_r.html" class="external-link">ssd_rlnorm</a></span>, nsim <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $x</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 4</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream  nrow data             </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     1      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     2      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     2      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>     3      1     6 <span style="color: #949494;">&lt;tibble [6 × 1]&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>     3      1    10 <span style="color: #949494;">&lt;tibble [10 × 1]&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $dists</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "gamma"       "lgumbel"     "llogis"      "lnorm"       "lnorm_lnorm"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [6] "weibull"    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $.progress</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 6</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sim stream  nrow data              fits       hc               </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>            <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>           </span>
