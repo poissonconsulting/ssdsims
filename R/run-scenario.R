@@ -59,9 +59,7 @@ ssd_run_scenario.fitdists <- function(x, ..., dist_sim = "top", nrow = c(6L, 10L
     dplyr::bind_rows() |> 
     dplyr::pull("data")
 
-  data |> 
-    ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
-    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
+  run_scenario(x = data, ..., dists = dists, proportion = proportion, ci = ci, .progress = .progress)
 }
 
 #' @describeIn ssd_run_scenario Run scenario using tmbfit object to generate data
@@ -118,7 +116,5 @@ ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), 
     dplyr::bind_rows() |> 
     dplyr::pull("data")
 
-  data |> 
-    ssd_fit_dists_sims(.progress = .progress, dists = dists) |>
-    ssd_hc_sims(proportion = proportion, ci = ci, .progress = .progress)
+  run_scenario(x = data, ..., dists = dists, proportion = proportion, ci = ci, .progress = .progress)
 }
