@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9002
+
+- Same as previous version.
+
+
 # ssdsims 0.0.0.9001
 
 - Merge pull request #30 from poissonconsulting/joethorley/issue21.
