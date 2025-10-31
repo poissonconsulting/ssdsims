@@ -1,5 +1,5 @@
-sim,stream,nrow,data,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
-1,1,6,"list(Conc = c(0.87892909345282, 1.90069735027901, 1.45369061092422, 0.273837316668106, 0.340807168614317, 0.2255988596944))",average,0.05,0.145453,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,10,"list(Conc = c(0.87892909345282, 1.90069735027901, 1.45369061092422, 0.273837316668106, 0.340807168614317, 0.2255988596944, 0.312498353605414, 2.00085047774002, 0.522316684537549, 0.00422909086884277))",average,0.05,0.0280648,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,6,"list(Conc = c(2.08800758606135, 0.784358769856754, 0.166746507684397, 0.973156230850578, 0.839168909691411, 0.897029849424373))",average,0.05,0.214152,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,10,"list(Conc = c(2.08800758606135, 0.784358769856754, 0.166746507684397, 0.973156230850578, 0.839168909691411, 0.897029849424373, 1.32272732963372, 0.2252031834853, 1.7070505145625, 1.37710386435222))",average,0.05,0.225626,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
+sim,stream,nrow,data,fits,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
+1,1,6,list,list,average,0.05,0.145453,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,list,list,average,0.05,0.0280648,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,6,list,list,average,0.05,0.214152,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,list,list,average,0.05,0.225626,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list

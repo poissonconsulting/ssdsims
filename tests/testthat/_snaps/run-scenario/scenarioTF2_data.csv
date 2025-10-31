@@ -1,65 +1,65 @@
-sim,stream,replace,nrow,Chemical,Species,Conc,Group,Units,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
-1,1,TRUE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,6,Boron,Lemna minor,60,Plant,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Lemna minor,60,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,6,Boron,Anacystis nidulans,50,Plant,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Anacystis nidulans,50,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Opercularia bimarginata,10,Invertebrate,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Entosiphon sulcatum,15,Invertebrate,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,FALSE,10,Boron,Ambystoma jeffersonianum,70.7,Amphibian,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,6,Boron,Lemna minor,60,Plant,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Lemna minor,60,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,3.17476,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,6,Boron,Anacystis nidulans,50,Plant,mg/L,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Anacystis nidulans,50,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Opercularia bimarginata,10,Invertebrate,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Entosiphon sulcatum,15,Invertebrate,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,FALSE,10,Boron,Ambystoma jeffersonianum,70.7,Amphibian,mg/L,average,0.05,2.95574,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
+sim,stream,replace,nrow,Chemical,Species,Conc,Group,Units,fits,hc
+1,1,TRUE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+1,1,TRUE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+1,1,TRUE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+1,1,TRUE,6,Boron,Lemna minor,60,Plant,mg/L,list,list
+1,1,TRUE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+1,1,TRUE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+1,1,TRUE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+1,1,TRUE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+1,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+1,1,TRUE,10,Boron,Lemna minor,60,Plant,mg/L,list,list
+1,1,TRUE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+1,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+1,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,list,list
+1,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,list,list
+1,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+1,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+1,1,FALSE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+1,1,FALSE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+1,1,FALSE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+1,1,FALSE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+1,1,FALSE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+1,1,FALSE,6,Boron,Anacystis nidulans,50,Plant,mg/L,list,list
+1,1,FALSE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+1,1,FALSE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+1,1,FALSE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+1,1,FALSE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+1,1,FALSE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+1,1,FALSE,10,Boron,Anacystis nidulans,50,Plant,mg/L,list,list
+1,1,FALSE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,list,list
+1,1,FALSE,10,Boron,Opercularia bimarginata,10,Invertebrate,mg/L,list,list
+1,1,FALSE,10,Boron,Entosiphon sulcatum,15,Invertebrate,mg/L,list,list
+1,1,FALSE,10,Boron,Ambystoma jeffersonianum,70.7,Amphibian,mg/L,list,list
+2,1,TRUE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+2,1,TRUE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+2,1,TRUE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+2,1,TRUE,6,Boron,Lemna minor,60,Plant,mg/L,list,list
+2,1,TRUE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+2,1,TRUE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+2,1,TRUE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+2,1,TRUE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+2,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+2,1,TRUE,10,Boron,Lemna minor,60,Plant,mg/L,list,list
+2,1,TRUE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+2,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+2,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,list,list
+2,1,TRUE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,list,list
+2,1,TRUE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+2,1,TRUE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+2,1,FALSE,6,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+2,1,FALSE,6,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+2,1,FALSE,6,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+2,1,FALSE,6,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+2,1,FALSE,6,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+2,1,FALSE,6,Boron,Anacystis nidulans,50,Plant,mg/L,list,list
+2,1,FALSE,10,Boron,Ceriodaphnia dubia,13.4,Invertebrate,mg/L,list,list
+2,1,FALSE,10,Boron,Myriophyllum spicatum,34.2,Plant,mg/L,list,list
+2,1,FALSE,10,Boron,Rana sylvatica,70.7,Amphibian,mg/L,list,list
+2,1,FALSE,10,Boron,Spirodella polyrrhiza,1.8,Plant,mg/L,list,list
+2,1,FALSE,10,Boron,Pimephales promelas,18.3,Fish,mg/L,list,list
+2,1,FALSE,10,Boron,Anacystis nidulans,50,Plant,mg/L,list,list
+2,1,FALSE,10,Boron,Selenastrum capricornutum,12.3,Plant,mg/L,list,list
+2,1,FALSE,10,Boron,Opercularia bimarginata,10,Invertebrate,mg/L,list,list
+2,1,FALSE,10,Boron,Entosiphon sulcatum,15,Invertebrate,mg/L,list,list
+2,1,FALSE,10,Boron,Ambystoma jeffersonianum,70.7,Amphibian,mg/L,list,list

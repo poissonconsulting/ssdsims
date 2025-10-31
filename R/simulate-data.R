@@ -59,7 +59,6 @@ ssd_simulate_data.fitdists <- function(x, ..., dist_sim = "top", nrow = 6L, seed
     wch <- which.max(weight)
   }
   x <- x[[wch]]
-  print(x)
   ssd_simulate_data(x, nrow = nrow, seed = seed, nsim = nsim, stream = stream, start_sim = start_sim, .progress = .progress)
 }
 
@@ -102,6 +101,9 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
   chk::chk_list(args)
   chk::chk_whole_number(nrow)
   chk::chk_range(nrow, c(5, 1000))
+
+  chk::chk_whole_number(stream)
+  chk::chk_gt(stream)
 
   sims <- sim_seq(start_sim, nsim) 
   seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)

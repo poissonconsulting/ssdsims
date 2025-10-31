@@ -1,65 +1,65 @@
-sim,stream,dist_sim,nrow,Conc,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
-1,1,lnorm,6,22.9602,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,6,68.6597,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,6,44.6865,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,6,8.20895,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,6,10.9988,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,6,117.682,average,0.05,5.61322,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,22.9602,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,68.6597,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,44.6865,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,8.20895,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,10.9988,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,117.682,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,7.28078,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,10.4417,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,7.84633,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,lnorm,10,75.0532,average,0.05,4.27887,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,top,6,8.85585,average,0.05,0.693636,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,top,6,19.8771,average,0.05,0.693636,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,top,6,2.03192,average,0.05,0.693636,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,top,6,0.95518,average,0.05,0.693636,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,top,6,3.83807,average,0.05,0.693636,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,top,6,25.1734,average,0.05,0.693636,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,8.85585,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,19.8771,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,2.03192,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,0.95518,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,3.83807,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,25.1734,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,24.2739,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,19.8181,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,18.763,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-1,1,top,10,21.3228,average,0.05,1.55437,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""lnorm_lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,6,2.77023,average,0.05,1.14683,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,6,1.44412,average,0.05,1.14683,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,6,4.78109,average,0.05,1.14683,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,6,18.8629,average,0.05,1.14683,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,6,18.1777,average,0.05,1.14683,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,6,21.6642,average,0.05,1.14683,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,2.77023,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,1.44412,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,4.78109,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,18.8629,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,18.1777,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,21.6642,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,25.9292,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,21.7692,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,23.5143,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,lnorm,10,38.9248,average,0.05,2.23353,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,6,54.0535,average,0.05,6.83166,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,6,28.9636,average,0.05,6.83166,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,6,79.7674,average,0.05,6.83166,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,6,8.05812,average,0.05,6.83166,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,6,37.1593,average,0.05,6.83166,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,6,12.2237,average,0.05,6.83166,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,54.0535,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,28.9636,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,79.7674,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,8.05812,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,37.1593,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,12.2237,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,10.9968,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,10.2203,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,11.4384,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,top,10,30.6223,average,0.05,6.08604,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
+sim,stream,dist_sim,nrow,Conc,fits,hc
+1,1,lnorm,6,22.9602,list,list
+1,1,lnorm,6,68.6597,list,list
+1,1,lnorm,6,44.6865,list,list
+1,1,lnorm,6,8.20895,list,list
+1,1,lnorm,6,10.9988,list,list
+1,1,lnorm,6,117.682,list,list
+1,1,lnorm,10,22.9602,list,list
+1,1,lnorm,10,68.6597,list,list
+1,1,lnorm,10,44.6865,list,list
+1,1,lnorm,10,8.20895,list,list
+1,1,lnorm,10,10.9988,list,list
+1,1,lnorm,10,117.682,list,list
+1,1,lnorm,10,7.28078,list,list
+1,1,lnorm,10,10.4417,list,list
+1,1,lnorm,10,7.84633,list,list
+1,1,lnorm,10,75.0532,list,list
+1,1,top,6,8.85585,list,list
+1,1,top,6,19.8771,list,list
+1,1,top,6,2.03192,list,list
+1,1,top,6,0.95518,list,list
+1,1,top,6,3.83807,list,list
+1,1,top,6,25.1734,list,list
+1,1,top,10,8.85585,list,list
+1,1,top,10,19.8771,list,list
+1,1,top,10,2.03192,list,list
+1,1,top,10,0.95518,list,list
+1,1,top,10,3.83807,list,list
+1,1,top,10,25.1734,list,list
+1,1,top,10,24.2739,list,list
+1,1,top,10,19.8181,list,list
+1,1,top,10,18.763,list,list
+1,1,top,10,21.3228,list,list
+2,1,lnorm,6,2.77023,list,list
+2,1,lnorm,6,1.44412,list,list
+2,1,lnorm,6,4.78109,list,list
+2,1,lnorm,6,18.8629,list,list
+2,1,lnorm,6,18.1777,list,list
+2,1,lnorm,6,21.6642,list,list
+2,1,lnorm,10,2.77023,list,list
+2,1,lnorm,10,1.44412,list,list
+2,1,lnorm,10,4.78109,list,list
+2,1,lnorm,10,18.8629,list,list
+2,1,lnorm,10,18.1777,list,list
+2,1,lnorm,10,21.6642,list,list
+2,1,lnorm,10,25.9292,list,list
+2,1,lnorm,10,21.7692,list,list
+2,1,lnorm,10,23.5143,list,list
+2,1,lnorm,10,38.9248,list,list
+2,1,top,6,54.0535,list,list
+2,1,top,6,28.9636,list,list
+2,1,top,6,79.7674,list,list
+2,1,top,6,8.05812,list,list
+2,1,top,6,37.1593,list,list
+2,1,top,6,12.2237,list,list
+2,1,top,10,54.0535,list,list
+2,1,top,10,28.9636,list,list
+2,1,top,10,79.7674,list,list
+2,1,top,10,8.05812,list,list
+2,1,top,10,37.1593,list,list
+2,1,top,10,12.2237,list,list
+2,1,top,10,10.9968,list,list
+2,1,top,10,10.2203,list,list
+2,1,top,10,11.4384,list,list
+2,1,top,10,30.6223,list,list

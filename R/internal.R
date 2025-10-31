@@ -48,7 +48,6 @@ run_scenario <- function(x, ..., dists = dists, proportion = proportion, ci = ci
   .args_fit <- list(x = x, dists = dists, .progress = .progress) |>
     c(.args_fit)
 
-  print(.args_fit)
   x <- do.call("ssd_fit_dists_sims", .args_fit)
 
   .args_hc <- list(x = x, proportion = proportion, ci = ci, .progress = .progress) |>
