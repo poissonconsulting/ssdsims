@@ -18,13 +18,15 @@ Imports:
     methods,
     parallel,
     purrr,
-    ssdtools,
+    ssdtools (>= 2.4.0.9001),
     tidyr,
     withr
 Suggests: 
     readr,
     ssddata,
     testthat (>= 3.0.0)
+Remotes:
+    poissonconsulting/ssdtools@dev
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
