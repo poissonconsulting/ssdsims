@@ -28,3 +28,31 @@ hc_seed <- function(data, sim, stream, seed, proportion, ci, save_to, ...) {
   })
   fit 
 }
+
+run_scenario <- function(x, ..., dists = dists, proportion = proportion, ci = ci, .progress = .progress) {
+  .args <- list(...)
+
+  fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
+  hc_formals <- methods::formalArgs(utils::argsAnywhere("ssd_hc.fitdists"))
+
+  .args_fit <- .args[names(.args) %in% fit_dists_formals]
+  .args_hc <- .args[names(.args) %in% hc_formals]
+
+  .args_unused <- names(.args[!names(.args) %in% c(fit_dists_formals, hc_formals)])
+  .n <- length(.args_unused)
+
+  if(.n) {
+      chk::abort_chk("the following %n argument%s %r unrecognised: ", chk::cc(.args_unused), n = .n)
+  }
+
+  .args_fit <- list(x = x, dists = dists, .progress = .progress) |>
+    c(.args_fit)
+
+  print(.args_fit)
+  x <- do.call("ssd_fit_dists_sims", .args_fit)
+
+  .args_hc <- list(x = x, proportion = proportion, ci = ci, .progress = .progress) |>
+    c(.args_hc)
+
+  do.call("ssd_hc_sims", .args_hc)
+}
