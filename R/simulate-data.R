@@ -103,6 +103,9 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
   chk::chk_whole_number(nrow)
   chk::chk_range(nrow, c(5, 1000))
 
+  chk::chk_whole_number(stream)
+  chk::chk_gt(stream)
+
   sims <- sim_seq(start_sim, nsim) 
   seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
 
