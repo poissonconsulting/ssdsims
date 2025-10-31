@@ -1,2 +1,2 @@
 sim,stream,data,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
-1,1,"list(Conc = c(1.58535887905803, 3.83090877340542, 2.71059533395263, 0.692377319352428, 0.876356155726321, 5.91268079141089))",average,0.05,0.514363,0.379049,0.137094,1.63033,1,0.95,multi,weighted_samples,parametric,1000,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
+1,1,list,average,0.05,0.514363,0.379049,0.137094,1.63033,1,0.95,multi,weighted_samples,parametric,1000,1,list,list

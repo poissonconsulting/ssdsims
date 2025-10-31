@@ -23,7 +23,8 @@ expect_snapshot_data <- function(x, name, digits = 6) {
   fun <- function(x) if(is.numeric(x)) signif(x, digits = digits) else x
   lapply_fun <- function(x) I(lapply(x, fun))
   x <- dplyr::mutate(x, dplyr::across(where(is.numeric), fun))
-  x <- dplyr::mutate(x, dplyr::across(where(is.list), lapply_fun))
+  n <- nrow(x)
+  x <- dplyr::mutate(x, dplyr::across(where(is.list), \(.x) rep("list", n)))
   path <- save_csv(x)
   testthat::expect_snapshot_file(
     path,

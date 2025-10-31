@@ -1,5 +1,33 @@
-sim,stream,nrow,data,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
-1,1,6,"list(Conc = c(1.58535887905803, 3.83090877340542, 2.71059533395263, 0.692377319352428, 0.876356155726321, 5.91268079141089))",average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-1,1,10,"list(Conc = c(1.58535887905803, 3.83090877340542, 2.71059533395263, 0.692377319352428, 0.876356155726321, 5.91268079141089, 0.62859469365099, 0.840425630088218, 0.66763478055666, 4.11572448031164))",average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,6,"list(Conc = c(0.288638018422456, 0.17079787006156, 0.447975519115659, 1.35322225383547, 1.31348723160756, 1.51287724539391))",average,0.05,0.143255,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
-2,1,10,"list(Conc = c(0.288638018422456, 0.17079787006156, 0.447975519115659, 1.35322225383547, 1.31348723160756, 1.51287724539391, 1.74850312057608, 1.51878351801123, 1.61610613057065, 2.42537004124292))",average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,"c(""gamma"", ""lgumbel"", ""llogis"", ""lnorm"", ""weibull"")",numeric(0)
+sim,stream,nrow,Conc,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
+1,1,6,1.58536,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,6,3.83091,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,6,2.7106,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,6,0.692377,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,6,0.876356,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,6,5.91268,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,1.58536,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,3.83091,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,2.7106,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,0.692377,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,0.876356,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,5.91268,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,0.628595,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,0.840426,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,0.667635,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+1,1,10,4.11572,average,0.05,0.410544,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,6,0.288638,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,6,0.170798,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,6,0.447976,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,6,1.35322,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,6,1.31349,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,6,1.51288,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,0.288638,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,0.170798,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,0.447976,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,1.35322,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,1.31349,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,1.51288,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,1.7485,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,1.51878,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,1.61611,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+2,1,10,2.42537,average,0.05,0.244793,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
