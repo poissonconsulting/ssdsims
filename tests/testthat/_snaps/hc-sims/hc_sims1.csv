@@ -1,2 +1,2 @@
-sim,stream,data,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
-1,1,list,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
+sim,stream,data,fits,dist,proportion,est,se,lcl,ucl,wt,level,est_method,ci_method,boot_method,nboot,pboot,dists,samples
+1,1,list,list,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,weighted_samples,parametric,0,1,list,list
