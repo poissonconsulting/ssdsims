@@ -36,4 +36,31 @@ withr::with_seed(42, {
 #>  8     8      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
 #>  9     9      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
 #> 10    10      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
+
+withr::with_seed(42, {
+  ssd_run_scenario(ssddata::ccme_boron, nsim = 10)
+})
+#> # A tibble: 20 × 7
+#>      sim stream replace  nrow data              fits       hc               
+#>    <int>  <int> <lgl>   <int> <list>            <list>     <list>           
+#>  1     1      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#>  2     1      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#>  3     2      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#>  4     2      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#>  5     3      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#>  6     3      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#>  7     4      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#>  8     4      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#>  9     5      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#> 10     5      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#> 11     6      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#> 12     6      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#> 13     7      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#> 14     7      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#> 15     8      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#> 16     8      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#> 17     9      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#> 18     9      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#> 19    10      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
+#> 20    10      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
 ```
