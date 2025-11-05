@@ -14,8 +14,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{data.frame}(
   x,
   ...,
-  replace = FALSE,
   nrow = 6L,
+  replace = FALSE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -26,8 +26,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{fitdists}(
   x,
   ...,
-  dist_sim = "top",
   nrow = 6L,
+  dist_sim = "top",
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -49,8 +49,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{character}(
   x,
   ...,
-  args = list(),
   nrow = 6L,
+  args = list(),
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -61,8 +61,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{`function`}(
   x,
   ...,
-  args = list(),
   nrow = 6L,
+  args = list(),
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -75,9 +75,9 @@ ssd_simulate_data(x, ...)
 
 \item{...}{Unused.}
 
-\item{replace}{A flag specifying whether to sample with replacement.}
+\item{nrow}{A numeric vector of the number of rows in the generated data which must be between 5 and 1,000,}
 
-\item{nrow}{A count of the number of rows in the generated data which must be between 5 and 1,000,}
+\item{replace}{A logical vector specifying whether to sample with replacement.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 
@@ -89,9 +89,7 @@ ssd_simulate_data(x, ...)
 
 \item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 
-\item{dist_sim}{A string specifying the distribution in the fitdists object or
-\code{"top"} to use the distribution with most weight or \code{"multi"} to treat
-the distributions as a single distribution.}
+\item{dist_sim}{A character vector specifying the distributions in the fitdists object or \verb{"all"`` for all the distributions and/or }"top"\verb{to use the distribution with most weight  and/or}"multi"` to treat the distributions as a single distribution.}
 
 \item{args}{A named list of the argument values.}
 }

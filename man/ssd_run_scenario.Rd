@@ -14,8 +14,8 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{data.frame}(
   x,
   ...,
-  replace = FALSE,
   nrow = c(6L, 10L),
+  replace = FALSE,
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
   ci = FALSE,
@@ -29,8 +29,8 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{fitdists}(
   x,
   ...,
-  dist_sim = "top",
   nrow = c(6L, 10L),
+  dist_sim = "top",
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
   ci = FALSE,
@@ -58,8 +58,8 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{character}(
   x,
   ...,
-  args = list(),
   nrow = c(6L, 10L),
+  args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
   ci = FALSE,
@@ -73,8 +73,8 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{`function`}(
   x,
   ...,
-  args = list(),
   nrow = c(6L, 10L),
+  args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
   ci = FALSE,
@@ -90,9 +90,9 @@ ssd_run_scenario(x, ...)
 
 \item{...}{Unused.}
 
-\item{replace}{A flag specifying whether to sample with replacement.}
-
 \item{nrow}{A positive whole number of the minimum number of non-missing rows.}
+
+\item{replace}{A logical vector specifying whether to sample with replacement.}
 
 \item{dists}{A character vector of the distribution names.}
 
@@ -110,9 +110,7 @@ ssd_run_scenario(x, ...)
 
 \item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 
-\item{dist_sim}{A string specifying the distribution in the fitdists object or
-\code{"top"} to use the distribution with most weight or \code{"multi"} to treat
-the distributions as a single distribution.}
+\item{dist_sim}{A character vector specifying the distributions in the fitdists object or \verb{"all"`` for all the distributions and/or }"top"\verb{to use the distribution with most weight  and/or}"multi"` to treat the distributions as a single distribution.}
 
 \item{args}{A named list of the argument values.}
 }
