@@ -4,18 +4,18 @@
       data
     Output
       # A tibble: 10 x 5
-           sim stream args        nrow data            
-         <int>  <int> <list>     <dbl> <list>          
-       1     1      1 <list [0]>     5 <tibble [5 x 1]>
-       2     2      1 <list [0]>     5 <tibble [5 x 1]>
-       3     3      1 <list [0]>     5 <tibble [5 x 1]>
-       4     4      1 <list [0]>     5 <tibble [5 x 1]>
-       5     5      1 <list [0]>     5 <tibble [5 x 1]>
-       6     6      1 <list [0]>     5 <tibble [5 x 1]>
-       7     7      1 <list [0]>     5 <tibble [5 x 1]>
-       8     8      1 <list [0]>     5 <tibble [5 x 1]>
-       9     9      1 <list [0]>     5 <tibble [5 x 1]>
-      10    10      1 <list [0]>     5 <tibble [5 x 1]>
+           sim stream  nrow args       data            
+         <int>  <int> <dbl> <list>     <list>          
+       1     1      1     5 <list [0]> <tibble [5 x 1]>
+       2     2      1     5 <list [0]> <tibble [5 x 1]>
+       3     3      1     5 <list [0]> <tibble [5 x 1]>
+       4     4      1     5 <list [0]> <tibble [5 x 1]>
+       5     5      1     5 <list [0]> <tibble [5 x 1]>
+       6     6      1     5 <list [0]> <tibble [5 x 1]>
+       7     7      1     5 <list [0]> <tibble [5 x 1]>
+       8     8      1     5 <list [0]> <tibble [5 x 1]>
+       9     9      1     5 <list [0]> <tibble [5 x 1]>
+      10    10      1     5 <list [0]> <tibble [5 x 1]>
 
 # ssd_simulate_data.function vectorized
 
@@ -36,18 +36,18 @@
       data
     Output
       # A tibble: 10 x 5
-           sim stream args        nrow data            
-         <int>  <int> <list>     <dbl> <list>          
-       1     1      1 <list [0]>     5 <tibble [5 x 1]>
-       2     2      1 <list [0]>     5 <tibble [5 x 1]>
-       3     3      1 <list [0]>     5 <tibble [5 x 1]>
-       4     4      1 <list [0]>     5 <tibble [5 x 1]>
-       5     5      1 <list [0]>     5 <tibble [5 x 1]>
-       6     6      1 <list [0]>     5 <tibble [5 x 1]>
-       7     7      1 <list [0]>     5 <tibble [5 x 1]>
-       8     8      1 <list [0]>     5 <tibble [5 x 1]>
-       9     9      1 <list [0]>     5 <tibble [5 x 1]>
-      10    10      1 <list [0]>     5 <tibble [5 x 1]>
+           sim stream  nrow args       data            
+         <int>  <int> <dbl> <list>     <list>          
+       1     1      1     5 <list [0]> <tibble [5 x 1]>
+       2     2      1     5 <list [0]> <tibble [5 x 1]>
+       3     3      1     5 <list [0]> <tibble [5 x 1]>
+       4     4      1     5 <list [0]> <tibble [5 x 1]>
+       5     5      1     5 <list [0]> <tibble [5 x 1]>
+       6     6      1     5 <list [0]> <tibble [5 x 1]>
+       7     7      1     5 <list [0]> <tibble [5 x 1]>
+       8     8      1     5 <list [0]> <tibble [5 x 1]>
+       9     9      1     5 <list [0]> <tibble [5 x 1]>
+      10    10      1     5 <list [0]> <tibble [5 x 1]>
 
 # ssd_simulate_data.character vectorized
 
@@ -68,18 +68,18 @@
       data
     Output
       # A tibble: 10 x 5
-           sim stream args              nrow data            
-         <int>  <int> <list>           <dbl> <list>          
-       1     1      1 <named list [2]>     5 <tibble [5 x 1]>
-       2     2      1 <named list [2]>     5 <tibble [5 x 1]>
-       3     3      1 <named list [2]>     5 <tibble [5 x 1]>
-       4     4      1 <named list [2]>     5 <tibble [5 x 1]>
-       5     5      1 <named list [2]>     5 <tibble [5 x 1]>
-       6     6      1 <named list [2]>     5 <tibble [5 x 1]>
-       7     7      1 <named list [2]>     5 <tibble [5 x 1]>
-       8     8      1 <named list [2]>     5 <tibble [5 x 1]>
-       9     9      1 <named list [2]>     5 <tibble [5 x 1]>
-      10    10      1 <named list [2]>     5 <tibble [5 x 1]>
+           sim stream  nrow args             data            
+         <int>  <int> <dbl> <list>           <list>          
+       1     1      1     5 <named list [2]> <tibble [5 x 1]>
+       2     2      1     5 <named list [2]> <tibble [5 x 1]>
+       3     3      1     5 <named list [2]> <tibble [5 x 1]>
+       4     4      1     5 <named list [2]> <tibble [5 x 1]>
+       5     5      1     5 <named list [2]> <tibble [5 x 1]>
+       6     6      1     5 <named list [2]> <tibble [5 x 1]>
+       7     7      1     5 <named list [2]> <tibble [5 x 1]>
+       8     8      1     5 <named list [2]> <tibble [5 x 1]>
+       9     9      1     5 <named list [2]> <tibble [5 x 1]>
+      10    10      1     5 <named list [2]> <tibble [5 x 1]>
 
 # ssd_simulate_data.fitdists works multi
 
@@ -87,18 +87,18 @@
       data
     Output
       # A tibble: 10 x 5
-           sim stream args              nrow data            
-         <int>  <int> <list>           <dbl> <list>          
-       1     1      1 <named list [1]>     5 <tibble [5 x 1]>
-       2     2      1 <named list [1]>     5 <tibble [5 x 1]>
-       3     3      1 <named list [1]>     5 <tibble [5 x 1]>
-       4     4      1 <named list [1]>     5 <tibble [5 x 1]>
-       5     5      1 <named list [1]>     5 <tibble [5 x 1]>
-       6     6      1 <named list [1]>     5 <tibble [5 x 1]>
-       7     7      1 <named list [1]>     5 <tibble [5 x 1]>
-       8     8      1 <named list [1]>     5 <tibble [5 x 1]>
-       9     9      1 <named list [1]>     5 <tibble [5 x 1]>
-      10    10      1 <named list [1]>     5 <tibble [5 x 1]>
+           sim stream  nrow args             data            
+         <int>  <int> <dbl> <list>           <list>          
+       1     1      1     5 <named list [1]> <tibble [5 x 1]>
+       2     2      1     5 <named list [1]> <tibble [5 x 1]>
+       3     3      1     5 <named list [1]> <tibble [5 x 1]>
+       4     4      1     5 <named list [1]> <tibble [5 x 1]>
+       5     5      1     5 <named list [1]> <tibble [5 x 1]>
+       6     6      1     5 <named list [1]> <tibble [5 x 1]>
+       7     7      1     5 <named list [1]> <tibble [5 x 1]>
+       8     8      1     5 <named list [1]> <tibble [5 x 1]>
+       9     9      1     5 <named list [1]> <tibble [5 x 1]>
+      10    10      1     5 <named list [1]> <tibble [5 x 1]>
 
 # ssd_simulate_data.fitdists works name
 
@@ -106,18 +106,18 @@
       data
     Output
       # A tibble: 10 x 5
-           sim stream args              nrow data            
-         <int>  <int> <list>           <dbl> <list>          
-       1     1      1 <named list [2]>     5 <tibble [5 x 1]>
-       2     2      1 <named list [2]>     5 <tibble [5 x 1]>
-       3     3      1 <named list [2]>     5 <tibble [5 x 1]>
-       4     4      1 <named list [2]>     5 <tibble [5 x 1]>
-       5     5      1 <named list [2]>     5 <tibble [5 x 1]>
-       6     6      1 <named list [2]>     5 <tibble [5 x 1]>
-       7     7      1 <named list [2]>     5 <tibble [5 x 1]>
-       8     8      1 <named list [2]>     5 <tibble [5 x 1]>
-       9     9      1 <named list [2]>     5 <tibble [5 x 1]>
-      10    10      1 <named list [2]>     5 <tibble [5 x 1]>
+           sim stream  nrow args             data            
+         <int>  <int> <dbl> <list>           <list>          
+       1     1      1     5 <named list [2]> <tibble [5 x 1]>
+       2     2      1     5 <named list [2]> <tibble [5 x 1]>
+       3     3      1     5 <named list [2]> <tibble [5 x 1]>
+       4     4      1     5 <named list [2]> <tibble [5 x 1]>
+       5     5      1     5 <named list [2]> <tibble [5 x 1]>
+       6     6      1     5 <named list [2]> <tibble [5 x 1]>
+       7     7      1     5 <named list [2]> <tibble [5 x 1]>
+       8     8      1     5 <named list [2]> <tibble [5 x 1]>
+       9     9      1     5 <named list [2]> <tibble [5 x 1]>
+      10    10      1     5 <named list [2]> <tibble [5 x 1]>
 
 # ssd_simulate_data.tmbfit works
 
@@ -125,18 +125,18 @@
       data
     Output
       # A tibble: 10 x 5
-           sim stream args              nrow data            
-         <int>  <int> <list>           <dbl> <list>          
-       1     1      1 <named list [2]>     5 <tibble [5 x 1]>
-       2     2      1 <named list [2]>     5 <tibble [5 x 1]>
-       3     3      1 <named list [2]>     5 <tibble [5 x 1]>
-       4     4      1 <named list [2]>     5 <tibble [5 x 1]>
-       5     5      1 <named list [2]>     5 <tibble [5 x 1]>
-       6     6      1 <named list [2]>     5 <tibble [5 x 1]>
-       7     7      1 <named list [2]>     5 <tibble [5 x 1]>
-       8     8      1 <named list [2]>     5 <tibble [5 x 1]>
-       9     9      1 <named list [2]>     5 <tibble [5 x 1]>
-      10    10      1 <named list [2]>     5 <tibble [5 x 1]>
+           sim stream  nrow args             data            
+         <int>  <int> <dbl> <list>           <list>          
+       1     1      1     5 <named list [2]> <tibble [5 x 1]>
+       2     2      1     5 <named list [2]> <tibble [5 x 1]>
+       3     3      1     5 <named list [2]> <tibble [5 x 1]>
+       4     4      1     5 <named list [2]> <tibble [5 x 1]>
+       5     5      1     5 <named list [2]> <tibble [5 x 1]>
+       6     6      1     5 <named list [2]> <tibble [5 x 1]>
+       7     7      1     5 <named list [2]> <tibble [5 x 1]>
+       8     8      1     5 <named list [2]> <tibble [5 x 1]>
+       9     9      1     5 <named list [2]> <tibble [5 x 1]>
+      10    10      1     5 <named list [2]> <tibble [5 x 1]>
 
 # ssd_simulate_data.data.frame works
 
@@ -144,18 +144,18 @@
       data
     Output
       # A tibble: 10 x 5
-           sim stream replace  nrow data            
-         <int>  <int> <lgl>   <dbl> <list>          
-       1     1      1 FALSE       5 <tibble [5 x 5]>
-       2     2      1 FALSE       5 <tibble [5 x 5]>
-       3     3      1 FALSE       5 <tibble [5 x 5]>
-       4     4      1 FALSE       5 <tibble [5 x 5]>
-       5     5      1 FALSE       5 <tibble [5 x 5]>
-       6     6      1 FALSE       5 <tibble [5 x 5]>
-       7     7      1 FALSE       5 <tibble [5 x 5]>
-       8     8      1 FALSE       5 <tibble [5 x 5]>
-       9     9      1 FALSE       5 <tibble [5 x 5]>
-      10    10      1 FALSE       5 <tibble [5 x 5]>
+           sim stream  nrow replace data            
+         <int>  <int> <dbl> <lgl>   <list>          
+       1     1      1     5 FALSE   <tibble [5 x 5]>
+       2     2      1     5 FALSE   <tibble [5 x 5]>
+       3     3      1     5 FALSE   <tibble [5 x 5]>
+       4     4      1     5 FALSE   <tibble [5 x 5]>
+       5     5      1     5 FALSE   <tibble [5 x 5]>
+       6     6      1     5 FALSE   <tibble [5 x 5]>
+       7     7      1     5 FALSE   <tibble [5 x 5]>
+       8     8      1     5 FALSE   <tibble [5 x 5]>
+       9     9      1     5 FALSE   <tibble [5 x 5]>
+      10    10      1     5 FALSE   <tibble [5 x 5]>
 
 # ssd_simulate_data.data.frame vectorized
 

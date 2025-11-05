@@ -4,9 +4,9 @@
       ssd_fit_dists_sims(data)
     Output
       # A tibble: 1 x 6
-          sim stream args        nrow data             fits      
-        <int>  <int> <list>     <int> <list>           <list>    
-      1     1      1 <list [0]>     6 <tibble [6 x 1]> <fitdists>
+          sim stream  nrow args       data             fits      
+        <int>  <int> <int> <list>     <list>           <list>    
+      1     1      1     6 <list [0]> <tibble [6 x 1]> <fitdists>
 
 # fit_dists_sims no seed
 
@@ -17,9 +17,9 @@
       '.Random.seed' is not an integer vector but of type 'NULL', so ignored
     Output
       # A tibble: 1 x 6
-          sim stream args        nrow data             fits      
-        <int>  <int> <list>     <int> <list>           <list>    
-      1     1      1 <list [0]>     6 <tibble [6 x 1]> <fitdists>
+          sim stream  nrow args       data             fits      
+        <int>  <int> <int> <list>     <list>           <list>    
+      1     1      1     6 <list [0]> <tibble [6 x 1]> <fitdists>
 
 # fit_dists_sims 1 sim
 
@@ -27,7 +27,7 @@
       fits
     Output
       # A tibble: 1 x 6
-          sim stream args        nrow data             fits      
-        <int>  <int> <list>     <int> <list>           <list>    
-      1     1      1 <list [0]>     6 <tibble [6 x 1]> <fitdists>
+          sim stream  nrow args       data             fits      
+        <int>  <int> <int> <list>     <list>           <list>    
+      1     1      1     6 <list [0]> <tibble [6 x 1]> <fitdists>
 

@@ -14,8 +14,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{data.frame}(
   x,
   ...,
-  replace = FALSE,
   nrow = 6L,
+  replace = FALSE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -26,8 +26,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{fitdists}(
   x,
   ...,
-  dist_sim = "top",
   nrow = 6L,
+  dist_sim = "top",
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -49,8 +49,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{character}(
   x,
   ...,
-  args = list(),
   nrow = 6L,
+  args = list(),
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -61,8 +61,8 @@ ssd_simulate_data(x, ...)
 \method{ssd_simulate_data}{`function`}(
   x,
   ...,
-  args = list(),
   nrow = 6L,
+  args = list(),
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -75,9 +75,9 @@ ssd_simulate_data(x, ...)
 
 \item{...}{Unused.}
 
-\item{replace}{A flag specifying whether to sample with replacement.}
-
 \item{nrow}{A count of the number of rows in the generated data which must be between 5 and 1,000,}
+
+\item{replace}{A flag specifying whether to sample with replacement.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 
