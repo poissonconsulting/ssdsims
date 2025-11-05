@@ -61,3 +61,11 @@ test_that("ssd_simulate_data.data.frame works", {
   data <- tidyr::unnest(data, cols = c(data))
   expect_snapshot_data(data, "data_frame_unnest")
 })
+
+test_that("ssd_simulate_data.data.frame vectorized", {
+  withr::local_seed(42)
+  data <- ssd_simulate_data(ssddata::ccme_boron, nrow = c(5,10), nsim = 2)
+  expect_snapshot(data)
+  data <- tidyr::unnest(data, cols = c(data))
+  expect_snapshot_data(data, "data_frame_vectorize")
+})

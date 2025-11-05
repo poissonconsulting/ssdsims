@@ -117,17 +117,30 @@
     Code
       data
     Output
-      # A tibble: 10 x 3
-           sim stream data            
-         <int>  <int> <list>          
-       1     1      1 <tibble [5 x 5]>
-       2     2      1 <tibble [5 x 5]>
-       3     3      1 <tibble [5 x 5]>
-       4     4      1 <tibble [5 x 5]>
-       5     5      1 <tibble [5 x 5]>
-       6     6      1 <tibble [5 x 5]>
-       7     7      1 <tibble [5 x 5]>
-       8     8      1 <tibble [5 x 5]>
-       9     9      1 <tibble [5 x 5]>
-      10    10      1 <tibble [5 x 5]>
+      # A tibble: 10 x 5
+           sim stream replace  nrow data            
+         <int>  <int> <lgl>   <dbl> <list>          
+       1     1      1 FALSE       5 <tibble [5 x 5]>
+       2     2      1 FALSE       5 <tibble [5 x 5]>
+       3     3      1 FALSE       5 <tibble [5 x 5]>
+       4     4      1 FALSE       5 <tibble [5 x 5]>
+       5     5      1 FALSE       5 <tibble [5 x 5]>
+       6     6      1 FALSE       5 <tibble [5 x 5]>
+       7     7      1 FALSE       5 <tibble [5 x 5]>
+       8     8      1 FALSE       5 <tibble [5 x 5]>
+       9     9      1 FALSE       5 <tibble [5 x 5]>
+      10    10      1 FALSE       5 <tibble [5 x 5]>
+
+# ssd_simulate_data.data.frame vectorized
+
+    Code
+      data
+    Output
+      # A tibble: 4 x 5
+          sim stream replace  nrow data             
+        <int>  <int> <lgl>   <dbl> <list>           
+      1     1      1 FALSE       5 <tibble [5 x 5]> 
+      2     1      1 FALSE      10 <tibble [10 x 5]>
+      3     2      1 FALSE       5 <tibble [5 x 5]> 
+      4     2      1 FALSE      10 <tibble [10 x 5]>
 

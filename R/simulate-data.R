@@ -18,8 +18,15 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
     x, values = list(Conc = c(0,Inf,NA_real_)), nrow = c(5, 10000)
   )
   chk::chk_unused(...)
-  chk::chk_flag(replace)
-  chk::chk_whole_number(nrow)
+  chk::chk_logical(replace)
+  chk::chk_not_any_na(replace)
+  chk::chk_unique(replace)
+  chk::chk_length(replace, upper = 2)
+  
+  chk::chk_whole_numeric(nrow)
+  chk::chk_not_any_na(nrow)
+  chk::chk_unique(nrow)
+  chk::chk_length(nrow, upper = 1000)
   chk::chk_range(nrow, c(5, 1000))
 
   chk::chk_whole_number(stream)
@@ -28,7 +35,7 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
   sims <- sim_seq(start_sim, nsim)
   stream <- as.integer(stream)
 
-  data <- tidyr::expand_grid(sims = sims, stream = stream, replace = replace, nrow = nrow)
+  data <- tidyr::expand_grid(sim = sims, stream = stream, replace = replace, nrow = nrow)
 
   if(nrow(data) == nsim) {
     seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
@@ -36,7 +43,9 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
     data <- purrr::map(seeds, \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed), .progress = .progress) |>
       purrr::map2(sims, \(.x, .y) dplyr::mutate(.x, sim = .y, stream = stream)) |>
       dplyr::bind_rows() |>
-      tidyr::nest(data = !c("sim", "stream"))
+      tidyr::nest(data = !c("sim", "stream")) |>
+      dplyr::mutate(nrow = nrow, replace = replace) |>
+      dplyr::select("sim", "stream", "replace", "nrow", "data")
 
     return(data)
   }
@@ -120,7 +129,7 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
   sims <- sim_seq(start_sim, nsim) 
   stream <- as.integer(stream)
 
-  data <- tidyr::expand_grid(sims = sims, stream = stream, nrow = nrow)
+  data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)
 
   if(nrow(data) == nsim) {
 
