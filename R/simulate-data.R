@@ -24,16 +24,28 @@ ssd_simulate_data.data.frame <- function(x, ..., replace = FALSE, nrow = 6L, see
 
   chk::chk_whole_number(stream)
   chk::chk_gt(stream)
-  
-  sims <- sim_seq(start_sim, nsim) 
-  seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
- 
+
+  sims <- sim_seq(start_sim, nsim)
   stream <- as.integer(stream)
 
-   purrr::map(seeds, \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed), .progress = .progress) |>
+  data <- tidyr::expand_grid(sims = sims, stream = stream, replace = replace, nrow = nrow)
+
+  if(nrow(data) == nsim) {
+    seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
+
+    data <- purrr::map(seeds, \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed), .progress = .progress) |>
       purrr::map2(sims, \(.x, .y) dplyr::mutate(.x, sim = .y, stream = stream)) |>
       dplyr::bind_rows() |>
       tidyr::nest(data = !c("sim", "stream"))
+
+    return(data)
+  }
+
+  data$data <- purrr::pmap(as.list(data), \(replace, nrow, sim, stream) ssd_simulate_data(x, replace = replace, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
+    dplyr::bind_rows() |> 
+    dplyr::pull("data")
+
+  data
 }
 
 #' @describeIn ssd_simulate_data Generate data from fitdists object

@@ -6,6 +6,14 @@
       # A tibble: 0 x 4
       # i 4 variables: sim <int>, stream <int>, data <list>, dists <list>
 
+# fit_dists_sims no seed
+
+    Code
+      ssd_fit_dists_sims(data)
+    Output
+      # A tibble: 0 x 4
+      # i 4 variables: sim <int>, stream <int>, data <list>, dists <list>
+
 # fit_dists_sims 1 sim
 
     Code
