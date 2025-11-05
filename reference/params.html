@@ -58,13 +58,11 @@ functions.</p>
 
 
 <dt id="arg-dist-sim">dist_sim<a class="anchor" aria-label="anchor" href="#arg-dist-sim"></a></dt>
-<dd><p>A string specifying the distribution in the fitdists object or
-<code>"top"</code> to use the distribution with most weight or <code>"multi"</code> to treat
-the distributions as a single distribution.</p></dd>
+<dd><p>A character vector specifying the distributions in the fitdists object or <code>"all"`` for all the distributions and/or </code>"top"<code>to use the distribution with most weight  and/or</code>"multi"` to treat the distributions as a single distribution.</p></dd>
 
 
 <dt id="arg-nrow">nrow<a class="anchor" aria-label="anchor" href="#arg-nrow"></a></dt>
-<dd><p>A count of the number of rows in the generated data which must be between 5 and 1,000,</p></dd>
+<dd><p>A numeric vector of the number of rows in the generated data which must be between 5 and 1,000,</p></dd>
 
 
 <dt id="arg-nsim">nsim<a class="anchor" aria-label="anchor" href="#arg-nsim"></a></dt>
@@ -76,7 +74,7 @@ the distributions as a single distribution.</p></dd>
 
 
 <dt id="arg-replace">replace<a class="anchor" aria-label="anchor" href="#arg-replace"></a></dt>
-<dd><p>A flag specifying whether to sample with replacement.</p></dd>
+<dd><p>A logical vector specifying whether to sample with replacement.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
