@@ -29,20 +29,9 @@ ssd_run_scenario.data.frame <- function(x, ..., nrow = c(6L, 10L), replace = FAL
 #' ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
 #'
 ssd_run_scenario.fitdists <- function(x, ..., nrow = c(6L, 10L), dist_sim = "top", dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
-  chk::chk_character(dist_sim)
-  chk::chk_not_any_na(dist_sim)
-  chk::chk_length(dist_sim, upper = Inf)
-  chk::chk_subset(dist_sim, c("multi", "top", names(x)))
 
-  chk::chk_whole_number(stream)
-  chk::chk_gt(stream)
-
-  sims <- sim_seq(start_sim, nsim)
-  data <- tidyr::expand_grid(sim = sims, stream = stream, dist_sim = dist_sim, nrow = nrow)
-
-  data$data <- purrr::pmap(as.list(data), \(dist_sim, nrow, sim, stream) ssd_simulate_data(x, dist_sim = dist_sim, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
-    dplyr::bind_rows() |> 
-    dplyr::pull("data")
+  data <- ssd_simulate_data(x, nrow = nrow, dist_sim = dist_sim, seed = seed, nsim = nsim, 
+    stream = stream, start_sim = start_sim, .progress = .progress)
 
   run_scenario(x = data, ..., dists = dists, proportion = proportion, ci = ci, .progress = .progress)
 }
@@ -79,7 +68,7 @@ ssd_run_scenario.character <- function(x, ..., nrow = c(6L, 10L), args = list(),
 #' @examples
 #' ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 #'
-ssd_run_scenario.function <- function(x, ...,  nrow = c(6L, 10L), args = list(),dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_run_scenario.function <- function(x, ...,  nrow = c(6L, 10L), args = list(), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
 
   data <- ssd_simulate_data(x, nrow = nrow, args = args, seed = seed, nsim = nsim, 
     stream = stream, start_sim = start_sim, .progress = .progress)
