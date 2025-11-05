@@ -80,26 +80,9 @@ ssd_run_scenario.character <- function(x, ..., nrow = c(6L, 10L), args = list(),
 #' ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 #'
 ssd_run_scenario.function <- function(x, ...,  nrow = c(6L, 10L), args = list(),dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
-  chk::chk_function(x)
-  chk::chk_unused(...)
 
-  chk::chk_list(args)
-
-  chk::chk_whole_numeric(nrow)
-  chk::chk_not_any_na(nrow)
-  chk::chk_range(nrow, c(5, 1000))
-  chk::chk_unique(nrow)
-  chk::chk_length(nrow, upper = 995)
-
-  chk::chk_whole_number(stream)
-  chk::chk_gt(stream)
-
-  sims <- sim_seq(start_sim, nsim)
-  data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)
-
-  data$data <- purrr::pmap(as.list(data), \(nrow, sim, stream) ssd_simulate_data(x, args = args, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
-    dplyr::bind_rows() |> 
-    dplyr::pull("data")
-
+  data <- ssd_simulate_data(x, nrow = nrow, args = args, seed = seed, nsim = nsim, 
+    stream = stream, start_sim = start_sim, .progress = .progress)
+  
   run_scenario(x = data, ..., dists = dists, proportion = proportion, ci = ci, .progress = .progress)
 }
