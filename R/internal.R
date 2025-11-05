@@ -29,21 +29,28 @@ hc_seed <- function(data, sim, stream, seed, proportion, ci, save_to, ...) {
   fit 
 }
 
-run_scenario <- function(x, ..., dists = dists, proportion = proportion, ci = ci, .progress = .progress) {
+run_scenario <- function(x, ..., nrow = nrow, dists = dists, proportion = proportion, ci = ci, .progress = .progress) {
   .args <- list(...)
 
+  sim_data_formals <- formal_args_simulate_data(x)
   fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
   hc_formals <- methods::formalArgs(utils::argsAnywhere("ssd_hc.fitdists"))
 
+  .args_sim_data <- .args[names(.args) %in% sim_data_formals]
   .args_fit <- .args[names(.args) %in% fit_dists_formals]
   .args_hc <- .args[names(.args) %in% hc_formals]
 
-  .args_unused <- names(.args[!names(.args) %in% c(fit_dists_formals, hc_formals)])
+  .args_unused <- names(.args[!names(.args) %in% c(sim_data_formals, fit_dists_formals, hc_formals)])
   .n <- length(.args_unused)
 
   if(.n) {
       chk::abort_chk("the following %n argument%s %r unrecognised: ", chk::cc(.args_unused), n = .n)
   }
+
+  .args_sim_data <- list(x = x, nrow = nrow, .progress = .progress) |>
+    c(.args_sim_data)
+
+  x <- do.call("ssd_simulate_data", .args_sim_data)
 
   .args_fit <- list(x = x, dists = dists, .progress = .progress) |>
     c(.args_fit)
