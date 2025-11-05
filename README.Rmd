@@ -28,12 +28,14 @@ The goal of ssdsims is to facilitate simulation studies with species sensitivity
 library(ssdsims)
 
 withr::with_seed(42, {
-  ssd_simulate_data(ssddata::ccme_boron, nsim =10) |>
+  ssd_simulate_data(ssddata::ccme_boron, nrow = c(6, 10), nsim = 2) |>
+    print() |>
     ssd_fit_dists_sims() |>
-    ssd_hc_sims()
+    print() |>
+    ssd_hc_sims(ci_method = c("multi_fixed", "weighted_samples"))
 })
 
 withr::with_seed(42, {
-  ssd_run_scenario(ssddata::ccme_boron, nsim = 10)
+  ssd_run_scenario(ssddata::ccme_boron, nrow = c(6, 10), ci_method = c("multi_fixed", "weighted_samples"), nsim = 2)
 })
 ```

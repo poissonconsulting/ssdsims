@@ -14,7 +14,7 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{data.frame}(
   x,
   ...,
-  nrow = c(6L, 10L),
+  nrow = 6L,
   replace = FALSE,
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
@@ -30,7 +30,7 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{fitdists}(
   x,
   ...,
-  nrow = c(6L, 10L),
+  nrow = 6L,
   dist_sim = "top",
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
@@ -46,7 +46,7 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{tmbfit}(
   x,
   ...,
-  nrow = c(6L, 10L),
+  nrow = 6L,
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
   ci = FALSE,
@@ -61,7 +61,7 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{character}(
   x,
   ...,
-  nrow = c(6L, 10L),
+  nrow = 6L,
   args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,
@@ -77,7 +77,7 @@ ssd_run_scenario(x, ...)
 \method{ssd_run_scenario}{`function`}(
   x,
   ...,
-  nrow = c(6L, 10L),
+  nrow = 6L,
   args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
   proportion = 0.05,

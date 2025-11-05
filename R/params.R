@@ -9,6 +9,8 @@
 #'
 #' @param args A named list of the argument values.
 #' @param ci A flag specifying whether to estimate confidence intervals (by bootstrapping).
+#' @param ci_method A character vector specifying the method to use for estimating the confidence limits.
+#' `ssdtools::ssd_ci_methods()` returns the possible values.
 #' @param dist_sim A character vector specifying the distributions in the fitdists object or `"all"``
 #' for all the distributions and/or `"top"` to use the distribution with most weight 
 #' and/or `"multi"` to treat the distributions as a single distribution.

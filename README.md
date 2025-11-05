@@ -19,48 +19,50 @@ sensitivity distribution data.
 library(ssdsims)
 
 withr::with_seed(42, {
-  ssd_simulate_data(ssddata::ccme_boron, nsim =10) |>
+  ssd_simulate_data(ssddata::ccme_boron, nrow = c(6, 10), nsim = 2) |>
+    print() |>
     ssd_fit_dists_sims() |>
-    ssd_hc_sims()
+    print() |>
+    ssd_hc_sims(ci_method = c("multi_fixed", "weighted_samples"))
 })
-#> # A tibble: 10 × 5
-#>      sim stream data             fits       hc               
-#>    <int>  <int> <list>           <list>     <list>           
-#>  1     1      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  2     2      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  3     3      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  4     4      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  5     5      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  6     6      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  7     7      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  8     8      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#>  9     9      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
-#> 10    10      1 <tibble [6 × 5]> <fitdists> <tibble [1 × 15]>
+#> # A tibble: 4 × 5
+#>     sim stream replace  nrow data             
+#>   <int>  <int> <lgl>   <dbl> <list>           
+#> 1     1      1 FALSE       6 <tibble [6 × 5]> 
+#> 2     1      1 FALSE      10 <tibble [10 × 5]>
+#> 3     2      1 FALSE       6 <tibble [6 × 5]> 
+#> 4     2      1 FALSE      10 <tibble [10 × 5]>
+#> # A tibble: 4 × 6
+#>     sim stream replace  nrow data              fits      
+#>   <int>  <int> <lgl>   <dbl> <list>            <list>    
+#> 1     1      1 FALSE       6 <tibble [6 × 5]>  <fitdists>
+#> 2     1      1 FALSE      10 <tibble [10 × 5]> <fitdists>
+#> 3     2      1 FALSE       6 <tibble [6 × 5]>  <fitdists>
+#> 4     2      1 FALSE      10 <tibble [10 × 5]> <fitdists>
+#> # A tibble: 8 × 8
+#>     sim stream replace  nrow data              fits       ci_method     hc      
+#>   <int>  <int> <lgl>   <dbl> <list>            <list>     <chr>         <list>  
+#> 1     1      1 FALSE       6 <tibble [6 × 5]>  <fitdists> multi_fixed   <tibble>
+#> 2     1      1 FALSE       6 <tibble [6 × 5]>  <fitdists> weighted_sam… <tibble>
+#> 3     1      1 FALSE      10 <tibble [10 × 5]> <fitdists> multi_fixed   <tibble>
+#> 4     1      1 FALSE      10 <tibble [10 × 5]> <fitdists> weighted_sam… <tibble>
+#> 5     2      1 FALSE       6 <tibble [6 × 5]>  <fitdists> multi_fixed   <tibble>
+#> 6     2      1 FALSE       6 <tibble [6 × 5]>  <fitdists> weighted_sam… <tibble>
+#> 7     2      1 FALSE      10 <tibble [10 × 5]> <fitdists> multi_fixed   <tibble>
+#> 8     2      1 FALSE      10 <tibble [10 × 5]> <fitdists> weighted_sam… <tibble>
 
 withr::with_seed(42, {
-  ssd_run_scenario(ssddata::ccme_boron, nsim = 10)
+  ssd_run_scenario(ssddata::ccme_boron, nrow = c(6, 10), ci_method = c("multi_fixed", "weighted_samples"), nsim = 2)
 })
-#> # A tibble: 20 × 7
-#>      sim stream replace  nrow data              fits       hc               
-#>    <int>  <int> <lgl>   <int> <list>            <list>     <list>           
-#>  1     1      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#>  2     1      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#>  3     2      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#>  4     2      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#>  5     3      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#>  6     3      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#>  7     4      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#>  8     4      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#>  9     5      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#> 10     5      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#> 11     6      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#> 12     6      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#> 13     7      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#> 14     7      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#> 15     8      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#> 16     8      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#> 17     9      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#> 18     9      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
-#> 19    10      1 FALSE       6 <tibble [6 × 5]>  <fitdists> <tibble [1 × 15]>
-#> 20    10      1 FALSE      10 <tibble [10 × 5]> <fitdists> <tibble [1 × 15]>
+#> # A tibble: 8 × 8
+#>     sim stream replace  nrow data              fits       ci_method     hc      
+#>   <int>  <int> <lgl>   <dbl> <list>            <list>     <chr>         <list>  
+#> 1     1      1 FALSE       6 <tibble [6 × 5]>  <fitdists> multi_fixed   <tibble>
+#> 2     1      1 FALSE       6 <tibble [6 × 5]>  <fitdists> weighted_sam… <tibble>
+#> 3     1      1 FALSE      10 <tibble [10 × 5]> <fitdists> multi_fixed   <tibble>
+#> 4     1      1 FALSE      10 <tibble [10 × 5]> <fitdists> weighted_sam… <tibble>
+#> 5     2      1 FALSE       6 <tibble [6 × 5]>  <fitdists> multi_fixed   <tibble>
+#> 6     2      1 FALSE       6 <tibble [6 × 5]>  <fitdists> weighted_sam… <tibble>
+#> 7     2      1 FALSE      10 <tibble [10 × 5]> <fitdists> multi_fixed   <tibble>
+#> 8     2      1 FALSE      10 <tibble [10 × 5]> <fitdists> weighted_sam… <tibble>
 ```
