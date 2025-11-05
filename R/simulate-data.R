@@ -118,14 +118,27 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
   chk::chk_gt(stream)
 
   sims <- sim_seq(start_sim, nsim) 
+  stream <- as.integer(stream)
+
+  data <- tidyr::expand_grid(sims = sims, stream = stream, nrow = nrow)
+
+  if(nrow(data) == nsim) {
+
   seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
 
-  stream <- as.integer(stream)
   args$n <- nrow
     
-  purrr::map(sims, \(seed) do_call_seed(x, args = args, seed = seed), .progress = .progress) |>
+  data <- purrr::map(sims, \(seed) do_call_seed(x, args = args, seed = seed), .progress = .progress) |>
       purrr::map(\(.x) dplyr::tibble(Conc = .x)) |>
       purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y, stream = stream)) |>
       dplyr::bind_rows() |>
       tidyr::nest(data = !c("sim", "stream"))
+
+    return(data)
+  }
+
+  data$data <- purrr::pmap(as.list(data), \(replace, nrow, sim, stream) ssd_simulate_data(x, replace = replace, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
+    dplyr::bind_rows() |> 
+    dplyr::pull("data")
+  data
 }
