@@ -14,7 +14,7 @@ ssd_run_scenario <- function(x, ...) UseMethod("ssd_run_scenario")
 #' @examples
 #' ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
 #' 
-ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_run_scenario.data.frame <- function(x, ..., nrow = c(6L, 10L), replace = FALSE, dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
 
   chk::check_data(
     x, values = list(Conc = c(0,Inf,NA_real_)), nrow = c(5, 10000)
@@ -49,7 +49,7 @@ ssd_run_scenario.data.frame <- function(x, ..., replace = FALSE, nrow = c(6L, 10
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 #' ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
 #'
-ssd_run_scenario.fitdists <- function(x, ..., dist_sim = "top", nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_run_scenario.fitdists <- function(x, ..., nrow = c(6L, 10L), dist_sim = "top", dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   chk::chk_character(dist_sim)
   chk::chk_not_any_na(dist_sim)
   chk::chk_length(dist_sim, upper = Inf)
@@ -86,7 +86,7 @@ ssd_run_scenario.tmbfit <- function(x, ..., nrow = c(6L, 10L), dists = ssdtools:
 #' @examples
 #' ssd_run_scenario("rlnorm", nsim = 3)
 #'
-ssd_run_scenario.character <- function(x, ..., args = list(), nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_run_scenario.character <- function(x, ..., nrow = c(6L, 10L), args = list(), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   chk::chk_string(x)
 
   x <- eval(parse(text = x))
@@ -100,7 +100,7 @@ ssd_run_scenario.character <- function(x, ..., args = list(), nrow = c(6L, 10L),
 #' @examples
 #' ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 #'
-ssd_run_scenario.function <- function(x, ..., args = list(), nrow = c(6L, 10L), dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
+ssd_run_scenario.function <- function(x, ...,  nrow = c(6L, 10L), args = list(),dists = ssdtools::ssd_dists_bcanz(), proportion = 0.05, ci = FALSE, seed = NULL, nsim = 100L, stream = getOption("ssdsims.stream", 1L), start_sim = 1L, .progress = FALSE) {
   chk::chk_function(x)
   chk::chk_unused(...)
 
