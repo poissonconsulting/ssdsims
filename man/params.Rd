@@ -13,17 +13,15 @@
 
 \item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
 
-\item{dist_sim}{A string specifying the distribution in the fitdists object or
-\code{"top"} to use the distribution with most weight or \code{"multi"} to treat
-the distributions as a single distribution.}
+\item{dist_sim}{A character vector specifying the distributions in the fitdists object or \verb{"all"`` for all the distributions and/or }"top"\verb{to use the distribution with most weight  and/or}"multi"` to treat the distributions as a single distribution.}
 
-\item{nrow}{A count of the number of rows in the generated data which must be between 5 and 1,000,}
+\item{nrow}{A numeric vector of the number of rows in the generated data which must be between 5 and 1,000,}
 
 \item{nsim}{A count of the number of data sets to generate.}
 
 \item{pars}{A named list of the parameter values.}
 
-\item{replace}{A flag specifying whether to sample with replacement.}
+\item{replace}{A logical vector specifying whether to sample with replacement.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 

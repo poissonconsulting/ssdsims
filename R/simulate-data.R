@@ -76,8 +76,15 @@ ssd_simulate_data.fitdists <- function(x, ..., nrow = 6L, dist_sim = "top", seed
   chk::chk_character(dist_sim)
   chk::chk_not_any_na(dist_sim)
   chk::chk_unique(dist_sim)
-  chk::chk_subset(dist_sim, c("multi", "top", names(x)))
+  chk::chk_subset(dist_sim, c("all", "multi", "top", names(x)))
   chk::chk_length(dist_sim, upper = Inf)
+
+  if("all" %in% dist_sim) {
+    wch <- which(dist_sim == "all")
+    n <- length(dist_sim)
+    dist_sim <- c(dist_sim[seq_up(1, wch-1)], names(x), dist_sim[seq_up(wch+1,n)])
+    dist_sim <- unique(dist_sim)
+  }
   
   chk::chk_whole_number(stream)
   chk::chk_gt(stream)

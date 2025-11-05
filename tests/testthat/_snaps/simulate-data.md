@@ -140,6 +140,27 @@
       11     2      1    10 multi    <tibble [10 x 1]>
       12     2      1    10 lnorm    <tibble [10 x 1]>
 
+# ssd_simulate_data.fitdists works all vectorized
+
+    Code
+      data
+    Output
+      # A tibble: 12 x 5
+           sim stream  nrow dist_sim data             
+         <int>  <int> <dbl> <chr>    <list>           
+       1     1      1     5 multi    <tibble [5 x 1]> 
+       2     1      1     5 lnorm    <tibble [5 x 1]> 
+       3     1      1     5 gamma    <tibble [5 x 1]> 
+       4     1      1    10 multi    <tibble [10 x 1]>
+       5     1      1    10 lnorm    <tibble [10 x 1]>
+       6     1      1    10 gamma    <tibble [10 x 1]>
+       7     2      1     5 multi    <tibble [5 x 1]> 
+       8     2      1     5 lnorm    <tibble [5 x 1]> 
+       9     2      1     5 gamma    <tibble [5 x 1]> 
+      10     2      1    10 multi    <tibble [10 x 1]>
+      11     2      1    10 lnorm    <tibble [10 x 1]>
+      12     2      1    10 gamma    <tibble [10 x 1]>
+
 # ssd_simulate_data.tmbfit works
 
     Code

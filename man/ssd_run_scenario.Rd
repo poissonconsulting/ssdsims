@@ -92,7 +92,7 @@ ssd_run_scenario(x, ...)
 
 \item{nrow}{A positive whole number of the minimum number of non-missing rows.}
 
-\item{replace}{A flag specifying whether to sample with replacement.}
+\item{replace}{A logical vector specifying whether to sample with replacement.}
 
 \item{dists}{A character vector of the distribution names.}
 
@@ -110,9 +110,7 @@ ssd_run_scenario(x, ...)
 
 \item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 
-\item{dist_sim}{A string specifying the distribution in the fitdists object or
-\code{"top"} to use the distribution with most weight or \code{"multi"} to treat
-the distributions as a single distribution.}
+\item{dist_sim}{A character vector specifying the distributions in the fitdists object or \verb{"all"`` for all the distributions and/or }"top"\verb{to use the distribution with most weight  and/or}"multi"` to treat the distributions as a single distribution.}
 
 \item{args}{A named list of the argument values.}
 }

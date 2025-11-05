@@ -9,13 +9,13 @@
 #'
 #' @param args A named list of the argument values.
 #' @param ci A flag specifying whether to estimate confidence intervals (by bootstrapping).
-#' @param dist_sim A string specifying the distribution in the fitdists object or
-#' `"top"` to use the distribution with most weight or `"multi"` to treat
-#' the distributions as a single distribution.
-#' @param nrow A count of the number of rows in the generated data which must be between 5 and 1,000,
+#' @param dist_sim A character vector specifying the distributions in the fitdists object or `"all"``
+#' for all the distributions and/or `"top"` to use the distribution with most weight 
+#' and/or `"multi"` to treat the distributions as a single distribution.
+#' @param nrow A numeric vector of the number of rows in the generated data which must be between 5 and 1,000,
 #' @param nsim A count of the number of data sets to generate. 
 #' @param pars A named list of the parameter values.
-#' @param replace A flag specifying whether to sample with replacement.
+#' @param replace A logical vector specifying whether to sample with replacement.
 #' @param seed An integer of the starting seed or NULL.
 #' @param start_sim A count of the number of the simulation to start from.
 #' @param stream A count of the stream number.
