@@ -120,7 +120,11 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
   chk::chk_function(x)
   chk::chk_unused(...)
   chk::chk_list(args)
-  chk::chk_whole_number(nrow)
+
+  chk::chk_whole_numeric(nrow)
+  chk::chk_not_any_na(nrow)
+  chk::chk_unique(nrow)
+  chk::chk_length(nrow, upper = 1000)
   chk::chk_range(nrow, c(5, 1000))
 
   chk::chk_whole_number(stream)
@@ -135,18 +139,22 @@ ssd_simulate_data.function <- function(x, ..., args = list(), nrow = 6L, seed = 
 
   seeds <- get_lecuyer_cmrg_seeds_stream(seed = seed, nsim = nsim, start_sim = start_sim, stream = stream)
 
-  args$n <- nrow
-    
-  data <- purrr::map(sims, \(seed) do_call_seed(x, args = args, seed = seed), .progress = .progress) |>
+  argsn <- args
+  argsn$n <- nrow
+
+  print(args)
+  data <- purrr::map(sims, \(seed) do_call_seed(x, args = argsn, seed = seed), .progress = .progress) |>
       purrr::map(\(.x) dplyr::tibble(Conc = .x)) |>
       purrr::map2(seq_len(nsim), \(.x, .y) dplyr::mutate(.x, sim = .y, stream = stream)) |>
       dplyr::bind_rows() |>
-      tidyr::nest(data = !c("sim", "stream"))
+      tidyr::nest(data = !c("sim", "stream")) |>
+      dplyr::mutate(nrow = nrow, args = list(args)) |>
+      dplyr::select("sim", "stream", "args", "nrow", "data")
 
     return(data)
   }
 
-  data$data <- purrr::pmap(as.list(data), \(replace, nrow, sim, stream) ssd_simulate_data(x, replace = replace, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
+  data$data <- purrr::pmap(as.list(data), \(nrow, sim, stream) ssd_simulate_data(x, args = args, nrow = nrow, nsim = 1L, start_sim = sim, stream = stream),.progress = .progress) |> 
     dplyr::bind_rows() |> 
     dplyr::pull("data")
   data

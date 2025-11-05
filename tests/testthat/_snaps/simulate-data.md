@@ -3,114 +3,140 @@
     Code
       data
     Output
-      # A tibble: 10 x 3
-           sim stream data            
-         <int>  <int> <list>          
-       1     1      1 <tibble [5 x 1]>
-       2     2      1 <tibble [5 x 1]>
-       3     3      1 <tibble [5 x 1]>
-       4     4      1 <tibble [5 x 1]>
-       5     5      1 <tibble [5 x 1]>
-       6     6      1 <tibble [5 x 1]>
-       7     7      1 <tibble [5 x 1]>
-       8     8      1 <tibble [5 x 1]>
-       9     9      1 <tibble [5 x 1]>
-      10    10      1 <tibble [5 x 1]>
+      # A tibble: 10 x 5
+           sim stream args        nrow data            
+         <int>  <int> <list>     <dbl> <list>          
+       1     1      1 <list [0]>     5 <tibble [5 x 1]>
+       2     2      1 <list [0]>     5 <tibble [5 x 1]>
+       3     3      1 <list [0]>     5 <tibble [5 x 1]>
+       4     4      1 <list [0]>     5 <tibble [5 x 1]>
+       5     5      1 <list [0]>     5 <tibble [5 x 1]>
+       6     6      1 <list [0]>     5 <tibble [5 x 1]>
+       7     7      1 <list [0]>     5 <tibble [5 x 1]>
+       8     8      1 <list [0]>     5 <tibble [5 x 1]>
+       9     9      1 <list [0]>     5 <tibble [5 x 1]>
+      10    10      1 <list [0]>     5 <tibble [5 x 1]>
+
+# ssd_simulate_data.function vectorized
+
+    Code
+      data
+    Output
+      # A tibble: 4 x 4
+          sim stream  nrow data             
+        <int>  <int> <dbl> <list>           
+      1     1      1     5 <tibble [5 x 1]> 
+      2     1      1    10 <tibble [10 x 1]>
+      3     2      1     5 <tibble [5 x 1]> 
+      4     2      1    10 <tibble [10 x 1]>
 
 # ssd_simulate_data.character works
 
     Code
       data
     Output
-      # A tibble: 10 x 3
-           sim stream data            
-         <int>  <int> <list>          
-       1     1      1 <tibble [5 x 1]>
-       2     2      1 <tibble [5 x 1]>
-       3     3      1 <tibble [5 x 1]>
-       4     4      1 <tibble [5 x 1]>
-       5     5      1 <tibble [5 x 1]>
-       6     6      1 <tibble [5 x 1]>
-       7     7      1 <tibble [5 x 1]>
-       8     8      1 <tibble [5 x 1]>
-       9     9      1 <tibble [5 x 1]>
-      10    10      1 <tibble [5 x 1]>
+      # A tibble: 10 x 5
+           sim stream args        nrow data            
+         <int>  <int> <list>     <dbl> <list>          
+       1     1      1 <list [0]>     5 <tibble [5 x 1]>
+       2     2      1 <list [0]>     5 <tibble [5 x 1]>
+       3     3      1 <list [0]>     5 <tibble [5 x 1]>
+       4     4      1 <list [0]>     5 <tibble [5 x 1]>
+       5     5      1 <list [0]>     5 <tibble [5 x 1]>
+       6     6      1 <list [0]>     5 <tibble [5 x 1]>
+       7     7      1 <list [0]>     5 <tibble [5 x 1]>
+       8     8      1 <list [0]>     5 <tibble [5 x 1]>
+       9     9      1 <list [0]>     5 <tibble [5 x 1]>
+      10    10      1 <list [0]>     5 <tibble [5 x 1]>
+
+# ssd_simulate_data.character vectorized
+
+    Code
+      data
+    Output
+      # A tibble: 4 x 4
+          sim stream  nrow data             
+        <int>  <int> <dbl> <list>           
+      1     1      1     5 <tibble [5 x 1]> 
+      2     1      1    10 <tibble [10 x 1]>
+      3     2      1     5 <tibble [5 x 1]> 
+      4     2      1    10 <tibble [10 x 1]>
 
 # ssd_simulate_data.fitdists works top
 
     Code
       data
     Output
-      # A tibble: 10 x 3
-           sim stream data            
-         <int>  <int> <list>          
-       1     1      1 <tibble [5 x 1]>
-       2     2      1 <tibble [5 x 1]>
-       3     3      1 <tibble [5 x 1]>
-       4     4      1 <tibble [5 x 1]>
-       5     5      1 <tibble [5 x 1]>
-       6     6      1 <tibble [5 x 1]>
-       7     7      1 <tibble [5 x 1]>
-       8     8      1 <tibble [5 x 1]>
-       9     9      1 <tibble [5 x 1]>
-      10    10      1 <tibble [5 x 1]>
+      # A tibble: 10 x 5
+           sim stream args              nrow data            
+         <int>  <int> <list>           <dbl> <list>          
+       1     1      1 <named list [2]>     5 <tibble [5 x 1]>
+       2     2      1 <named list [2]>     5 <tibble [5 x 1]>
+       3     3      1 <named list [2]>     5 <tibble [5 x 1]>
+       4     4      1 <named list [2]>     5 <tibble [5 x 1]>
+       5     5      1 <named list [2]>     5 <tibble [5 x 1]>
+       6     6      1 <named list [2]>     5 <tibble [5 x 1]>
+       7     7      1 <named list [2]>     5 <tibble [5 x 1]>
+       8     8      1 <named list [2]>     5 <tibble [5 x 1]>
+       9     9      1 <named list [2]>     5 <tibble [5 x 1]>
+      10    10      1 <named list [2]>     5 <tibble [5 x 1]>
 
 # ssd_simulate_data.fitdists works multi
 
     Code
       data
     Output
-      # A tibble: 10 x 3
-           sim stream data            
-         <int>  <int> <list>          
-       1     1      1 <tibble [5 x 1]>
-       2     2      1 <tibble [5 x 1]>
-       3     3      1 <tibble [5 x 1]>
-       4     4      1 <tibble [5 x 1]>
-       5     5      1 <tibble [5 x 1]>
-       6     6      1 <tibble [5 x 1]>
-       7     7      1 <tibble [5 x 1]>
-       8     8      1 <tibble [5 x 1]>
-       9     9      1 <tibble [5 x 1]>
-      10    10      1 <tibble [5 x 1]>
+      # A tibble: 10 x 5
+           sim stream args              nrow data            
+         <int>  <int> <list>           <dbl> <list>          
+       1     1      1 <named list [1]>     5 <tibble [5 x 1]>
+       2     2      1 <named list [1]>     5 <tibble [5 x 1]>
+       3     3      1 <named list [1]>     5 <tibble [5 x 1]>
+       4     4      1 <named list [1]>     5 <tibble [5 x 1]>
+       5     5      1 <named list [1]>     5 <tibble [5 x 1]>
+       6     6      1 <named list [1]>     5 <tibble [5 x 1]>
+       7     7      1 <named list [1]>     5 <tibble [5 x 1]>
+       8     8      1 <named list [1]>     5 <tibble [5 x 1]>
+       9     9      1 <named list [1]>     5 <tibble [5 x 1]>
+      10    10      1 <named list [1]>     5 <tibble [5 x 1]>
 
 # ssd_simulate_data.fitdists works name
 
     Code
       data
     Output
-      # A tibble: 10 x 3
-           sim stream data            
-         <int>  <int> <list>          
-       1     1      1 <tibble [5 x 1]>
-       2     2      1 <tibble [5 x 1]>
-       3     3      1 <tibble [5 x 1]>
-       4     4      1 <tibble [5 x 1]>
-       5     5      1 <tibble [5 x 1]>
-       6     6      1 <tibble [5 x 1]>
-       7     7      1 <tibble [5 x 1]>
-       8     8      1 <tibble [5 x 1]>
-       9     9      1 <tibble [5 x 1]>
-      10    10      1 <tibble [5 x 1]>
+      # A tibble: 10 x 5
+           sim stream args              nrow data            
+         <int>  <int> <list>           <dbl> <list>          
+       1     1      1 <named list [2]>     5 <tibble [5 x 1]>
+       2     2      1 <named list [2]>     5 <tibble [5 x 1]>
+       3     3      1 <named list [2]>     5 <tibble [5 x 1]>
+       4     4      1 <named list [2]>     5 <tibble [5 x 1]>
+       5     5      1 <named list [2]>     5 <tibble [5 x 1]>
+       6     6      1 <named list [2]>     5 <tibble [5 x 1]>
+       7     7      1 <named list [2]>     5 <tibble [5 x 1]>
+       8     8      1 <named list [2]>     5 <tibble [5 x 1]>
+       9     9      1 <named list [2]>     5 <tibble [5 x 1]>
+      10    10      1 <named list [2]>     5 <tibble [5 x 1]>
 
 # ssd_simulate_data.tmbfit works
 
     Code
       data
     Output
-      # A tibble: 10 x 3
-           sim stream data            
-         <int>  <int> <list>          
-       1     1      1 <tibble [5 x 1]>
-       2     2      1 <tibble [5 x 1]>
-       3     3      1 <tibble [5 x 1]>
-       4     4      1 <tibble [5 x 1]>
-       5     5      1 <tibble [5 x 1]>
-       6     6      1 <tibble [5 x 1]>
-       7     7      1 <tibble [5 x 1]>
-       8     8      1 <tibble [5 x 1]>
-       9     9      1 <tibble [5 x 1]>
-      10    10      1 <tibble [5 x 1]>
+      # A tibble: 10 x 5
+           sim stream args              nrow data            
+         <int>  <int> <list>           <dbl> <list>          
+       1     1      1 <named list [2]>     5 <tibble [5 x 1]>
+       2     2      1 <named list [2]>     5 <tibble [5 x 1]>
+       3     3      1 <named list [2]>     5 <tibble [5 x 1]>
+       4     4      1 <named list [2]>     5 <tibble [5 x 1]>
+       5     5      1 <named list [2]>     5 <tibble [5 x 1]>
+       6     6      1 <named list [2]>     5 <tibble [5 x 1]>
+       7     7      1 <named list [2]>     5 <tibble [5 x 1]>
+       8     8      1 <named list [2]>     5 <tibble [5 x 1]>
+       9     9      1 <named list [2]>     5 <tibble [5 x 1]>
+      10    10      1 <named list [2]>     5 <tibble [5 x 1]>
 
 # ssd_simulate_data.data.frame works
 
