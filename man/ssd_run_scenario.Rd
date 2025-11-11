@@ -17,6 +17,7 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   replace = FALSE,
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -33,6 +34,7 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   dist_sim = "top",
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -48,6 +50,7 @@ ssd_run_scenario(x, ...)
   ...,
   nrow = 6L,
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -64,6 +67,7 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -80,6 +84,7 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -100,6 +105,8 @@ ssd_run_scenario(x, ...)
 \item{replace}{A logical vector specifying whether to sample with replacement.}
 
 \item{dists}{A character vector of the distribution names.}
+
+\item{rescale}{A flag specifying whether to leave the values unchanged (FALSE) or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values (TRUE) or a string specifying whether to leave the values unchanged ("no") or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values ("geomean") or to logistically transform ("odds").}
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 

@@ -8,6 +8,7 @@ ssd_fit_dists_sims(
   x,
   dists = ssdtools::ssd_dists_bcanz(),
   ...,
+  rescale = FALSE,
   seed = NULL,
   silent = TRUE,
   .progress = FALSE
@@ -19,6 +20,8 @@ ssd_fit_dists_sims(
 \item{dists}{A character vector of the distribution names.}
 
 \item{...}{Additional arguments passed to \code{ssdtools::ssd_fit_dists()}.}
+
+\item{rescale}{A flag specifying whether to leave the values unchanged (FALSE) or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values (TRUE) or a string specifying whether to leave the values unchanged ("no") or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values ("geomean") or to logistically transform ("odds").}
 
 \item{seed}{An integer of the starting seed or NULL.}
 

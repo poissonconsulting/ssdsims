@@ -16,11 +16,11 @@ seq_up <- function(from, to) {
   seq(from, to)
 }
 
-fit_dists_seed <- function(data, sim, stream, seed, dists, silent, ...) {
+fit_dists_seed <- function(data, sim, stream, seed, dists, rescale, silent, ...) {
    seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_sim = sim, stream = stream)
   ## TODO: handle failure of all model to fit!!
   with_lecuyer_cmrg_seed(seed, {
-    fit <- ssdtools::ssd_fit_dists(data, dists = dists, silent = silent, nrow = 5L, ...)
+    fit <- ssdtools::ssd_fit_dists(data, dists = dists, rescale = rescale, silent = silent, nrow = 5L, ...)
   })
   fit
 }
@@ -34,7 +34,7 @@ hc_seed <- function(data, sim, stream, ci_method, seed, proportion, ci, save_to,
   dplyr::select(hc, !"ci_method") 
 }
 
-run_scenario <- function(x, ..., dists, proportion, ci, ci_method, .progress = .progress) {
+run_scenario <- function(x, ..., dists, rescale, proportion, ci, ci_method, .progress = .progress) {
   .args <- list(...)
 
   fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
@@ -50,7 +50,7 @@ run_scenario <- function(x, ..., dists, proportion, ci, ci_method, .progress = .
       chk::abort_chk("the following %n argument%s %r unrecognised: ", chk::cc(.args_unused), n = .n)
   }
 
-  .args_fit <- list(x = x, dists = dists, .progress = .progress) |>
+  .args_fit <- list(x = x, dists = dists, rescale = rescale, .progress = .progress) |>
     c(.args_fit)
 
   x <- do.call("ssd_fit_dists_sims", .args_fit)
