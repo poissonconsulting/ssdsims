@@ -10,7 +10,10 @@ ssd_hc_sims(
   proportion = 0.05,
   ...,
   ci = FALSE,
+  nboot = 1000,
+  est_method = "multi",
   ci_method = "weighted_samples",
+  parametric = TRUE,
   seed = NULL,
   save_to = NULL,
   .progress = FALSE
@@ -39,6 +42,21 @@ ssd_hc_sims(
   A flag specifying whether to estimate confidence intervals (by
   bootstrapping).
 
+- nboot:
+
+  A count of the number of bootstrap samples to use to estimate the
+  confidence limits. A value of 10,000 is recommended for official
+  guidelines.
+
+- est_method:
+
+  A string specifying whether to estimate directly from the
+  model-averaged cumulative distribution function
+  (`est_method = 'multi'`) or to take the arithmetic mean of the
+  estimates from the individual cumulative distribution functions
+  weighted by the AICc derived weights (`est_method = 'arithmetic'`) or
+  or to use the geometric mean instead (`est_method = 'geometric'`).
+
 - ci_method:
 
   A string specifying which method to use for estimating the standard
@@ -64,6 +82,12 @@ ssd_hc_sims(
   mean of the values for each bootstrap iteration across all the
   distributions and then calculate the confidence limits (and SE) from
   the single set of samples.
+
+- parametric:
+
+  A flag specifying whether to perform parametric bootstrapping as
+  opposed to non-parametrically resampling the original data with
+  replacement.
 
 - seed:
 
