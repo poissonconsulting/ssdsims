@@ -6,10 +6,16 @@
 #' @param ... Additional arguments passed to `ssdtools::ssd_hc()`.
 #' @return The x tibble with a list column hc of data frames produced by applying ssd_hc() to fits.
 #' @export
-ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, est_method = "multi", ci_method = "weighted_samples", parametric = TRUE, seed = NULL, save_to = NULL, .progress = FALSE) {
+ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, nboot = 1000, est_method = "multi", ci_method = "weighted_samples", parametric = TRUE, seed = NULL, save_to = NULL, .progress = FALSE) {
   chk::check_data(x, values = list(sim = c(1L, 10000000L), stream = c(1L, 10000000L)))
   chk::check_names(x, "fits")
   chk::chk_null_or(save_to, vld = chk::vld_dir)
+
+  chk::chk_whole_numeric(nboot)
+  chk::chk_not_any_na(nboot)
+  chk::chk_gt(nboot)
+  chk::chk_unique(nboot)
+  chk::chk_length(nboot, upper = Inf)
 
   chk::chk_character(est_method)
   chk::chk_not_any_na(est_method)
@@ -38,8 +44,8 @@ ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, est_method = "mul
   }
 
   x <- x |>
-    dplyr::cross_join(tidyr::expand_grid(est_method = est_method, ci_method = ci_method, parametric = parametric))
+    dplyr::cross_join(tidyr::expand_grid(nboot = nboot, est_method = est_method, ci_method = ci_method, parametric = parametric))
 
-  x$hc <- purrr::pmap(list(x$fits, x$sim, x$stream, x$est_method, x$ci_method, x$parametric), \(.x, .sim, .stream, .est_method, .ci_method, .parametric) hc_seed(.x, .sim, .stream, est_method = .est_method, ci_method = .ci_method, parametric = .parametric, seed = seed, proportion = proportion, save_to = save_to, ci = ci,...), .progress = .progress)
+  x$hc <- purrr::pmap(list(x$fits, x$sim, x$stream, x$nboot, x$est_method, x$ci_method, x$parametric), \(.x, .sim, .stream, .nboot, .est_method, .ci_method, .parametric) hc_seed(.x, .sim, .stream, nboot = .nboot, est_method = .est_method, ci_method = .ci_method, parametric = .parametric, seed = seed, proportion = proportion, save_to = save_to, ci = ci,...), .progress = .progress)
   x
 }

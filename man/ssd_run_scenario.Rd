@@ -25,6 +25,7 @@ ssd_run_scenario(x, ...)
   range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
@@ -49,6 +50,7 @@ ssd_run_scenario(x, ...)
   range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
@@ -72,6 +74,7 @@ ssd_run_scenario(x, ...)
   range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
@@ -96,6 +99,7 @@ ssd_run_scenario(x, ...)
   range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
@@ -120,6 +124,7 @@ ssd_run_scenario(x, ...)
   range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
@@ -157,6 +162,8 @@ parameters at the boundary should be considered to have converged (default = TRU
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 
 \item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
+
+\item{nboot}{A count of the number of bootstrap samples to use to estimate the confidence limits. A value of 10,000 is recommended for official guidelines.}
 
 \item{est_method}{A string specifying whether to estimate directly from
 the model-averaged cumulative distribution function (\code{est_method = 'multi'}) or
