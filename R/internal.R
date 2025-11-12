@@ -26,16 +26,16 @@ fit_dists_seed <- function(data, sim, stream, seed, dists, rescale, computable, 
   fit
 }
 
-hc_seed <- function(data, sim, stream, ci_method, seed, proportion, ci, save_to, ...) {
+hc_seed <- function(data, sim, stream, nboot, est_method, ci_method, seed, proportion, ci, parametric, save_to, ...) {
   seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_sim = sim, stream = stream)
   ## TODO: handle failures
   with_lecuyer_cmrg_seed(seed, {
-    hc<- ssdtools::ssd_hc(data, proportion = proportion, ci = ci, ci_method = ci_method, ...)
+    hc<- ssdtools::ssd_hc(data, proportion = proportion, ci = ci, nboot = nboot, est_method = est_method, ci_method = ci_method, parametric = parametric, min_pboot = 0, ...)
   })
-  dplyr::select(hc, !"ci_method") 
+  dplyr::select(hc, !c("nboot", "est_method", "ci_method")) 
 }
 
-run_scenario <- function(x, ..., dists, rescale, proportion, ci, ci_method, .progress = .progress) {
+run_scenario <- function(x, ..., dists, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, proportion, ci, nboot, est_method, ci_method, parametric, .progress = .progress) {
   .args <- list(...)
 
   fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
@@ -51,12 +51,12 @@ run_scenario <- function(x, ..., dists, rescale, proportion, ci, ci_method, .pro
       chk::abort_chk("the following %n argument%s %r unrecognised: ", chk::cc(.args_unused), n = .n)
   }
 
-  .args_fit <- list(x = x, dists = dists, rescale = rescale, .progress = .progress) |>
+  .args_fit <- list(x = x, dists = dists, rescale = rescale, computable = computable, at_boundary_ok = at_boundary_ok, min_pmix = min_pmix, range_shape1 = range_shape1, range_shape2 = range_shape2,  .progress = .progress) |>
     c(.args_fit)
 
   x <- do.call("ssd_fit_dists_sims", .args_fit)
 
-  .args_hc <- list(x = x, proportion = proportion, ci = ci, ci_method = ci_method, .progress = .progress) |>
+  .args_hc <- list(x = x, proportion = proportion, ci = ci, nboot = nboot, est_method = est_method, ci_method = ci_method, parametric = parametric, .progress = .progress) |>
     c(.args_hc)
 
   do.call("ssd_hc_sims", .args_hc)
