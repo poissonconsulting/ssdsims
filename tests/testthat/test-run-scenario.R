@@ -15,10 +15,12 @@ test_that("ssd_run_scenario.data.frame errors unknown argument", {
   chk::expect_chk_error(ssd_run_scenario(ssddata::ccme_boron, replace = c(TRUE, FALSE), nsim = 2, thingy = 1), "thingy")
 })
 
-test_that("ssd_run_scenario.data.frame passes arguments fits", {
-  scenario <- ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, rescale = TRUE)
+test_that("ssd_run_scenario.data.frame passes vectorized arguments fits", {
+  scenario <- ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, rescale = c(TRUE, FALSE))
   coef <- coef(scenario$fits[[1]])
-  expect_snapshot_data(coef, "coef_rescale")
+  expect_snapshot_data(coef, "coef_rescale1")
+  coef <- coef(scenario$fits[[2]])
+  expect_snapshot_data(coef, "coef_rescale2")
 })
 
 test_that("ssd_run_scenario.data.frame passes arguments hc", {

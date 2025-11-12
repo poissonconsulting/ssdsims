@@ -17,6 +17,12 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   replace = FALSE,
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
+  computable = FALSE,
+  at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -33,6 +39,12 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   dist_sim = "top",
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
+  computable = FALSE,
+  at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -48,6 +60,12 @@ ssd_run_scenario(x, ...)
   ...,
   nrow = 6L,
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
+  computable = FALSE,
+  at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -64,6 +82,12 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
+  computable = FALSE,
+  at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -80,6 +104,12 @@ ssd_run_scenario(x, ...)
   nrow = 6L,
   args = list(),
   dists = ssdtools::ssd_dists_bcanz(),
+  rescale = FALSE,
+  computable = FALSE,
+  at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -100,6 +130,19 @@ ssd_run_scenario(x, ...)
 \item{replace}{A logical vector specifying whether to sample with replacement.}
 
 \item{dists}{A character vector of the distribution names.}
+
+\item{rescale}{A flag specifying whether to leave the values unchanged (FALSE) or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values (TRUE) or a string specifying whether to leave the values unchanged ("no") or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values ("geomean") or to logistically transform ("odds").}
+
+\item{computable}{A flag specifying whether to only return fits with numerically computable standard errors.}
+
+\item{at_boundary_ok}{A flag specifying whether a model with one or more
+parameters at the boundary should be considered to have converged (default = TRUE).}
+
+\item{min_pmix}{A number between 0 and 0.5 specifying the minimum proportion in mixture models.}
+
+\item{range_shape1}{A numeric vector of length two of the lower and upper bounds for the shape1 parameter.}
+
+\item{range_shape2}{shape2 parameter.}
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 
