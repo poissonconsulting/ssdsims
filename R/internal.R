@@ -16,11 +16,12 @@ seq_up <- function(from, to) {
   seq(from, to)
 }
 
-fit_dists_seed <- function(data, sim, stream, seed, dists, rescale, silent, ...) {
+fit_dists_seed <- function(data, sim, stream, seed, dists, rescale, computable, at_boundary_ok, min_pmix, silent, ...) {
    seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_sim = sim, stream = stream)
+  
   ## TODO: handle failure of all model to fit!!
   with_lecuyer_cmrg_seed(seed, {
-    fit <- ssdtools::ssd_fit_dists(data, dists = dists, rescale = rescale, silent = silent, nrow = 5L, ...)
+    fit <- ssdtools::ssd_fit_dists(data, dists = dists, rescale = rescale, computable = computable, at_boundary_ok = at_boundary_ok, min_pmix = min_pmix(nrow(data)), silent = silent, nrow = 5L, ...)
   })
   fit
 }

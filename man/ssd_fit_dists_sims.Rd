@@ -11,6 +11,7 @@ ssd_fit_dists_sims(
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
   seed = NULL,
   silent = TRUE,
   .progress = FALSE
@@ -29,6 +30,9 @@ ssd_fit_dists_sims(
 
 \item{at_boundary_ok}{A flag specifying whether a model with one or more
 parameters at the boundary should be considered to have converged (default = TRUE).}
+
+\item{min_pmix}{A list of one or more functions with a single argument
+that inputs the number of rows of data and returns a proportion between 0 and 0.5.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 

@@ -20,6 +20,7 @@ ssd_run_scenario(x, ...)
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -39,6 +40,7 @@ ssd_run_scenario(x, ...)
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -57,6 +59,7 @@ ssd_run_scenario(x, ...)
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -76,6 +79,7 @@ ssd_run_scenario(x, ...)
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -95,6 +99,7 @@ ssd_run_scenario(x, ...)
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
+  min_pmix = list(ssdtools::ssd_min_pmix),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -122,6 +127,8 @@ ssd_run_scenario(x, ...)
 
 \item{at_boundary_ok}{A flag specifying whether a model with one or more
 parameters at the boundary should be considered to have converged (default = TRUE).}
+
+\item{min_pmix}{A number between 0 and 0.5 specifying the minimum proportion in mixture models.}
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 
