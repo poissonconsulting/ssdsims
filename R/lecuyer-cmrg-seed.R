@@ -46,6 +46,14 @@ set_seed <- function (seed)
   invisible(get_seed())
 }
 
+#' Local L'Euyer-CMRG Seed
+#' @inheritParams withr::local_seed
+#' @seealso [`withr::local_seed()`]
+#' @export
+#' @examples
+#' 
+#' local_lecuyer_cmrg_seed(42)
+#' runif(3)
 local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) 
 {
   withr::local_seed(seed, 
@@ -55,6 +63,15 @@ local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame())
     .rng_sample_kind = "Rejection")
 }
 
+#' With L'Euyer-CMRG Seed
+#' @inheritParams withr::with_seed
+#' @seealso [`withr::with_seed()`]
+#' @export
+#' @examples
+#' 
+#' with_lecuyer_cmrg_seed(42, {
+#' runif(3)
+#' })
 with_lecuyer_cmrg_seed <- function(seed, code) {
   force(seed)
   withr::with_seed(seed, 
