@@ -9,6 +9,7 @@ ssd_hc_sims(
   proportion = 0.05,
   ...,
   ci = FALSE,
+  est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
   seed = NULL,
@@ -24,6 +25,13 @@ ssd_hc_sims(
 \item{...}{Additional arguments passed to \code{ssdtools::ssd_hc()}.}
 
 \item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
+
+\item{est_method}{A string specifying whether to estimate directly from
+the model-averaged cumulative distribution function (\code{est_method = 'multi'}) or
+to take the arithmetic mean of the estimates from the
+individual cumulative distribution functions weighted
+by the AICc derived weights  (\code{est_method = 'arithmetic'}) or
+or to use the geometric mean instead (\code{est_method = 'geometric'}).}
 
 \item{ci_method}{A string specifying which method to use for estimating
 the standard error and confidence limits from the bootstrap samples.

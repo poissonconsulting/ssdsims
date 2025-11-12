@@ -26,13 +26,13 @@ fit_dists_seed <- function(data, sim, stream, seed, dists, rescale, computable, 
   fit
 }
 
-hc_seed <- function(data, sim, stream, ci_method, seed, proportion, ci, parametric, save_to, ...) {
+hc_seed <- function(data, sim, stream, est_method, ci_method, seed, proportion, ci, parametric, save_to, ...) {
   seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_sim = sim, stream = stream)
   ## TODO: handle failures
   with_lecuyer_cmrg_seed(seed, {
-    hc<- ssdtools::ssd_hc(data, proportion = proportion, ci = ci, parametric = parametric, ci_method = ci_method, min_pboot = 0, ...)
+    hc<- ssdtools::ssd_hc(data, proportion = proportion, ci = ci, est_method = est_method, ci_method = ci_method, parametric = parametric, min_pboot = 0, ...)
   })
-  dplyr::select(hc, !"ci_method") 
+  dplyr::select(hc, !c("est_method", "ci_method")) 
 }
 
 run_scenario <- function(x, ..., dists, rescale, proportion, ci, ci_method, .progress = .progress) {
