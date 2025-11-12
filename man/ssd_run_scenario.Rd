@@ -26,6 +26,7 @@ ssd_run_scenario(x, ...)
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
+  parametric = TRUE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -48,6 +49,7 @@ ssd_run_scenario(x, ...)
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
+  parametric = TRUE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -69,6 +71,7 @@ ssd_run_scenario(x, ...)
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
+  parametric = TRUE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -91,6 +94,7 @@ ssd_run_scenario(x, ...)
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
+  parametric = TRUE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -113,6 +117,7 @@ ssd_run_scenario(x, ...)
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
+  parametric = TRUE,
   seed = NULL,
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
@@ -170,6 +175,8 @@ Finally \code{ci_method = "arithmetic"} and \code{ci_method = "geometric"}
 take the weighted arithmetic or geometric mean of the values for
 each bootstrap iteration across all the distributions and then
 calculate the confidence limits (and SE) from the single set of samples.}
+
+\item{parametric}{A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 

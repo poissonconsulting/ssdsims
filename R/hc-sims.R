@@ -6,7 +6,7 @@
 #' @param ... Additional arguments passed to `ssdtools::ssd_hc()`.
 #' @return The x tibble with a list column hc of data frames produced by applying ssd_hc() to fits.
 #' @export
-ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, ci_method = "weighted_samples", seed = NULL, save_to = NULL, .progress = FALSE) {
+ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, ci_method = "weighted_samples", parametric = TRUE, seed = NULL, save_to = NULL, .progress = FALSE) {
   chk::check_data(x, values = list(sim = c(1L, 10000000L), stream = c(1L, 10000000L)))
   chk::check_names(x, "fits")
   chk::chk_null_or(save_to, vld = chk::vld_dir)
@@ -16,6 +16,11 @@ ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, ci_method = "weig
   chk::chk_unique(ci_method)
   chk::chk_subset(ci_method, ssdtools::ssd_ci_methods())
   chk::chk_length(ci_method, upper = Inf)
+
+  chk::chk_logical(parametric)
+  chk::chk_not_any_na(parametric)
+  chk::chk_unique(parametric)
+  chk::chk_length(parametric, upper = 2L)
 
   args <- list(...)
   if("min_pboot" %in% names(args)) {
@@ -27,8 +32,8 @@ ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, ci_method = "weig
   }
 
   x <- x |>
-    dplyr::cross_join(tidyr::expand_grid(ci_method = ci_method))
+    dplyr::cross_join(tidyr::expand_grid(ci_method = ci_method, parametric = parametric))
 
-  x$hc <- purrr::pmap(list(x$fits, x$sim, x$stream, x$ci_method), \(.x, .sim, .stream, .ci_method) hc_seed(.x, .sim, .stream, ci_method = .ci_method, seed = seed, proportion = proportion, save_to = save_to, ci = ci,...), .progress = .progress)
+  x$hc <- purrr::pmap(list(x$fits, x$sim, x$stream, x$ci_method, x$parametric), \(.x, .sim, .stream, .ci_method, .parametric) hc_seed(.x, .sim, .stream, ci_method = .ci_method, parametric = .parametric, seed = seed, proportion = proportion, save_to = save_to, ci = ci,...), .progress = .progress)
   x
 }
