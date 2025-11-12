@@ -1,3 +1,3 @@
-sim,stream,nrow,args,data,rescale,computable,fits,ci_method,dist,proportion,est,se,lcl,ucl,wt,level,est_method,boot_method,nboot,pboot,dists,samples
-1,1,6,list,list,FALSE,FALSE,list,weighted_samples,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
-2,1,6,list,list,FALSE,FALSE,list,weighted_samples,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
+sim,stream,nrow,args,data,rescale,computable,at_boundary_ok,fits,ci_method,dist,proportion,est,se,lcl,ucl,wt,level,est_method,boot_method,nboot,pboot,dists,samples
+1,1,6,list,list,FALSE,FALSE,TRUE,list,weighted_samples,average,0.05,0.514363,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
+2,1,6,list,list,FALSE,FALSE,TRUE,list,weighted_samples,average,0.05,0.143255,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
