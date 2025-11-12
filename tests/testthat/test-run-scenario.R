@@ -23,9 +23,8 @@ test_that("ssd_run_scenario.data.frame passes vectorized arguments fits", {
   expect_snapshot_data(coef, "coef_rescale2")
 })
 
-test_that("ssd_run_scenario.data.frame passes arguments hc", {
-  scenario <- ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, ci = TRUE, nboot = 3, min_pboot = 0)
-  expect_equal(scenario$hc[[1]]$nboot, 3L)
+test_that("ssd_run_scenario.data.frame errors min_pboot", {
+  expect_error(ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, ci = TRUE, nboot = 3, min_pboot = 0), "`min_pboot` is fixed at 0 in ssdsims and cannot be set by the user\\.")
 })
 
 test_that("ssd_run_scenario.function works", {

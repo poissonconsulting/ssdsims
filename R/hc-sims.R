@@ -17,6 +17,11 @@ ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, ci_method = "weig
   chk::chk_subset(ci_method, ssdtools::ssd_ci_methods())
   chk::chk_length(ci_method, upper = Inf)
 
+  args <- list(...)
+  if("min_pboot" %in% names(args)) {
+    chk::abort_chk("`min_pboot` is fixed at 0 in ssdsims and cannot be set by the user")
+  }
+
   if(!nrow(x)) {
     return(dplyr::mutate(x, hc = list()))
   }
