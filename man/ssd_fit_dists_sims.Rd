@@ -12,6 +12,8 @@ ssd_fit_dists_sims(
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = range_shape1,
   seed = NULL,
   silent = TRUE,
   .progress = FALSE
@@ -33,6 +35,12 @@ parameters at the boundary should be considered to have converged (default = TRU
 
 \item{min_pmix}{A list of one or more functions with a single argument
 that inputs the number of rows of data and returns a proportion between 0 and 0.5.}
+
+\item{range_shape1}{A list of numeric vectors of length two of the lower
+and upper bounds for the shape1 parameter.}
+
+\item{range_shape2}{A list of numeric vectors of length two of the lower
+and upper bounds for the shape2 parameter.}
 
 \item{seed}{An integer of the starting seed or NULL.}
 

@@ -1,5 +1,5 @@
-sim,stream,replace,nrow,data,rescale,computable,at_boundary_ok,min_pmix,fits,ci_method,dist,proportion,est,se,lcl,ucl,wt,level,est_method,boot_method,nboot,pboot,dists,samples
-1,1,TRUE,6,list,FALSE,FALSE,TRUE,list,list,weighted_samples,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
-1,1,FALSE,6,list,FALSE,FALSE,TRUE,list,list,weighted_samples,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
-2,1,TRUE,6,list,FALSE,FALSE,TRUE,list,list,weighted_samples,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
-2,1,FALSE,6,list,FALSE,FALSE,TRUE,list,list,weighted_samples,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
+sim,stream,replace,nrow,data,rescale,computable,at_boundary_ok,min_pmix,range_shape1,range_shape2,fits,ci_method,dist,proportion,est,se,lcl,ucl,wt,level,est_method,boot_method,nboot,pboot,dists,samples
+1,1,TRUE,6,list,FALSE,FALSE,TRUE,list,list,list,list,weighted_samples,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
+1,1,FALSE,6,list,FALSE,FALSE,TRUE,list,list,list,list,weighted_samples,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
+2,1,TRUE,6,list,FALSE,FALSE,TRUE,list,list,list,list,weighted_samples,average,0.05,2.54944,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list
+2,1,FALSE,6,list,FALSE,FALSE,TRUE,list,list,list,list,weighted_samples,average,0.05,2.61109,NA,NA,NA,1,0.95,multi,parametric,0,1,list,list

@@ -21,6 +21,8 @@ ssd_run_scenario(x, ...)
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -41,6 +43,8 @@ ssd_run_scenario(x, ...)
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -60,6 +64,8 @@ ssd_run_scenario(x, ...)
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -80,6 +86,8 @@ ssd_run_scenario(x, ...)
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -100,6 +108,8 @@ ssd_run_scenario(x, ...)
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
+  range_shape1 = list(c(0.05, 20)),
+  range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
   ci = FALSE,
   ci_method = "weighted_samples",
@@ -129,6 +139,10 @@ ssd_run_scenario(x, ...)
 parameters at the boundary should be considered to have converged (default = TRUE).}
 
 \item{min_pmix}{A number between 0 and 0.5 specifying the minimum proportion in mixture models.}
+
+\item{range_shape1}{A numeric vector of length two of the lower and upper bounds for the shape1 parameter.}
+
+\item{range_shape2}{shape2 parameter.}
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 
