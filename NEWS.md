@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9004
+
+- Vectorize `ssd_fit_dists_sims()`.
+
+
 # ssdsims 0.0.0.9003
 
 -  Vectorize `ssd_hc_sims(ci_method)`.
