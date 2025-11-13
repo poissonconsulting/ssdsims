@@ -30,7 +30,7 @@ hc_seed <- function(data, sim, stream, nboot, est_method, ci_method, seed, propo
   seed <- get_lecuyer_cmrg_seed_stream(seed = seed, start_sim = sim, stream = stream)
   ## TODO: handle failures
   with_lecuyer_cmrg_seed(seed, {
-    hc<- ssdtools::ssd_hc(data, proportion = proportion, ci = ci, nboot = nboot, est_method = est_method, ci_method = ci_method, parametric = parametric, min_pboot = 0, ...)
+    hc<- ssdtools::ssd_hc(data, proportion = proportion, average = TRUE, ci = ci, nboot = nboot, est_method = est_method, ci_method = ci_method, parametric = parametric, min_pboot = 0, ...)
   })
   dplyr::select(hc, !c("nboot", "est_method", "ci_method")) 
 }

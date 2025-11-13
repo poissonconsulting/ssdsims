@@ -23,7 +23,8 @@ ssd_hc_sims(
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 
-\item{...}{Additional arguments passed to \code{ssdtools::ssd_hc()}.}
+\item{...}{Additional arguments passed to \code{ssdtools::ssd_hc()}. The exceptions are
+\code{average} and \code{min_pboot} which are fixed at \code{TRUE} and \code{0} respectively.}
 
 \item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
 

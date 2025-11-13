@@ -3,7 +3,8 @@
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
 #' @param x A data frame with sim and stream integer columns and a list column of fitdists objects.
-#' @param ... Additional arguments passed to `ssdtools::ssd_hc()`.
+#' @param ... Additional arguments passed to `ssdtools::ssd_hc()`. The exceptions are
+#' `average` and `min_pboot` which are fixed at `TRUE` and `0` respectively.
 #' @return The x tibble with a list column hc of data frames produced by applying ssd_hc() to fits.
 #' @export
 ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, nboot = 1000, est_method = "multi", ci_method = "weighted_samples", parametric = TRUE, seed = NULL, save_to = NULL, .progress = FALSE) {
@@ -35,6 +36,9 @@ ssd_hc_sims <- function(x, proportion = 0.05, ..., ci = FALSE, nboot = 1000, est
   chk::chk_length(parametric, upper = 2L)
 
   args <- list(...)
+    if("average" %in% names(args)) {
+    chk::abort_chk("`average` is fixed at TRUE in ssdsims and cannot be set by the user")
+  }
   if("min_pboot" %in% names(args)) {
     chk::abort_chk("`min_pboot` is fixed at 0 in ssdsims and cannot be set by the user")
   }

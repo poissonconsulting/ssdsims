@@ -23,8 +23,12 @@ test_that("ssd_run_scenario.data.frame passes vectorized arguments fits", {
   expect_snapshot_data(coef, "coef_rescale2")
 })
 
+test_that("ssd_run_scenario.data.frame errors average", {
+  expect_error(ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, ci = FALSE, average = TRUE), "`average` is fixed at TRUE in ssdsims and cannot be set by the user\\.")
+})
+
 test_that("ssd_run_scenario.data.frame errors min_pboot", {
-  expect_error(ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, ci = TRUE, nboot = 3, min_pboot = 0), "`min_pboot` is fixed at 0 in ssdsims and cannot be set by the user\\.")
+  expect_error(ssd_run_scenario(ssddata::ccme_boron, nrow = 5, nsim = 1, ci = FALSE, nboot = 3, min_pboot = 0), "`min_pboot` is fixed at 0 in ssdsims and cannot be set by the user\\.")
 })
 
 test_that("ssd_run_scenario.function works", {
