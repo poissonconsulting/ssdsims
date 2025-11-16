@@ -1,4 +1,4 @@
-#' Fit SSD Distributions to Simulated Data
+#' Estimate hazard concentrations for multiple simulations using bootstrapping
 #' 
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
