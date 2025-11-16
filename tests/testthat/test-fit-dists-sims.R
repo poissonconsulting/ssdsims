@@ -1,7 +1,7 @@
 test_that("fit_dists_sims edge cases", {
   with_lecuyer_cmrg_seed(10, {
-  data <- ssd_simulate_data("rlnorm", nsim = 1)
-  expect_snapshot(ssd_fit_dists_sims(data))
+    data <- ssd_simulate_data("rlnorm", nsim = 1)
+    expect_snapshot(ssd_fit_dists_sims(data))
   })
 })
 
