@@ -38,7 +38,7 @@ ssd_run_scenario.data.frame <- function(
   start_sim = 1L,
   .progress = FALSE
 ) {
-  data <- ssd_simulate_data(
+  data <- ssd_sim_data(
     x,
     nrow = nrow,
     replace = replace,
@@ -99,7 +99,7 @@ ssd_run_scenario.fitdists <- function(
   start_sim = 1L,
   .progress = FALSE
 ) {
-  data <- ssd_simulate_data(
+  data <- ssd_sim_data(
     x,
     nrow = nrow,
     dist_sim = dist_sim,
@@ -276,7 +276,7 @@ ssd_run_scenario.function <- function(
   start_sim = 1L,
   .progress = FALSE
 ) {
-  data <- ssd_simulate_data(
+  data <- ssd_sim_data(
     x,
     nrow = nrow,
     args = args,

@@ -8,7 +8,7 @@
 # ssdsims 0.0.0.9003
 
 -  Vectorize `ssd_hc_sims(ci_method)`.
--  Vectorize `ssd_simulate_data()`
+-  Vectorize `ssd_sim_data()`
 
 
 # ssdsims 0.0.0.9002
