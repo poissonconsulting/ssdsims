@@ -1,3 +1,30 @@
+# extract_chk_calls snapshot: simple function with direct non-namespaced chk calls
+
+    Code
+      extract_chk_calls(test_fun, fun_name = "test_fun")
+    Message
+      i Non-generic function `test_fun()` with 3 arguments: `x`, `y`, and `z`
+      > Step 2: Searching for chk:: calls in function body
+      v Found 3 chk calls across 3 arguments: `x`, `y`, and `z`
+      i All arguments have chk calls
+      > Returning results for 3 arguments
+    Output
+      $x
+      $x[[1]]
+      chk::chk_string(x)
+      
+      
+      $y
+      $y[[1]]
+      chk::chk_flag(y)
+      
+      
+      $z
+      $z[[1]]
+      chk::chk_number(z)
+      
+      
+
 # extract_chk_calls snapshot: simple function with direct chk calls
 
     Code

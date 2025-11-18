@@ -12,18 +12,34 @@ test_that("contains_symbol finds symbols in expressions", {
   expect_false(contains_symbol(expr2, "z"))
 })
 
-test_that("is_chk_call detects chk namespace calls", {
+test_that("normalize_chk_call detects and normalizes chk calls", {
+  # Namespaced call - should return as-is
   expr1 <- quote(chk::chk_string(x))
-  expect_true(is_chk_call(expr1))
+  result1 <- normalize_chk_call(expr1)
+  expect_false(is.null(result1))
+  expect_equal(result1, expr1)
 
+  # Another namespaced call
   expr2 <- quote(chk::chk_flag(y))
-  expect_true(is_chk_call(expr2))
+  result2 <- normalize_chk_call(expr2)
+  expect_false(is.null(result2))
+  expect_equal(result2, expr2)
 
-  expr3 <- quote(print(x))
-  expect_false(is_chk_call(expr3))
+  # Non-namespaced chk call - should be converted to namespaced
+  expr3 <- quote(chk_string(x))
+  result3 <- normalize_chk_call(expr3)
+  expect_false(is.null(result3))
+  expect_equal(result3, quote(chk::chk_string(x)))
 
-  expr4 <- quote(other::fun(x))
-  expect_false(is_chk_call(expr4))
+  # Non-chk call - should return NULL
+  expr4 <- quote(print(x))
+  result4 <- normalize_chk_call(expr4)
+  expect_null(result4)
+
+  # Different namespace - should return NULL
+  expr5 <- quote(other::fun(x))
+  result5 <- normalize_chk_call(expr5)
+  expect_null(result5)
 })
 
 test_that("find_chk_calls_in_body extracts chk calls", {
@@ -161,6 +177,19 @@ test_that("extract_chk_calls traces indirect usage", {
   expect_length(result$x, 1)
   # Should have traced through to find chk_string on the mapped parameter
   expect_equal(result$x[[1]], quote(chk::chk_string(val)))
+})
+
+test_that("extract_chk_calls snapshot: simple function with direct non-namespaced chk calls", {
+  test_fun <- function(x, y, z) {
+    chk_string(x)
+    chk_flag(y)
+    chk_number(z)
+    paste(x, y, z)
+  }
+
+  expect_snapshot({
+    extract_chk_calls(test_fun, fun_name = "test_fun")
+  })
 })
 
 test_that("extract_chk_calls snapshot: simple function with direct chk calls", {

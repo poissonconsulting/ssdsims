@@ -15,10 +15,11 @@ contains_symbol <- function(expr, symbol_name) {
   FALSE
 }
 
-# Check if a call is a chk-related call
-is_chk_call <- function(expr) {
+# Normalize a chk call to namespaced form
+# Returns the normalized expression if it's a chk call, NULL otherwise
+normalize_chk_call <- function(expr) {
   if (!is.call(expr)) {
-    return(FALSE)
+    return(NULL)
   }
 
   # Check for chk::function_name pattern (namespace call)
@@ -28,28 +29,37 @@ is_chk_call <- function(expr) {
       identical(expr[[1]][[1]], quote(`::`)) &&
       identical(expr[[1]][[2]], quote(chk))
   ) {
-    return(TRUE)
+    return(expr)
   }
 
   # Check for direct function call where function is exported by chk
   if (is.symbol(expr[[1]])) {
     fun_name <- as.character(expr[[1]])
     if (fun_name %in% get_chk_exports()) {
-      return(TRUE)
+      # Create a namespaced call: chk::function_name
+      namespaced_fun <- call("::", quote(chk), as.symbol(fun_name))
+      # Replace the function part of the call
+      expr[[1]] <- namespaced_fun
+      return(expr)
     }
   }
 
-  FALSE
+  # Return NULL if it's not a chk call
+  NULL
 }
 
 # Walk the function body to find chk:: calls
 find_chk_calls_in_body <- function(expr, fun_args, arg_results) {
-  if (is_chk_call(expr)) {
+  normalized_expr <- normalize_chk_call(expr)
+
+  if (!is.null(normalized_expr)) {
     # Check which arguments this call references
     for (arg_name in fun_args) {
       if (contains_symbol(expr, arg_name)) {
         # Add this call to the results for this argument
-        arg_results[[arg_name]][[length(arg_results[[arg_name]]) + 1]] <- expr
+        arg_results[[arg_name]][[
+          length(arg_results[[arg_name]]) + 1
+        ]] <- normalized_expr
       }
     }
   } else if (is.call(expr) || is.list(expr)) {
