@@ -19,7 +19,7 @@ sensitivity distribution data.
 library(ssdsims)
 
 withr::with_seed(42, {
-  ssd_simulate_data(ssddata::ccme_boron, nrow = c(6, 10), nsim = 2) |>
+  ssd_sim_data(ssddata::ccme_boron, nrow = c(6, 10), nsim = 2) |>
     print() |>
     ssd_fit_dists_sims() |>
     print() |>
