@@ -177,8 +177,8 @@ test_that("analyze_s3_generic with specific argument", {
       rm(test_fun, test_fun.default, test_fun.numeric, envir = .GlobalEnv)
     },
     add = TRUE
-  ) 
-  
+  )
+
   # Mock extract_chk_calls
   mock_extract_chk_calls <- function(
     fun,
@@ -335,7 +335,9 @@ test_that("extract_chk_calls snapshot: S3 generic with multiple methods", {
 
     validate_obj.default <<- function(x, strict = FALSE) {
       chk::chk_not_null(x)
-      if (strict) chk::chk_not_empty(x)
+      if (strict) {
+        chk::chk_not_empty(x)
+      }
       x
     }
 
@@ -348,15 +350,25 @@ test_that("extract_chk_calls snapshot: S3 generic with multiple methods", {
 
     validate_obj.character <<- function(x, pattern = NULL) {
       chk::chk_string(x)
-      if (!is.null(pattern)) chk::chk_match(x, pattern)
+      if (!is.null(pattern)) {
+        chk::chk_match(x, pattern)
+      }
       x
     }
   })
 
-  on.exit({
-    rm(validate_obj, validate_obj.default, validate_obj.numeric, 
-       validate_obj.character, envir = .GlobalEnv)
-  }, add = TRUE)
+  on.exit(
+    {
+      rm(
+        validate_obj,
+        validate_obj.default,
+        validate_obj.numeric,
+        validate_obj.character,
+        envir = .GlobalEnv
+      )
+    },
+    add = TRUE
+  )
 
   expect_snapshot({
     extract_chk_calls(validate_obj, fun_name = "validate_obj")
@@ -378,15 +390,24 @@ test_that("extract_chk_calls snapshot: S3 generic analyzing specific argument", 
 
     process_data.data.frame <<- function(x, verbose = FALSE, nrows = NULL) {
       chk::chk_flag(verbose)
-      if (!is.null(nrows)) chk::chk_whole_number(nrows)
+      if (!is.null(nrows)) {
+        chk::chk_whole_number(nrows)
+      }
       x
     }
   })
 
-  on.exit({
-    rm(process_data, process_data.default, process_data.data.frame, 
-       envir = .GlobalEnv)
-  }, add = TRUE)
+  on.exit(
+    {
+      rm(
+        process_data,
+        process_data.default,
+        process_data.data.frame,
+        envir = .GlobalEnv
+      )
+    },
+    add = TRUE
+  )
 
   expect_snapshot({
     # Analyze only the 'verbose' argument
@@ -421,9 +442,18 @@ test_that("extract_chk_calls snapshot: S3 generic with indirect validation", {
     }
   })
 
-  on.exit({
-    rm(check_positive, compute, compute.default, compute.numeric, envir = .GlobalEnv)
-  }, add = TRUE)
+  on.exit(
+    {
+      rm(
+        check_positive,
+        compute,
+        compute.default,
+        compute.numeric,
+        envir = .GlobalEnv
+      )
+    },
+    add = TRUE
+  )
 
   expect_snapshot({
     extract_chk_calls(compute, fun_name = "compute")
@@ -443,14 +473,14 @@ test_that("combine_method_results snapshot: deduplicates across methods", {
       name = list(expr3)
     ),
     method2 = list(
-      verbose = list(expr1),  # Duplicate
-      x = list(expr2),        # Duplicate
+      verbose = list(expr1), # Duplicate
+      x = list(expr2), # Duplicate
       name = list()
     ),
     method3 = list(
-      verbose = list(expr1),  # Duplicate
+      verbose = list(expr1), # Duplicate
       x = list(),
-      name = list(expr3)      # Duplicate
+      name = list(expr3) # Duplicate
     )
   )
 

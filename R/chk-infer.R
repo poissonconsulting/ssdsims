@@ -376,6 +376,8 @@ extract_chk_calls <- function(fun, arg = NULL, fun_name = NULL, .depth = 0) {
   }
 
   # Step 4: Return a named list of lists of quoted expressions for each argument analyzed.
-  cli::cli_alert("{indent}Returning results for {length(fun_args)} argument{?s}")
+  cli::cli_alert(
+    "{indent}Returning results for {length(fun_args)} argument{?s}"
+  )
   arg_results
 }
