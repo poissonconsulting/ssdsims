@@ -20,7 +20,7 @@ save_csv <- function(x) {
 }
 
 expect_snapshot_data <- function(x, name, digits = 6) {
-  fun <- function(x) if(is.numeric(x)) signif(x, digits = digits) else x
+  fun <- function(x) if (is.numeric(x)) signif(x, digits = digits) else x
   lapply_fun <- function(x) I(lapply(x, fun))
   x <- dplyr::mutate(x, dplyr::across(where(is.numeric), fun))
   n <- nrow(x)
