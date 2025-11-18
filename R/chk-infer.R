@@ -381,3 +381,14 @@ extract_chk_calls <- function(fun, arg = NULL, fun_name = NULL, .depth = 0) {
   )
   arg_results
 }
+
+combine_chk_calls <- function(fun) {
+  combined <- extract_chk_calls(fun)
+  empty <- (lengths(combined) == 0)
+  combined[empty] <- purrr::imap(
+    names(empty)[empty],
+    ~ rlang::expr(quote(FIXME_ADD_CHECK_CALL(!!rlang::sym(.x))))
+  )
+
+  rlang::call2("{", !!!unlist(unname(combined)))
+}
