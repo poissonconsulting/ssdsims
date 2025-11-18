@@ -325,3 +325,137 @@ test_that("get_s3_methods retrieves methods correctly", {
   expect_true(is.function(methods_list$test_gen.default))
   expect_true(is.function(methods_list$test_gen.numeric))
 })
+
+test_that("extract_chk_calls snapshot: S3 generic with multiple methods", {
+  # Create S3 generic with methods
+  local({
+    validate_obj <<- function(x, ...) {
+      UseMethod("validate_obj")
+    }
+
+    validate_obj.default <<- function(x, strict = FALSE) {
+      chk::chk_not_null(x)
+      if (strict) chk::chk_not_empty(x)
+      x
+    }
+
+    validate_obj.numeric <<- function(x, min_val = 0, max_val = 100) {
+      chk::chk_number(x)
+      chk::chk_gte(x, min_val)
+      chk::chk_lte(x, max_val)
+      x
+    }
+
+    validate_obj.character <<- function(x, pattern = NULL) {
+      chk::chk_string(x)
+      if (!is.null(pattern)) chk::chk_match(x, pattern)
+      x
+    }
+  })
+
+  on.exit({
+    rm(validate_obj, validate_obj.default, validate_obj.numeric, 
+       validate_obj.character, envir = .GlobalEnv)
+  }, add = TRUE)
+
+  expect_snapshot({
+    extract_chk_calls(validate_obj, fun_name = "validate_obj")
+  })
+})
+
+test_that("extract_chk_calls snapshot: S3 generic analyzing specific argument", {
+  # Create S3 generic with methods
+  local({
+    process_data <<- function(x, ...) {
+      UseMethod("process_data")
+    }
+
+    process_data.default <<- function(x, verbose = FALSE, timeout = 60) {
+      chk::chk_flag(verbose)
+      chk::chk_whole_number(timeout)
+      x
+    }
+
+    process_data.data.frame <<- function(x, verbose = FALSE, nrows = NULL) {
+      chk::chk_flag(verbose)
+      if (!is.null(nrows)) chk::chk_whole_number(nrows)
+      x
+    }
+  })
+
+  on.exit({
+    rm(process_data, process_data.default, process_data.data.frame, 
+       envir = .GlobalEnv)
+  }, add = TRUE)
+
+  expect_snapshot({
+    # Analyze only the 'verbose' argument
+    extract_chk_calls(process_data, arg = "verbose", fun_name = "process_data")
+  })
+})
+
+test_that("extract_chk_calls snapshot: S3 generic with indirect validation", {
+  # Helper function
+  local({
+    check_positive <<- function(val) {
+      chk::chk_number(val)
+      chk::chk_gt(val, 0)
+      val
+    }
+
+    compute <<- function(x, ...) {
+      UseMethod("compute")
+    }
+
+    compute.default <<- function(x, scale = 1) {
+      chk::chk_not_null(x)
+      check_positive(scale)
+      x * scale
+    }
+
+    compute.numeric <<- function(x, scale = 1, offset = 0) {
+      chk::chk_number(x)
+      check_positive(scale)
+      chk::chk_number(offset)
+      x * scale + offset
+    }
+  })
+
+  on.exit({
+    rm(check_positive, compute, compute.default, compute.numeric, envir = .GlobalEnv)
+  }, add = TRUE)
+
+  expect_snapshot({
+    extract_chk_calls(compute, fun_name = "compute")
+  })
+})
+
+test_that("combine_method_results snapshot: deduplicates across methods", {
+  # Create expressions that appear in multiple methods
+  expr1 <- quote(chk::chk_flag(verbose))
+  expr2 <- quote(chk::chk_number(x))
+  expr3 <- quote(chk::chk_string(name))
+
+  results_list <- list(
+    method1 = list(
+      verbose = list(expr1),
+      x = list(expr2),
+      name = list(expr3)
+    ),
+    method2 = list(
+      verbose = list(expr1),  # Duplicate
+      x = list(expr2),        # Duplicate
+      name = list()
+    ),
+    method3 = list(
+      verbose = list(expr1),  # Duplicate
+      x = list(),
+      name = list(expr3)      # Duplicate
+    )
+  )
+
+  fun_args <- c("verbose", "x", "name")
+  expect_snapshot({
+    combine_method_results(results_list, fun_args)
+  })
+})

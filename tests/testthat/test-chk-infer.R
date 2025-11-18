@@ -162,3 +162,113 @@ test_that("extract_chk_calls traces indirect usage", {
   # Should have traced through to find chk_string on the mapped parameter
   expect_equal(result$x[[1]], quote(chk::chk_string(val)))
 })
+
+test_that("extract_chk_calls snapshot: simple function with direct chk calls", {
+  test_fun <- function(x, y, z) {
+    chk::chk_string(x)
+    chk::chk_flag(y)
+    chk::chk_number(z)
+    paste(x, y, z)
+  }
+
+  expect_snapshot({
+    extract_chk_calls(test_fun, fun_name = "test_fun")
+  })
+})
+
+test_that("extract_chk_calls snapshot: function with indirect chk calls", {
+  validate_input <- function(val) {
+    chk::chk_string(val)
+    chk::chk_not_empty(val)
+    val
+  }
+
+  test_fun <- function(x, y) {
+    chk::chk_flag(y)
+    validate_input(x)
+  }
+
+  # Add helper to global env
+  assign("validate_input", validate_input, envir = .GlobalEnv)
+  on.exit(rm(validate_input, envir = .GlobalEnv), add = TRUE)
+
+  expect_snapshot({
+    extract_chk_calls(test_fun, fun_name = "test_fun")
+  })
+})
+
+test_that("extract_chk_calls snapshot: function with mixed validation", {
+  helper1 <- function(a) {
+    chk::chk_whole_number(a)
+    a
+  }
+
+  helper2 <- function(b) {
+    chk::chk_range(b, c(0, 1))
+    b
+  }
+
+  test_fun <- function(x, y, z) {
+    chk::chk_string(x)
+    helper1(y)
+    helper2(z)
+  }
+
+  # Add helpers to global env
+  assign("helper1", helper1, envir = .GlobalEnv)
+  assign("helper2", helper2, envir = .GlobalEnv)
+  on.exit(
+    {
+      rm(helper1, envir = .GlobalEnv)
+      rm(helper2, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+
+  expect_snapshot({
+    extract_chk_calls(test_fun, fun_name = "test_fun")
+  })
+})
+
+test_that("extract_chk_calls snapshot: single argument analysis", {
+  test_fun <- function(x, y, z) {
+    chk::chk_string(x)
+    chk::chk_flag(y)
+    chk::chk_number(z)
+    paste(x, y, z)
+  }
+
+  expect_snapshot({
+    extract_chk_calls(test_fun, arg = "y", fun_name = "test_fun")
+  })
+})
+
+test_that("extract_chk_calls snapshot: nested function calls", {
+  inner_validate <- function(val) {
+    chk::chk_gt(val, 0)
+    val
+  }
+
+  middle_validate <- function(val) {
+    inner_validate(val)
+  }
+
+  test_fun <- function(x) {
+    middle_validate(x)
+  }
+
+  # Add helpers to global env
+  assign("inner_validate", inner_validate, envir = .GlobalEnv)
+  assign("middle_validate", middle_validate, envir = .GlobalEnv)
+  on.exit(
+    {
+      rm(inner_validate, envir = .GlobalEnv)
+      rm(middle_validate, envir = .GlobalEnv)
+    },
+    add = TRUE
+  )
+
+  expect_snapshot({
+    extract_chk_calls(test_fun, fun_name = "test_fun")
+  })
+})
