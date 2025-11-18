@@ -61,7 +61,7 @@ get_s3_methods <- function(fun) {
   }
 
   # Get method names
-  method_names <- methods(fun_name)
+  method_names <- utils::.S3methods(fun_name, envir = environment(fun))
 
   # Retrieve actual method functions as a named list
   method_funs <- list()
@@ -70,7 +70,7 @@ get_s3_methods <- function(fun) {
       {
         # Extract class name from method name
         class_name <- sub(paste0("^", fun_name, "\\."), "", method)
-        method_fun <- getS3method(fun_name, class_name)
+        method_fun <- getS3method(fun_name, class_name, envir = environment(fun))
         # Use the full method name as the list name
         method_funs[[as.character(method)]] <- method_fun
       },
