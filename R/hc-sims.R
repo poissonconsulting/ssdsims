@@ -1,5 +1,5 @@
 #' Estimate hazard concentrations for multiple simulations using bootstrapping
-#' 
+#'
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
 #' @param x A data frame with sim and stream integer columns and a list column of fitdists objects.
