@@ -207,7 +207,7 @@ calculate the confidence limits (and SE) from the single set of samples.}
 
 \item{.progress}{Whether to show a \verb{purrr::progress bar}.}
 
-\item{dist_sim}{A character vector specifying the distributions in the fitdists object or \verb{"all"`` for all the distributions and/or }"top"\verb{to use the distribution with most weight  and/or}"multi"` to treat the distributions as a single distribution.}
+\item{dist_sim}{A character vector specifying the distributions in the fitdists object or \verb{"all"`` for all the distributions and/or }"top"\verb{to use the distribution with most weight and/or}"multi"` to treat the distributions as a single distribution.}
 
 \item{args}{A named list of the argument values.}
 }
