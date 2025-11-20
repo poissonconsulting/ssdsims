@@ -66,7 +66,8 @@ withr::with_seed(42, {
 - [`ssd_fit_dists_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.md)
   : Fit SSD Distributions to Simulated Data
 - [`ssd_hc_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md)
-  : Fit SSD Distributions to Simulated Data
+  : Estimate hazard concentrations for multiple simulations using
+  bootstrapping
 - [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
   : Run Scenario
 - [`ssd_simulate_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_simulate_data.md)

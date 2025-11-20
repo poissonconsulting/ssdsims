@@ -1,6 +1,7 @@
-# Fit SSD Distributions to Simulated Data
+# Estimate hazard concentrations for multiple simulations using bootstrapping
 
-Fit SSD Distributions to Simulated Data
+Estimate hazard concentrations for multiple simulations using
+bootstrapping
 
 ## Usage
 
