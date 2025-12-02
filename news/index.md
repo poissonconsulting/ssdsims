@@ -9,7 +9,7 @@
 
 - Vectorize `ssd_hc_sims(ci_method)`.
 - Vectorize
-  [`ssd_simulate_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_simulate_data.md)
+  [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
 
 ## ssdsims 0.0.0.9002
 

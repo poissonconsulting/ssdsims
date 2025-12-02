@@ -11,7 +11,7 @@
   bootstrapping
 - [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
   : Run Scenario
-- [`ssd_simulate_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_simulate_data.md)
+- [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
   : Generate Data for Simulations
 - [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_seed.md)
   : With L'Euyer-CMRG Seed
