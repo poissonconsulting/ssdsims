@@ -1,18 +1,18 @@
 test_that("fit_dists_sims edge cases", {
   with_lecuyer_cmrg_seed(10, {
-    data <- ssd_simulate_data("rlnorm", nsim = 1)
+    data <- ssd_sim_data("rlnorm", nsim = 1)
     expect_snapshot(ssd_fit_dists_sims(data))
   })
 })
 
 test_that("fit_dists_sims no seed", {
-  data <- ssd_simulate_data("rlnorm", nsim = 1)
+  data <- ssd_sim_data("rlnorm", nsim = 1)
   expect_snapshot(ssd_fit_dists_sims(data))
 })
 
 test_that("fit_dists_sims 1 sim", {
   with_lecuyer_cmrg_seed(10, {
-    data <- ssd_simulate_data("rlnorm", nsim = 1L)
+    data <- ssd_sim_data("rlnorm", nsim = 1L)
     fits <- ssd_fit_dists_sims(data, seed = 10)
   })
   expect_snapshot(fits)
