@@ -6,14 +6,14 @@
 #' @param x The object to use for generating the data.
 #' @return A tibble of nested data sets.
 #' @export
-ssd_simulate_data <- function(x, ...) UseMethod("ssd_simulate_data")
+ssd_sim_data <- function(x, ...) UseMethod("ssd_sim_data")
 
-#' @describeIn ssd_simulate_data Generate data by sampling from data.frame
+#' @describeIn ssd_sim_data Generate data by sampling from data.frame
 #' @export
 #' @examples
-#' ssd_simulate_data(ssddata::ccme_boron, nrow = 5, nsim = 3)
+#' ssd_sim_data(ssddata::ccme_boron, nrow = 5, nsim = 3)
 #'
-ssd_simulate_data.data.frame <- function(
+ssd_sim_data.data.frame <- function(
   x,
   ...,
   nrow = 6L,
@@ -82,7 +82,7 @@ ssd_simulate_data.data.frame <- function(
   data$data <- purrr::pmap(
     as.list(data),
     \(replace, nrow, sim, stream) {
-      ssd_simulate_data(
+      ssd_sim_data(
         x,
         replace = replace,
         nrow = nrow,
@@ -99,13 +99,13 @@ ssd_simulate_data.data.frame <- function(
   data
 }
 
-#' @describeIn ssd_simulate_data Generate data from fitdists object
+#' @describeIn ssd_sim_data Generate data from fitdists object
 #' @export
 #' @examples
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
-#' ssd_simulate_data(fit, nrow = 5, nsim = 3)
+#' ssd_sim_data(fit, nrow = 5, nsim = 3)
 #'
-ssd_simulate_data.fitdists <- function(
+ssd_sim_data.fitdists <- function(
   x,
   ...,
   nrow = 6L,
@@ -158,7 +158,7 @@ ssd_simulate_data.fitdists <- function(
     if (dist_sim == "multi") {
       fun <- ssdtools::ssd_rmulti_fitdists
       args <- list(fitdists = x)
-      datas <- ssd_simulate_data(
+      datas <- ssd_sim_data(
         fun,
         args = args,
         nrow = nrow,
@@ -176,7 +176,7 @@ ssd_simulate_data.fitdists <- function(
       wch <- which.max(weight)
     }
     x <- x[[wch]]
-    data <- ssd_simulate_data(
+    data <- ssd_sim_data(
       x,
       nrow = nrow,
       seed = seed,
@@ -190,7 +190,7 @@ ssd_simulate_data.fitdists <- function(
   data$data <- purrr::pmap(
     as.list(data),
     \(nrow, dist_sim, sim, stream) {
-      ssd_simulate_data(
+      ssd_sim_data(
         x,
         nrow = nrow,
         dist_sim = dist_sim,
@@ -206,13 +206,13 @@ ssd_simulate_data.fitdists <- function(
   data
 }
 
-#' @describeIn ssd_simulate_data Generate data from tmbfit object
+#' @describeIn ssd_sim_data Generate data from tmbfit object
 #' @export
 #' @examples
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
-#' ssd_simulate_data(fit[[1]], nrow = 5, nsim = 3)
+#' ssd_sim_data(fit[[1]], nrow = 5, nsim = 3)
 #'
-ssd_simulate_data.tmbfit <- function(
+ssd_sim_data.tmbfit <- function(
   x,
   ...,
   nrow = 6L,
@@ -226,7 +226,7 @@ ssd_simulate_data.tmbfit <- function(
 
   args <- ssdtools::estimates(x)
   x <- paste0("ssdtools::ssd_r", x$dist)
-  ssd_simulate_data(
+  ssd_sim_data(
     x,
     args = args,
     nrow = nrow,
@@ -238,12 +238,12 @@ ssd_simulate_data.tmbfit <- function(
   )
 }
 
-#' @describeIn ssd_simulate_data Generate data using name of function
+#' @describeIn ssd_sim_data Generate data using name of function
 #' @export
 #' @examples
-#' ssd_simulate_data("rnorm", nrow = 5, nsim = 3)
+#' ssd_sim_data("rnorm", nrow = 5, nsim = 3)
 #'
-ssd_simulate_data.character <- function(
+ssd_sim_data.character <- function(
   x,
   ...,
   nrow = 6L,
@@ -259,7 +259,7 @@ ssd_simulate_data.character <- function(
 
   x <- eval(parse(text = x))
 
-  ssd_simulate_data(
+  ssd_sim_data(
     x,
     args = args,
     nrow = nrow,
@@ -271,12 +271,12 @@ ssd_simulate_data.character <- function(
   )
 }
 
-#' @describeIn ssd_simulate_data Generate data using function to generate sequence of random numbers
+#' @describeIn ssd_sim_data Generate data using function to generate sequence of random numbers
 #' @export
 #' @examples
-#' ssd_simulate_data(ssdtools::ssd_rlnorm, nrow = 5, nsim = 3)
+#' ssd_sim_data(ssdtools::ssd_rlnorm, nrow = 5, nsim = 3)
 #'
-ssd_simulate_data.function <- function(
+ssd_sim_data.function <- function(
   x,
   ...,
   nrow = 6L,
@@ -336,7 +336,7 @@ ssd_simulate_data.function <- function(
   data$data <- purrr::pmap(
     as.list(data),
     \(nrow, sim, stream) {
-      ssd_simulate_data(
+      ssd_sim_data(
         x,
         args = args,
         nrow = nrow,

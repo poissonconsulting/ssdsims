@@ -1,4 +1,4 @@
-# ssd_simulate_data.function works
+# ssd_sim_data.function works
 
     Code
       data
@@ -17,7 +17,7 @@
        9     9      1     5 <list [0]> <tibble [5 x 1]>
       10    10      1     5 <list [0]> <tibble [5 x 1]>
 
-# ssd_simulate_data.function vectorized
+# ssd_sim_data.function vectorized
 
     Code
       data
@@ -30,7 +30,7 @@
       3     2      1     5 <tibble [5 x 1]> 
       4     2      1    10 <tibble [10 x 1]>
 
-# ssd_simulate_data.character works
+# ssd_sim_data.character works
 
     Code
       data
@@ -49,7 +49,7 @@
        9     9      1     5 <list [0]> <tibble [5 x 1]>
       10    10      1     5 <list [0]> <tibble [5 x 1]>
 
-# ssd_simulate_data.character vectorized
+# ssd_sim_data.character vectorized
 
     Code
       data
@@ -62,7 +62,7 @@
       3     2      1     5 <tibble [5 x 1]> 
       4     2      1    10 <tibble [10 x 1]>
 
-# ssd_simulate_data.fitdists works top
+# ssd_sim_data.fitdists works top
 
     Code
       data
@@ -81,7 +81,7 @@
        9     9      1     5 <named list [2]> <tibble [5 x 1]>
       10    10      1     5 <named list [2]> <tibble [5 x 1]>
 
-# ssd_simulate_data.fitdists works multi
+# ssd_sim_data.fitdists works multi
 
     Code
       data
@@ -100,7 +100,7 @@
        9     9      1     5 <named list [1]> <tibble [5 x 1]>
       10    10      1     5 <named list [1]> <tibble [5 x 1]>
 
-# ssd_simulate_data.fitdists works name
+# ssd_sim_data.fitdists works name
 
     Code
       data
@@ -119,7 +119,7 @@
        9     9      1     5 <named list [2]> <tibble [5 x 1]>
       10    10      1     5 <named list [2]> <tibble [5 x 1]>
 
-# ssd_simulate_data.fitdists works vectorized
+# ssd_sim_data.fitdists works vectorized
 
     Code
       data
@@ -140,7 +140,7 @@
       11     2      1    10 multi    <tibble [10 x 1]>
       12     2      1    10 lnorm    <tibble [10 x 1]>
 
-# ssd_simulate_data.fitdists works all vectorized
+# ssd_sim_data.fitdists works all vectorized
 
     Code
       data
@@ -161,7 +161,7 @@
       11     2      1    10 lnorm    <tibble [10 x 1]>
       12     2      1    10 gamma    <tibble [10 x 1]>
 
-# ssd_simulate_data.tmbfit works
+# ssd_sim_data.tmbfit works
 
     Code
       data
@@ -180,7 +180,7 @@
        9     9      1     5 <named list [2]> <tibble [5 x 1]>
       10    10      1     5 <named list [2]> <tibble [5 x 1]>
 
-# ssd_simulate_data.data.frame works
+# ssd_sim_data.data.frame works
 
     Code
       data
@@ -199,7 +199,7 @@
        9     9      1     5 FALSE   <tibble [5 x 5]>
       10    10      1     5 FALSE   <tibble [5 x 5]>
 
-# ssd_simulate_data.data.frame vectorized
+# ssd_sim_data.data.frame vectorized
 
     Code
       data

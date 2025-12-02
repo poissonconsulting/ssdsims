@@ -20,6 +20,11 @@ save_csv <- function(x) {
 }
 
 expect_snapshot_data <- function(x, name, digits = 6) {
+  if (!requireNamespace("readr", quietly = TRUE)) {
+    warning("Package 'readr' is required for this test.")
+    return(invisible())
+  }
+
   fun <- function(x) if (is.numeric(x)) signif(x, digits = digits) else x
   lapply_fun <- function(x) I(lapply(x, fun))
   x <- dplyr::mutate(x, dplyr::across(where(is.numeric), fun))

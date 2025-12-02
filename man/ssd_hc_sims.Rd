@@ -2,7 +2,7 @@
 % Please edit documentation in R/hc-sims.R
 \name{ssd_hc_sims}
 \alias{ssd_hc_sims}
-\title{Fit SSD Distributions to Simulated Data}
+\title{Estimate hazard concentrations for multiple simulations using bootstrapping}
 \usage{
 ssd_hc_sims(
   x,
@@ -67,5 +67,5 @@ calculate the confidence limits (and SE) from the single set of samples.}
 The x tibble with a list column hc of data frames produced by applying ssd_hc() to fits.
 }
 \description{
-Fit SSD Distributions to Simulated Data
+Estimate hazard concentrations for multiple simulations using bootstrapping
 }
