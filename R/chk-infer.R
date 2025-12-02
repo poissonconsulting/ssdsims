@@ -333,7 +333,7 @@ extract_chk_calls <- function(fun, arg = NULL, fun_name = NULL, .depth = 0) {
   cli::cli_alert("{indent}Step 2: Searching for chk:: calls in function body")
 
   # Initialize results for each argument
-  arg_results <- setNames(lapply(fun_args, function(x) list()), fun_args)
+  arg_results <- stats::setNames(lapply(fun_args, function(x) list()), fun_args)
 
   # Find all chk:: calls in the function body
   arg_results <- find_chk_calls_in_body(fun_body, fun_args, arg_results)

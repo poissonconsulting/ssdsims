@@ -115,7 +115,7 @@ test_that("analyze_s3_generic works with mocked extract_chk_calls", {
       fun_args <- arg
     }
 
-    result <- setNames(
+    result <- stats::setNames(
       lapply(fun_args, function(arg_name) {
         list(call("chk_not_null", as.symbol(arg_name)))
       }),
@@ -193,7 +193,7 @@ test_that("analyze_s3_generic with specific argument", {
       fun_args <- arg
     }
 
-    result <- setNames(
+    result <- stats::setNames(
       lapply(fun_args, function(arg_name) {
         list(call("chk_not_null", as.symbol(arg_name)))
       }),
@@ -265,7 +265,7 @@ test_that("analyze_s3_generic skips methods without requested argument", {
       fun_args <- arg
     }
 
-    result <- setNames(
+    result <- stats::setNames(
       lapply(fun_args, function(arg_name) {
         list(call("chk_not_null", as.symbol(arg_name)))
       }),

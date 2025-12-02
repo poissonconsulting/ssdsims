@@ -44,7 +44,7 @@ test_that("normalize_chk_call detects and normalizes chk calls", {
 
 test_that("find_chk_calls_in_body extracts chk calls", {
   fun_args <- c("x", "y")
-  arg_results <- setNames(lapply(fun_args, function(x) list()), fun_args)
+  arg_results <- stats::setNames(lapply(fun_args, function(x) list()), fun_args)
 
   # Body with chk calls
   body_expr <- quote({
