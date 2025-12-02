@@ -18,7 +18,7 @@ Imports:
     methods,
     parallel,
     purrr,
-    ssdtools (>= 2.4.0.9001),
+    ssdtools (>= 2.5.0.9001),
     tidyr,
     withr
 Suggests: 
