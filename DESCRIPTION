@@ -21,7 +21,7 @@ Imports:
     parallel,
     purrr,
     rlang,
-    ssdtools (>= 2.5.0.9002),
+    ssdtools (>= 2.5.0.9003),
     tidyr,
     withr
 Suggests: 
