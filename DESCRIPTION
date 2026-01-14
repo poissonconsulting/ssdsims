@@ -14,11 +14,14 @@ Depends:
     R (>= 4.1)
 Imports: 
     chk,
+    cli,
     dplyr,
+    memoise,
     methods,
     parallel,
     purrr,
-    ssdtools (>= 2.5.0.9001),
+    rlang,
+    ssdtools (>= 2.5.0.9003),
     tidyr,
     withr
 Suggests: 
