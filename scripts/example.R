@@ -42,4 +42,3 @@ ssd_run_scenario(
   samples = FALSE,
   delta = Inf
 )
-
