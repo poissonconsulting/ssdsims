@@ -17,11 +17,7 @@ ssd_run_scenario(
     "arithmetic_samples",
     "geometric_samples",
     "GMACL",
-    "GMAW1",
-    "GMAW2",
     "MACL",
-    "MAW1",
-    "MAW2",
     "multi_fixed",
     "multi_free",
     "weighted_samples"
@@ -43,7 +39,7 @@ ssd_run_scenario(
   ci = FALSE,
   parametric = TRUE,
   nboot = c(1, 5, 10, 50, 100, 500), # * 100,
-  samples = TRUE,
+  samples = FALSE,
   delta = Inf
 )
 
