@@ -20,5 +20,5 @@ local_lecuyer_cmrg_seed(42)
 runif(3)
 }
 \seealso{
-\code{\link[withr:with_seed]{withr::local_seed()}}
+\code{\link[withr:local_seed]{withr::local_seed()}}
 }
