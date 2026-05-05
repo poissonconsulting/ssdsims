@@ -6,6 +6,7 @@ sensitivity distribution data.
 ## Installation
 
 ``` r
+
 library(ssdsims)
 
 withr::with_seed(42, {

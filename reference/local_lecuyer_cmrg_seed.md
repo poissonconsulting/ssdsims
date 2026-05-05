@@ -27,6 +27,7 @@ local_lecuyer_cmrg_seed(seed, .local_envir = parent.frame())
 ## Examples
 
 ``` r
+
 local_lecuyer_cmrg_seed(42)
 runif(3)
 #> [1] 0.1738456 0.5547401 0.4833771

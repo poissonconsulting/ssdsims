@@ -27,6 +27,7 @@ with_lecuyer_cmrg_seed(seed, code)
 ## Examples
 
 ``` r
+
 with_lecuyer_cmrg_seed(42, {
 runif(3)
 })
