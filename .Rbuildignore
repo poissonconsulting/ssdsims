@@ -15,3 +15,4 @@
 ^README\.Rmd$
 ^.*\.html$
 ^air\.toml$
+^\.ccache$
