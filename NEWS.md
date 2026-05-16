@@ -1,5 +1,10 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9007
+
+- Ci: Unify fledge.yaml across cynkratemplate and fledge (#86).
+
+
 # ssdsims 0.0.0.9006
 
 ## Chore
