@@ -13,13 +13,13 @@ Source:
 [`DESCRIPTION`](https://github.com/poissonconsulting/ssdsims/blob/main/DESCRIPTION)
 
 Thorley J, Fisher R (2026). *ssdsims: What the Package Does (One Line,
-Title Case)*. R package version 0.0.0.9005,
+Title Case)*. R package version 0.0.0.9006,
 <https://poissonconsulting.github.io/ssdsims/>.
 
     @Manual{,
       title = {ssdsims: What the Package Does (One Line, Title Case)},
       author = {Joe Thorley and Rebecca Fisher},
       year = {2026},
-      note = {R package version 0.0.0.9005},
+      note = {R package version 0.0.0.9006},
       url = {https://poissonconsulting.github.io/ssdsims/},
     }

@@ -1,5 +1,19 @@
 # Changelog
 
+## ssdsims 0.0.0.9006
+
+### Chore
+
+- Add ccache to `.gitignore` and `.Rbuildignore`.
+
+### Continuous integration
+
+- Create snapshot update PR against correct branch.
+
+- Add reference to `/apply-patch` workflow in commit message.
+
+- Clarify rationale for not deploying on schedule.
+
 ## ssdsims 0.0.0.9005
 
 ### Chore
