@@ -1,5 +1,10 @@
 # Changelog
 
+## ssdsims 0.0.0.9007
+
+- Ci: Unify fledge.yaml across cynkratemplate and fledge
+  ([\#86](https://github.com/poissonconsulting/ssdsims/issues/86)).
+
 ## ssdsims 0.0.0.9006
 
 ### Chore
