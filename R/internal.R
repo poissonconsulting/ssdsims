@@ -146,7 +146,7 @@ run_scenario <- function(
   ) |>
     c(.args_fit)
 
-  x <- do.call("ssd_fit_dists_sims", .args_fit)
+  x <- do.call(ssd_fit_dists_sims, .args_fit)
 
   .args_hc <- list(
     x = x,
