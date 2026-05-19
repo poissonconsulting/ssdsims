@@ -364,6 +364,87 @@ Smaller items, mostly polish, mostly post-M3:
 * **Schema docs.** Each minted project lists the columns it writes,
   including list-column shapes for `samples` / `dists`.
 
+## Related work
+
+This is well-trodden ground; the design borrows liberally from existing
+ecosystems and tries to be explicit about where it fits.
+
+### Closest precedent — the R Targetopia
+
+[**R Targetopia**](https://wlandau.github.io/targetopia/) is Will
+Landau's term for a family of R packages that wrap `targets` for a
+specific domain, "abstracting away most of the tricky planning and
+engineering typically required to write pipelines." That's exactly the
+niche this roadmap targets. Concrete blueprint packages in the
+ecosystem:
+
+* [**stantargets**](https://docs.ropensci.org/stantargets/) — domain
+  package for Bayesian Stan workflows. The user calls
+  `tar_stan_mcmc()` / `tar_stan_mcmc_rep_summary()` / etc., each of
+  which returns a list of `tar_target()` objects (a "target factory")
+  that they drop into `_targets.R`. Direct API model for what
+  `add_scenario()` should look like in M3.
+* [**jagstargets**](https://docs.ropensci.org/jagstargets/) — same
+  pattern for JAGS.
+* [**tarchetypes**](https://docs.ropensci.org/tarchetypes/) — the
+  generic target-factory toolkit underneath the Targetopia. Provides
+  `tar_map()` for static branching over a grid, `tar_plan()` for a
+  drake-style DSL, and the factory-authoring helpers we'd build on.
+
+**Where `ssdsims` extends the model:** Targetopia packages typically
+produce *target factories* (lists of targets); the user still authors
+their own `_targets.R`. M1 of this roadmap goes one step further and
+mints a *full project directory* (analogous to
+[`targets::use_targets()`](https://docs.ropensci.org/targets/reference/use_targets.html)
+or `usethis::create_project()`), so a researcher running a one-off
+simulation exercise doesn't have to learn `_targets.R` at all. The
+target factories underneath that project are pure stantargets-style.
+
+### Simulation-framework cousins
+
+Pre-`targets` simulation tooling that influenced the M3 DSL:
+
+* [**SimDesign**](https://cran.r-project.org/package=SimDesign) —
+  Monte Carlo simulation framework with a tibble-shaped design grid
+  and a `generate / analyse / summarise` triplet of user functions.
+  Native HPC support including SLURM array jobs. Closest in spirit to
+  what M3 looks like end-to-end; differs in that it doesn't lean on
+  `targets` for caching/invalidation.
+* [**simChef**](https://github.com/Yu-Group/simChef) — PCS framework
+  (Data-Generating Process / Method / Evaluator / Visualizer), runs a
+  Cartesian product across DGP × Method. Uses
+  [`future`](https://future.futureverse.org/) /
+  [`future.batchtools`](https://future.futureverse.org/) for HPC
+  rather than `targets` / `crew.cluster`.
+* [**simsalapar**](https://cran.r-project.org/package=simsalapar) —
+  older but design-grid-and-graphics-focused; useful reference for
+  result-table shape.
+
+### HPC backends (M2)
+
+* [**crew.cluster**](https://wlandau.github.io/crew.cluster/) — the
+  targets-native path. `crew_controller_slurm()` is what M2 will
+  emit. Persistent SLURM workers; per-worker resource templates.
+* [**clustermq**](https://github.com/mschubert/clustermq) /
+  [**slurmR**](https://uscbiostats.github.io/slurmR/) /
+  [**future.batchtools**](https://future.futureverse.org/) —
+  alternative SLURM bridges; we won't ship them by default but the
+  generated `_targets.R` is small enough that a power user can swap
+  controllers if their cluster needs something specific.
+* The [targets HPC
+  chapter](https://books.ropensci.org/targets/hpc.html) is the
+  canonical writeup; we'll cite it from the minted project's README.
+
+### Project-scaffolding precedent
+
+* [`targets::use_targets()`](https://docs.ropensci.org/targets/reference/use_targets.html) —
+  the official scaffold. Writes `_targets.R` with TODO comments. Good
+  baseline; M1 is "use_targets, but with all the SSD-shaped TODOs
+  already filled in."
+* [`usethis`](https://usethis.r-lib.org/) project / package
+  templates — same conceptual move (function-call generates a
+  directory tree) for a different problem domain.
+
 ## Out of scope (for now)
 
 * Generic targets project generation outside the SSD domain. The DSL
