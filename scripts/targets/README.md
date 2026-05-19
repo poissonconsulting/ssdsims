@@ -4,7 +4,10 @@ A [`targets`](https://docs.ropensci.org/targets/) pipeline that runs the
 example in `scripts/example.R` end-to-end and persists every HC result as
 hive-partitioned Parquet, so the whole dataset can be queried lazily with
 [`duckplyr`](https://duckplyr.tidyverse.org/) (and any other DuckDB or Arrow
-reader).
+reader). Parquet is written through duckplyr too
+(`duckplyr::compute_parquet()`), and the dynamic branches run in parallel
+through a [`crew`](https://wlandau.github.io/crew/) controller sized to
+`parallel::detectCores()`.
 
 ## Layout
 
@@ -50,6 +53,10 @@ targets::tar_make(
   store  = "scripts/targets/_targets"
 )
 ```
+
+`tar_make()` automatically uses the `crew` controller configured in
+`_targets.R`, which spawns one local worker per detected core. Override
+by editing the `crew::crew_controller_local(workers = …)` call.
 
 Useful inspections:
 

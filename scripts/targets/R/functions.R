@@ -50,7 +50,7 @@ flatten_hc_sims <- function(x) {
 #' `<root>/nrow=<value>/data.parquet` (hive layout).
 #'
 #' The `nrow` column is removed from the file body because its value is
-#' carried by the directory name; DuckDB/arrow restore it on read.
+#' carried by the directory name; DuckDB restores it on read.
 write_partition <- function(df, root, nrow_value) {
   if (!nrow(df)) {
     return(character(0))
@@ -62,7 +62,7 @@ write_partition <- function(df, root, nrow_value) {
   dir.create(branch_dir, recursive = TRUE, showWarnings = FALSE)
   df$nrow <- NULL
   out <- file.path(branch_dir, "data.parquet")
-  arrow::write_parquet(df, out)
+  duckplyr::compute_parquet(duckplyr::as_duckdb_tibble(df), out)
   out
 }
 

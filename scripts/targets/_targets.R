@@ -6,8 +6,7 @@
 ## `nrow`) so they can be read with arrow::open_dataset() or duckplyr.
 ##
 ## Run with:
-##   targets::tar_make()                # build everything
-##   targets::tar_make_future(workers = 4)  # parallel (after loading future)
+##   targets::tar_make()    # parallel across all cores via crew (see below)
 ##
 ## Then see collect.R for reading the Parquet output back with duckplyr.
 
@@ -22,13 +21,18 @@ tar_option_set(
     "tidyr",
     "tibble",
     "purrr",
-    "arrow"
+    "duckplyr"
   ),
   format = "qs",
   memory = "transient",
   garbage_collection = TRUE,
   storage = "worker",
-  retrieval = "worker"
+  retrieval = "worker",
+  ## crew controller: one worker per core, fanning out across the dynamic
+  ## branches of fits_by_nrow / scenario{1,2}_parquet.
+  controller = crew::crew_controller_local(
+    workers = max(1L, parallel::detectCores())
+  )
 )
 
 tar_source("R")
