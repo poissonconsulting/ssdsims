@@ -20,8 +20,13 @@ sizes <- list(
   large = list(
     proportion = c(0.01, 0.05, 0.1),
     ci_method = c(
-      "arithmetic_samples", "geometric_samples", "GMACL", "MACL",
-      "multi_fixed", "multi_free", "weighted_samples"
+      "arithmetic_samples",
+      "geometric_samples",
+      "GMACL",
+      "MACL",
+      "multi_fixed",
+      "multi_free",
+      "weighted_samples"
     ),
     nboot = c(1L, 5L, 10L, 50L, 100L)
   )

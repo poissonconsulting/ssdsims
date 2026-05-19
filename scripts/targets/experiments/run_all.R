@@ -57,18 +57,34 @@ run_one <- function(cfg) {
 
   ## per-target meta
   meta <- targets::tar_meta(
-    fields = c("name", "type", "parent", "seconds", "bytes", "warnings", "error")
+    fields = c(
+      "name",
+      "type",
+      "parent",
+      "seconds",
+      "bytes",
+      "warnings",
+      "error"
+    )
   )
   meta$config_id <- cfg$id
   meta$size <- cfg$size
   meta$split <- cfg$split
 
   ## count parquet output
-  pq <- list.files("data", pattern = "\\.parquet$", recursive = TRUE,
-                   full.names = TRUE)
+  pq <- list.files(
+    "data",
+    pattern = "\\.parquet$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
   pq_bytes <- sum(file.info(pq)$size, na.rm = TRUE)
 
-  branch_meta <- dplyr::filter(meta, type == "branch", parent == "branch_results")
+  branch_meta <- dplyr::filter(
+    meta,
+    type == "branch",
+    parent == "branch_results"
+  )
   summary_row <- tibble::tibble(
     config_id = cfg$id,
     size = cfg$size,
@@ -78,16 +94,42 @@ run_one <- function(cfg) {
     n_proportion = length(cfg$proportion),
     n_ci_method = length(cfg$ci_method),
     n_nboot = length(cfg$nboot),
-    n_atomic_units = length(cfg$nrow_levels) * length(cfg$ci_method) *
-      length(cfg$nboot) * length(cfg$proportion),
+    n_atomic_units = length(cfg$nrow_levels) *
+      length(cfg$ci_method) *
+      length(cfg$nboot) *
+      length(cfg$proportion),
     n_branches = nrow(branch_meta),
     wall_secs = wall,
-    branch_secs_mean = if (nrow(branch_meta)) mean(branch_meta$seconds) else NA_real_,
-    branch_secs_median = if (nrow(branch_meta)) median(branch_meta$seconds) else NA_real_,
-    branch_secs_max = if (nrow(branch_meta)) max(branch_meta$seconds) else NA_real_,
-    branch_secs_min = if (nrow(branch_meta)) min(branch_meta$seconds) else NA_real_,
-    branch_secs_sd = if (nrow(branch_meta)) sd(branch_meta$seconds) else NA_real_,
-    branch_secs_total = if (nrow(branch_meta)) sum(branch_meta$seconds) else NA_real_,
+    branch_secs_mean = if (nrow(branch_meta)) {
+      mean(branch_meta$seconds)
+    } else {
+      NA_real_
+    },
+    branch_secs_median = if (nrow(branch_meta)) {
+      median(branch_meta$seconds)
+    } else {
+      NA_real_
+    },
+    branch_secs_max = if (nrow(branch_meta)) {
+      max(branch_meta$seconds)
+    } else {
+      NA_real_
+    },
+    branch_secs_min = if (nrow(branch_meta)) {
+      min(branch_meta$seconds)
+    } else {
+      NA_real_
+    },
+    branch_secs_sd = if (nrow(branch_meta)) {
+      sd(branch_meta$seconds)
+    } else {
+      NA_real_
+    },
+    branch_secs_total = if (nrow(branch_meta)) {
+      sum(branch_meta$seconds)
+    } else {
+      NA_real_
+    },
     parquet_count = length(pq),
     parquet_bytes = pq_bytes,
     ok = ok,
@@ -106,8 +148,15 @@ for (cfg in configs) {
   ## checkpoint after each config in case we're interrupted
   readr::write_csv(dplyr::bind_rows(summary_all), summary_path)
   readr::write_csv(dplyr::bind_rows(meta_all), meta_path)
-  message("  -> ", res$summary$ok, " in ", round(res$summary$wall_secs, 1),
-          "s, ", res$summary$n_branches, " branches")
+  message(
+    "  -> ",
+    res$summary$ok,
+    " in ",
+    round(res$summary$wall_secs, 1),
+    "s, ",
+    res$summary$n_branches,
+    " branches"
+  )
 }
 
 message("\nDone. Wrote ", summary_path, " and ", meta_path, ".")

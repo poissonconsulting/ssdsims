@@ -37,7 +37,9 @@ build_branches_tbl <- function(config) {
   for (nm in vectored) {
     grid[[nm]] <- replicate(nrow(grid), axes_all[[nm]], simplify = FALSE)
   }
-  if (".row" %in% names(grid)) grid$.row <- NULL
+  if (".row" %in% names(grid)) {
+    grid$.row <- NULL
+  }
   grid
 }
 
