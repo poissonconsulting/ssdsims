@@ -11,6 +11,95 @@ in service of letting researchers describe **what** they want simulated
 and letting the tooling decide **how** the work is chopped, cached, and
 distributed.
 
+## Workflow and artefacts
+
+### Local
+
+```
+┌──────────────────────────── User's machine ────────────────────────────┐
+│                                                                        │
+│   R session (controller)                                               │
+│     │                                                                  │
+│     │  targets::tar_make()                                             │
+│     │   ├── reads _targets/meta/*  (hashes, errors, wall time)         │
+│     │   ├── decides which branches are stale                           │
+│     │   └── hands stale branches to crew_controller_local(workers=N)   │
+│     │                                                                  │
+│     │            ┌────────┬────────┬────────┐                          │
+│     │            ▼        ▼        ▼        ▼                          │
+│     │           w1       w2       w3  ...   wN     ← R subprocesses    │
+│     │            │        │        │        │                          │
+│     │            └─ each runs sim → fit → hc ┘                         │
+│     │                       │                                          │
+│     │                       ▼                                          │
+│     │   data/<config>/branch-*.parquet     ← local filesystem          │
+│     │                                                                  │
+│     ▼                                                                  │
+│   collect.R / analysis.qmd  →  duckplyr reads parquet back lazily      │
+│                                                                        │
+│   Artefacts on disk:                                                   │
+│     _targets/meta/    target metadata, error log, wall time            │
+│     _targets/objects/ small return values (paths, summaries)           │
+│     data/<config>/    hive-partitioned parquet (one file per branch)   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### SLURM HPC
+
+```
+┌─ User laptop ─┐         ┌──────────────── Login node ─────────────────┐
+│               │  ssh /  │                                             │
+│ write DSL,    │──remote │  R session (controller, long-running)       │
+│ run           │  R─────▶│   │                                         │
+│ tar_make()    │         │   │ targets::tar_make()                     │
+│ remotely (or  │         │   │  ├── reads _targets/meta/* (shared FS)  │
+│ copy project  │         │   │  └── crew_controller_slurm(             │
+│ up)           │         │   │        workers = N,                     │
+└───────────────┘         │   │        template = slurm.tmpl,           │
+                          │   │        resources = list(cpus, mem, …))  │
+                          │   │           │                             │
+                          │   │           │ sbatch one job per worker   │
+                          │   │           ▼                             │
+                          │   │   ┌──── Compute nodes ────┐             │
+                          │   │   │                       │             │
+                          │   │   │  worker R sessions    │             │
+                          │   │   │   ├ pull task from    │             │
+                          │   │   │   │   controller      │             │
+                          │   │   │   ├ run sim→fit→hc    │             │
+                          │   │   │   └ write parquet     │             │
+                          │   │   │                       │             │
+                          │   │   └───────┼───────────────┘             │
+                          │   │           │                             │
+                          │   │           ▼                             │
+                          │   │   ┌────────────────────────┐            │
+                          │   │   │ Shared FS  OR  S3      │ ← workers  │
+                          │   │   │ data/<config>/*.parquet│   write,   │
+                          │   │   └────────────────────────┘   login    │
+                          │   │           ▲                    reads    │
+                          │   │           │                             │
+                          │   │   collect.R / analysis.qmd              │
+                          │   │   reads parquet via duckplyr            │
+                          │   │   (DuckDB httpfs for S3)                │
+                          │   │                                         │
+                          │   │  _targets/meta/  lives on shared FS so  │
+                          │   │  the controller and any rerun sees the │
+                          │   │  same hashes and error log              │
+                          │   └─────────────────────────────────────────┘
+                          └─────────────────────────────────────────────┘
+                                              │
+                                              ▼
+                                       analyst on a different
+                                       machine reads the S3 parquet
+                                       directly — no scp / no shared FS
+```
+
+The login-vs-worker split matters because: (a) the controller R session
+must stay alive for the duration of the run (often `tmux`/`screen`),
+(b) only the worker nodes do CPU-heavy work, and (c) the **storage
+root** has to be reachable from both. Shared FS is the path of least
+resistance on most clusters; S3 lets analysts pull results without
+touching the cluster at all (see [Storage](#storage)).
+
 ## Where we are (M0, today)
 
 * Simulation primitives live in `R/`: `ssd_sim_data()`,
@@ -23,11 +112,147 @@ distributed.
 * `scripts/targets/experiments/` (also this PR) explores split granularity
   vs. wall time and per-branch size, with reproducible `.qmd` reports.
 
-The split-granularity finding from the experiments is folded into the
-roadmap: M2/M3 ship heuristics that pick sensible batch sizes by
-default, rather than asking the researcher.
+## Split granularity — recommendations, not magic
 
-## M1 — Reusable targets factory (local) `[next]`
+The experiments characterise a handful of obvious candidates:
+
+| split label | branch key                                  | typical branch count    | when it shines                                |
+|-------------|---------------------------------------------|-------------------------|------------------------------------------------|
+| `coarse`    | `nrow`                                      | ~5–10                   | fastest wall time, lowest scheduler overhead   |
+| `medium`    | `nrow × ci_method`                          | tens                    | recommended default; ~30–120 s per branch      |
+| `fine`      | `nrow × ci_method × nboot`                  | hundreds                | good for HPC at scale                          |
+| `atomic`    | full `(nrow, ci_method, nboot, proportion)` | full grid (thousands)   | maximum resume granularity; fault-tolerant     |
+
+The DSL surfaces these as named choices, plus a custom escape hatch:
+
+```r
+ssdsims_project("boron-sims") |>
+  recommend_branching()       # prints the table above with size estimates
+                              # and an "(recommended)" marker
+
+ssdsims_project("boron-sims") |>
+  set_branching("medium")     # named option
+
+ssdsims_project("boron-sims") |>
+  set_branching(by = c("nrow", "ci_method", "nboot"))  # custom
+```
+
+We give a recommendation based on grid size and compute target (local
+vs. SLURM), but always let the user pick — splitting affects
+fault-tolerance and analysis ergonomics, not just speed, so it's not a
+choice we should make silently.
+
+## Storage
+
+Two backends, same DSL:
+
+```r
+project |> set_storage("data/")                          # local / shared FS
+project |> set_storage("s3://my-bucket/boron-sims/")     # S3
+```
+
+Both write hive-partitioned Parquet. Reads use duckplyr
+(`read_parquet_duckdb()`) which goes through DuckDB's `httpfs` extension
+for S3 — same code path for analysis whether the data lives on disk or
+in a bucket.
+
+**Why S3.** On HPC, results often need to escape the cluster — a
+collaborator without a login wants to render the analysis notebook on
+their laptop. Writing to S3 from the workers removes the scp / shared-FS
+step entirely; the analyst's `analysis.qmd` reads
+`s3://bucket/<config>/*.parquet` directly, locally, with no SLURM
+involved.
+
+Caveats we'll need to handle:
+
+* Worker AWS credentials (instance role on cloud HPC; `~/.aws` for
+  on-prem with S3 gateway).
+* Atomic writes: each branch writes to a unique file path keyed by the
+  branch index, so partial writes from a failed branch are orphans, not
+  corruption.
+* Parquet listing latency on S3 — we'll cache the manifest in
+  `_targets/objects/<config>_files.rds` for fast collection.
+
+## Errors and partial re-runs
+
+A simulation project's lifecycle is dominated by debugging cycles — a
+user changes one helper, one scenario errors, they fix and re-run. The
+package should make this fast and unambiguous, and **never** ask the
+user to recompute work they already have.
+
+Two classes of failure, handled differently:
+
+### Infrastructure failures
+
+Scheduler timeout, OOM, network blip, S3 throttling. Re-running
+`tar_make()` retries just the failed branches because the successful
+ones are still cached in `_targets/meta`. Workers are stateless; nothing
+to clean up.
+
+The package adds a small retry wrapper around each branch
+(`tar_target(..., error = "null", retrieval = "main")` plus a configurable
+`max_retries`) so that transient errors don't even surface as failures
+on the first pass.
+
+### User-code errors
+
+Typo in a helper, NA in input data, scenario formula doesn't converge
+for one combination. These need debugging, not retry. The package adds:
+
+* **Clear error surfacing.** `ssdsims_errors(project)` reads
+  `tar_meta(fields = c("error", "warnings"))`, joins it to the branch
+  parameter grid, and prints something like:
+
+  ```
+  3 of 240 branches errored:
+
+    scenario1 / nrow=20 / ci_method=weighted_sample / nboot=1000
+      ! "system is computationally singular: …"
+
+    scenario1 / nrow=50 / ci_method=weighted_sample / nboot=1000
+      ! "system is computationally singular: …"
+    …
+  ```
+
+  So the failure mode (and the inputs that triggered it) is visible
+  without spelunking through `_targets/meta`.
+
+* **Re-run after code change.** `targets` already invalidates downstream
+  targets when their code-dependency hash changes. The DSL leans into
+  this:
+
+  - User edits `R/functions.R` → only branches whose code-deps changed
+    re-run. All others stay cached, including their parquet output.
+  - User edits one scenario's body → only that scenario's branches
+    invalidate. Other scenarios stay green.
+  - User changes input data → all branches downstream of that input
+    invalidate; everything else stays green.
+
+* **Surgical invalidation.** When the user *wants* to re-run a specific
+  cut without changing code (e.g. "redo all `nboot=1000` branches with
+  a different seed"), the DSL exposes:
+
+  ```r
+  ssdsims_invalidate(project, where = nboot == 1000)
+  ```
+
+  which calls `targets::tar_invalidate()` on the matching branches and
+  deletes their parquet files. Other branches and their outputs are
+  untouched.
+
+* **Debug a single branch.** `ssdsims_debug(project,
+  branch_id = "scenario1_b042")` runs that one branch in the foreground
+  with `browser()` on error — no crew, no parquet write, just the
+  function call with its captured inputs. This is the workflow a user
+  reaches for when `ssdsims_errors()` shows something unfamiliar.
+
+Combined: a debug cycle becomes "see the error in
+`ssdsims_errors()`, reproduce with `ssdsims_debug()`, fix the code,
+re-run `tar_make()`" — and only the previously-failing branches re-run.
+
+## Milestones
+
+### M1 — Reusable targets factory (local) `[next]`
 
 Goal: turn the hand-rolled `scripts/targets/` workflow into a
 package-exported function that any researcher can call to get the same
@@ -52,39 +277,42 @@ shape of project for their own scenario.
 * The minted project keeps the structure we have today:
   `_targets.R`, `R/functions.R`, `run.R`, `collect.R`, `README.md`,
   `.gitignore`, plus an `experiments/` runner if requested.
-* Output layout: hive-partitioned Parquet, written through duckplyr.
+* Output layout: hive-partitioned Parquet on the local filesystem
+  (`set_storage()` defaults to `"data/"`).
 * Local execution only; `crew::crew_controller_local()` is the default
   controller.
+* `ssdsims_errors()` / `ssdsims_debug()` / `ssdsims_invalidate()` land
+  here — these are independent of compute backend.
 
 **Done when:** a researcher can replicate `scripts/targets/` end-to-end
 by calling `ssdsims_targets_project()` and `targets::tar_make()`, with
 no hand-editing.
 
-## M2 — SLURM HPC backend
+### M2 — SLURM HPC backend + S3 storage
 
 Goal: the same `ssdsims_targets_project()` call produces a project that
-runs on a SLURM cluster.
+runs on a SLURM cluster, and either backend can write to S3.
 
-* Add a `compute = c("local", "slurm")` argument. Under `"slurm"` the
-  minted `_targets.R` swaps `crew::crew_controller_local()` for
+* `compute = c("local", "slurm")`. Under `"slurm"` the minted
+  `_targets.R` swaps `crew::crew_controller_local()` for
   `crew.cluster::crew_controller_slurm()`, with sensible defaults:
   - `tasks_max` sized from the input grid,
   - per-worker resources templated (cpus, memory, walltime, partition),
   - host- and queue-aware tuning hooks.
-* File staging: minted project writes Parquet to a configurable
-  `storage_root` (shared FS by default, S3 if requested) so workers and
-  the controller process see the same outputs.
+* `set_storage()` accepts an `s3://` URI. Workers write through DuckDB's
+  `httpfs` extension; `collect.R` reads the same way.
 * A small `slurm_template.tmpl` ships with the package; researchers can
   override per-site.
+* The error/debug/invalidate UX from M1 works identically on SLURM —
+  branch-level granularity, no special cases.
 * Auth / accounts are out of scope; the project assumes the user can
-  `sbatch` already and the package wires up the controller, not the
-  login.
+  `sbatch` already (and, for S3, has working credentials).
 
 **Done when:** the same scenario description from M1 runs on a SLURM
 cluster against the same Parquet output, with no project-source
-changes besides flipping `compute = "slurm"`.
+changes besides flipping `compute = "slurm"` and `set_storage()`.
 
-## M3 — Higher-level DSL
+### M3 — Higher-level DSL
 
 Goal: hide the "build a list of scenarios" step behind a DSL designed
 for simulation exercises.
@@ -102,8 +330,10 @@ for simulation exercises.
       data       = ssddata::ccme_boron,
       est_method = c("arithmetic", "geometric", "multi"),
       ci         = FALSE) |>
-    set_compute("local", workers = parallel::detectCores()) |>
-    set_storage("data/") |>
+    recommend_branching() |>          # prints the candidate table
+    set_branching("medium") |>        # user picks; not picked silently
+    set_compute("slurm", workers = 32) |>
+    set_storage("s3://my-bucket/boron-sims/") |>
     write_project()
   ```
 * DSL emits the same targets project shape as M1/M2; everything below
@@ -111,16 +341,15 @@ for simulation exercises.
 * Validation: the DSL checks parameter combinations against
   `ssdtools::ssd_ci_methods()` / `ssd_est_methods()` etc. and reports
   configuration errors **at DSL time**, not at `tar_make()` time.
-* Heuristic batch sizing: the DSL picks a default split based on the
-  experiment results (≈30–120 s per branch locally, scaled up for
-  HPC). Researchers can override with `set_branching(by = c("nrow",
-  "ci_method"))`.
+* `recommend_branching()` estimates branch count and approximate
+  wall time per split candidate (from the experiments matrix and the
+  current compute config), so the recommendation is grounded.
 
 **Done when:** a researcher can express a multi-scenario simulation
 exercise in <30 lines of R and run it on local or SLURM with one
 command.
 
-## M4 — Ergonomics and operations
+### M4 — Ergonomics and operations
 
 Smaller items, mostly polish, mostly post-M3:
 
@@ -147,10 +376,10 @@ Smaller items, mostly polish, mostly post-M3:
 
 ## Open questions
 
-* **Storage backends.** Parquet on a shared filesystem is the default,
-  but how seriously do we want to support object stores (S3, GCS)? M2
-  may answer this; tooling-wise it's a controller config issue rather
-  than a code change.
+* **S3 credentials on HPC.** Most academic clusters don't have instance
+  roles; the user has to ship credentials. We can document the
+  `AWS_PROFILE` / `~/.aws/credentials` pattern but it's a real
+  onboarding step — worth a "first SLURM run" cookbook in M2.
 * **Random-number reproducibility across controllers.** ssdsims already
   uses L'Ecuyer-CMRG seeds keyed by `(start_sim, stream)`. Need to
   confirm SLURM workers see the same seed sequence as local crew
@@ -159,4 +388,4 @@ Smaller items, mostly polish, mostly post-M3:
   experiments is ~30–120 s per branch. On SLURM with multi-minute
   scheduler latency, the floor is likely higher; M2 should re-run the
   split-granularity experiment on a real cluster before locking
-  defaults.
+  `recommend_branching()` outputs for the SLURM compute target.
