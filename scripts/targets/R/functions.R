@@ -23,7 +23,9 @@ flatten_hc_sims <- function(x) {
     ),
     names(x)
   )
-  if (length(drop)) x <- x[, setdiff(names(x), drop), drop = FALSE]
+  if (length(drop)) {
+    x <- x[, setdiff(names(x), drop), drop = FALSE]
+  }
   out <- tidyr::unnest(x, cols = "hc")
   if ("samples" %in% names(out)) {
     out$samples <- lapply(out$samples, function(v) {
@@ -54,7 +56,9 @@ write_partition <- function(df, root, nrow_value) {
     return(character(0))
   }
   branch_dir <- file.path(root, paste0("nrow=", nrow_value))
-  if (dir.exists(branch_dir)) unlink(branch_dir, recursive = TRUE)
+  if (dir.exists(branch_dir)) {
+    unlink(branch_dir, recursive = TRUE)
+  }
   dir.create(branch_dir, recursive = TRUE, showWarnings = FALSE)
   df$nrow <- NULL
   out <- file.path(branch_dir, "data.parquet")
