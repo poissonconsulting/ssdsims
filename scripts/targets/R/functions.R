@@ -5,10 +5,43 @@
 ## the whole dataset can be read back with arrow / duckplyr.
 
 #' Drop list-columns of complex objects and unnest the hc tibble.
+#'
+#' `ssd_fit_dists_sims()` adds list-columns of functions (`min_pmix`) and
+#' numeric ranges (`range_shape1`, `range_shape2`) via `cross_join`, plus the
+#' fitdists objects themselves; none of these are writable by arrow. The
+#' bootstrap `samples` column inside hc is a list of *named* numeric vectors,
+#' which arrow can't infer a type from — so strip the names too.
 flatten_hc_sims <- function(x) {
-  drop <- intersect(c("data", "fits", "args"), names(x))
+  drop <- intersect(
+    c(
+      "data",
+      "fits",
+      "args",
+      "min_pmix",
+      "range_shape1",
+      "range_shape2"
+    ),
+    names(x)
+  )
   if (length(drop)) x <- x[, setdiff(names(x), drop), drop = FALSE]
-  tidyr::unnest(x, cols = "hc")
+  out <- tidyr::unnest(x, cols = "hc")
+  if ("samples" %in% names(out)) {
+    out$samples <- lapply(out$samples, function(v) {
+      if (is.null(v)) {
+        return(numeric(0))
+      }
+      unname(as.numeric(v))
+    })
+  }
+  if ("dists" %in% names(out)) {
+    out$dists <- lapply(out$dists, function(v) {
+      if (is.null(v)) {
+        return(character(0))
+      }
+      unname(as.character(v))
+    })
+  }
+  out
 }
 
 #' Write a single-nrow flattened result as one Parquet file under
