@@ -1,0 +1,167 @@
+---
+title: "Output correctness — `ssdsims` targets experiments"
+format:
+  gfm:
+    toc: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(duckplyr)
+  library(readr)
+  library(purrr)
+})
+
+summary_csv <- "../results/summary.csv"
+stopifnot(file.exists(summary_csv))
+sm <- readr::read_csv(summary_csv, show_col_types = FALSE)
+```
+
+Twelve experiment runs wrote bootstrap HC results to
+`data/<config_id>/branch-*.parquet`. Each config should produce the same
+*combined* answer regardless of how many branches it was split across —
+this notebook checks that.
+
+## Per-config row counts
+
+```{r}
+counts <- sm |>
+  rowwise() |>
+  mutate(
+    files = list(list.files(file.path("..", "data", config_id),
+                            pattern = "\\.parquet$", full.names = TRUE)),
+    n_rows = {
+      f <- files
+      if (length(f) == 0) NA_integer_ else
+        duckplyr::read_parquet_duckdb(f) |>
+          summarise(n = n()) |> collect() |> pull(n)
+    }
+  ) |>
+  ungroup() |>
+  select(size, split, n_branches, n_atomic_units, n_rows)
+
+counts |> knitr::kable()
+```
+
+Each atomic unit is one `ssd_hc()` call. With `est_method = "multi"` and
+`samples = TRUE`, every `(nrow, ci_method, nboot, proportion, sim)` pair
+contributes one row to the output, so we expect
+
+```
+n_rows == n_atomic_units * nsim
+```
+
+with `nsim = 2` for every config:
+
+```{r}
+counts |>
+  mutate(
+    expected = n_atomic_units * 2L,
+    delta    = n_rows - expected
+  ) |>
+  select(size, split, n_rows, expected, delta) |>
+  knitr::kable()
+```
+
+If `delta` is zero everywhere, splitting is row-count-preserving.
+
+## Cross-split agreement
+
+For each `size`, the `est`/`lcl`/`ucl` columns at every
+`(sim, nrow, ci_method, nboot, proportion)` key should match across the
+four splits, because seeds are deterministic and the work per atomic unit
+is identical regardless of how it's batched.
+
+```{r}
+read_all <- function(size_val) {
+  rows <- sm |> filter(size == size_val)
+  purrr::map(rows$config_id, function(id) {
+    f <- list.files(file.path("..", "data", id),
+                    pattern = "\\.parquet$", full.names = TRUE)
+    duckplyr::read_parquet_duckdb(f) |>
+      collect() |>
+      mutate(split = rows$split[match(id, rows$config_id)])
+  }) |> bind_rows()
+}
+
+agreement_table <- function(size_val) {
+  d <- read_all(size_val)
+  if (!nrow(d)) {
+    return(tibble::tibble(metric = character(), max_diff = double()))
+  }
+  key <- c("sim", "stream", "ci_method", "nboot", "proportion", "dist")
+  pivots <- c("est", "lcl", "ucl")
+  ## per-split tibble keyed by run config
+  pivot <- d |>
+    select(all_of(c(key, pivots, "split"))) |>
+    pivot_wider(names_from = split, values_from = all_of(pivots))
+  splits_present <- c("split0", "split1", "split2", "split3")
+  splits_present <- intersect(splits_present, unique(d$split))
+  if (length(splits_present) < 2) {
+    return(tibble::tibble(metric = pivots, max_diff = NA_real_))
+  }
+  ref <- splits_present[1]
+  others <- setdiff(splits_present, ref)
+  purrr::map_dfr(pivots, function(m) {
+    rcol <- paste0(m, "_", ref)
+    diffs <- purrr::map_dbl(others, function(s) {
+      ocol <- paste0(m, "_", s)
+      if (!all(c(rcol, ocol) %in% names(pivot))) return(NA_real_)
+      max(abs(pivot[[rcol]] - pivot[[ocol]]), na.rm = TRUE)
+    })
+    tibble::tibble(
+      size     = size_val,
+      metric   = m,
+      ref      = ref,
+      other    = others,
+      max_abs_diff = diffs
+    )
+  })
+}
+
+agreement <- purrr::map_dfr(c("small", "medium", "large"), agreement_table)
+agreement |> knitr::kable()
+```
+
+Zero (or floating-point-zero, e.g. `< 1e-10`) means the splits agree
+exactly on the point estimate and CI bounds.
+
+## Samples list-column
+
+```{r}
+samples_check <- function(size_val) {
+  d <- read_all(size_val) |>
+    mutate(samp_len = lengths(samples))
+  d |>
+    group_by(split, nboot, ci_method) |>
+    summarise(
+      n          = n(),
+      uniq_lens  = paste(sort(unique(samp_len)), collapse = ","),
+      .groups    = "drop"
+    ) |>
+    mutate(size = size_val) |>
+    select(size, split, nboot, ci_method, n, uniq_lens)
+}
+
+purrr::map_dfr(c("small", "medium", "large"), samples_check) |>
+  knitr::kable()
+```
+
+`uniq_lens` is the set of sample-vector lengths observed at each
+`(nboot, ci_method)`. The samples vector either equals `nboot` (most CI
+methods) or `nboot × #dists` (the multi methods); we expect this to be
+identical across splits.
+
+## Summary
+
+If all three checks above are clean — row counts match, split-vs-split
+estimate diff is at floating-point zero, and samples lengths are
+consistent — then the split granularity is **purely an
+infrastructure choice**: the answer doesn't depend on how the work was
+chopped up.
