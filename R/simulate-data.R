@@ -134,9 +134,9 @@ ssd_sim_data.fitdists <- function(
     wch <- which(dist_sim == "all")
     n <- length(dist_sim)
     dist_sim <- c(
-      dist_sim[seq_up(1, wch - 1)],
+      dist_sim[rlang::seq2(1, wch - 1)],
       names(x),
-      dist_sim[seq_up(wch + 1, n)]
+      dist_sim[rlang::seq2(wch + 1, n)]
     )
     dist_sim <- unique(dist_sim)
   }
