@@ -52,5 +52,18 @@ and upper bounds for the shape2 parameter.}
 The x tibble with a list column fits of fistdist objects.
 }
 \description{
-Fit SSD Distributions to Simulated Data
+Fits one or more species sensitivity distributions to each of the simulated
+data sets stored in a nested tibble.
+}
+\details{
+For each row of \code{x}, the function calls \code{\link[ssdtools:ssd_fit_dists]{ssdtools::ssd_fit_dists()}} on the
+data in the \code{data} list column, using an independent L'Ecuyer-CMRG random
+number stream derived from \code{seed}, \code{sim} and \code{stream} so that fits are
+reproducible across parallel workers.
+
+The \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix}, \code{range_shape1}
+and \code{range_shape2} arguments may each be supplied as vectors or lists; their
+values are crossed with the rows of \code{x} so that every combination of inputs
+is fitted, allowing different fitting configurations to be compared in a
+single call.
 }

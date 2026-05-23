@@ -1,5 +1,19 @@
 #' Fit SSD Distributions to Simulated Data
 #'
+#' Fits one or more species sensitivity distributions to each of the simulated
+#' data sets stored in a nested tibble.
+#'
+#' For each row of `x`, the function calls [ssdtools::ssd_fit_dists()] on the
+#' data in the `data` list column, using an independent L'Ecuyer-CMRG random
+#' number stream derived from `seed`, `sim` and `stream` so that fits are
+#' reproducible across parallel workers.
+#'
+#' The `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`
+#' and `range_shape2` arguments may each be supplied as vectors or lists; their
+#' values are crossed with the rows of `x` so that every combination of inputs
+#' is fitted, allowing different fitting configurations to be compared in a
+#' single call.
+#'
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @param min_pmix A list of one or more functions with a single argument
 #' that inputs the number of rows of data and returns a proportion between 0 and 0.5.

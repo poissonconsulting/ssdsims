@@ -2,6 +2,18 @@
 #'
 #' A family of functions to generate a tibble of nested data sets.
 #'
+#' The generic dispatches on the class of `x`. Methods are provided for
+#' `data.frame` (resampling rows from an empirical data set), `fitdists`
+#' (drawing from a fitted species sensitivity distribution or the multi-model
+#' density), `tmbfit` (drawing from a single fitted distribution), `character`
+#' (treating `x` as the name of a random-number-generating function such as
+#' `"rlnorm"`) and `function` (calling the function directly).
+#'
+#' Random number generation is parallel-safe: each `(stream, sim)` pair uses
+#' an independent L'Ecuyer-CMRG sub-stream derived from `seed`, so individual
+#' simulations are reproducible and can be regenerated without recomputing
+#' the entire grid.
+#'
 #' @inheritParams params
 #' @param x The object to use for generating the data.
 #' @return A tibble of nested data sets.

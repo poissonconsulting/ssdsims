@@ -1,5 +1,19 @@
 #' Run Scenario
 #'
+#' Runs an end-to-end species sensitivity distribution simulation scenario by
+#' generating data, fitting distributions and computing hazard concentrations.
+#'
+#' The generic dispatches on the class of `x` and selects an appropriate
+#' [ssd_sim_data()] method to produce the nested tibble of simulated data
+#' sets. The simulated tibble is then passed through [ssd_fit_dists_sims()]
+#' and finally [ssd_hc_sims()]; any extra arguments in `...` are routed to
+#' whichever of the two underlying calls accepts them, with unrecognised
+#' arguments triggering an informative error.
+#'
+#' This makes `ssd_run_scenario()` a convenient single-call entry point for
+#' the simulation pipeline, while still allowing fine-grained control over
+#' the fitting and hazard-estimation steps.
+#'
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
