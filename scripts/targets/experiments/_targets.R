@@ -22,12 +22,12 @@ tar_option_set(
     "duckplyr",
     "digest"
   ),
-  format             = "qs",
-  memory             = "transient",
+  format = "qs",
+  memory = "transient",
   garbage_collection = TRUE,
-  storage            = "worker",
-  retrieval          = "worker",
-  controller         = crew::crew_controller_local(workers = n_workers)
+  storage = "worker",
+  retrieval = "worker",
+  controller = crew::crew_controller_local(workers = n_workers)
 )
 
 tar_source("R")
@@ -42,10 +42,10 @@ if (!nzchar(config_json)) {
 config <- jsonlite::fromJSON(config_json, simplifyVector = TRUE)
 ## fromJSON coerces vectors fine; ensure the right types:
 config$grid$nrow_levels <- as.integer(config$grid$nrow_levels)
-config$grid$nboot       <- as.integer(config$grid$nboot)
-config$grid$proportion  <- as.numeric(config$grid$proportion)
-config$grid$ci_method   <- as.character(config$grid$ci_method)
-config$grid$nsim        <- as.integer(config$grid$nsim)
-config$split_axes       <- as.character(config$split_axes)
+config$grid$nboot <- as.integer(config$grid$nboot)
+config$grid$proportion <- as.numeric(config$grid$proportion)
+config$grid$ci_method <- as.character(config$grid$ci_method)
+config$grid$nsim <- as.integer(config$grid$nsim)
+config$split_axes <- as.character(config$split_axes)
 
 build_pipeline(config)

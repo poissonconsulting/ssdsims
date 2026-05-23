@@ -18,14 +18,14 @@
 
 GRID <- list(
   ## Fit-task axes (each combo is one fit_dists_seed call).
-  nrow_levels = c(6L, 10L, 20L),    # KNOB: more values → more fits; larger nrow → slower fit/bootstrap
-  nsim        = 2L,                  # KNOB: more sims per nrow → linearly more fit tasks
-  stream      = 1L,                  # usually constant; pin per pipeline
+  nrow_levels = c(6L, 10L, 20L), # KNOB: more values → more fits; larger nrow → slower fit/bootstrap
+  nsim = 2L, # KNOB: more sims per nrow → linearly more fit tasks
+  stream = 1L, # usually constant; pin per pipeline
 
   ## HC sweep — applied inside every fit task.
-  ci_method   = c("multi_fixed", "weighted_samples"),  # KNOB: more methods → bigger HC sweep
-  nboot       = c(1L, 5L),                             # KNOB: bigger → slower bootstrap per HC
-  proportion  = 0.05                                   # KNOB: more values → bigger HC sweep
+  ci_method = c("multi_fixed", "weighted_samples"), # KNOB: more methods → bigger HC sweep
+  nboot = c(1L, 5L), # KNOB: bigger → slower bootstrap per HC
+  proportion = 0.05 # KNOB: more values → bigger HC sweep
 )
 
 ## To run a longer experiment, replace GRID with one of these (or your own):
@@ -46,25 +46,25 @@ GRID <- list(
 
 SPLITS <- list(
   ## One branch per nrow. Each branch contains nsim fits.
-  by_nrow      = c("nrow"),
+  by_nrow = c("nrow"),
 
   ## One branch per sim across all nrows. Each branch contains
   ## #nrow_levels fits. Useful when the HC sweep dominates so you
   ## want to keep workers busy across sims.
-  by_sim       = c("sim"),
+  by_sim = c("sim"),
 
   ## One branch per (nrow, sim) — atomic at the fit layer.
   ## Maximum parallelism (one fit per worker), highest dispatch
   ## overhead.
-  atomic       = c("nrow", "sim")
+  atomic = c("nrow", "sim")
 )
 
 configs <- lapply(names(SPLITS), function(sp_name) {
   list(
-    id          = sp_name,
-    split       = sp_name,
-    split_axes  = SPLITS[[sp_name]],
-    grid        = GRID
+    id = sp_name,
+    split = sp_name,
+    split_axes = SPLITS[[sp_name]],
+    grid = GRID
   )
 })
 names(configs) <- names(SPLITS)

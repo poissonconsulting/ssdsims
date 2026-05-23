@@ -24,8 +24,8 @@ source("../R/functions.R")
 #' at the fit-layer granularity.
 build_fit_grid <- function(grid) {
   tidyr::expand_grid(
-    nrow   = grid$nrow_levels,
-    sim    = seq_len(grid$nsim),
+    nrow = grid$nrow_levels,
+    sim = seq_len(grid$nsim),
     stream = grid$stream
   )
 }
@@ -37,14 +37,14 @@ run_experiment_branch <- function(branch_rows, boron, grid, out_dir) {
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
   fit_defaults <- list(
-    dists          = ssdtools::ssd_dists_bcanz(),
-    rescale        = FALSE,
-    computable     = FALSE,
+    dists = ssdtools::ssd_dists_bcanz(),
+    rescale = FALSE,
+    computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix       = ssdtools::ssd_min_pmix,
-    range_shape1   = c(0.05, 20),
-    range_shape2   = c(0.05, 20),
-    silent         = TRUE
+    min_pmix = ssdtools::ssd_min_pmix,
+    range_shape1 = c(0.05, 20),
+    range_shape2 = c(0.05, 20),
+    silent = TRUE
   )
 
   paths <- character(nrow(branch_rows))
@@ -54,56 +54,56 @@ run_experiment_branch <- function(branch_rows, boron, grid, out_dir) {
     ## --- Atomic fit task: one fit_dists_seed() call -------------------
     sim_tbl <- ssdsims::ssd_sim_data(
       boron,
-      nrow      = row$nrow,
-      nsim      = 1L,
+      nrow = row$nrow,
+      nsim = 1L,
       start_sim = row$sim,
-      stream    = row$stream
+      stream = row$stream
     )
     data_one <- sim_tbl$data[[1]]
 
     fit <- ssdsims:::fit_dists_seed(
-      data           = data_one,
-      sim            = row$sim,
-      stream         = row$stream,
-      seed           = NULL,
-      dists          = fit_defaults$dists,
-      rescale        = fit_defaults$rescale,
-      computable     = fit_defaults$computable,
+      data = data_one,
+      sim = row$sim,
+      stream = row$stream,
+      seed = NULL,
+      dists = fit_defaults$dists,
+      rescale = fit_defaults$rescale,
+      computable = fit_defaults$computable,
       at_boundary_ok = fit_defaults$at_boundary_ok,
-      min_pmix       = fit_defaults$min_pmix,
-      range_shape1   = fit_defaults$range_shape1,
-      range_shape2   = fit_defaults$range_shape2,
-      silent         = fit_defaults$silent
+      min_pmix = fit_defaults$min_pmix,
+      range_shape1 = fit_defaults$range_shape1,
+      range_shape2 = fit_defaults$range_shape2,
+      silent = fit_defaults$silent
     )
 
     ## --- HC sweep for this fit ---------------------------------------
     ## ssd_hc_sims expects a fits tibble; build a 1-row one from the
     ## values we just produced.
     fits_tbl <- tibble::tibble(
-      sim            = row$sim,
-      stream         = row$stream,
-      nrow           = row$nrow,
-      replace        = FALSE,
-      data           = list(data_one),
-      rescale        = fit_defaults$rescale,
-      computable     = fit_defaults$computable,
+      sim = row$sim,
+      stream = row$stream,
+      nrow = row$nrow,
+      replace = FALSE,
+      data = list(data_one),
+      rescale = fit_defaults$rescale,
+      computable = fit_defaults$computable,
       at_boundary_ok = fit_defaults$at_boundary_ok,
-      min_pmix       = list(fit_defaults$min_pmix),
-      range_shape1   = list(fit_defaults$range_shape1),
-      range_shape2   = list(fit_defaults$range_shape2),
-      fits           = list(fit)
+      min_pmix = list(fit_defaults$min_pmix),
+      range_shape1 = list(fit_defaults$range_shape1),
+      range_shape2 = list(fit_defaults$range_shape2),
+      fits = list(fit)
     )
 
     hc <- ssdsims::ssd_hc_sims(
       fits_tbl,
       proportion = grid$proportion,
-      ci_method  = grid$ci_method,
-      nboot      = grid$nboot,
+      ci_method = grid$ci_method,
+      nboot = grid$nboot,
       est_method = "multi",
-      ci         = TRUE,
-      samples    = TRUE,
+      ci = TRUE,
+      samples = TRUE,
       parametric = TRUE,
-      delta      = Inf
+      delta = Inf
     )
     flat <- flatten_hc_sims(hc)
 
@@ -142,7 +142,7 @@ build_pipeline <- function(config) {
       build_fit_grid(config$grid) |>
         dplyr::group_by(dplyr::across(dplyr::all_of(config$split_axes))) |>
         targets::tar_group(),
-      iteration  = "group",
+      iteration = "group",
       deployment = "main"
     ),
 
@@ -153,7 +153,7 @@ build_pipeline <- function(config) {
       branch_results,
       run_experiment_branch(fit_grid, boron, grid, out_dir),
       pattern = map(fit_grid),
-      format  = "file"
+      format = "file"
     )
   )
 }
