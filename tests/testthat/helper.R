@@ -13,6 +13,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+if (!exists(".Random.seed", envir = globalenv())) {
+  set.seed(NULL)
+}
+
 save_csv <- function(x) {
   path <- tempfile(fileext = ".csv")
   readr::write_csv(x, path)
