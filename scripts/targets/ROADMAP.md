@@ -445,6 +445,92 @@ Pre-`targets` simulation tooling that influenced the M3 DSL:
   templates — same conceptual move (function-call generates a
   directory tree) for a different problem domain.
 
+## Packaging strategy
+
+**Direction:** keep everything in `ssdsims` and prefer fast shipping
+over premature separation. Build on `tarchetypes` from day one.
+
+The shortest path to a useful product is: one package, one install,
+one release cycle. Splitting "primitives" from "workflow factories"
+into separate packages buys conceptual cleanliness but costs release
+velocity, dependency coordination, and discoverability. The
+[Targetopia](https://wlandau.github.io/targetopia/) precedent (e.g.
+`stantargets` separate from `cmdstanr`) is principled but optional —
+many R packages successfully ship both primitives and workflow tools
+together. We only extract when there's a concrete second consumer.
+
+Building on `tarchetypes` from day one means M1's
+`ssdsims_targets_project()` produces target factories that desugar to
+`tarchetypes::tar_map()` / `tarchetypes::tar_group_by()` /
+`tarchetypes::tar_combine()` rather than hand-rolled `tar_target()`
+lists. Concretely, the experiments harness in this PR is being
+migrated to that pattern now; the production minted projects will
+follow the same shape.
+
+### The boundary problem
+
+R doesn't have a real internal-module concept — files are mostly a
+convention. Practical options for marking the SSD-vocabulary layer:
+
+* **File prefixes.** `R/targets-*.R` for the workflow tooling,
+  `R/sim-*.R` (or no prefix) for the primitives. The boundary lives
+  in the directory listing.
+* **Roxygen `@keywords internal`** on factory helpers that aren't
+  meant to be SSD-vocabulary-aware, so they aren't documented as
+  domain functions.
+* **Naming.** `ssdsims_project_*`, `ssdsims_branching_*`,
+  `ssdsims_errors_*` for the workflow side; `ssd_*` for the
+  primitives side (matching `ssdtools`'s convention). Anyone reading
+  the NAMESPACE can tell what's what.
+
+None of these are enforced. They drift unless we test for drift.
+
+### Static-analysis tests for boundary maintenance
+
+The package should ship a couple of automated checks that fail in
+`R CMD check` when the boundary is crossed:
+
+* **Primitives layer must not know about workflow.** A test that
+  greps `R/sim-*.R` for forbidden tokens (`tar_target`, `tarchetypes`,
+  `crew`, `duckplyr`, `arrow`). If any appear, the test fails with a
+  pointer to which file to clean up.
+* **Workflow layer must not bypass primitives.** A test that asserts
+  every workflow factory body calls into `ssd_*` functions rather
+  than reimplementing simulation logic. Cheap version: parse the
+  factory files with `parse()` / `getParseData()`, walk the call
+  tree, and assert that any call to `ssdtools::*` or `ssddata::*`
+  goes via the primitive helpers, not directly.
+* **Exported-name conventions.** A test that walks `NAMESPACE`, bins
+  exports by prefix, and asserts each bin maps to one layer. New
+  unprefixed exports trigger a failure that asks the contributor to
+  pick a side. (lintr can be configured for this if we don't want to
+  hand-roll.)
+* **Dependency direction.** Using
+  [`pkgnet`](https://github.com/uptake/pkgnet) or a small custom
+  walker, assert the workflow files import from the primitive files
+  but not the reverse. This catches accidental cycles before they
+  become real coupling.
+
+These run in CI, take seconds, and turn "we should be careful about
+the boundary" into "the boundary is checked on every PR." When the
+checks fail repeatedly because the boundary is genuinely wrong, that's
+the signal to extract — not vibes.
+
+### Extraction trigger
+
+We extract the workflow layer into a separate package (`ssdtargets`?)
+when:
+
+1. A second domain package wants to depend on the workflow factories
+   without inheriting SSD vocabulary, **or**
+2. The static-analysis tests above keep needing exceptions (i.e. the
+   "boundary" is moving), **or**
+3. The dep weight of `tarchetypes` / `crew` / `crew.cluster` /
+   `duckplyr` is genuinely hurting downstream consumers who just want
+   the primitives.
+
+Until one of those bites, the cost of a split exceeds the benefit.
+
 ## Out of scope (for now)
 
 * Generic targets project generation outside the SSD domain. The DSL

@@ -28,7 +28,19 @@ if (length(selected)) {
 }
 
 summary_path <- file.path(results_dir, "summary.csv")
-meta_path <- file.path(results_dir, "per_target.csv")
+meta_path    <- file.path(results_dir, "per_target.csv")
+
+n_workers <- as.integer(Sys.getenv("SSDSIMS_EXP_WORKERS", unset = "2"))
+
+## Atomic = one fit_dists_seed call = one (nrow, sim, stream) tuple.
+n_atomic_fits <- function(grid) {
+  length(grid$nrow_levels) * grid$nsim * length(grid$stream)
+}
+
+## HC combinations applied within each fit.
+n_hc_per_fit <- function(grid) {
+  length(grid$ci_method) * length(grid$nboot) * length(grid$proportion)
+}
 
 run_one <- function(cfg) {
   message("== running config: ", cfg$id, " ==")
@@ -40,7 +52,9 @@ run_one <- function(cfg) {
   if (dir.exists("_targets")) {
     targets::tar_destroy(ask = FALSE)
   }
-  unlink("data", recursive = TRUE)
+  ## Per-config data dir; keep other configs' data so we can compare
+  ## results across splits in the analysis qmds.
+  unlink(file.path("data", cfg$id), recursive = TRUE)
 
   t0 <- Sys.time()
   ok <- TRUE
@@ -52,88 +66,49 @@ run_one <- function(cfg) {
       err_msg <<- conditionMessage(e)
     }
   )
-  t1 <- Sys.time()
-  wall <- as.numeric(difftime(t1, t0, units = "secs"))
+  wall <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
 
-  ## per-target meta
   meta <- targets::tar_meta(
-    fields = c(
-      "name",
-      "type",
-      "parent",
-      "seconds",
-      "bytes",
-      "warnings",
-      "error"
-    )
+    fields = c("name", "type", "parent", "seconds", "bytes", "warnings", "error")
   )
   meta$config_id <- cfg$id
-  meta$size <- cfg$size
-  meta$split <- cfg$split
+  meta$split     <- cfg$split
 
-  ## count parquet output
-  pq <- list.files(
-    "data",
-    pattern = "\\.parquet$",
-    recursive = TRUE,
-    full.names = TRUE
-  )
+  pq <- list.files(file.path("data", cfg$id),
+                   pattern = "\\.parquet$", recursive = TRUE, full.names = TRUE)
   pq_bytes <- sum(file.info(pq)$size, na.rm = TRUE)
 
-  branch_meta <- dplyr::filter(
-    meta,
-    type == "branch",
-    parent == "branch_results"
-  )
+  branch_meta <- dplyr::filter(meta, type == "branch", parent == "branch_results")
+
+  agg <- function(f) {
+    if (nrow(branch_meta)) f(branch_meta$seconds) else NA_real_
+  }
   summary_row <- tibble::tibble(
-    config_id = cfg$id,
-    size = cfg$size,
-    split = cfg$split,
-    nsim = cfg$nsim,
-    split_axes = paste(cfg$split_axes, collapse = "+"),
-    n_proportion = length(cfg$proportion),
-    n_ci_method = length(cfg$ci_method),
-    n_nboot = length(cfg$nboot),
-    n_atomic_units = length(cfg$nrow_levels) *
-      length(cfg$ci_method) *
-      length(cfg$nboot) *
-      length(cfg$proportion),
-    n_branches = nrow(branch_meta),
-    wall_secs = wall,
-    branch_secs_mean = if (nrow(branch_meta)) {
-      mean(branch_meta$seconds)
-    } else {
-      NA_real_
-    },
-    branch_secs_median = if (nrow(branch_meta)) {
-      median(branch_meta$seconds)
-    } else {
-      NA_real_
-    },
-    branch_secs_max = if (nrow(branch_meta)) {
-      max(branch_meta$seconds)
-    } else {
-      NA_real_
-    },
-    branch_secs_min = if (nrow(branch_meta)) {
-      min(branch_meta$seconds)
-    } else {
-      NA_real_
-    },
-    branch_secs_sd = if (nrow(branch_meta)) {
-      sd(branch_meta$seconds)
-    } else {
-      NA_real_
-    },
-    branch_secs_total = if (nrow(branch_meta)) {
-      sum(branch_meta$seconds)
-    } else {
-      NA_real_
-    },
-    parquet_count = length(pq),
-    parquet_bytes = pq_bytes,
-    ok = ok,
-    error = err_msg
+    config_id          = cfg$id,
+    split              = cfg$split,
+    split_axes         = paste(cfg$split_axes, collapse = "+"),
+    n_workers          = n_workers,
+    nsim               = cfg$grid$nsim,
+    n_proportion       = length(cfg$grid$proportion),
+    n_ci_method        = length(cfg$grid$ci_method),
+    n_nboot            = length(cfg$grid$nboot),
+    n_atomic_fits      = n_atomic_fits(cfg$grid),
+    n_hc_per_fit       = n_hc_per_fit(cfg$grid),
+    n_branches         = nrow(branch_meta),
+    n_fits_per_branch  = if (nrow(branch_meta)) {
+      n_atomic_fits(cfg$grid) / nrow(branch_meta)
+    } else NA_real_,
+    wall_secs          = wall,
+    branch_secs_mean   = agg(mean),
+    branch_secs_median = agg(stats::median),
+    branch_secs_max    = agg(max),
+    branch_secs_min    = agg(min),
+    branch_secs_sd     = agg(stats::sd),
+    branch_secs_total  = agg(sum),
+    parquet_count      = length(pq),
+    parquet_bytes      = pq_bytes,
+    ok                 = ok,
+    error              = err_msg
   )
 
   list(summary = summary_row, meta = meta)
@@ -144,18 +119,13 @@ meta_all <- list()
 for (cfg in configs) {
   res <- run_one(cfg)
   summary_all[[cfg$id]] <- res$summary
-  meta_all[[cfg$id]] <- res$meta
-  ## checkpoint after each config in case we're interrupted
+  meta_all[[cfg$id]]    <- res$meta
   readr::write_csv(dplyr::bind_rows(summary_all), summary_path)
-  readr::write_csv(dplyr::bind_rows(meta_all), meta_path)
+  readr::write_csv(dplyr::bind_rows(meta_all),    meta_path)
   message(
-    "  -> ",
-    res$summary$ok,
-    " in ",
-    round(res$summary$wall_secs, 1),
-    "s, ",
-    res$summary$n_branches,
-    " branches"
+    "  -> ", res$summary$ok,
+    " in ", round(res$summary$wall_secs, 1), "s, ",
+    res$summary$n_branches, " branches"
   )
 }
 

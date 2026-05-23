@@ -4,6 +4,11 @@
 ## calling tar_make(); we parse it here and call build_pipeline().
 
 library(targets)
+library(tarchetypes)
+
+## Workers are intentionally capped at 2 so the baseline timings are
+## comparable across machines. Override with SSDSIMS_EXP_WORKERS.
+n_workers <- as.integer(Sys.getenv("SSDSIMS_EXP_WORKERS", unset = "2"))
 
 tar_option_set(
   packages = c(
@@ -17,14 +22,12 @@ tar_option_set(
     "duckplyr",
     "digest"
   ),
-  format = "qs",
-  memory = "transient",
+  format             = "qs",
+  memory             = "transient",
   garbage_collection = TRUE,
-  storage = "worker",
-  retrieval = "worker",
-  controller = crew::crew_controller_local(
-    workers = max(1L, parallel::detectCores())
-  )
+  storage            = "worker",
+  retrieval          = "worker",
+  controller         = crew::crew_controller_local(workers = n_workers)
 )
 
 tar_source("R")
@@ -38,11 +41,11 @@ if (!nzchar(config_json)) {
 }
 config <- jsonlite::fromJSON(config_json, simplifyVector = TRUE)
 ## fromJSON coerces vectors fine; ensure the right types:
-config$nrow_levels <- as.integer(config$nrow_levels)
-config$nboot <- as.integer(config$nboot)
-config$proportion <- as.numeric(config$proportion)
-config$ci_method <- as.character(config$ci_method)
-config$split_axes <- as.character(config$split_axes)
-config$nsim <- as.integer(config$nsim)
+config$grid$nrow_levels <- as.integer(config$grid$nrow_levels)
+config$grid$nboot       <- as.integer(config$grid$nboot)
+config$grid$proportion  <- as.numeric(config$grid$proportion)
+config$grid$ci_method   <- as.character(config$grid$ci_method)
+config$grid$nsim        <- as.integer(config$grid$nsim)
+config$split_axes       <- as.character(config$split_axes)
 
 build_pipeline(config)

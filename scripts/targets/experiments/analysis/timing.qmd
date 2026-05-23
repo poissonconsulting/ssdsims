@@ -13,68 +13,58 @@ execute:
 
 ```{r setup}
 library(dplyr)
-library(tidyr)
 library(ggplot2)
 library(readr)
 library(scales)
 
 summary_csv <- "../results/summary.csv"
 meta_csv    <- "../results/per_target.csv"
-
 stopifnot(file.exists(summary_csv), file.exists(meta_csv))
 
 sm <- readr::read_csv(summary_csv, show_col_types = FALSE) |>
-  mutate(
-    size  = factor(size,  levels = c("small", "medium", "large")),
-    split = factor(split, levels = c("split0", "split1", "split2", "split3"))
-  )
+  mutate(split = factor(split, levels = c("by_nrow", "by_sim", "atomic")))
 
 meta <- readr::read_csv(meta_csv, show_col_types = FALSE) |>
   filter(type == "branch", parent == "branch_results") |>
-  mutate(
-    size  = factor(size,  levels = c("small", "medium", "large")),
-    split = factor(split, levels = c("split0", "split1", "split2", "split3"))
-  )
+  mutate(split = factor(split, levels = levels(sm$split)))
 
-cores <- parallel::detectCores()
+n_workers <- unique(sm$n_workers)
+stopifnot(length(n_workers) == 1)
 ```
 
-This pipeline branches a bootstrap simulation (scenario 1 of
-`scripts/example.R`) into dynamic targets, then runs them via a
-`crew::crew_controller_local(workers = `r cores`)`. We sweep over
-**three problem sizes** and **four split granularities**, then ask:
+Each **atomic task** is one `fit_dists_seed()` call — one parquet file
+per task containing the full HC sweep downstream of that fit. The
+harness builds the same atomic grid for each split and lets the choice
+of **split granularity** show up as a `dplyr::group_by()` over the
+fit-grid columns. Dynamic branching (`iteration = "group"`) iterates
+over groups, so each branch (= "job") bundles one or more atomic
+tasks.
 
-- Where does the wall time go as we make work units smaller?
-- What's the per-branch time distribution at each split?
-- Is there a "sweet spot" for batch size?
+Compute target: **`r n_workers` `crew_controller_local()` workers**.
 
 ## Configurations
 
 ```{r}
 sm |>
-  select(size, split, split_axes, n_atomic_units, n_branches,
-         work_per_branch = n_atomic_units) |>
-  mutate(work_per_branch = round(work_per_branch / n_branches, 1)) |>
+  select(split, split_axes, n_atomic_fits, n_branches, n_fits_per_branch) |>
   knitr::kable()
 ```
 
-`n_atomic_units` is the total number of distinct `(nrow, ci_method, nboot,
-proportion)` tuples; `n_branches` is how many of those tuples each become
-their own dynamic target. `work_per_branch` is the mean fan-in.
+`n_atomic_fits` is identical across rows (the grid doesn't change);
+`n_branches` is the number of groups produced by the split, and
+`n_fits_per_branch` shows how the work is packed.
 
 ## Total wall time
 
 ```{r}
-ggplot(sm, aes(split, wall_secs, group = size, colour = size)) +
-  geom_line() +
-  geom_point(size = 3) +
-  geom_text(aes(label = paste0(round(wall_secs), "s")),
-            vjust = -0.8, size = 3) +
-  scale_y_continuous(labels = label_number(suffix = "s")) +
+ggplot(sm, aes(split, wall_secs)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = paste0(round(wall_secs, 1), "s")), vjust = -0.4) +
+  scale_y_continuous(labels = label_number(suffix = "s"),
+                     expand = expansion(mult = c(0, 0.1))) +
   labs(
     x = "Split granularity (coarse → fine)",
-    y = paste0("Wall time on ", cores, " cores"),
-    colour = "Problem size",
+    y = paste0("Wall time on ", n_workers, " workers"),
     title = "Wall time across split granularity"
   ) +
   theme_minimal()
@@ -84,30 +74,27 @@ ggplot(sm, aes(split, wall_secs, group = size, colour = size)) +
 
 ```{r}
 sm <- sm |>
-  mutate(
-    cpu_time      = branch_secs_total,
-    parallel_eff  = cpu_time / (wall_secs * cores)
-  )
+  mutate(parallel_eff = branch_secs_total / (wall_secs * n_workers))
 
 sm |>
-  select(size, split, n_branches, cpu_time, wall_secs, parallel_eff) |>
+  select(split, n_branches, branch_secs_total, wall_secs, parallel_eff) |>
   mutate(
-    cpu_time      = round(cpu_time, 1),
-    wall_secs     = round(wall_secs, 1),
-    parallel_eff  = scales::percent(parallel_eff, accuracy = 1)
+    branch_secs_total = round(branch_secs_total, 1),
+    wall_secs         = round(wall_secs, 1),
+    parallel_eff      = scales::percent(parallel_eff, accuracy = 1)
   ) |>
   knitr::kable()
 ```
 
 ```{r}
-ggplot(sm, aes(split, parallel_eff, group = size, colour = size)) +
-  geom_line() +
-  geom_point(size = 3) +
-  scale_y_continuous(labels = scales::percent_format()) +
+ggplot(sm, aes(split, parallel_eff, group = 1)) +
+  geom_line(colour = "steelblue") +
+  geom_point(size = 3, colour = "steelblue") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     limits = c(0, NA)) +
   labs(
-    x = "Split granularity (coarse → fine)",
-    y = paste0("Parallel efficiency (cpu / wall / ", cores, ")"),
-    colour = "Problem size",
+    x = "Split granularity",
+    y = paste0("Parallel efficiency (∑ branch secs / wall / ", n_workers, ")"),
     title = "How much of the work actually parallelises"
   ) +
   theme_minimal()
@@ -116,28 +103,26 @@ ggplot(sm, aes(split, parallel_eff, group = size, colour = size)) +
 ## Per-branch time distribution
 
 ```{r}
-ggplot(meta, aes(split, seconds, colour = size)) +
-  geom_boxplot(outlier.size = 0.5) +
-  scale_y_log10() +
-  facet_wrap(~size, scales = "free_y") +
+ggplot(meta, aes(split, seconds)) +
+  geom_boxplot(outlier.size = 1, fill = "steelblue", alpha = 0.4) +
+  geom_jitter(width = 0.1, height = 0, size = 1, alpha = 0.6) +
   labs(
-    x = "Split", y = "Per-branch seconds (log)",
+    x = "Split", y = "Per-branch seconds",
     title = "Per-branch wall time distribution"
   ) +
-  theme_minimal() +
-  theme(legend.position = "none")
+  theme_minimal()
 ```
 
 ```{r}
 meta |>
-  group_by(size, split) |>
+  group_by(split) |>
   summarise(
-    n       = n(),
-    min_s   = round(min(seconds), 2),
-    p50_s   = round(median(seconds), 2),
-    mean_s  = round(mean(seconds), 2),
-    p90_s   = round(quantile(seconds, 0.9), 2),
-    max_s   = round(max(seconds), 2),
+    n      = n(),
+    min_s  = round(min(seconds), 2),
+    p50_s  = round(stats::median(seconds), 2),
+    mean_s = round(mean(seconds), 2),
+    p90_s  = round(stats::quantile(seconds, 0.9), 2),
+    max_s  = round(max(seconds), 2),
     .groups = "drop"
   ) |>
   knitr::kable()
@@ -147,25 +132,9 @@ meta |>
 
 ```{r}
 sm |>
-  select(size, split, n_branches, parquet_count,
-         parquet_KB = parquet_bytes) |>
+  select(split, n_branches, parquet_count, parquet_KB = parquet_bytes) |>
   mutate(parquet_KB = round(parquet_KB / 1024, 1)) |>
   knitr::kable()
-```
-
-```{r}
-ggplot(sm, aes(n_branches, parquet_bytes / 1024, colour = size)) +
-  geom_point(size = 3) +
-  geom_line(aes(group = size)) +
-  scale_x_log10() +
-  scale_y_continuous(labels = label_number(suffix = " KB")) +
-  labs(
-    x = "Number of branches (log)",
-    y = "Total Parquet bytes",
-    colour = "Problem size",
-    title = "Output storage vs. number of branches"
-  ) +
-  theme_minimal()
 ```
 
 ## Picking a split
@@ -175,31 +144,28 @@ saturated, big enough work units that crew dispatch / parquet-write
 overhead is amortised, small enough that interruption costs at most one
 unit.**
 
-Concretely from the data above:
+Reading across the three splits:
 
-- `split0` (branch by `nrow` only) gives the **smallest wall time and the
-  highest parallel efficiency**, but every branch is a 5–20 minute
-  bootstrap — interrupting at minute 15 of 20 wastes 15 minutes.
-- `split3` (atomic, one branch per `(nrow, ci_method, nboot, proportion)`)
-  gives ~`r round(median(meta$seconds[meta$split == "split3"]), 1)`-second
-  branches — interruption-safe to the second — but pays for it with
-  noticeable crew dispatch overhead, lower parallel efficiency, and
-  hundreds of tiny Parquet files.
-- **Recommended sweet spot:** `split1` (branch by `nrow × ci_method`) or
-  `split2` (add `nboot`) — branch wall time on the order of a minute,
-  parallel efficiency still close to 1.0, branch count proportional to
-  problem size rather than to atomic-unit count.
+- **`by_nrow`** bundles all sims of one nrow into one job. Few, fat
+  branches; high parallel efficiency on workers ≤ n_branches, but
+  scheduler can't load-balance within an nrow.
+- **`by_sim`** bundles one sim across all nrows. Different work
+  profile per branch (one cheap small-nrow fit + one expensive
+  large-nrow fit), still few branches.
+- **`atomic`** runs each `(nrow, sim)` fit in its own branch.
+  Maximum parallelism and finest interruption granularity at the
+  cost of per-branch dispatch + parquet-write overhead paid `n` times.
 
-A rule of thumb that holds across sizes: **target branches of ~30–120 s**
-on a 4-core machine; on HPC, scale up by ~`workers / 4` so per-branch time
-still dwarfs scheduler latency (typically 5–15 s on SLURM).
+The right split depends on the (fit cost vs. dispatch overhead) ratio
+on your compute target. On HPC the overhead floor is much higher (≥ 5s
+scheduler latency) so coarser splits win; on local crew the overhead
+is small enough that atomic is often viable.
 
-## Caveats
+## Reproducing this at scale
 
-- Local crew with `r cores` workers; HPC numbers (mirai/clustermq/SLURM)
-  will differ. Scheduler latency adds a per-branch floor that punishes
-  fine splits more on HPC than locally.
-- `nsim = 2` for every config — branch time variance underestimates what
-  you'd see with real sample sizes.
-- Bootstrap cost grows roughly linearly with `nboot`; the largest `nboot`
-  in any config is 100, capped to keep total experiment wall time bounded.
+The baseline grid is set up to finish in ~1 minute on 2 CPUs. To
+explore the trade-off at production scale, bump knobs in
+`configs.R` — bigger `nboot`, more `ci_method`s, more `nrow_levels`.
+Each knob roughly multiplies branch count or per-branch cost in an
+obvious way; the wall-time-vs-split shape stays the same, the
+constants get bigger.
