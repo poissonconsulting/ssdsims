@@ -3,7 +3,7 @@ rinteger <- function(n = 1L) {
     integer(0)
   }
   mx <- 2147483647L
-  as.integer(stats::runif(n, -mx, mx))
+  as.integer(stats::runif(n, -2^31, mx))
 }
 
 # internal function from withr
