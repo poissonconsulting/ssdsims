@@ -67,5 +67,21 @@ calculate the confidence limits (and SE) from the single set of samples.}
 The x tibble with a list column hc of data frames produced by applying ssd_hc() to fits.
 }
 \description{
-Estimate hazard concentrations for multiple simulations using bootstrapping
+Estimates one or more hazard concentrations from a nested tibble of fitted
+species sensitivity distributions, optionally with bootstrapped confidence
+limits.
+}
+\details{
+For each row of \code{x}, the function calls \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}} on the
+\code{fitdists} object in the \code{fits} list column. Random number generation is
+performed using an independent L'Ecuyer-CMRG stream derived from \code{seed},
+\code{sim} and \code{stream}, so bootstrap samples are reproducible and statistically
+independent across simulations.
+
+The \code{nboot}, \code{est_method}, \code{ci_method} and \code{parametric} arguments may be
+supplied as vectors; their values are crossed with the rows of \code{x} so that
+every combination of estimation settings is computed.
+
+The \code{min_pboot} argument of \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}} is fixed at 0 and cannot be
+overridden.
 }

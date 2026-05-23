@@ -12,7 +12,15 @@ with_lecuyer_cmrg_seed(seed, code)
 \item{code}{\code{[any]}\cr Code to execute in the temporary environment}
 }
 \description{
-With L'Euyer-CMRG Seed
+Evaluates an R expression with the random number generator temporarily set
+to the L'Ecuyer-CMRG algorithm and the supplied seed.
+}
+\details{
+This is a thin wrapper around \code{\link[withr:with_seed]{withr::with_seed()}} that pins the RNG kind
+to \code{"L'Ecuyer-CMRG"}, the normal kind to \code{"Inversion"} and the sample kind
+to \code{"Rejection"} while \code{code} is being evaluated. The previous RNG state
+is restored on exit, which makes it suitable for generating reproducible
+parallel-safe random numbers inside a larger pipeline.
 }
 \examples{
 

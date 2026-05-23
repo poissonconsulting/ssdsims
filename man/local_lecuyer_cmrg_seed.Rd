@@ -12,7 +12,15 @@ local_lecuyer_cmrg_seed(seed, .local_envir = parent.frame())
 \item{.local_envir}{\verb{[environment]}\cr The environment to use for scoping.}
 }
 \description{
-Local L'Euyer-CMRG Seed
+Sets the random number generator state in the calling environment to use
+the L'Ecuyer-CMRG algorithm with the supplied seed.
+}
+\details{
+This is a thin wrapper around \code{\link[withr:local_seed]{withr::local_seed()}} that pins the RNG kind
+to \code{"L'Ecuyer-CMRG"}, the normal kind to \code{"Inversion"} and the sample kind
+to \code{"Rejection"}. The previous RNG state is restored when the calling
+frame exits, making this convenient for tests and reproducible workflows
+that need a parallel-safe RNG without polluting the global state.
 }
 \examples{
 

@@ -1,5 +1,22 @@
 #' Estimate hazard concentrations for multiple simulations using bootstrapping
 #'
+#' Estimates one or more hazard concentrations from a nested tibble of fitted
+#' species sensitivity distributions, optionally with bootstrapped confidence
+#' limits.
+#'
+#' For each row of `x`, the function calls [ssdtools::ssd_hc()] on the
+#' `fitdists` object in the `fits` list column. Random number generation is
+#' performed using an independent L'Ecuyer-CMRG stream derived from `seed`,
+#' `sim` and `stream`, so bootstrap samples are reproducible and statistically
+#' independent across simulations.
+#'
+#' The `nboot`, `est_method`, `ci_method` and `parametric` arguments may be
+#' supplied as vectors; their values are crossed with the rows of `x` so that
+#' every combination of estimation settings is computed.
+#'
+#' The `min_pboot` argument of [ssdtools::ssd_hc()] is fixed at 0 and cannot be
+#' overridden.
+#'
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
 #' @param x A data frame with sim and stream integer columns and a list column of fitdists objects.

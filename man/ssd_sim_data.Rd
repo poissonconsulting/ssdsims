@@ -99,6 +99,19 @@ A tibble of nested data sets.
 \description{
 A family of functions to generate a tibble of nested data sets.
 }
+\details{
+The generic dispatches on the class of \code{x}. Methods are provided for
+\code{data.frame} (resampling rows from an empirical data set), \code{fitdists}
+(drawing from a fitted species sensitivity distribution or the multi-model
+density), \code{tmbfit} (drawing from a single fitted distribution), \code{character}
+(treating \code{x} as the name of a random-number-generating function such as
+\code{"rlnorm"}) and \code{function} (calling the function directly).
+
+Random number generation is parallel-safe: each \verb{(stream, sim)} pair uses
+an independent L'Ecuyer-CMRG sub-stream derived from \code{seed}, so individual
+simulations are reproducible and can be regenerated without recomputing
+the entire grid.
+}
 \section{Methods (by class)}{
 \itemize{
 \item \code{ssd_sim_data(data.frame)}: Generate data by sampling from data.frame

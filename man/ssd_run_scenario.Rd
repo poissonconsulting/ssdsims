@@ -211,7 +211,20 @@ calculate the confidence limits (and SE) from the single set of samples.}
 A tibble of nested data sets.
 }
 \description{
-Run Scenario
+Runs an end-to-end species sensitivity distribution simulation scenario by
+generating data, fitting distributions and computing hazard concentrations.
+}
+\details{
+The generic dispatches on the class of \code{x} and selects an appropriate
+\code{\link[=ssd_sim_data]{ssd_sim_data()}} method to produce the nested tibble of simulated data
+sets. The simulated tibble is then passed through \code{\link[=ssd_fit_dists_sims]{ssd_fit_dists_sims()}}
+and finally \code{\link[=ssd_hc_sims]{ssd_hc_sims()}}; any extra arguments in \code{...} are routed to
+whichever of the two underlying calls accepts them, with unrecognised
+arguments triggering an informative error.
+
+This makes \code{ssd_run_scenario()} a convenient single-call entry point for
+the simulation pipeline, while still allowing fine-grained control over
+the fitting and hazard-estimation steps.
 }
 \section{Methods (by class)}{
 \itemize{
