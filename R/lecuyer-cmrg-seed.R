@@ -1,12 +1,25 @@
 #' Generate Random Integers
 #'
-#' Generates `n` random integers drawn uniformly from the full signed 32-bit
-#' integer range.
+#' Generates `n` random integers drawn uniformly from
+#' `[-.Machine$integer.max, .Machine$integer.max]`.
 #'
 #' The values are produced with [stats::runif()] using `-.Machine$integer.max`
-#' and `.Machine$integer.max` (2147483647) as bounds and then coerced to
-#' integer. This is used internally to seed L'Ecuyer-CMRG streams when the
-#' caller has not supplied an explicit seed.
+#' (i.e. `-(2^31 - 1) = -2147483647`) and `.Machine$integer.max` (`2^31 - 1 =
+#' 2147483647`) as bounds and then coerced to integer. This is used internally
+#' to seed L'Ecuyer-CMRG streams when the caller has not supplied an explicit
+#' seed.
+#'
+#' The symmetric range deliberately excludes `-2^31 = -2147483648`: R reserves
+#' that bit pattern for `NA_integer_`, so any attempt to coerce it from a
+#' double via [as.integer()] returns `NA` with a warning rather than a valid
+#' integer. Using `-.Machine$integer.max` as the lower bound therefore keeps
+#' every draw inside R's representable integer range. This costs at most one
+#' value of entropy out of `~2^32`, which is irrelevant given the function's
+#' sole use - producing a single scalar to pass to [set.seed()] when
+#' bootstrapping a fresh L'Ecuyer-CMRG state. [set.seed()] would in turn
+#' expand any such scalar into the six-integer L'Ecuyer-CMRG seed vector, so
+#' the missing value has no observable effect on the diversity of generated
+#' streams.
 #'
 #' @param n A count of the number of integers to generate.
 #' @return An integer vector of length `n`.
