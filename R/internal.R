@@ -41,26 +41,6 @@ do_call_seed <- function(what, args, seed) {
   })
 }
 
-#' Safe Upward Integer Sequence
-#'
-#' Returns the integer sequence from `from` to `to`, or an empty integer
-#' vector when `to < from`.
-#'
-#' Used in place of [seq()] when constructing slicing indices that may be
-#' empty - the base implementation of `seq(1, 0)` returns `c(1, 0)` rather
-#' than `integer(0)`, which would be incorrect for slicing.
-#'
-#' @param from An integer scalar.
-#' @param to An integer scalar.
-#' @return An integer vector, possibly of length zero.
-#' @noRd
-seq_up <- function(from, to) {
-  if (to < from) {
-    return(integer())
-  }
-  seq(from, to)
-}
-
 #' Fit Distributions for a Single Simulation
 #'
 #' Fits the supplied `dists` to one simulated data set using a deterministic
