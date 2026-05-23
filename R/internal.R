@@ -94,6 +94,70 @@ hc_seed <- function(
   dplyr::select(hc, !c("nboot", "est_method", "ci_method"))
 }
 
+run_fit_dists <- function(
+  x,
+  ...,
+  dists,
+  rescale,
+  computable,
+  at_boundary_ok,
+  min_pmix,
+  range_shape1,
+  range_shape2,
+  .progress = FALSE
+) {
+  .args <- list(...)
+
+  fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
+  .args_fit <- .args[names(.args) %in% fit_dists_formals]
+
+  .args_fit <- list(
+    x = x,
+    dists = dists,
+    rescale = rescale,
+    computable = computable,
+    at_boundary_ok = at_boundary_ok,
+    min_pmix = min_pmix,
+    range_shape1 = range_shape1,
+    range_shape2 = range_shape2,
+    .progress = .progress
+  ) |>
+    c(.args_fit)
+
+  do.call(ssd_fit_dists_sims, .args_fit)
+}
+
+run_hc <- function(
+  x,
+  ...,
+  proportion,
+  ci,
+  nboot,
+  est_method,
+  ci_method,
+  parametric,
+  .progress = FALSE
+) {
+  .args <- list(...)
+
+  hc_formals <- methods::formalArgs(utils::argsAnywhere("ssd_hc.fitdists"))
+  .args_hc <- .args[names(.args) %in% hc_formals]
+
+  .args_hc <- list(
+    x = x,
+    proportion = proportion,
+    ci = ci,
+    nboot = nboot,
+    est_method = est_method,
+    ci_method = ci_method,
+    parametric = parametric,
+    .progress = .progress
+  ) |>
+    c(.args_hc)
+
+  do.call("ssd_hc_sims", .args_hc)
+}
+
 run_scenario <- function(
   x,
   ...,
@@ -110,15 +174,12 @@ run_scenario <- function(
   est_method,
   ci_method,
   parametric,
-  .progress = .progress
+  .progress = FALSE
 ) {
   .args <- list(...)
 
   fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
   hc_formals <- methods::formalArgs(utils::argsAnywhere("ssd_hc.fitdists"))
-
-  .args_fit <- .args[names(.args) %in% fit_dists_formals]
-  .args_hc <- .args[names(.args) %in% hc_formals]
 
   .args_unused <- names(.args[
     !names(.args) %in% c(fit_dists_formals, hc_formals)
@@ -133,8 +194,9 @@ run_scenario <- function(
     )
   }
 
-  .args_fit <- list(
-    x = x,
+  x <- run_fit_dists(
+    x,
+    ...,
     dists = dists,
     rescale = rescale,
     computable = computable,
@@ -143,13 +205,11 @@ run_scenario <- function(
     range_shape1 = range_shape1,
     range_shape2 = range_shape2,
     .progress = .progress
-  ) |>
-    c(.args_fit)
+  )
 
-  x <- do.call(ssd_fit_dists_sims, .args_fit)
-
-  .args_hc <- list(
-    x = x,
+  run_hc(
+    x,
+    ...,
     proportion = proportion,
     ci = ci,
     nboot = nboot,
@@ -157,8 +217,5 @@ run_scenario <- function(
     ci_method = ci_method,
     parametric = parametric,
     .progress = .progress
-  ) |>
-    c(.args_hc)
-
-  do.call("ssd_hc_sims", .args_hc)
+  )
 }
