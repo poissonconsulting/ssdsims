@@ -11,13 +11,6 @@ do_call_seed <- function(what, args, seed) {
   })
 }
 
-seq_up <- function(from, to) {
-  if (to < from) {
-    return(integer())
-  }
-  seq(from, to)
-}
-
 fit_dists_seed <- function(
   data,
   sim,
