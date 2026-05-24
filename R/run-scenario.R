@@ -165,6 +165,7 @@ ssd_run_scenario.tmbfit <- function(
   ssd_run_scenario(
     x,
     ...,
+    args = args,
     nrow = nrow,
     dists = dists,
     rescale = rescale,
