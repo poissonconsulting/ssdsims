@@ -6,14 +6,14 @@ rinteger <- function(n = 1L) {
   as.integer(stats::runif(n, -mx, mx))
 }
 
-# internal function from withr
-has_seed <- function() {
+# inspired by withr::has_seed()
+has_state <- function() {
   exists(".Random.seed", globalenv(), mode = "integer", inherits = FALSE)
 }
 
-# internal function from withr
-get_seed <- function() {
-  if (!has_seed()) {
+# inspired by withr::get_seed()
+get_state <- function() {
+  if (!has_state()) {
     return(NULL)
   }
   list(
@@ -27,7 +27,7 @@ get_seed <- function() {
   )
 }
 
-# internal function from withr
+# inspired by withr:::restore_rng_kind()
 restore_rng_kind <- function(kind) {
   RNGkind <- get("RNGkind")
   RNGkind(kind[[1]], normal.kind = kind[[2]])
@@ -40,14 +40,15 @@ restore_rng_kind <- function(kind) {
   NULL
 }
 
-set_seed <- function(seed) {
-  restore_rng_kind(seed$rng_kind)
-  if (is.null(seed$seed)) {
-    assign(".Random.seed", seed$random_seed, globalenv())
-  } else {
-    set.seed(seed$seed)
+# `state` is either NULL (no-op, used to restore from a fresh R session
+# where `.Random.seed` did not yet exist) or a list from `get_state()`.
+set_state <- function(state) {
+  if (is.null(state)) {
+    return(invisible(NULL))
   }
-  invisible(get_seed())
+  restore_rng_kind(state$rng_kind)
+  assign(".Random.seed", state$random_seed, globalenv())
+  invisible(get_state())
 }
 
 #' Local L'Ecuyer-CMRG Seed
@@ -110,19 +111,13 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
 #' @export
 #' @examples
 #'
-#' state <- with_lecuyer_cmrg_seed(
-#'   42,
-#'   get_lecuyer_cmrg_stream_state(stream = 1L, start_sim = 1L)
-#' )
+#' state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
 #' local_lecuyer_cmrg_state(state)
 #' runif(3)
 local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
-  old <- get_seed()
-  withr::defer(
-    if (!is.null(old)) set_seed(old),
-    envir = .local_envir
-  )
-  set_seed(list(
+  old <- get_state()
+  withr::defer(set_state(old), envir = .local_envir)
+  set_state(list(
     random_seed = state,
     rng_kind = c("L'Ecuyer-CMRG", "Inversion", "Rejection")
   ))
@@ -144,10 +139,7 @@ local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
 #' @export
 #' @examples
 #'
-#' state <- with_lecuyer_cmrg_seed(
-#'   42,
-#'   get_lecuyer_cmrg_stream_state(stream = 1L, start_sim = 1L)
-#' )
+#' state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
 #' with_lecuyer_cmrg_state(state, runif(3))
 with_lecuyer_cmrg_state <- function(state, code) {
   force(state)
@@ -167,8 +159,8 @@ get_lecuyer_cmrg_stream_states <- function(seed, nsim, stream, start_sim) {
     return(list())
   }
 
-  oseed <- get_seed()
-  on.exit(set_seed(oseed))
+  ostate <- get_state()
+  on.exit(set_state(ostate))
 
   if (!is.null(seed)) {
     set.seed(seed)

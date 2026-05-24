@@ -24,10 +24,7 @@ which takes a scalar \emph{seed} (see \code{\link[=with_lecuyer_cmrg_seed]{with_
 }
 \examples{
 
-state <- with_lecuyer_cmrg_seed(
-  42,
-  get_lecuyer_cmrg_stream_state(stream = 1L, start_sim = 1L)
-)
+state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
 with_lecuyer_cmrg_state(state, runif(3))
 }
 \seealso{
