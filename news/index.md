@@ -1,5 +1,19 @@
 # Changelog
 
+## ssdsims 0.0.0.9008
+
+### Chore
+
+- Replace `seq_up()` with
+  [`rlang::seq2()`](https://rlang.r-lib.org/reference/seq2.html)
+  ([\#55](https://github.com/poissonconsulting/ssdsims/issues/55)).
+
+### Continuous integration
+
+- Update ccache-action reference.
+
+- Bump action version.
+
 ## ssdsims 0.0.0.9007
 
 - Ci: Unify fledge.yaml across cynkratemplate and fledge
