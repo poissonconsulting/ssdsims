@@ -4,8 +4,8 @@
 #'
 #' The generic dispatches on the class of `x`. Methods are provided for
 #' `data.frame` (resampling rows from an empirical data set), `fitdists`
-#' (drawing from a fitted species sensitivity distribution or the multi-model
-#' density), `tmbfit` (drawing from a single fitted distribution), `character`
+#' (drawing from a set of species sensitivity distributions), 
+#' `tmbfit` (drawing from a single species sensitivity distribution), `character`
 #' (treating `x` as the name of a random-number-generating function such as
 #' `"rlnorm"`) and `function` (calling the function directly).
 #'

@@ -1,4 +1,4 @@
-#' Estimate hazard concentrations for multiple simulations using bootstrapping
+#' Estimate Hazard Concentrations for Multiple Simulations
 #'
 #' Estimates one or more hazard concentrations from a nested tibble of fitted
 #' species sensitivity distributions, optionally with bootstrapped confidence

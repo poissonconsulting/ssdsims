@@ -61,8 +61,10 @@ do_call_seed <- function(what, args, seed) {
 #' @param computable A flag controlling discarding non-computable fits.
 #' @param at_boundary_ok A flag controlling acceptance of boundary fits.
 #' @param min_pmix A function returning the minimum mixture proportion.
-#' @param range_shape1 A numeric vector of length two for the shape1 bounds.
-#' @param range_shape2 A numeric vector of length two for the shape2 bounds.
+#' @param range_shape1 A numeric vector of length two of the lower
+#' and upper bounds of the shape1 parameter for the burrIII3 distribution.
+#' @param range_shape2 A numeric vector of length two of the lower
+#' and upper bounds of the shape2 parameter for the burrIII3 distribution.
 #' @param silent A flag controlling whether fitting warnings are suppressed.
 #' @param ... Additional arguments passed to [ssdtools::ssd_fit_dists()].
 #' @return A `fitdists` object.

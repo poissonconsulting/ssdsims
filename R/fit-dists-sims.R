@@ -18,9 +18,9 @@
 #' @param min_pmix A list of one or more functions with a single argument
 #' that inputs the number of rows of data and returns a proportion between 0 and 0.5.
 #' @param range_shape1 A list of numeric vectors of length two of the lower
-#' and upper bounds for the shape1 parameter.
+#' and upper bounds of the shape1 parameter for the burrIII3 distribution.
 #' @param range_shape2 A list of numeric vectors of length two of the lower
-#' and upper bounds for the shape2 parameter.
+#' and upper bounds of the shape2 parameter for the burrIII3 distribution.
 #' @inheritParams params
 #' @param x A data frame with sim and stream integer columns and a list column of the data frames to fit distributions to.
 #' @param ... Additional arguments passed to `ssdtools::ssd_fit_dists()`.

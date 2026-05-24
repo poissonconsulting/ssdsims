@@ -1,14 +1,14 @@
 #' Simulation Index Sequence
 #'
 #' Returns the integer sequence of simulation indices starting from
-#' `start_sim` and of length `nsim`.
+#' `start_sim` of length `nsim`.
 #'
-#' Validates that both inputs are positive counts before constructing the
+#' Validates that `start_sim` is a positive count and `nsim` is a count before constructing the
 #' sequence. Used to assemble the `sim` column of the nested tibbles produced
 #' by the [ssd_sim_data()] family.
 #'
 #' @inheritParams params
-#' @return An integer vector of length `nsim`.
+#' @return An integer vector of consecutive positive numbers of length `nsim`.
 #' @noRd
 sim_seq <- function(start_sim, nsim) {
   chk::chk_count(nsim)
