@@ -317,7 +317,7 @@ ssd_sim_data.function <- function(
     argsn$n <- nrow
 
     data <- purrr::map(
-      sims,
+      seeds,
       \(seed) do_call_seed(x, args = argsn, seed = seed),
       .progress = .progress
     ) |>

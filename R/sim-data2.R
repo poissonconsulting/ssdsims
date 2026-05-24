@@ -207,6 +207,7 @@ ssd_sim_data2.fitdists <- function(
 
   stream <- as.integer(stream)
   sims <- sim_seq(start_sim, nsim)
+  seed_by_sim <- seeds_by_sim(seed, nsim, stream, start_sim)
   resolved <- lapply(dist_sim, resolve_dist_sim, fits = x)
   names(resolved) <- dist_sim
 
@@ -225,7 +226,11 @@ ssd_sim_data2.fitdists <- function(
       function() {
         argsn <- c(r$args, list(n = nrow))
         dplyr::tibble(
-          Conc = do_call_seed(r$fn, args = argsn, seed = sim)
+          Conc = do_call_seed(
+            r$fn,
+            args = argsn,
+            seed = seed_by_sim[[as.character(sim)]]
+          )
         )
       }
     }
@@ -342,6 +347,7 @@ ssd_sim_data2.function <- function(
 
   stream <- as.integer(stream)
   sims <- sim_seq(start_sim, nsim)
+  seed_by_sim <- seeds_by_sim(seed, nsim, stream, start_sim)
 
   jobs <- tidyr::expand_grid(
     sim = sims,
@@ -357,7 +363,13 @@ ssd_sim_data2.function <- function(
       function() {
         argsn <- args
         argsn$n <- nrow
-        dplyr::tibble(Conc = do_call_seed(x, args = argsn, seed = sim))
+        dplyr::tibble(
+          Conc = do_call_seed(
+            x,
+            args = argsn,
+            seed = seed_by_sim[[as.character(sim)]]
+          )
+        )
       }
     }
   )

@@ -59,6 +59,11 @@ set_seed <- function(seed) {
 #' local_lecuyer_cmrg_seed(42)
 #' runif(3)
 local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
+  old_kind <- RNGkind()
+  withr::defer(
+    do.call(RNGkind, as.list(old_kind)),
+    envir = .local_envir
+  )
   withr::local_seed(
     seed,
     .local_envir = .local_envir,
@@ -79,13 +84,29 @@ local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
 #' })
 with_lecuyer_cmrg_seed <- function(seed, code) {
   force(seed)
-  withr::with_seed(
-    seed,
-    code,
-    .rng_kind = "L'Ecuyer-CMRG",
-    .rng_normal_kind = "Inversion",
-    .rng_sample_kind = "Rejection"
+  old_kind <- RNGkind()
+  has_old_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+  if (has_old_seed) {
+    old_seed <- get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  }
+  on.exit(
+    {
+      do.call(RNGkind, as.list(old_kind))
+      if (has_old_seed) {
+        assign(".Random.seed", old_seed, envir = globalenv())
+      } else if (exists(".Random.seed", envir = globalenv(), inherits = FALSE)) {
+        rm(".Random.seed", envir = globalenv())
+      }
+    },
+    add = TRUE
   )
+  RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
+  if (is.numeric(seed) && length(seed) > 1L) {
+    assign(".Random.seed", as.integer(seed), envir = globalenv())
+  } else {
+    set.seed(seed)
+  }
+  code
 }
 
 get_lecuyer_cmrg_seed <- function() {
