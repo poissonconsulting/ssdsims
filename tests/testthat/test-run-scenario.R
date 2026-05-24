@@ -102,3 +102,17 @@ test_that("ssd_run_scenario.fitdist works", {
   scenario <- tidyr::unnest(scenario, cols = hc)
   expect_snapshot_data(scenario, "scenarioFit2")
 })
+
+test_that("ssd_run_scenario.tmbfit uses the tmbfit's fitted estimates", {
+  # Regression test: ssd_run_scenario.tmbfit computed the estimates from the
+  # tmbfit but dropped them on the recursive call, so the rng function ran
+  # with default parameters instead of the fitted ones. ssd_sim_data.tmbfit
+  # threads them through correctly, so the two paths should agree.
+  fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron, dists = "lnorm")
+  tmbfit <- fit[[1]]
+
+  via_run <- with_lecuyer_cmrg_seed(10, ssd_run_scenario(tmbfit, nsim = 2))
+  via_sim <- with_lecuyer_cmrg_seed(10, ssd_sim_data(tmbfit, nsim = 2))
+
+  expect_equal(via_run$data, via_sim$data)
+})
