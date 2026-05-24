@@ -24,7 +24,7 @@ test_that("ssd_run_job on a single task matches ssd_run_scenario2 row", {
 })
 
 test_that("parquet round-trip preserves task metadata and fits class", {
-  skip_if_not_installed("arrow")
+  skip_if_not_installed("duckplyr")
   skip_if_not_installed("qs2")
 
   s <- ssd_sim_data2(

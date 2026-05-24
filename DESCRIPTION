@@ -23,7 +23,7 @@ Imports:
     tidyr,
     withr
 Suggests:
-    arrow,
+    duckplyr,
     qs2,
     readr,
     ssddata,

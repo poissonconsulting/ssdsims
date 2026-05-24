@@ -17,9 +17,9 @@ A tibble matching the shape of the input to
 \code{\link[=ssd_write_job_parquet]{ssd_write_job_parquet()}}.
 }
 \description{
-Reads a Parquet file produced by \code{\link[=ssd_write_job_parquet]{ssd_write_job_parquet()}}.
-qs2-encoded columns are decoded back to their original R objects
-when \code{decode = TRUE} (the default).
+Reads a Parquet file produced by \code{\link[=ssd_write_job_parquet]{ssd_write_job_parquet()}} via
+duckplyr/DuckDB. qs2-encoded columns are decoded back to their
+original R objects when \code{decode = TRUE} (the default).
 }
 \seealso{
 \code{\link[=ssd_write_job_parquet]{ssd_write_job_parquet()}}.

@@ -17,7 +17,7 @@ nrow <- as.integer(strsplit(
 )[[1]])
 nboot <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NBOOT", "50"))
 
-tar_option_set(packages = c("ssdsims", "ssddata", "dplyr", "arrow", "qs2"))
+tar_option_set(packages = c("ssdsims", "ssddata", "dplyr", "duckplyr", "qs2"))
 
 list(
   tar_target(

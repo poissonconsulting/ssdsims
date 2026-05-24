@@ -17,13 +17,14 @@ ssd_write_job_parquet(job, path)
 }
 \description{
 Writes a tibble produced by \code{\link[=ssd_run_job]{ssd_run_job()}} (or
-\code{\link[=ssd_run_scenario2]{ssd_run_scenario2()}}) to Parquet. Columns that Arrow cannot
-represent natively are serialized to qs2 binary blobs (held in
-sibling \verb{*_qs2} raw-vector columns); the original columns are
-dropped from the file and reconstructed on read. By default the
-fits, min_pmix and args list-columns are qs2-blobbed; native list
-types (data, hc tibbles, range_shape numeric vectors) are kept as
-Arrow nested structures.
+\code{\link[=ssd_run_scenario2]{ssd_run_scenario2()}}) to Parquet via duckplyr/DuckDB. Columns that
+do not map cleanly to columnar types (functions, S3 fit objects) are
+first serialized to qs2 binary blobs (held in sibling \verb{*_qs2}
+raw-vector columns); the original columns are dropped from the file
+and reconstructed on read. By default the \code{fits}, \code{min_pmix} and
+\code{args} list-columns are qs2-blobbed; native nested types (the
+\code{data} and \code{hc} tibble list-columns, the \code{range_shape1/2} numeric
+list-columns) are kept as DuckDB STRUCT/LIST.
 }
 \seealso{
 \code{\link[=ssd_read_job_parquet]{ssd_read_job_parquet()}}.

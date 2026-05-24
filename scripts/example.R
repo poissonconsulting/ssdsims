@@ -19,7 +19,7 @@ library(targets)
 library(dplyr, warn.conflicts = FALSE)
 library(ssdsims)
 
-stopifnot(requireNamespace("arrow"), requireNamespace("qs2"))
+stopifnot(requireNamespace("duckplyr"), requireNamespace("qs2"))
 
 # --- knobs --------------------------------------------------------------
 # Section A: downsized
@@ -81,8 +81,9 @@ run_manual <- function(env) {
 }
 
 # Lightweight comparison — counts and metadata grid only (Conc / HC
-# numeric values won't match exactly because Arrow's nested round-trip
-# can shift inner class wrappers; see ssd_read_job_parquet docs).
+# numeric values won't match exactly because the DuckDB nested
+# round-trip may shift inner class wrappers; see
+# ssd_read_job_parquet docs).
 compare <- function(targets_out, manual_out, label) {
   cat(sprintf(
     "[%s] targets rows = %d, manual rows = %d, match = %s\n",

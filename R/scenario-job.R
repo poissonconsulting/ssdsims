@@ -63,13 +63,14 @@ ssd_run_job <- function(tasks, scenario) {
 #' Persist a Job Result to Parquet
 #'
 #' Writes a tibble produced by [`ssd_run_job()`] (or
-#' [`ssd_run_scenario2()`]) to Parquet. Columns that Arrow cannot
-#' represent natively are serialized to qs2 binary blobs (held in
-#' sibling `*_qs2` raw-vector columns); the original columns are
-#' dropped from the file and reconstructed on read. By default the
-#' fits, min_pmix and args list-columns are qs2-blobbed; native list
-#' types (data, hc tibbles, range_shape numeric vectors) are kept as
-#' Arrow nested structures.
+#' [`ssd_run_scenario2()`]) to Parquet via duckplyr/DuckDB. Columns that
+#' do not map cleanly to columnar types (functions, S3 fit objects) are
+#' first serialized to qs2 binary blobs (held in sibling `*_qs2`
+#' raw-vector columns); the original columns are dropped from the file
+#' and reconstructed on read. By default the `fits`, `min_pmix` and
+#' `args` list-columns are qs2-blobbed; native nested types (the
+#' `data` and `hc` tibble list-columns, the `range_shape1/2` numeric
+#' list-columns) are kept as DuckDB STRUCT/LIST.
 #'
 #' @param job A job tibble (output of [`ssd_run_job()`] or
 #' [`ssd_run_scenario2()`]).
@@ -80,8 +81,8 @@ ssd_run_job <- function(tasks, scenario) {
 ssd_write_job_parquet <- function(job, path) {
   chk::chk_data(job)
   chk::chk_string(path)
-  if (!requireNamespace("arrow", quietly = TRUE)) {
-    stop("Package 'arrow' is required to write Parquet output.")
+  if (!requireNamespace("duckplyr", quietly = TRUE)) {
+    stop("Package 'duckplyr' is required to write Parquet output.")
   }
   if (!requireNamespace("qs2", quietly = TRUE)) {
     stop("Package 'qs2' is required to write qs2-encoded columns.")
@@ -90,15 +91,15 @@ ssd_write_job_parquet <- function(job, path) {
     job[[paste0(col, "_qs2")]] <- lapply(job[[col]], qs2::qs_serialize)
     job[[col]] <- NULL
   }
-  arrow::write_parquet(job, path)
+  duckplyr::compute_parquet(job, path)
   invisible(path)
 }
 
 #' Read a Job Result from Parquet
 #'
-#' Reads a Parquet file produced by [`ssd_write_job_parquet()`].
-#' qs2-encoded columns are decoded back to their original R objects
-#' when `decode = TRUE` (the default).
+#' Reads a Parquet file produced by [`ssd_write_job_parquet()`] via
+#' duckplyr/DuckDB. qs2-encoded columns are decoded back to their
+#' original R objects when `decode = TRUE` (the default).
 #'
 #' @param path Parquet file path.
 #' @param decode Whether to decode `*_qs2` columns back to native R
@@ -110,10 +111,12 @@ ssd_write_job_parquet <- function(job, path) {
 ssd_read_job_parquet <- function(path, decode = TRUE) {
   chk::chk_string(path)
   chk::chk_flag(decode)
-  if (!requireNamespace("arrow", quietly = TRUE)) {
-    stop("Package 'arrow' is required to read Parquet output.")
+  if (!requireNamespace("duckplyr", quietly = TRUE)) {
+    stop("Package 'duckplyr' is required to read Parquet output.")
   }
-  job <- dplyr::as_tibble(arrow::read_parquet(path))
+  job <- dplyr::as_tibble(
+    dplyr::collect(duckplyr::read_parquet_duckdb(path))
+  )
   if (decode) {
     if (!requireNamespace("qs2", quietly = TRUE)) {
       stop("Package 'qs2' is required to decode qs2-encoded columns.")
