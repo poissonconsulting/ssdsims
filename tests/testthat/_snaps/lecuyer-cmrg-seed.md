@@ -1,7 +1,7 @@
-# get_lecuyer_cmrg_states_stream repeatable
+# get_lecuyer_cmrg_stream_states repeatable
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_states_stream(seed = NULL, nsim = 1L,
+      withr::with_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -9,10 +9,10 @@
       [7]   645839282
       
 
-# get_lecuyer_cmrg_states_stream seed fast enough
+# get_lecuyer_cmrg_stream_states seed fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_states_stream(seed = NULL, nsim = 1L,
+      withr::with_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 10^5))
     Output
       [[1]]
@@ -20,10 +20,10 @@
       [7] -1427362856
       
 
-# get_lecuyer_cmrg_states_stream stream fast enough
+# get_lecuyer_cmrg_stream_states stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_states_stream(seed = NULL, nsim = 1L,
+      withr::with_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         start_sim = 1L, stream = 10^5))
     Output
       [[1]]
@@ -31,10 +31,10 @@
       [7]  1725202986
       
 
-# get_lecuyer_cmrg_states_stream seed stream fast enough
+# get_lecuyer_cmrg_stream_states seed stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_states_stream(seed = NULL, nsim = 1L,
+      withr::with_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         start_sim = 10^5, stream = 10^5))
     Output
       [[1]]
@@ -42,7 +42,7 @@
       [7]   248690873
       
 
-# get_lecuyer_cmrg_states_stream seeds stream fast enough
+# get_lecuyer_cmrg_stream_states seeds stream fast enough
 
     Code
       seeds[[10^5]]
@@ -50,10 +50,10 @@
       [1]       10407  1222159184  2127954179   -48790419    17570307 -1110399007
       [7] -1488892956
 
-# get_lecuyer_cmrg_states_stream repeatable multiple seeds
+# get_lecuyer_cmrg_stream_states repeatable multiple seeds
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_states_stream(seed = NULL, nsim = 2L,
+      withr::with_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 2L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -65,10 +65,10 @@
       [7]   734238052
       
 
-# get_lecuyer_cmrg_states_stream repeatable other starts
+# get_lecuyer_cmrg_stream_states repeatable other starts
 
     Code
-      withr::with_seed(42, get_lecuyer_cmrg_states_stream(seed = NULL, nsim = 1L,
+      withr::with_seed(42, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -76,10 +76,10 @@
       [7] -1522797297
       
 
-# get_lecuyer_cmrg_states_stream seeds repeatable with other seed types
+# get_lecuyer_cmrg_stream_states seeds repeatable with other seed types
 
     Code
-      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_states_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -115,7 +115,7 @@
     Output
       [1] 0.1738456 0.5547401 0.4833771
 
-# get_lecuyer_cmrg_states_stream return values state different sub-streams (snapshot)
+# get_lecuyer_cmrg_stream_states return values state different sub-streams (snapshot)
 
     Code
       with_lecuyer_cmrg_state(states[[1]], runif(3))

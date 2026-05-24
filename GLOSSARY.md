@@ -13,7 +13,7 @@ Terminology used throughout `ssdsims`.
   vector (see `?parallel::nextRNGStream`, indexed in
   `?parallel::RNGstreams`). States are produced by
   `parallel::nextRNGStream()` / `parallel::nextRNGSubStream()` and by
-  `get_lecuyer_cmrg_state_stream()` / `get_lecuyer_cmrg_states_stream()`;
+  `get_lecuyer_cmrg_stream_state()` / `get_lecuyer_cmrg_stream_states()`;
   they are consumed by `with_lecuyer_cmrg_state()` /
   `local_lecuyer_cmrg_state()`. A state cannot be passed to
   `base::set.seed()` because `set.seed()` only consumes a single integer.

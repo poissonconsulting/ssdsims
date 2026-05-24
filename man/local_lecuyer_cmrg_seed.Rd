@@ -14,9 +14,8 @@ local_lecuyer_cmrg_seed(seed, .local_envir = parent.frame())
 \description{
 Seeds the L'Ecuyer-CMRG RNG with a scalar integer via \code{\link[base:set.seed]{base::set.seed()}}.
 For a \code{.Random.seed}-style state vector (e.g. from
-\code{get_lecuyer_cmrg_state_stream()} or \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}) use
-\code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}}. See \code{GLOSSARY.md} for the distinction
-between a \emph{seed} and a \emph{state}.
+\code{get_lecuyer_cmrg_stream_state()} or \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}) use
+\code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}}.
 }
 \examples{
 

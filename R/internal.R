@@ -26,7 +26,7 @@ fit_dists_seed <- function(
   silent,
   ...
 ) {
-  state <- get_lecuyer_cmrg_state_stream(
+  state <- get_lecuyer_cmrg_stream_state(
     seed = seed,
     start_sim = sim,
     stream = stream
@@ -65,7 +65,7 @@ hc_seed <- function(
   save_to,
   ...
 ) {
-  state <- get_lecuyer_cmrg_state_stream(
+  state <- get_lecuyer_cmrg_stream_state(
     seed = seed,
     start_sim = sim,
     stream = stream

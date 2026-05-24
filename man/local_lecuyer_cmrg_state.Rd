@@ -19,15 +19,14 @@ Sets the L'Ecuyer-CMRG RNG state to a \code{.Random.seed}-style integer
 vector (length 7) by assigning to \code{.Random.seed} directly, restoring the
 previous state when \code{.local_envir} exits. A \emph{state} is the full internal
 RNG state (as returned by \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}} or
-\code{get_lecuyer_cmrg_state_stream()}); contrast with \code{\link[base:set.seed]{base::set.seed()}}
-which takes a scalar \emph{seed} (see \code{\link[=local_lecuyer_cmrg_seed]{local_lecuyer_cmrg_seed()}}). See
-\code{GLOSSARY.md} for the distinction.
+\code{get_lecuyer_cmrg_stream_state()}); contrast with \code{\link[base:set.seed]{base::set.seed()}}
+which takes a scalar \emph{seed} (see \code{\link[=local_lecuyer_cmrg_seed]{local_lecuyer_cmrg_seed()}}).
 }
 \examples{
 
 state <- with_lecuyer_cmrg_seed(
   42,
-  get_lecuyer_cmrg_state_stream(stream = 1L, start_sim = 1L)
+  get_lecuyer_cmrg_stream_state(stream = 1L, start_sim = 1L)
 )
 local_lecuyer_cmrg_state(state)
 runif(3)

@@ -56,7 +56,7 @@ ssd_sim_data.data.frame <- function(
   )
 
   if (nrow(data) == nsim) {
-    states <- get_lecuyer_cmrg_states_stream(
+    states <- get_lecuyer_cmrg_stream_states(
       seed = seed,
       nsim = nsim,
       start_sim = start_sim,
@@ -308,7 +308,7 @@ ssd_sim_data.function <- function(
   data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)
 
   if (nrow(data) == nsim) {
-    seeds <- get_lecuyer_cmrg_states_stream(
+    seeds <- get_lecuyer_cmrg_stream_states(
       seed = seed,
       nsim = nsim,
       start_sim = start_sim,
