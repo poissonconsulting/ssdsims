@@ -54,7 +54,7 @@ set_seed <- function(seed) {
 #'
 #' Seeds the L'Ecuyer-CMRG RNG with a scalar integer via [base::set.seed()].
 #' For a `.Random.seed`-style state vector (e.g. from
-#' `get_lecuyer_cmrg_seed_stream()` or [`parallel::nextRNGStream()`]) use
+#' `get_lecuyer_cmrg_state_stream()` or [`parallel::nextRNGStream()`]) use
 #' [`local_lecuyer_cmrg_state()`]. See `GLOSSARY.md` for the distinction
 #' between a *seed* and a *state*.
 #' @inheritParams withr::local_seed
@@ -80,7 +80,7 @@ local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
 #' Evaluates `code` with the L'Ecuyer-CMRG RNG seeded with a scalar integer
 #' via [base::set.seed()], then restores the previous state. For a
 #' `.Random.seed`-style state vector (e.g. from
-#' `get_lecuyer_cmrg_seed_stream()` or [`parallel::nextRNGStream()`]) use
+#' `get_lecuyer_cmrg_state_stream()` or [`parallel::nextRNGStream()`]) use
 #' [`with_lecuyer_cmrg_state()`]. See `GLOSSARY.md` for the distinction
 #' between a *seed* and a *state*.
 #' @inheritParams withr::with_seed
@@ -103,7 +103,7 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
 #' vector (length 7) by assigning to `.Random.seed` directly, restoring the
 #' previous state when `.local_envir` exits. A *state* is the full internal
 #' RNG state (as returned by [`parallel::nextRNGStream()`] or
-#' `get_lecuyer_cmrg_seed_stream()`); contrast with [base::set.seed()]
+#' `get_lecuyer_cmrg_state_stream()`); contrast with [base::set.seed()]
 #' which takes a scalar *seed* (see [`local_lecuyer_cmrg_seed()`]). See
 #' `GLOSSARY.md` for the distinction.
 #' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
@@ -115,7 +115,7 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
 #'
 #' state <- with_lecuyer_cmrg_seed(
 #'   42,
-#'   get_lecuyer_cmrg_seed_stream(stream = 1L, start_sim = 1L)
+#'   get_lecuyer_cmrg_state_stream(stream = 1L, start_sim = 1L)
 #' )
 #' local_lecuyer_cmrg_state(state)
 #' runif(3)
@@ -138,7 +138,7 @@ local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
 #' `state` (a `.Random.seed`-style integer vector of length 7), then
 #' restores the previous state. A *state* is the full internal RNG state
 #' (as returned by [`parallel::nextRNGStream()`] or
-#' `get_lecuyer_cmrg_seed_stream()`); contrast with [base::set.seed()]
+#' `get_lecuyer_cmrg_state_stream()`); contrast with [base::set.seed()]
 #' which takes a scalar *seed* (see [`with_lecuyer_cmrg_seed()`]). See
 #' `GLOSSARY.md` for the distinction.
 #' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
@@ -150,7 +150,7 @@ local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
 #'
 #' state <- with_lecuyer_cmrg_seed(
 #'   42,
-#'   get_lecuyer_cmrg_seed_stream(stream = 1L, start_sim = 1L)
+#'   get_lecuyer_cmrg_state_stream(stream = 1L, start_sim = 1L)
 #' )
 #' with_lecuyer_cmrg_state(state, runif(3))
 with_lecuyer_cmrg_state <- function(state, code) {
@@ -159,14 +159,14 @@ with_lecuyer_cmrg_state <- function(state, code) {
   code
 }
 
-get_lecuyer_cmrg_seed <- function() {
+get_lecuyer_cmrg_state <- function() {
   RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
   set.seed(rinteger(1))
   globalenv()$.Random.seed
 }
 
 # inspired by furrr:::generate_seed_streams
-get_lecuyer_cmrg_seeds_stream <- function(seed, nsim, stream, start_sim) {
+get_lecuyer_cmrg_states_stream <- function(seed, nsim, stream, start_sim) {
   if (nsim == 0) {
     return(list())
   }
@@ -178,22 +178,22 @@ get_lecuyer_cmrg_seeds_stream <- function(seed, nsim, stream, start_sim) {
     set.seed(seed)
   }
 
-  seeds <- vector("list", length = nsim)
-  seeds[[1]] <- parallel::nextRNGStream(get_lecuyer_cmrg_seed())
+  states <- vector("list", length = nsim)
+  states[[1]] <- parallel::nextRNGStream(get_lecuyer_cmrg_state())
   for (i in seq_len(stream - 1)) {
-    seeds[[1]] <- parallel::nextRNGStream(seeds[[1]])
+    states[[1]] <- parallel::nextRNGStream(states[[1]])
   }
   for (i in seq_len(start_sim - 1)) {
-    seeds[[1]] <- parallel::nextRNGSubStream(seeds[[1]])
+    states[[1]] <- parallel::nextRNGSubStream(states[[1]])
   }
   for (i in seq_len(nsim - 1)) {
-    seeds[[i + 1]] <- parallel::nextRNGSubStream(seeds[[i]])
+    states[[i + 1]] <- parallel::nextRNGSubStream(states[[i]])
   }
-  seeds
+  states
 }
 
-get_lecuyer_cmrg_seed_stream <- function(seed = NULL, stream, start_sim) {
-  get_lecuyer_cmrg_seeds_stream(
+get_lecuyer_cmrg_state_stream <- function(seed = NULL, stream, start_sim) {
+  get_lecuyer_cmrg_states_stream(
     seed = seed,
     nsim = 1L,
     stream = stream,

@@ -19,7 +19,7 @@ Evaluates \code{code} with the L'Ecuyer-CMRG RNG state temporarily set to
 \code{state} (a \code{.Random.seed}-style integer vector of length 7), then
 restores the previous state. A \emph{state} is the full internal RNG state
 (as returned by \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}} or
-\code{get_lecuyer_cmrg_seed_stream()}); contrast with \code{\link[base:set.seed]{base::set.seed()}}
+\code{get_lecuyer_cmrg_state_stream()}); contrast with \code{\link[base:set.seed]{base::set.seed()}}
 which takes a scalar \emph{seed} (see \code{\link[=with_lecuyer_cmrg_seed]{with_lecuyer_cmrg_seed()}}). See
 \code{GLOSSARY.md} for the distinction.
 }
@@ -27,7 +27,7 @@ which takes a scalar \emph{seed} (see \code{\link[=with_lecuyer_cmrg_seed]{with_
 
 state <- with_lecuyer_cmrg_seed(
   42,
-  get_lecuyer_cmrg_seed_stream(stream = 1L, start_sim = 1L)
+  get_lecuyer_cmrg_state_stream(stream = 1L, start_sim = 1L)
 )
 with_lecuyer_cmrg_state(state, runif(3))
 }

@@ -1,4 +1,4 @@
-slice_sample_seed <- function(data, n, replace, state) {
+slice_sample_state <- function(data, n, replace, state) {
   with_lecuyer_cmrg_state(state, {
     data |>
       dplyr::slice_sample(n = n, replace = replace)
@@ -26,7 +26,7 @@ fit_dists_seed <- function(
   silent,
   ...
 ) {
-  state <- get_lecuyer_cmrg_seed_stream(
+  state <- get_lecuyer_cmrg_state_stream(
     seed = seed,
     start_sim = sim,
     stream = stream
@@ -65,7 +65,7 @@ hc_seed <- function(
   save_to,
   ...
 ) {
-  state <- get_lecuyer_cmrg_seed_stream(
+  state <- get_lecuyer_cmrg_state_stream(
     seed = seed,
     start_sim = sim,
     stream = stream
