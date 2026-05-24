@@ -93,14 +93,8 @@ local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
 #'   runif(3)
 #' })
 with_lecuyer_cmrg_seed <- function(seed, code) {
-  force(seed)
-  withr::with_seed(
-    seed,
-    code,
-    .rng_kind = "L'Ecuyer-CMRG",
-    .rng_normal_kind = "Inversion",
-    .rng_sample_kind = "Rejection"
-  )
+  local_lecuyer_cmrg_seed(seed)
+  code
 }
 
 #' Local L'Ecuyer-CMRG State
