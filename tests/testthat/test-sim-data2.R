@@ -21,7 +21,10 @@ test_that("ssd_sim_data2 normalizes tmbfit to function", {
 
 test_that("ssd_sim_data2 keeps fitdists kind", {
   withr::local_seed(42)
-  fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron, dists = c("lnorm", "gamma"))
+  fit <- ssdtools::ssd_fit_dists(
+    ssddata::ccme_boron,
+    dists = c("lnorm", "gamma")
+  )
   scenario <- ssd_sim_data2(fit, dist_sim = c("lnorm", "top"), nsim = 2)
   expect_equal(scenario$generator$kind, "fitdists")
   expect_equal(scenario$generator$dist_sim, c("lnorm", "top"))
@@ -69,8 +72,16 @@ test_that("print.ssdsims_scenario tmbfit", {
 
 test_that("print.ssdsims_scenario fitdists", {
   withr::local_seed(42)
-  fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron, dists = c("lnorm", "gamma"))
-  scenario <- ssd_sim_data2(fit, dist_sim = c("lnorm", "top"), nsim = 2, seed = 1)
+  fit <- ssdtools::ssd_fit_dists(
+    ssddata::ccme_boron,
+    dists = c("lnorm", "gamma")
+  )
+  scenario <- ssd_sim_data2(
+    fit,
+    dist_sim = c("lnorm", "top"),
+    nsim = 2,
+    seed = 1
+  )
   expect_snapshot(scenario)
 })
 
