@@ -17,23 +17,22 @@ list-columns.
 }
 \description{
 Materializes a scenario (built by \code{\link[=ssd_sim_data2]{ssd_sim_data2()}}) by expanding the
-full task grid (cross-joining the data-generation, \code{\link[ssdtools:ssd_fit_dists]{ssdtools::ssd_fit_dists()}}
-and \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}} argument vectors) and computing each task
-independently. Each task produces one row of the output tibble.
+full task grid (cross-joining the data-generation,
+\code{\link[ssdtools:ssd_fit_dists]{ssdtools::ssd_fit_dists()}} and \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}} argument vectors)
+and computing each task independently. Each task produces one row of
+the output tibble.
 }
 \details{
 Compared to \code{\link[=ssd_run_scenario]{ssd_run_scenario()}} this function:
 \itemize{
-\item Uses the precomputed L'Ecuyer-CMRG stream seeds uniformly for all
-generator kinds. The original \code{ssd_sim_data.function()} chain
-computed the seeds but never used them, falling back to the raw
-\code{sim} integer as the seed — fixed here.
-\item Propagates the master \code{seed} to every task. The original vectorized
-branches of \verb{ssd_sim_data.*} silently dropped \code{seed} on recursion.
-\item Derives independent data, fit and hc seeds per (sim, stream) from
+\item Uses the precomputed L'Ecuyer-CMRG stream states uniformly for all
+generator kinds via \code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}}.
+\item Propagates the master \code{seed} to every task by construction; no
+recursive call ever drops it.
+\item Derives independent data, fit and hc states per (sim, stream) from
 the master seed (via L'Ecuyer-CMRG substreams) rather than reading
 the global RNG state at fit/hc time.
-\item Has a single, full cross-join over all argument vectors, so output
+\item Has a single full cross-join over all argument vectors, so output
 column order is uniform across generator kinds.
 }
 }

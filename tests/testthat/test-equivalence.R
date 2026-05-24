@@ -32,7 +32,10 @@ expect_run_equivalent <- function(build_old, build_new) {
   old_data <- strip_lists(tidyr::unnest(old, cols = "data"))
   new_data <- strip_lists(tidyr::unnest(new, cols = "data"))
   grid_cols <- intersect(
-    setdiff(names(old_data), c("Conc", "Chemical", "Species", "Group", "Units")),
+    setdiff(
+      names(old_data),
+      c("Conc", "Chemical", "Species", "Group", "Units")
+    ),
     names(new_data)
   )
   testthat::expect_equal(
