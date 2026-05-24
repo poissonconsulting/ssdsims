@@ -17,3 +17,6 @@ docs
 
 /.quarto/
 .ccache/
+
+inst/targets-examples/*/_targets/
+inst/targets-examples/*/results/

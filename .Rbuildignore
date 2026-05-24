@@ -17,3 +17,5 @@
 ^air\.toml$
 ^\.ccache$
 ^GLOSSARY\.md$
+^inst/targets-examples/[^/]+/_targets$
+^inst/targets-examples/[^/]+/results$

@@ -22,9 +22,13 @@ Imports:
     ssdtools (>= 2.6.0),
     tidyr,
     withr
-Suggests: 
+Suggests:
+    arrow,
+    qs2,
     readr,
     ssddata,
+    tarchetypes,
+    targets,
     testthat (>= 3.0.0)
 Remotes:
     poissonconsulting/ssdtools@dev
