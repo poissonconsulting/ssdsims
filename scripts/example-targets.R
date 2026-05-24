@@ -26,18 +26,27 @@ rlang::check_installed(
 
 # --- knobs --------------------------------------------------------------
 # Section A: downsized
-small_env <- c(
-  SSDSIMS_EXAMPLE_NSIM = "4", # KNOB: enlarge to 100, 1000
-  SSDSIMS_EXAMPLE_NROW = "5,10", # KNOB: more nrow values
-  SSDSIMS_EXAMPLE_NBOOT = "50" # KNOB: 1000+ for production
+small_env <- list(
+  nsim = "4", # KNOB: enlarge to 100, 1000
+  nrow = "5,10", # KNOB: more nrow values
+  nboot = "50" # KNOB: 1000+ for production
 )
 
 # Section B: full
-full_env <- c(
-  SSDSIMS_EXAMPLE_NSIM = "12", # KNOB: 12 sims (3x small)
-  SSDSIMS_EXAMPLE_NROW = "5,10", # same nrow vector ⇒ per-task/per-sim cached
-  SSDSIMS_EXAMPLE_NBOOT = "50" # same nboot         ⇒ ditto
+full_env <- list(
+  nsim = "12", # KNOB: 12 sims (3x small)
+  nrow = "5,10", # same nrow vector ⇒ per-task/per-sim cached
+  nboot = "50" # same nboot         ⇒ ditto
 )
+
+# Translate the lowercase short names used in `*_env` to the
+# SSDSIMS_EXAMPLE_<NAME> environment variables that the pipelines read.
+env_set <- function(env) {
+  do.call(
+    Sys.setenv,
+    setNames(env, paste0("SSDSIMS_EXAMPLE_", toupper(names(env))))
+  )
+}
 
 granularities <- c(
   "per-task",
@@ -64,7 +73,7 @@ run_pipeline <- function(granularity, env) {
   dir <- example_dir(granularity)
   old_wd <- setwd(dir)
   on.exit(setwd(old_wd), add = TRUE)
-  do.call(Sys.setenv, as.list(env))
+  env_set(env)
   message("==> tar_make() in ", dir)
   invisible(tar_make(callr_function = NULL))
   files <- list.files("results", full.names = TRUE)
@@ -72,12 +81,12 @@ run_pipeline <- function(granularity, env) {
 }
 
 run_manual <- function(env) {
-  do.call(Sys.setenv, as.list(env))
+  env_set(env)
   scenario <- ssdsims::ssd_sim_data2(
     ssddata::ccme_boron,
-    nsim = as.integer(env[["SSDSIMS_EXAMPLE_NSIM"]]),
-    nrow = as.integer(strsplit(env[["SSDSIMS_EXAMPLE_NROW"]], ",")[[1]]),
-    nboot = as.integer(env[["SSDSIMS_EXAMPLE_NBOOT"]]),
+    nsim = as.integer(env$nsim),
+    nrow = as.integer(strsplit(env$nrow, ",")[[1]]),
+    nboot = as.integer(env$nboot),
     seed = 42
   )
   ssdsims::ssd_run_scenario2(scenario)
