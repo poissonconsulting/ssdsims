@@ -396,3 +396,42 @@ test_that("local_lecuyer_cmrg_state different states produce different outcomes"
   }
   expect_false(identical(gen(states[[1]]), gen(states[[2]])))
 })
+
+test_that("local_lecuyer_cmrg_seed rejects non-scalar seed", {
+  state <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_stream_state(seed = NULL, stream = 1L, start_sim = 1L)
+  )
+  expect_snapshot(local_lecuyer_cmrg_seed(state), error = TRUE)
+  expect_snapshot(local_lecuyer_cmrg_seed(integer()), error = TRUE)
+  expect_snapshot(local_lecuyer_cmrg_seed(NA_integer_), error = TRUE)
+  expect_snapshot(local_lecuyer_cmrg_seed("10"), error = TRUE)
+})
+
+test_that("local_lecuyer_cmrg_seed rejects non-environment .local_envir", {
+  expect_snapshot(
+    local_lecuyer_cmrg_seed(10, .local_envir = "env"),
+    error = TRUE
+  )
+})
+
+test_that("local_lecuyer_cmrg_state rejects non-integer state", {
+  expect_snapshot(local_lecuyer_cmrg_state(10), error = TRUE)
+  expect_snapshot(local_lecuyer_cmrg_state(1:6), error = TRUE)
+  expect_snapshot(
+    local_lecuyer_cmrg_state(c(1L, 2L, 3L, 4L, 5L, 6L, NA_integer_)),
+    error = TRUE
+  )
+  expect_snapshot(local_lecuyer_cmrg_state("a"), error = TRUE)
+})
+
+test_that("local_lecuyer_cmrg_state rejects non-environment .local_envir", {
+  state <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_stream_state(seed = NULL, stream = 1L, start_sim = 1L)
+  )
+  expect_snapshot(
+    local_lecuyer_cmrg_state(state, .local_envir = "env"),
+    error = TRUE
+  )
+})
