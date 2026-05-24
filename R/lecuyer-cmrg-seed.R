@@ -50,7 +50,6 @@ has_seed <- function() {
 #'
 #' @return A list with components `random_seed` and `rng_kind`, or `NULL`.
 #' @noRd
-# internal function from withr
 get_seed <- function() {
   if (!has_seed()) {
     return(NULL)
@@ -78,7 +77,6 @@ get_seed <- function() {
 #' @param kind A character vector of length 3 as returned by [RNGkind()].
 #' @return `NULL`, invisibly.
 #' @noRd
-# internal function from withr
 restore_rng_kind <- function(kind) {
   RNGkind <- get("RNGkind")
   RNGkind(kind[[1]], normal.kind = kind[[2]])
