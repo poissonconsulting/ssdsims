@@ -1,0 +1,91 @@
+Subject: Fix ssd_run_scenario.tmbfit to pass fitted estimates to the rng call
+
+ssd_run_scenario.tmbfit() computes the estimates from the tmbfit via
+ssdtools::estimates() into a local `args` variable, but the recursive
+call to ssd_run_scenario() does not pass `args = args` through, so the
+recursion falls through to ssd_run_scenario.character -> .function
+with args = list() (the default). The rng function therefore runs with
+no parameters and produces samples from the default distribution
+(e.g. rlnorm(n, meanlog = 0, sdlog = 1)) instead of the fitted one.
+
+ssd_sim_data.tmbfit() handles this correctly, so the bug only manifests
+via the run-scenario path. The fix is one line: thread `args = args`
+into the recursive call. The added regression test compares the data
+produced by ssd_run_scenario(tmbfit) to the data produced by
+ssd_sim_data(tmbfit) under an identical seed; these should be
+byte-identical and were not before the fix.
+
+The two scenarioTMB2 snapshot files are regenerated because the bug
+fix changes the values the existing "ssd_run_scenario.tmbfit works"
+test produces (e.g. the HC est at proportion=0.05 goes from 0.145 to
+8.90 because samples now reflect ccme_boron's log-normal estimates
+instead of standard log-normal).
+
+Apply with: git apply scripts/tmbfit-args-fix.patch
+---
+--- a/R/run-scenario.R
++++ b/R/run-scenario.R
+@@ -165,6 +165,7 @@
+   ssd_run_scenario(
+     x,
+     ...,
++    args = args,
+     nrow = nrow,
+     dists = dists,
+     rescale = rescale,
+--- a/tests/testthat/test-run-scenario.R
++++ b/tests/testthat/test-run-scenario.R
+@@ -102,3 +102,17 @@
+   scenario <- tidyr::unnest(scenario, cols = hc)
+   expect_snapshot_data(scenario, "scenarioFit2")
+ })
++
++test_that("ssd_run_scenario.tmbfit uses the tmbfit's fitted estimates", {
++  # Regression test: ssd_run_scenario.tmbfit computed the estimates from the
++  # tmbfit but dropped them on the recursive call, so the rng function ran
++  # with default parameters instead of the fitted ones. ssd_sim_data.tmbfit
++  # threads them through correctly, so the two paths should agree.
++  fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron, dists = "lnorm")
++  tmbfit <- fit[[1]]
++
++  via_run <- with_lecuyer_cmrg_seed(10, ssd_run_scenario(tmbfit, nsim = 2))
++  via_sim <- with_lecuyer_cmrg_seed(10, ssd_sim_data(tmbfit, nsim = 2))
++
++  expect_equal(via_run$data, via_sim$data)
++})
+--- a/tests/testthat/_snaps/run-scenario/scenarioTMB2.csv
++++ b/tests/testthat/_snaps/run-scenario/scenarioTMB2.csv
+@@ -1,3 +1,3 @@
+ sim,stream,nrow,args,data,rescale,computable,at_boundary_ok,min_pmix,range_shape1,range_shape2,fits,nboot,est_method,ci_method,parametric,dist,proportion,est,se,lcl,ucl,wt,level,boot_method,pboot,dists,samples
+-1,1,6,list,list,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,average,0.05,0.145453,NA,NA,NA,1,0.95,parametric,1,list,list
+-2,1,6,list,list,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,average,0.05,0.214152,NA,NA,NA,1,0.95,parametric,1,list,list
++1,1,6,list,list,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,average,0.05,8.90103,NA,NA,NA,1,0.95,parametric,1,list,list
++2,1,6,list,list,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,average,0.05,1.22656,NA,NA,NA,1,0.95,parametric,1,list,list
+--- a/tests/testthat/_snaps/run-scenario/scenarioTMB2_data.csv
++++ b/tests/testthat/_snaps/run-scenario/scenarioTMB2_data.csv
+@@ -1,13 +1,13 @@
+ sim,stream,nrow,args,Conc,rescale,computable,at_boundary_ok,min_pmix,range_shape1,range_shape2,fits,nboot,est_method,ci_method,parametric,hc
+-1,1,6,list,0.878929,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-1,1,6,list,1.9007,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-1,1,6,list,1.45369,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-1,1,6,list,0.273837,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-1,1,6,list,0.340807,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-1,1,6,list,0.225599,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-2,1,6,list,2.08801,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-2,1,6,list,0.784359,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-2,1,6,list,0.166747,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-2,1,6,list,0.973156,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-2,1,6,list,0.839169,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
+-2,1,6,list,0.89703,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++1,1,6,list,22.8675,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++1,1,6,list,37.3342,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++1,1,6,list,11.6366,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++1,1,6,list,73.5012,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++1,1,6,list,14.2055,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++1,1,6,list,55.1031,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++2,1,6,list,3.27863,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++2,1,6,list,1.1208,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++2,1,6,list,22.2653,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++2,1,6,list,24.2531,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++2,1,6,list,12.9734,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
++2,1,6,list,34.9122,FALSE,FALSE,TRUE,list,list,list,list,1000,multi,weighted_samples,TRUE,list
