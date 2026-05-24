@@ -50,9 +50,16 @@ set_seed <- function(seed) {
   invisible(get_seed())
 }
 
-#' Local L'Euyer-CMRG Seed
+#' Local L'Ecuyer-CMRG Seed
+#'
+#' Seeds the L'Ecuyer-CMRG RNG with a scalar integer via [base::set.seed()].
+#' For a `.Random.seed`-style state vector (e.g. from
+#' `get_lecuyer_cmrg_seed_stream()` or [`parallel::nextRNGStream()`]) use
+#' [`local_lecuyer_cmrg_state()`]. See [`ssdsims-glossary`] for the
+#' distinction between a *seed* and a *state*.
 #' @inheritParams withr::local_seed
-#' @seealso [`withr::local_seed()`]
+#' @seealso [`withr::local_seed()`], [`local_lecuyer_cmrg_state()`],
+#'   [`parallel::nextRNGStream()`], [`ssdsims-glossary`].
 #' @export
 #' @examples
 #'
@@ -68,14 +75,22 @@ local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
   )
 }
 
-#' With L'Euyer-CMRG Seed
+#' With L'Ecuyer-CMRG Seed
+#'
+#' Evaluates `code` with the L'Ecuyer-CMRG RNG seeded with a scalar integer
+#' via [base::set.seed()], then restores the previous state. For a
+#' `.Random.seed`-style state vector (e.g. from
+#' `get_lecuyer_cmrg_seed_stream()` or [`parallel::nextRNGStream()`]) use
+#' [`with_lecuyer_cmrg_state()`]. See [`ssdsims-glossary`] for the
+#' distinction between a *seed* and a *state*.
 #' @inheritParams withr::with_seed
-#' @seealso [`withr::with_seed()`]
+#' @seealso [`withr::with_seed()`], [`with_lecuyer_cmrg_state()`],
+#'   [`parallel::nextRNGStream()`], [`ssdsims-glossary`].
 #' @export
 #' @examples
 #'
 #' with_lecuyer_cmrg_seed(42, {
-#' runif(3)
+#'   runif(3)
 #' })
 with_lecuyer_cmrg_seed <- function(seed, code) {
   force(seed)
@@ -86,6 +101,70 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
     .rng_normal_kind = "Inversion",
     .rng_sample_kind = "Rejection"
   )
+}
+
+#' Local L'Ecuyer-CMRG State
+#'
+#' Sets the L'Ecuyer-CMRG RNG state to a `.Random.seed`-style integer
+#' vector (length 7) by assigning to `.Random.seed` directly, restoring the
+#' previous state when `.local_envir` exits. A *state* is the full internal
+#' RNG state (as returned by [`parallel::nextRNGStream()`] or
+#' `get_lecuyer_cmrg_seed_stream()`); contrast with [base::set.seed()]
+#' which takes a scalar *seed* (see [`local_lecuyer_cmrg_seed()`]). See
+#' [`ssdsims-glossary`] for the distinction.
+#' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
+#' @inheritParams withr::local_seed
+#' @return Invisibly returns `state`.
+#' @seealso [`parallel::nextRNGStream()`], [`local_lecuyer_cmrg_seed()`],
+#'   [`ssdsims-glossary`].
+#' @export
+#' @examples
+#'
+#' state <- with_lecuyer_cmrg_seed(
+#'   42,
+#'   get_lecuyer_cmrg_seed_stream(stream = 1L, start_sim = 1L)
+#' )
+#' local_lecuyer_cmrg_state(state)
+#' runif(3)
+local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
+  old <- get_seed()
+  withr::defer(
+    if (!is.null(old)) set_seed(old),
+    envir = .local_envir
+  )
+  set_seed(list(
+    random_seed = state,
+    rng_kind = c("L'Ecuyer-CMRG", "Inversion", "Rejection")
+  ))
+  invisible(state)
+}
+
+#' With L'Ecuyer-CMRG State
+#'
+#' Evaluates `code` with the L'Ecuyer-CMRG RNG state temporarily set to
+#' `state` (a `.Random.seed`-style integer vector of length 7), then
+#' restores the previous state. A *state* is the full internal RNG state
+#' (as returned by [`parallel::nextRNGStream()`] or
+#' `get_lecuyer_cmrg_seed_stream()`); contrast with [base::set.seed()]
+#' which takes a scalar *seed* (see [`with_lecuyer_cmrg_seed()`]). See
+#' [`ssdsims-glossary`] for the distinction.
+#' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
+#' @inheritParams withr::with_seed
+#' @return The value of `code`.
+#' @seealso [`parallel::nextRNGStream()`], [`with_lecuyer_cmrg_seed()`],
+#'   [`ssdsims-glossary`].
+#' @export
+#' @examples
+#'
+#' state <- with_lecuyer_cmrg_seed(
+#'   42,
+#'   get_lecuyer_cmrg_seed_stream(stream = 1L, start_sim = 1L)
+#' )
+#' with_lecuyer_cmrg_state(state, runif(3))
+with_lecuyer_cmrg_state <- function(state, code) {
+  force(state)
+  local_lecuyer_cmrg_state(state)
+  code
 }
 
 get_lecuyer_cmrg_seed <- function() {

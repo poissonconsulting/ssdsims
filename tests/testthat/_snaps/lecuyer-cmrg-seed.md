@@ -115,17 +115,17 @@
     Output
       [1] 0.1738456 0.5547401 0.4833771
 
-# get_lecuyer_cmrg_seeds_stream return values seed different sub-streams (snapshot)
+# get_lecuyer_cmrg_seeds_stream return values state different sub-streams (snapshot)
 
     Code
-      with_lecuyer_cmrg_seed(seeds[[1]], runif(3))
+      with_lecuyer_cmrg_state(states[[1]], runif(3))
     Output
-      [1] 0.7330424 0.8172787 0.8308336
+      [1] 0.4075339 0.6022828 0.9188258
 
 ---
 
     Code
-      with_lecuyer_cmrg_seed(seeds[[2]], runif(3))
+      with_lecuyer_cmrg_state(states[[2]], runif(3))
     Output
-      [1] 0.7330424 0.8172787 0.8308336
+      [1] 0.0006085795 0.0701991342 0.7472101830
 

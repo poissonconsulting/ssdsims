@@ -335,8 +335,8 @@ test_that("with_lecuyer_cmrg_seed different seeds produce different outcomes (sn
   expect_snapshot(with_lecuyer_cmrg_seed(42, runif(3)))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream return values seed different sub-streams", {
-  seeds <- withr::with_seed(
+test_that("get_lecuyer_cmrg_seeds_stream return values state different sub-streams", {
+  states <- withr::with_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -346,13 +346,13 @@ test_that("get_lecuyer_cmrg_seeds_stream return values seed different sub-stream
     )
   )
   expect_false(identical(
-    with_lecuyer_cmrg_seed(seeds[[1]], runif(3)),
-    with_lecuyer_cmrg_seed(seeds[[2]], runif(3))
+    with_lecuyer_cmrg_state(states[[1]], runif(3)),
+    with_lecuyer_cmrg_state(states[[2]], runif(3))
   ))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream return values seed different sub-streams (snapshot)", {
-  seeds <- withr::with_seed(
+test_that("get_lecuyer_cmrg_seeds_stream return values state different sub-streams (snapshot)", {
+  states <- withr::with_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -361,11 +361,11 @@ test_that("get_lecuyer_cmrg_seeds_stream return values seed different sub-stream
       start_sim = 1L
     )
   )
-  expect_snapshot(with_lecuyer_cmrg_seed(seeds[[1]], runif(3)))
-  expect_snapshot(with_lecuyer_cmrg_seed(seeds[[2]], runif(3)))
+  expect_snapshot(with_lecuyer_cmrg_state(states[[1]], runif(3)))
+  expect_snapshot(with_lecuyer_cmrg_state(states[[2]], runif(3)))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream return values seed different streams", {
+test_that("get_lecuyer_cmrg_seed_stream return values state different streams", {
   s1 <- withr::with_seed(
     10,
     get_lecuyer_cmrg_seed_stream(seed = NULL, stream = 1L, start_sim = 1L)
@@ -375,7 +375,24 @@ test_that("get_lecuyer_cmrg_seeds_stream return values seed different streams", 
     get_lecuyer_cmrg_seed_stream(seed = NULL, stream = 2L, start_sim = 1L)
   )
   expect_false(identical(
-    with_lecuyer_cmrg_seed(s1, runif(3)),
-    with_lecuyer_cmrg_seed(s2, runif(3))
+    with_lecuyer_cmrg_state(s1, runif(3)),
+    with_lecuyer_cmrg_state(s2, runif(3))
   ))
+})
+
+test_that("local_lecuyer_cmrg_state different states produce different outcomes", {
+  states <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_seeds_stream(
+      seed = NULL,
+      nsim = 2L,
+      stream = 1L,
+      start_sim = 1L
+    )
+  )
+  gen <- function(state) {
+    local_lecuyer_cmrg_state(state)
+    runif(3)
+  }
+  expect_false(identical(gen(states[[1]]), gen(states[[2]])))
 })

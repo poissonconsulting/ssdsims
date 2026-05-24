@@ -2,7 +2,7 @@
 % Please edit documentation in R/lecuyer-cmrg-seed.R
 \name{local_lecuyer_cmrg_seed}
 \alias{local_lecuyer_cmrg_seed}
-\title{Local L'Euyer-CMRG Seed}
+\title{Local L'Ecuyer-CMRG Seed}
 \usage{
 local_lecuyer_cmrg_seed(seed, .local_envir = parent.frame())
 }
@@ -12,7 +12,11 @@ local_lecuyer_cmrg_seed(seed, .local_envir = parent.frame())
 \item{.local_envir}{\verb{[environment]}\cr The environment to use for scoping.}
 }
 \description{
-Local L'Euyer-CMRG Seed
+Seeds the L'Ecuyer-CMRG RNG with a scalar integer via \code{\link[base:set.seed]{base::set.seed()}}.
+For a \code{.Random.seed}-style state vector (e.g. from
+\code{get_lecuyer_cmrg_seed_stream()} or \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}) use
+\code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}}. See \code{\link{ssdsims-glossary}} for the
+distinction between a \emph{seed} and a \emph{state}.
 }
 \examples{
 
@@ -20,5 +24,6 @@ local_lecuyer_cmrg_seed(42)
 runif(3)
 }
 \seealso{
-\code{\link[withr:local_seed]{withr::local_seed()}}
+\code{\link[withr:local_seed]{withr::local_seed()}}, \code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}},
+\code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}, \code{\link{ssdsims-glossary}}.
 }

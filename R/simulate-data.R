@@ -56,7 +56,7 @@ ssd_sim_data.data.frame <- function(
   )
 
   if (nrow(data) == nsim) {
-    seeds <- get_lecuyer_cmrg_seeds_stream(
+    states <- get_lecuyer_cmrg_seeds_stream(
       seed = seed,
       nsim = nsim,
       start_sim = start_sim,
@@ -64,8 +64,8 @@ ssd_sim_data.data.frame <- function(
     )
 
     data <- purrr::map(
-      seeds,
-      \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed),
+      states,
+      \(state) slice_sample_seed(x, n = nrow, replace = replace, state = state),
       .progress = .progress
     ) |>
       purrr::map2(sims, \(.x, .y) {
