@@ -65,7 +65,9 @@ ssd_sim_data.data.frame <- function(
 
     data <- purrr::map(
       states,
-      \(state) slice_sample_state(x, n = nrow, replace = replace, state = state),
+      \(state) {
+        slice_sample_state(x, n = nrow, replace = replace, state = state)
+      },
       .progress = .progress
     ) |>
       purrr::map2(sims, \(.x, .y) {
