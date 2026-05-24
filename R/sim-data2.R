@@ -56,20 +56,26 @@ ssd_sim_data2.data.frame <- function(
     values = list(Conc = c(0, Inf, NA_real_)),
     nrow = c(5, 10000)
   )
-
-  chk::chk_whole_numeric(nrow)
-  chk::chk_not_any_na(nrow)
-  chk::chk_unique(nrow)
-  chk::chk_range(nrow, c(5, 1000))
-  chk::chk_length(nrow, upper = Inf)
-
-  chk::chk_logical(replace)
-  chk::chk_not_any_na(replace)
-  chk::chk_unique(replace)
-  chk::chk_length(replace, upper = 2L)
-
-  chk::chk_whole_number(stream)
-  chk::chk_gt(stream)
+  chk_nrow_param(nrow)
+  chk_replace_param(replace)
+  chk_stream_param(stream)
+  chk_fit_params(
+    dists = dists,
+    rescale = rescale,
+    computable = computable,
+    at_boundary_ok = at_boundary_ok,
+    min_pmix = min_pmix,
+    range_shape1 = range_shape1,
+    range_shape2 = range_shape2
+  )
+  chk_hc_params(
+    proportion = proportion,
+    ci = ci,
+    nboot = nboot,
+    est_method = est_method,
+    ci_method = ci_method,
+    parametric = parametric
+  )
 
   new_ssdsims_scenario(
     generator = list(
@@ -129,16 +135,26 @@ ssd_sim_data2.function <- function(
   start_sim = 1L,
   .progress = FALSE
 ) {
-  chk::chk_whole_numeric(nrow)
-  chk::chk_not_any_na(nrow)
-  chk::chk_unique(nrow)
-  chk::chk_range(nrow, c(5, 1000))
-  chk::chk_length(nrow, upper = Inf)
-
+  chk_nrow_param(nrow)
   chk::chk_list(args)
-
-  chk::chk_whole_number(stream)
-  chk::chk_gt(stream)
+  chk_stream_param(stream)
+  chk_fit_params(
+    dists = dists,
+    rescale = rescale,
+    computable = computable,
+    at_boundary_ok = at_boundary_ok,
+    min_pmix = min_pmix,
+    range_shape1 = range_shape1,
+    range_shape2 = range_shape2
+  )
+  chk_hc_params(
+    proportion = proportion,
+    ci = ci,
+    nboot = nboot,
+    est_method = est_method,
+    ci_method = ci_method,
+    parametric = parametric
+  )
 
   new_ssdsims_scenario(
     generator = list(
@@ -222,20 +238,26 @@ ssd_sim_data2.fitdists <- function(
   start_sim = 1L,
   .progress = FALSE
 ) {
-  chk::chk_whole_numeric(nrow)
-  chk::chk_not_any_na(nrow)
-  chk::chk_unique(nrow)
-  chk::chk_range(nrow, c(5, 1000))
-  chk::chk_length(nrow, upper = Inf)
-
-  chk::chk_character(dist_sim)
-  chk::chk_not_any_na(dist_sim)
-  chk::chk_unique(dist_sim)
-  chk::chk_subset(dist_sim, c("all", "multi", "top", names(x)))
-  chk::chk_length(dist_sim, upper = Inf)
-
-  chk::chk_whole_number(stream)
-  chk::chk_gt(stream)
+  chk_nrow_param(nrow)
+  chk_dist_sim_param(dist_sim, x)
+  chk_stream_param(stream)
+  chk_fit_params(
+    dists = dists,
+    rescale = rescale,
+    computable = computable,
+    at_boundary_ok = at_boundary_ok,
+    min_pmix = min_pmix,
+    range_shape1 = range_shape1,
+    range_shape2 = range_shape2
+  )
+  chk_hc_params(
+    proportion = proportion,
+    ci = ci,
+    nboot = nboot,
+    est_method = est_method,
+    ci_method = ci_method,
+    parametric = parametric
+  )
 
   new_ssdsims_scenario(
     generator = list(
@@ -348,130 +370,117 @@ split_extras <- function(extras) {
   list(fit = fit_extras, hc = hc_extras)
 }
 
-#' @export
-print.ssdsims_scenario <- function(x, ...) {
-  cat("<ssdsims_scenario>\n")
-  print_scenario_generator(x$generator)
-  print_scenario_sim(x$sim)
-  print_scenario_fit(x$fit)
-  print_scenario_hc(x$hc)
-  print_scenario_extras(x$extras)
-  invisible(x)
+chk_nrow_param <- function(nrow) {
+  chk::chk_whole_numeric(nrow)
+  chk::chk_not_any_na(nrow)
+  chk::chk_unique(nrow)
+  chk::chk_range(nrow, c(5, 1000))
+  chk::chk_length(nrow, upper = Inf)
 }
 
-print_scenario_generator <- function(g) {
-  cat(sprintf("* Generator: %s\n", g$kind))
-  if (g$kind == "data.frame") {
-    cat(sprintf(
-      "    source:  data.frame [%d x %d]\n",
-      nrow(g$x),
-      ncol(g$x)
-    ))
-    cat(sprintf("    nrow:    %s\n", fmt_scenario_vec(g$nrow)))
-    cat(sprintf("    replace: %s\n", fmt_scenario_vec(g$replace)))
-  } else if (g$kind == "function") {
-    cat(sprintf("    nrow: %s\n", fmt_scenario_vec(g$nrow)))
-    cat(sprintf("    args: %s\n", fmt_scenario_args(g$args)))
-  } else if (g$kind == "fitdists") {
-    cat(sprintf(
-      "    source:   fitdists [%s]\n",
-      paste(names(g$x), collapse = ", ")
-    ))
-    cat(sprintf("    nrow:     %s\n", fmt_scenario_vec(g$nrow)))
-    cat(sprintf("    dist_sim: %s\n", fmt_scenario_vec(g$dist_sim)))
-  }
+chk_replace_param <- function(replace) {
+  chk::chk_logical(replace)
+  chk::chk_not_any_na(replace)
+  chk::chk_unique(replace)
+  chk::chk_length(replace, upper = 2L)
 }
 
-print_scenario_sim <- function(s) {
-  cat(sprintf(
-    "* Sim: nsim=%d, stream=%d, start_sim=%d, seed=%s\n",
-    s$nsim,
-    s$stream,
-    s$start_sim,
-    if (is.null(s$seed)) "NULL" else format(s$seed)
-  ))
+chk_stream_param <- function(stream) {
+  chk::chk_whole_number(stream)
+  chk::chk_gt(stream)
 }
 
-print_scenario_fit <- function(f) {
-  cat("* Fit:\n")
-  cat(sprintf("    dists:          %s\n", fmt_scenario_vec(f$dists)))
-  cat(sprintf("    rescale:        %s\n", fmt_scenario_vec(f$rescale)))
-  cat(sprintf("    computable:     %s\n", fmt_scenario_vec(f$computable)))
-  cat(sprintf(
-    "    at_boundary_ok: %s\n",
-    fmt_scenario_vec(f$at_boundary_ok)
-  ))
-  cat(sprintf(
-    "    min_pmix:       %s\n",
-    fmt_scenario_list(f$min_pmix)
-  ))
-  cat(sprintf(
-    "    range_shape1:   %s\n",
-    fmt_scenario_list(f$range_shape1)
-  ))
-  cat(sprintf(
-    "    range_shape2:   %s\n",
-    fmt_scenario_list(f$range_shape2)
-  ))
+chk_dist_sim_param <- function(dist_sim, fits) {
+  chk::chk_character(dist_sim)
+  chk::chk_not_any_na(dist_sim)
+  chk::chk_unique(dist_sim)
+  chk::chk_subset(dist_sim, c("all", "multi", "top", names(fits)))
+  chk::chk_length(dist_sim, upper = Inf)
 }
 
-print_scenario_hc <- function(h) {
-  cat("* HC:\n")
-  cat(sprintf("    proportion: %s\n", fmt_scenario_vec(h$proportion)))
-  cat(sprintf("    ci:         %s\n", fmt_scenario_vec(h$ci)))
-  cat(sprintf("    nboot:      %s\n", fmt_scenario_vec(h$nboot)))
-  cat(sprintf("    est_method: %s\n", fmt_scenario_vec(h$est_method)))
-  cat(sprintf("    ci_method:  %s\n", fmt_scenario_vec(h$ci_method)))
-  cat(sprintf("    parametric: %s\n", fmt_scenario_vec(h$parametric)))
+chk_fit_params <- function(
+  dists,
+  rescale,
+  computable,
+  at_boundary_ok,
+  min_pmix,
+  range_shape1,
+  range_shape2
+) {
+  chk::chk_character(dists)
+  chk::chk_not_any_na(dists)
+  chk::chk_unique(dists)
+  chk::chk_length(dists, upper = Inf)
+
+  chk::chk_logical(rescale)
+  chk::chk_not_any_na(rescale)
+  chk::chk_unique(rescale)
+  chk::chk_length(rescale, upper = 2L)
+
+  chk::chk_logical(computable)
+  chk::chk_not_any_na(computable)
+  chk::chk_unique(computable)
+  chk::chk_length(computable, upper = 2L)
+
+  chk::chk_logical(at_boundary_ok)
+  chk::chk_not_any_na(at_boundary_ok)
+  chk::chk_unique(at_boundary_ok)
+  chk::chk_length(at_boundary_ok, upper = 2L)
+
+  chk::chk_list(min_pmix)
+  chk::chk_length(min_pmix, upper = Inf)
+  chk::chk_all(min_pmix, chk::chk_function, formals = 1L)
+  chk::chk_unique(min_pmix)
+
+  chk::chk_list(range_shape1)
+  chk::chk_length(range_shape1, upper = Inf)
+  chk::chk_all(range_shape1, chk::chk_double)
+  chk::chk_all(range_shape1, chk::chk_length, upper = 2L)
+  chk::chk_unique(range_shape1)
+
+  chk::chk_list(range_shape2)
+  chk::chk_length(range_shape2, upper = Inf)
+  chk::chk_all(range_shape2, chk::chk_double)
+  chk::chk_all(range_shape2, chk::chk_length, upper = 2L)
+  chk::chk_unique(range_shape2)
 }
 
-print_scenario_extras <- function(extras) {
-  fit_extras <- extras$fit
-  hc_extras <- extras$hc
-  if (length(fit_extras) == 0 && length(hc_extras) == 0) {
-    return(invisible())
-  }
-  cat("* Extras:\n")
-  if (length(fit_extras)) {
-    cat(sprintf("    fit: %s\n", paste(names(fit_extras), collapse = ", ")))
-  }
-  if (length(hc_extras)) {
-    cat(sprintf("    hc:  %s\n", paste(names(hc_extras), collapse = ", ")))
-  }
-}
+chk_hc_params <- function(
+  proportion,
+  ci,
+  nboot,
+  est_method,
+  ci_method,
+  parametric
+) {
+  chk::chk_numeric(proportion)
+  chk::chk_not_any_na(proportion)
+  chk::chk_range(proportion, c(0, 1))
+  chk::chk_unique(proportion)
+  chk::chk_length(proportion, upper = Inf)
 
-fmt_scenario_vec <- function(x) {
-  if (is.null(x)) {
-    return("NULL")
-  }
-  if (is.character(x)) {
-    return(paste(x, collapse = ", "))
-  }
-  paste(format(x), collapse = ", ")
-}
+  chk::chk_flag(ci)
 
-fmt_scenario_args <- function(args) {
-  if (length(args) == 0) {
-    return("<empty>")
-  }
-  parts <- vapply(
-    seq_along(args),
-    function(i) {
-      nm <- names(args)[i]
-      val <- args[[i]]
-      if (is.numeric(val) && length(val) == 1) {
-        sprintf("%s=%s", nm, format(val))
-      } else if (is.atomic(val) && length(val) <= 4) {
-        sprintf("%s=[%s]", nm, paste(format(val), collapse = ", "))
-      } else {
-        sprintf("%s=<%s [%d]>", nm, class(val)[1], length(val))
-      }
-    },
-    character(1)
-  )
-  paste(parts, collapse = ", ")
-}
+  chk::chk_whole_numeric(nboot)
+  chk::chk_not_any_na(nboot)
+  chk::chk_gt(nboot)
+  chk::chk_unique(nboot)
+  chk::chk_length(nboot, upper = Inf)
 
-fmt_scenario_list <- function(x) {
-  sprintf("<list of %d>", length(x))
+  chk::chk_character(est_method)
+  chk::chk_not_any_na(est_method)
+  chk::chk_unique(est_method)
+  chk::chk_subset(est_method, ssdtools::ssd_est_methods())
+  chk::chk_length(est_method, upper = Inf)
+
+  chk::chk_character(ci_method)
+  chk::chk_not_any_na(ci_method)
+  chk::chk_unique(ci_method)
+  chk::chk_subset(ci_method, ssdtools::ssd_ci_methods())
+  chk::chk_length(ci_method, upper = Inf)
+
+  chk::chk_logical(parametric)
+  chk::chk_not_any_na(parametric)
+  chk::chk_unique(parametric)
+  chk::chk_length(parametric, upper = 2L)
 }

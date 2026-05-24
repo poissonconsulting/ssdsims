@@ -1,21 +1,20 @@
 #' Run a Scenario
 #'
 #' Materializes a scenario (built by [ssd_sim_data2()]) by expanding the
-#' full task grid (cross-joining the data-generation, [ssdtools::ssd_fit_dists()]
-#' and [ssdtools::ssd_hc()] argument vectors) and computing each task
-#' independently. Each task produces one row of the output tibble.
+#' full task grid (cross-joining the data-generation,
+#' [ssdtools::ssd_fit_dists()] and [ssdtools::ssd_hc()] argument vectors)
+#' and computing each task independently. Each task produces one row of
+#' the output tibble.
 #'
 #' Compared to [ssd_run_scenario()] this function:
-#' - Uses the precomputed L'Ecuyer-CMRG stream seeds uniformly for all
-#'   generator kinds. The original `ssd_sim_data.function()` chain
-#'   computed the seeds but never used them, falling back to the raw
-#'   `sim` integer as the seed — fixed here.
-#' - Propagates the master `seed` to every task. The original vectorized
-#'   branches of `ssd_sim_data.*` silently dropped `seed` on recursion.
-#' - Derives independent data, fit and hc seeds per (sim, stream) from
+#' - Uses the precomputed L'Ecuyer-CMRG stream states uniformly for all
+#'   generator kinds via [`local_lecuyer_cmrg_state()`].
+#' - Propagates the master `seed` to every task by construction; no
+#'   recursive call ever drops it.
+#' - Derives independent data, fit and hc states per (sim, stream) from
 #'   the master seed (via L'Ecuyer-CMRG substreams) rather than reading
 #'   the global RNG state at fit/hc time.
-#' - Has a single, full cross-join over all argument vectors, so output
+#' - Has a single full cross-join over all argument vectors, so output
 #'   column order is uniform across generator kinds.
 #'
 #' @param scenario An `ssdsims_scenario` object built by [ssd_sim_data2()].
@@ -53,9 +52,9 @@ ssd_run_scenario2 <- function(scenario, ...) {
 }
 
 internal_cols <- c(
-  ".seed_data",
-  ".seed_fit",
-  ".seed_hc",
+  ".state_data",
+  ".state_fit",
+  ".state_hc",
   ".gen_kind",
   ".gen_x",
   ".gen_fn",
@@ -97,58 +96,58 @@ build_data_grid <- function(scenario) {
   sims <- sim_seq(sim$start_sim, sim$nsim)
   stream <- as.integer(sim$stream)
 
-  data_seeds <- get_lecuyer_cmrg_seeds_stream(
-    sim$seed,
-    sim$nsim,
+  data_states <- get_lecuyer_cmrg_stream_states(
+    seed = sim$seed,
+    nsim = sim$nsim,
     start_sim = sim$start_sim,
     stream = stream
   )
-  fit_seeds <- lapply(data_seeds, parallel::nextRNGSubStream)
-  hc_seeds <- lapply(fit_seeds, parallel::nextRNGSubStream)
+  fit_states <- lapply(data_states, parallel::nextRNGSubStream)
+  hc_states <- lapply(fit_states, parallel::nextRNGSubStream)
 
-  seed_tbl <- dplyr::tibble(
+  state_tbl <- dplyr::tibble(
     sim = sims,
     stream = stream,
-    .seed_data = data_seeds,
-    .seed_fit = fit_seeds,
-    .seed_hc = hc_seeds
+    .state_data = data_states,
+    .state_fit = fit_states,
+    .state_hc = hc_states
   )
 
   switch(
     gen$kind,
-    "data.frame" = build_data_grid_dataframe(gen, sims, stream, seed_tbl),
-    "function" = build_data_grid_function(gen, sims, stream, seed_tbl),
-    "fitdists" = build_data_grid_fitdists(gen, sims, stream, seed_tbl)
+    "data.frame" = build_data_grid_dataframe(gen, sims, stream, state_tbl),
+    "function" = build_data_grid_function(gen, sims, stream, state_tbl),
+    "fitdists" = build_data_grid_fitdists(gen, sims, stream, state_tbl)
   )
 }
 
-build_data_grid_dataframe <- function(gen, sims, stream, seed_tbl) {
+build_data_grid_dataframe <- function(gen, sims, stream, state_tbl) {
   grid <- tidyr::expand_grid(
     sim = sims,
     stream = stream,
     replace = gen$replace,
     nrow = gen$nrow
   )
-  grid <- dplyr::left_join(grid, seed_tbl, by = c("sim", "stream"))
+  grid <- dplyr::left_join(grid, state_tbl, by = c("sim", "stream"))
   grid$.gen_kind <- "data.frame"
   grid$.gen_x <- replicate(nrow(grid), gen$x, simplify = FALSE)
   grid
 }
 
-build_data_grid_function <- function(gen, sims, stream, seed_tbl) {
+build_data_grid_function <- function(gen, sims, stream, state_tbl) {
   grid <- tidyr::expand_grid(
     sim = sims,
     stream = stream,
     nrow = gen$nrow
   )
-  grid <- dplyr::left_join(grid, seed_tbl, by = c("sim", "stream"))
+  grid <- dplyr::left_join(grid, state_tbl, by = c("sim", "stream"))
   grid$args <- replicate(nrow(grid), gen$args, simplify = FALSE)
   grid$.gen_kind <- "function"
   grid$.gen_fn <- replicate(nrow(grid), gen$fn, simplify = FALSE)
   grid
 }
 
-build_data_grid_fitdists <- function(gen, sims, stream, seed_tbl) {
+build_data_grid_fitdists <- function(gen, sims, stream, state_tbl) {
   dist_sim <- expand_all_dist_sim(gen$dist_sim, gen$x)
   resolutions <- lapply(dist_sim, \(ds) resolve_dist_sim(ds, gen$x))
   names(resolutions) <- dist_sim
@@ -159,7 +158,7 @@ build_data_grid_fitdists <- function(gen, sims, stream, seed_tbl) {
     nrow = gen$nrow,
     dist_sim = dist_sim
   )
-  grid <- dplyr::left_join(grid, seed_tbl, by = c("sim", "stream"))
+  grid <- dplyr::left_join(grid, state_tbl, by = c("sim", "stream"))
   grid$.gen_kind <- "function"
   grid$.gen_fn <- lapply(grid$dist_sim, \(ds) resolutions[[ds]]$fn)
   grid$.gen_args <- lapply(grid$dist_sim, \(ds) resolutions[[ds]]$args)
@@ -206,13 +205,9 @@ run_task <- function(task, scenario) {
 }
 
 generate_task_data <- function(task) {
+  local_lecuyer_cmrg_state(task$.state_data[[1]])
   if (task$.gen_kind == "data.frame") {
-    slice_sample_seed(
-      task$.gen_x[[1]],
-      n = task$nrow,
-      replace = task$replace,
-      seed = task$.seed_data[[1]]
-    )
+    dplyr::slice_sample(task$.gen_x[[1]], n = task$nrow, replace = task$replace)
   } else {
     args <- if (".gen_args" %in% names(task)) {
       task$.gen_args[[1]]
@@ -220,16 +215,12 @@ generate_task_data <- function(task) {
       task$args[[1]]
     }
     args$n <- task$nrow
-    conc <- do_call_seed(
-      task$.gen_fn[[1]],
-      args = args,
-      seed = task$.seed_data[[1]]
-    )
-    dplyr::tibble(Conc = conc)
+    dplyr::tibble(Conc = do.call(task$.gen_fn[[1]], args))
   }
 }
 
 fit_task_dists <- function(task, scenario, data) {
+  local_lecuyer_cmrg_state(task$.state_fit[[1]])
   fit_args <- c(
     list(
       data = data,
@@ -245,12 +236,11 @@ fit_task_dists <- function(task, scenario, data) {
     ),
     scenario$extras$fit
   )
-  with_lecuyer_cmrg_seed(task$.seed_fit[[1]], {
-    do.call(ssdtools::ssd_fit_dists, fit_args)
-  })
+  do.call(ssdtools::ssd_fit_dists, fit_args)
 }
 
 hc_task <- function(task, scenario, fit) {
+  local_lecuyer_cmrg_state(task$.state_hc[[1]])
   hc_args <- c(
     list(
       x = fit,
@@ -264,8 +254,6 @@ hc_task <- function(task, scenario, fit) {
     ),
     scenario$extras$hc
   )
-  hc <- with_lecuyer_cmrg_seed(task$.seed_hc[[1]], {
-    do.call(ssdtools::ssd_hc, hc_args)
-  })
+  hc <- do.call(ssdtools::ssd_hc, hc_args)
   dplyr::select(hc, !dplyr::any_of(c("nboot", "est_method", "ci_method")))
 }
