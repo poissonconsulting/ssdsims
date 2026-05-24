@@ -27,7 +27,7 @@ ssd_scenario_tasks <- function(scenario) {
 #' file per job.
 #'
 #' @param tasks A subset of the tibble returned by
-#' [`ssd_scenario_tasks(scenario)`]. May be one or many rows.
+#' [`ssd_scenario_tasks()`]. May be one or many rows.
 #' @param scenario The `ssdsims_scenario` object the `tasks` were
 #' derived from.
 #' @return A tibble matching the shape produced by

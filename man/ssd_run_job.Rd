@@ -8,7 +8,7 @@ ssd_run_job(tasks, scenario)
 }
 \arguments{
 \item{tasks}{A subset of the tibble returned by
-\code{\link{ssd_scenario_tasks(scenario)}}. May be one or many rows.}
+\code{\link[=ssd_scenario_tasks]{ssd_scenario_tasks()}}. May be one or many rows.}
 
 \item{scenario}{The \code{ssdsims_scenario} object the \code{tasks} were
 derived from.}
