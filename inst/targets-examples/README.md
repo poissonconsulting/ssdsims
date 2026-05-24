@@ -13,25 +13,28 @@ per job (per target branch).
 
 ## Knobs
 
-Each `_targets.R` reads scenario size from environment variables:
+Each `_targets.R` has a small **knobs** block near the top with
+typed literal values:
 
-| Variable                      | Default                          | Effect                                                     |
-| ----------------------------- | -------------------------------- | ---------------------------------------------------------- |
-| `SSDSIMS_EXAMPLE_NSIM`        | `4`                              | Number of simulations.                                     |
-| `SSDSIMS_EXAMPLE_NROW`        | `5,10`                           | Comma-separated `nrow` values.                             |
-| `SSDSIMS_EXAMPLE_NBOOT`       | `50`                             | Bootstrap replicates passed to `ssd_hc()`.                 |
-| `SSDSIMS_EXAMPLE_WORKERS`     | `parallelly::availableCores()`   | mirai workers used by `crew::crew_controller_local()`.     |
+```r
+# --- knobs: edit these to change scenario size --------------------------
+nsim  <- 4L              # KNOB: enlarge to 100, 1000, …
+nrow  <- c(5L, 10L)      # KNOB: more nrow values
+nboot <- 50L             # KNOB: 1000+ for production
+# ------------------------------------------------------------------------
+```
 
-Enlarging `SSDSIMS_EXAMPLE_NSIM` is the resumability case the design is
-optimised for — see the next section.
+To change the scenario size, edit those literals and re-run
+`targets::tar_make()`. There is no external override mechanism — the
+pipeline is the source of truth for its own knobs.
 
 ## Parallel execution
 
 Each `_targets.R` sets a mirai-backed `crew_controller_local()` so the
-dynamic branches run concurrently. By default the controller uses
-`parallelly::availableCores()` workers; set
-`SSDSIMS_EXAMPLE_WORKERS=1` to force serial execution (useful for
-debugging or when comparing wall-clock timings).
+dynamic branches run concurrently using
+`parallelly::availableCores()` workers. To force serial execution
+(useful for debugging or comparing wall-clock timings), edit the
+`workers = ...` argument in the `crew_controller_local()` call.
 
 ## Resumability under knob changes
 

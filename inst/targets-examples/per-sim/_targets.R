@@ -9,21 +9,16 @@
 library(targets)
 library(tarchetypes)
 
-nsim <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NSIM", "4"))
-nrow <- as.integer(strsplit(
-  Sys.getenv("SSDSIMS_EXAMPLE_NROW", "5,10"),
-  ","
-)[[1]])
-nboot <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NBOOT", "50"))
-workers <- as.integer(Sys.getenv(
-  "SSDSIMS_EXAMPLE_WORKERS",
-  as.character(parallelly::availableCores())
-))
+# --- knobs: edit these to change scenario size ---------------------------
+nsim  <- 4L              # KNOB: enlarge to 100, 1000, …
+nrow  <- c(5L, 10L)      # KNOB: more nrow values
+nboot <- 50L             # KNOB: 1000+ for production
+# -------------------------------------------------------------------------
 
 tar_option_set(
   packages = c("ssdsims", "ssddata", "dplyr", "duckplyr", "qs2"),
   controller = crew::crew_controller_local(
-    workers = workers,
+    workers = parallelly::availableCores(),
     seconds_idle = 30
   )
 )

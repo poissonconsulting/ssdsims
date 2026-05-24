@@ -11,24 +11,19 @@
 library(targets)
 library(tarchetypes)
 
-# --- knobs ---------------------------------------------------------------
-# Read by *every* example so the same env vars drive all four
-# granularities side-by-side. See `scripts/example-targets.R`.
-nsim <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NSIM", "4"))
-nrow <- as.integer(strsplit(
-  Sys.getenv("SSDSIMS_EXAMPLE_NROW", "5,10"),
-  ","
-)[[1]])
-nboot <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NBOOT", "50"))
-workers <- as.integer(Sys.getenv(
-  "SSDSIMS_EXAMPLE_WORKERS",
-  as.character(parallelly::availableCores())
-))
+# --- knobs: edit these to change scenario size ---------------------------
+# Demonstrates the "downsized first call". To go larger, bump these and
+# re-run `targets::tar_make()`; per-task and per-sim pipelines retain
+# their cache for already-computed branches (see ../README.md).
+nsim  <- 4L              # KNOB: enlarge to 100, 1000, …
+nrow  <- c(5L, 10L)      # KNOB: more nrow values
+nboot <- 50L             # KNOB: 1000+ for production
+# -------------------------------------------------------------------------
 
 tar_option_set(
   packages = c("ssdsims", "ssddata", "dplyr", "duckplyr", "qs2"),
   controller = crew::crew_controller_local(
-    workers = workers,
+    workers = parallelly::availableCores(),
     seconds_idle = 30
   )
 )
@@ -38,10 +33,10 @@ list(
     scenario,
     ssdsims::ssd_sim_data2(
       ssddata::ccme_boron,
-      nsim = nsim,
-      nrow = nrow,
+      nsim  = nsim,
+      nrow  = nrow,
       nboot = nboot,
-      seed = 42
+      seed  = 42
     )
   ),
 

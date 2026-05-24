@@ -89,7 +89,23 @@ ssd_write_job_parquet <- function(job, path) {
     job[[paste0(col, "_qs2")]] <- lapply(job[[col]], qs2::qs_serialize)
     job[[col]] <- NULL
   }
-  duckplyr::compute_parquet(job, path)
+  # df_to_parquet() is write-only (deprecated alias for the write half
+  # of compute_parquet); compute_parquet() additionally reads the file
+  # back to return a lazy duckplyr_df, which can race with concurrent
+  # writes in a crew worker pool and surface as "File too small to be
+  # a Parquet file".
+  withCallingHandlers(
+    duckplyr::df_to_parquet(job, path),
+    lifecycle_warning_deprecated = function(w) {
+      invokeRestart("muffleWarning")
+    }
+  )
+  if (!file.exists(path) || file.size(path) == 0L) {
+    stop(
+      "duckplyr::df_to_parquet() produced a missing or zero-byte ",
+      "Parquet file at ", path, "."
+    )
+  }
   invisible(path)
 }
 
