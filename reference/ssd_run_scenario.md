@@ -329,13 +329,14 @@ ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 ssd_run_scenario(fit[[1]], nsim = 3)
 #> # A tibble: 3 × 17
-#>     sim stream  nrow args   data     rescale computable at_boundary_ok min_pmix
-#>   <int>  <int> <int> <list> <list>   <lgl>   <lgl>      <lgl>          <list>  
-#> 1     1      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
-#> 2     2      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
-#> 3     3      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, fits <list>,
-#> #   nboot <dbl>, est_method <chr>, ci_method <chr>, parametric <lgl>, hc <list>
+#>     sim stream  nrow args             data     rescale computable at_boundary_ok
+#>   <int>  <int> <int> <list>           <list>   <lgl>   <lgl>      <lgl>         
+#> 1     1      1     6 <named list [2]> <tibble> FALSE   FALSE      TRUE          
+#> 2     2      1     6 <named list [2]> <tibble> FALSE   FALSE      TRUE          
+#> 3     3      1     6 <named list [2]> <tibble> FALSE   FALSE      TRUE          
+#> # ℹ 9 more variables: min_pmix <list>, range_shape1 <list>,
+#> #   range_shape2 <list>, fits <list>, nboot <dbl>, est_method <chr>,
+#> #   ci_method <chr>, parametric <lgl>, hc <list>
 
 ssd_run_scenario("rlnorm", nsim = 3)
 #> # A tibble: 3 × 17
