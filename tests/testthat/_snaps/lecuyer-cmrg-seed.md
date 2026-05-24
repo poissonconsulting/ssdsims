@@ -87,3 +87,31 @@
       [7]   645839282
       
 
+# local_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)
+
+    Code
+      gen_lecuyer_runif(10)
+    Output
+      [1] 0.3276690 0.7040534 0.3022566
+
+---
+
+    Code
+      gen_lecuyer_runif(42)
+    Output
+      [1] 0.1738456 0.5547401 0.4833771
+
+# with_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)
+
+    Code
+      with_lecuyer_cmrg_seed(10, runif(3))
+    Output
+      [1] 0.3276690 0.7040534 0.3022566
+
+---
+
+    Code
+      with_lecuyer_cmrg_seed(42, runif(3))
+    Output
+      [1] 0.1738456 0.5547401 0.4833771
+

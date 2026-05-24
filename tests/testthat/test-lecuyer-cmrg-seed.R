@@ -304,3 +304,33 @@ test_that("get_lecuyer_cmrg_seeds_stream local withr work", {
     )
   })
 })
+
+gen_lecuyer_runif <- function(seed) {
+  local_lecuyer_cmrg_seed(seed)
+  runif(3)
+}
+
+test_that("local_lecuyer_cmrg_seed different seeds produce different outcomes", {
+  expect_false(identical(gen_lecuyer_runif(10), gen_lecuyer_runif(42)))
+})
+
+test_that("local_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)", {
+  expect_snapshot(gen_lecuyer_runif(10))
+  expect_snapshot(gen_lecuyer_runif(42))
+})
+
+test_that("with_lecuyer_cmrg_seed different seeds produce different outcomes", {
+  expect_identical(
+    with_lecuyer_cmrg_seed(10, runif(3)),
+    gen_lecuyer_runif(10)
+  )
+  expect_false(identical(
+    with_lecuyer_cmrg_seed(10, runif(3)),
+    with_lecuyer_cmrg_seed(42, runif(3))
+  ))
+})
+
+test_that("with_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)", {
+  expect_snapshot(with_lecuyer_cmrg_seed(10, runif(3)))
+  expect_snapshot(with_lecuyer_cmrg_seed(42, runif(3)))
+})
