@@ -334,3 +334,48 @@ test_that("with_lecuyer_cmrg_seed different seeds produce different outcomes (sn
   expect_snapshot(with_lecuyer_cmrg_seed(10, runif(3)))
   expect_snapshot(with_lecuyer_cmrg_seed(42, runif(3)))
 })
+
+test_that("get_lecuyer_cmrg_seeds_stream return values seed different sub-streams", {
+  seeds <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_seeds_stream(
+      seed = NULL,
+      nsim = 2L,
+      stream = 1L,
+      start_sim = 1L
+    )
+  )
+  expect_false(identical(
+    with_lecuyer_cmrg_seed(seeds[[1]], runif(3)),
+    with_lecuyer_cmrg_seed(seeds[[2]], runif(3))
+  ))
+})
+
+test_that("get_lecuyer_cmrg_seeds_stream return values seed different sub-streams (snapshot)", {
+  seeds <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_seeds_stream(
+      seed = NULL,
+      nsim = 2L,
+      stream = 1L,
+      start_sim = 1L
+    )
+  )
+  expect_snapshot(with_lecuyer_cmrg_seed(seeds[[1]], runif(3)))
+  expect_snapshot(with_lecuyer_cmrg_seed(seeds[[2]], runif(3)))
+})
+
+test_that("get_lecuyer_cmrg_seeds_stream return values seed different streams", {
+  s1 <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_seed_stream(seed = NULL, stream = 1L, start_sim = 1L)
+  )
+  s2 <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_seed_stream(seed = NULL, stream = 2L, start_sim = 1L)
+  )
+  expect_false(identical(
+    with_lecuyer_cmrg_seed(s1, runif(3)),
+    with_lecuyer_cmrg_seed(s2, runif(3))
+  ))
+})
