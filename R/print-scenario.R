@@ -32,13 +32,21 @@ format_scalar <- function(x) {
 }
 
 format_param <- function(x) {
-  if (is.null(x)) return("NULL")
-  if (is.function(x)) return("<function>")
+  if (is.null(x)) {
+    return("NULL")
+  }
+  if (is.function(x)) {
+    return("<function>")
+  }
   if (is.list(x)) {
     parts <- vapply(x, format_param, character(1))
     return(paste0("[", paste(parts, collapse = ", "), "]"))
   }
-  if (length(x) == 0) return(paste0(typeof(x), "(0)"))
-  if (length(x) == 1) return(as.character(x))
+  if (length(x) == 0) {
+    return(paste0(typeof(x), "(0)"))
+  }
+  if (length(x) == 1) {
+    return(as.character(x))
+  }
   paste0("[", paste(as.character(x), collapse = ", "), "]")
 }

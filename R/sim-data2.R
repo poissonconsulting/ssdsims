@@ -131,7 +131,11 @@ ssd_sim_data2.data.frame <- function(
     source_info = list(
       type = "data.frame",
       description = paste0(
-        "data.frame [", nrow(x), " x ", ncol(x), "]"
+        "data.frame [",
+        nrow(x),
+        " x ",
+        ncol(x),
+        "]"
       )
     )
   )
