@@ -81,12 +81,10 @@ ssd_run_job <- function(tasks, scenario) {
 ssd_write_job_parquet <- function(job, path) {
   chk::chk_data(job)
   chk::chk_string(path)
-  if (!requireNamespace("duckplyr", quietly = TRUE)) {
-    stop("Package 'duckplyr' is required to write Parquet output.")
-  }
-  if (!requireNamespace("qs2", quietly = TRUE)) {
-    stop("Package 'qs2' is required to write qs2-encoded columns.")
-  }
+  rlang::check_installed(
+    c("duckplyr", "qs2"),
+    reason = "to write Parquet output with qs2-encoded columns."
+  )
   for (col in qs2_columns(job)) {
     job[[paste0(col, "_qs2")]] <- lapply(job[[col]], qs2::qs_serialize)
     job[[col]] <- NULL
@@ -111,16 +109,15 @@ ssd_write_job_parquet <- function(job, path) {
 ssd_read_job_parquet <- function(path, decode = TRUE) {
   chk::chk_string(path)
   chk::chk_flag(decode)
-  if (!requireNamespace("duckplyr", quietly = TRUE)) {
-    stop("Package 'duckplyr' is required to read Parquet output.")
-  }
+  rlang::check_installed("duckplyr", reason = "to read Parquet output.")
   job <- dplyr::as_tibble(
     dplyr::collect(duckplyr::read_parquet_duckdb(path))
   )
   if (decode) {
-    if (!requireNamespace("qs2", quietly = TRUE)) {
-      stop("Package 'qs2' is required to decode qs2-encoded columns.")
-    }
+    rlang::check_installed(
+      "qs2",
+      reason = "to decode qs2-encoded columns."
+    )
     blob_cols <- grep("_qs2$", names(job), value = TRUE)
     for (bc in blob_cols) {
       decoded <- lapply(job[[bc]], function(raw) qs2::qs_deserialize(raw))

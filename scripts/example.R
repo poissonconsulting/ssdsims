@@ -19,7 +19,10 @@ library(targets)
 library(dplyr, warn.conflicts = FALSE)
 library(ssdsims)
 
-stopifnot(requireNamespace("duckplyr"), requireNamespace("qs2"))
+rlang::check_installed(
+  c("duckplyr", "qs2"),
+  reason = "to run the targets-examples driver."
+)
 
 # --- knobs --------------------------------------------------------------
 # Section A: downsized
