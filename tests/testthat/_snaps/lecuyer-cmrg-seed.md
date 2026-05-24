@@ -129,3 +129,83 @@
     Output
       [1] 0.0006085795 0.0701991342 0.7472101830
 
+# local_lecuyer_cmrg_seed rejects non-scalar seed
+
+    Code
+      local_lecuyer_cmrg_seed(state)
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      local_lecuyer_cmrg_seed(integer())
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      local_lecuyer_cmrg_seed(NA_integer_)
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      local_lecuyer_cmrg_seed("10")
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+# local_lecuyer_cmrg_seed rejects non-environment .local_envir
+
+    Code
+      local_lecuyer_cmrg_seed(10, .local_envir = "env")
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `.local_envir` must be an environment.
+
+# local_lecuyer_cmrg_state rejects non-integer state
+
+    Code
+      local_lecuyer_cmrg_state(10)
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must be integer.
+
+---
+
+    Code
+      local_lecuyer_cmrg_state(1:6)
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must be length 7 not 6.
+
+---
+
+    Code
+      local_lecuyer_cmrg_state(c(1L, 2L, 3L, 4L, 5L, 6L, NA_integer_))
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must not have any missing values.
+
+---
+
+    Code
+      local_lecuyer_cmrg_state("a")
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must be integer.
+
+# local_lecuyer_cmrg_state rejects non-environment .local_envir
+
+    Code
+      local_lecuyer_cmrg_state(state, .local_envir = "env")
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `.local_envir` must be an environment.
+

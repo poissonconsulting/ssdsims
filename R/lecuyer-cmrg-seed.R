@@ -66,6 +66,8 @@ set_state <- function(state) {
 #' local_lecuyer_cmrg_seed(42)
 #' runif(3)
 local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
+  chk::chk_whole_number(seed)
+  chk::chk_environment(.local_envir)
   withr::local_seed(
     seed,
     .local_envir = .local_envir,
@@ -115,6 +117,10 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
 #' local_lecuyer_cmrg_state(state)
 #' runif(3)
 local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
+  chk::chk_integer(state)
+  chk::chk_not_any_na(state)
+  chk::chk_length(state, length = 7L)
+  chk::chk_environment(.local_envir)
   old <- get_state()
   withr::defer(set_state(old), envir = .local_envir)
   set_state(list(
