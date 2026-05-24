@@ -80,7 +80,7 @@ ssd_sim_data2.data.frame <- function(
 
   stream <- as.integer(stream)
   sims <- sim_seq(start_sim, nsim)
-  seed_by_sim <- seeds_by_sim(seed, nsim, stream, start_sim)
+  state_by_sim <- states_by_sim(seed, nsim, stream, start_sim)
 
   jobs <- tidyr::expand_grid(
     sim = sims,
@@ -95,11 +95,11 @@ ssd_sim_data2.data.frame <- function(
       force(replace)
       force(nrow)
       function() {
-        slice_sample_seed(
+        slice_sample_state(
           x,
           n = nrow,
           replace = replace,
-          seed = seed_by_sim[[as.character(sim)]]
+          state = state_by_sim[[as.character(sim)]]
         )
       }
     }
@@ -207,7 +207,7 @@ ssd_sim_data2.fitdists <- function(
 
   stream <- as.integer(stream)
   sims <- sim_seq(start_sim, nsim)
-  seed_by_sim <- seeds_by_sim(seed, nsim, stream, start_sim)
+  state_by_sim <- states_by_sim(seed, nsim, stream, start_sim)
   resolved <- lapply(dist_sim, resolve_dist_sim, fits = x)
   names(resolved) <- dist_sim
 
@@ -226,10 +226,10 @@ ssd_sim_data2.fitdists <- function(
       function() {
         argsn <- c(r$args, list(n = nrow))
         dplyr::tibble(
-          Conc = do_call_seed(
+          Conc = do_call_state(
             r$fn,
             args = argsn,
-            seed = seed_by_sim[[as.character(sim)]]
+            state = state_by_sim[[as.character(sim)]]
           )
         )
       }
@@ -347,7 +347,7 @@ ssd_sim_data2.function <- function(
 
   stream <- as.integer(stream)
   sims <- sim_seq(start_sim, nsim)
-  seed_by_sim <- seeds_by_sim(seed, nsim, stream, start_sim)
+  state_by_sim <- states_by_sim(seed, nsim, stream, start_sim)
 
   jobs <- tidyr::expand_grid(
     sim = sims,
@@ -364,10 +364,10 @@ ssd_sim_data2.function <- function(
         argsn <- args
         argsn$n <- nrow
         dplyr::tibble(
-          Conc = do_call_seed(
+          Conc = do_call_state(
             x,
             args = argsn,
-            seed = seed_by_sim[[as.character(sim)]]
+            state = state_by_sim[[as.character(sim)]]
           )
         )
       }
@@ -429,16 +429,16 @@ new_ssd_scenario <- function(
   )
 }
 
-seeds_by_sim <- function(seed, nsim, stream, start_sim) {
+states_by_sim <- function(seed, nsim, stream, start_sim) {
   sims <- sim_seq(start_sim, nsim)
-  seeds <- get_lecuyer_cmrg_seeds_stream(
+  states <- get_lecuyer_cmrg_stream_states(
     seed = seed,
     nsim = nsim,
     stream = stream,
     start_sim = start_sim
   )
-  names(seeds) <- as.character(sims)
-  seeds
+  names(states) <- as.character(sims)
+  states
 }
 
 resolve_dist_sim <- function(d, fits) {

@@ -56,7 +56,7 @@ ssd_sim_data.data.frame <- function(
   )
 
   if (nrow(data) == nsim) {
-    seeds <- get_lecuyer_cmrg_seeds_stream(
+    states <- get_lecuyer_cmrg_stream_states(
       seed = seed,
       nsim = nsim,
       start_sim = start_sim,
@@ -64,8 +64,10 @@ ssd_sim_data.data.frame <- function(
     )
 
     data <- purrr::map(
-      seeds,
-      \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed),
+      states,
+      \(state) {
+        slice_sample_state(x, n = nrow, replace = replace, state = state)
+      },
       .progress = .progress
     ) |>
       purrr::map2(sims, \(.x, .y) {
@@ -306,7 +308,7 @@ ssd_sim_data.function <- function(
   data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)
 
   if (nrow(data) == nsim) {
-    seeds <- get_lecuyer_cmrg_seeds_stream(
+    states <- get_lecuyer_cmrg_stream_states(
       seed = seed,
       nsim = nsim,
       start_sim = start_sim,
@@ -317,8 +319,8 @@ ssd_sim_data.function <- function(
     argsn$n <- nrow
 
     data <- purrr::map(
-      seeds,
-      \(seed) do_call_seed(x, args = argsn, seed = seed),
+      states,
+      \(state) do_call_state(x, args = argsn, state = state),
       .progress = .progress
     ) |>
       purrr::map(\(.x) dplyr::tibble(Conc = .x)) |>

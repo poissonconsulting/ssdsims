@@ -1,5 +1,5 @@
-slice_sample_seed <- function(data, n, replace, seed) {
-  with_lecuyer_cmrg_seed(seed, {
+slice_sample_state <- function(data, n, replace, state) {
+  with_lecuyer_cmrg_state(state, {
     data |>
       dplyr::slice_sample(n = n, replace = replace)
   })
@@ -7,6 +7,12 @@ slice_sample_seed <- function(data, n, replace, seed) {
 
 do_call_seed <- function(what, args, seed) {
   with_lecuyer_cmrg_seed(seed, {
+    do.call(what, args = args)
+  })
+}
+
+do_call_state <- function(what, args, state) {
+  with_lecuyer_cmrg_state(state, {
     do.call(what, args = args)
   })
 }
@@ -26,14 +32,14 @@ fit_dists_seed <- function(
   silent,
   ...
 ) {
-  seed <- get_lecuyer_cmrg_seed_stream(
+  state <- get_lecuyer_cmrg_stream_state(
     seed = seed,
     start_sim = sim,
     stream = stream
   )
 
   ## TODO: handle failure of all model to fit!!
-  with_lecuyer_cmrg_seed(seed, {
+  with_lecuyer_cmrg_state(state, {
     fit <- ssdtools::ssd_fit_dists(
       data,
       dists = dists,
@@ -65,13 +71,13 @@ hc_seed <- function(
   save_to,
   ...
 ) {
-  seed <- get_lecuyer_cmrg_seed_stream(
+  state <- get_lecuyer_cmrg_stream_state(
     seed = seed,
     start_sim = sim,
     stream = stream
   )
   ## TODO: handle failures
-  with_lecuyer_cmrg_seed(seed, {
+  with_lecuyer_cmrg_state(state, {
     hc <- ssdtools::ssd_hc(
       data,
       proportion = proportion,
