@@ -24,19 +24,24 @@ stopifnot(requireNamespace("arrow"), requireNamespace("qs2"))
 # --- knobs --------------------------------------------------------------
 # Section A: downsized
 small_env <- c(
-  SSDSIMS_EXAMPLE_NSIM  = "4",     # KNOB: enlarge to 100, 1000
-  SSDSIMS_EXAMPLE_NROW  = "5,10",  # KNOB: more nrow values
-  SSDSIMS_EXAMPLE_NBOOT = "50"     # KNOB: 1000+ for production
+  SSDSIMS_EXAMPLE_NSIM = "4", # KNOB: enlarge to 100, 1000
+  SSDSIMS_EXAMPLE_NROW = "5,10", # KNOB: more nrow values
+  SSDSIMS_EXAMPLE_NBOOT = "50" # KNOB: 1000+ for production
 )
 
 # Section B: full
 full_env <- c(
-  SSDSIMS_EXAMPLE_NSIM  = "12",    # KNOB: 12 sims (3x small)
-  SSDSIMS_EXAMPLE_NROW  = "5,10",  # same nrow vector ⇒ per-task/per-sim cached
-  SSDSIMS_EXAMPLE_NBOOT = "50"     # same nboot         ⇒ ditto
+  SSDSIMS_EXAMPLE_NSIM = "12", # KNOB: 12 sims (3x small)
+  SSDSIMS_EXAMPLE_NROW = "5,10", # same nrow vector ⇒ per-task/per-sim cached
+  SSDSIMS_EXAMPLE_NBOOT = "50" # same nboot         ⇒ ditto
 )
 
-granularities <- c("per-task", "per-sim", "per-parameter-slice", "whole-scenario")
+granularities <- c(
+  "per-task",
+  "per-sim",
+  "per-parameter-slice",
+  "whole-scenario"
+)
 
 # --- helpers ------------------------------------------------------------
 
@@ -67,10 +72,10 @@ run_manual <- function(env) {
   do.call(Sys.setenv, as.list(env))
   scenario <- ssdsims::ssd_sim_data2(
     ssddata::ccme_boron,
-    nsim  = as.integer(env[["SSDSIMS_EXAMPLE_NSIM"]]),
-    nrow  = as.integer(strsplit(env[["SSDSIMS_EXAMPLE_NROW"]], ",")[[1]]),
+    nsim = as.integer(env[["SSDSIMS_EXAMPLE_NSIM"]]),
+    nrow = as.integer(strsplit(env[["SSDSIMS_EXAMPLE_NROW"]], ",")[[1]]),
     nboot = as.integer(env[["SSDSIMS_EXAMPLE_NBOOT"]]),
-    seed  = 42
+    seed = 42
   )
   ssdsims::ssd_run_scenario2(scenario)
 }
@@ -93,13 +98,17 @@ message("\n========== Section A: downsized ==========")
 small_results <- lapply(granularities, function(g) {
   list(
     targets = run_pipeline(g, small_env),
-    manual  = run_manual(small_env)
+    manual = run_manual(small_env)
   )
 })
 names(small_results) <- granularities
 
 for (g in granularities) {
-  compare(small_results[[g]]$targets, small_results[[g]]$manual, paste0("small/", g))
+  compare(
+    small_results[[g]]$targets,
+    small_results[[g]]$manual,
+    paste0("small/", g)
+  )
 }
 
 # --- Section B: full ----------------------------------------------------
@@ -109,13 +118,17 @@ message("\n========== Section B: full ==========")
 full_results <- lapply(granularities, function(g) {
   list(
     targets = run_pipeline(g, full_env),
-    manual  = run_manual(full_env)
+    manual = run_manual(full_env)
   )
 })
 names(full_results) <- granularities
 
 for (g in granularities) {
-  compare(full_results[[g]]$targets, full_results[[g]]$manual, paste0("full/", g))
+  compare(
+    full_results[[g]]$targets,
+    full_results[[g]]$manual,
+    paste0("full/", g)
+  )
 }
 
 # Summary of cache hits. Use `tar_progress()` after a tar_make() to see

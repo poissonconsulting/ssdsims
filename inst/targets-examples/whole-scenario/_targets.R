@@ -8,9 +8,10 @@
 
 library(targets)
 
-nsim  <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NSIM",  "4"))
-nrow  <- as.integer(strsplit(
-  Sys.getenv("SSDSIMS_EXAMPLE_NROW", "5,10"), ","
+nsim <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NSIM", "4"))
+nrow <- as.integer(strsplit(
+  Sys.getenv("SSDSIMS_EXAMPLE_NROW", "5,10"),
+  ","
 )[[1]])
 nboot <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NBOOT", "50"))
 
@@ -21,10 +22,10 @@ list(
     scenario,
     ssdsims::ssd_sim_data2(
       ssddata::ccme_boron,
-      nsim   = nsim,
-      nrow   = nrow,
-      nboot  = nboot,
-      seed   = 42
+      nsim = nsim,
+      nrow = nrow,
+      nboot = nboot,
+      seed = 42
     )
   ),
 
