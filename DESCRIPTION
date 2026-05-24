@@ -23,7 +23,10 @@ Imports:
     tidyr,
     withr
 Suggests:
+    crew,
     duckplyr,
+    mirai,
+    parallelly,
     qs2,
     readr,
     ssddata,

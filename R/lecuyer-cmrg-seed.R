@@ -168,6 +168,15 @@ get_lecuyer_cmrg_stream_states <- function(seed, nsim, stream, start_sim) {
   ostate <- get_state()
   on.exit(set_state(ostate))
 
+  # Pin the RNGkind to Mersenne-Twister before set.seed() so that
+  # `seed` produces a deterministic starting state regardless of the
+  # caller's current RNGkind. Without this, a second call from the
+  # same R session inherits the L'Ecuyer-CMRG kind left over by
+  # get_lecuyer_cmrg_state() below, and set.seed(seed) yields a
+  # different sequence — breaking reproducibility and (more visibly)
+  # any targets pipeline that grows nsim across runs.
+  RNGkind("Mersenne-Twister", "Inversion", "Rejection")
+
   if (!is.null(seed)) {
     set.seed(seed)
   }

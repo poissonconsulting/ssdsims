@@ -14,8 +14,18 @@ nrow <- as.integer(strsplit(
   ","
 )[[1]])
 nboot <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NBOOT", "50"))
+workers <- as.integer(Sys.getenv(
+  "SSDSIMS_EXAMPLE_WORKERS",
+  as.character(parallelly::availableCores())
+))
 
-tar_option_set(packages = c("ssdsims", "ssddata", "dplyr", "duckplyr", "qs2"))
+tar_option_set(
+  packages = c("ssdsims", "ssddata", "dplyr", "duckplyr", "qs2"),
+  controller = crew::crew_controller_local(
+    workers = workers,
+    seconds_idle = 30
+  )
+)
 
 list(
   tar_target(
