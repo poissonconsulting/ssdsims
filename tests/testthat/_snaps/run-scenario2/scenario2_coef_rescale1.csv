@@ -1,0 +1,16 @@
+dist,term,est,se
+gamma,scale,2.32899,1.65145
+gamma,shape,1.05354,0.589387
+lgumbel,locationlog,-0.303063,0.623873
+lgumbel,scalelog,1.31047,0.428336
+llogis,locationlog,0.491116,0.542456
+llogis,scalelog,0.699003,0.265859
+lnorm,meanlog,0.353006,0.551638
+lnorm,sdlog,1.2335,0.390066
+lnorm_lnorm,meanlog1,-0.43278,4.56816
+lnorm_lnorm,meanlog2,0.997758,0.568868
+lnorm_lnorm,pmix,0.5,1.53631
+lnorm_lnorm,sdlog1,1.332,0.909788
+lnorm_lnorm,sdlog2,0.625965,0.300717
+weibull,scale,2.5073,1.11263
+weibull,shape,1.05945,0.383959

@@ -444,6 +444,9 @@ fmt_scenario_vec <- function(x) {
   if (is.null(x)) {
     return("NULL")
   }
+  if (is.character(x)) {
+    return(paste(x, collapse = ", "))
+  }
   paste(format(x), collapse = ", ")
 }
 
