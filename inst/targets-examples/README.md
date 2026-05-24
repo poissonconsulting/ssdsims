@@ -78,6 +78,6 @@ on.exit(setwd(old))
 targets::tar_make(callr_function = NULL)  # devtools-loaded pkg lives in this R session
 ```
 
-See `scripts/example.R` for a driver that runs all four granularities
+See `scripts/example-targets.R` for a driver that runs all four granularities
 twice (downsized then full) and compares each against a direct
 `ssd_run_scenario2()` call.

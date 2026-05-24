@@ -13,7 +13,7 @@ library(tarchetypes)
 
 # --- knobs ---------------------------------------------------------------
 # Read by *every* example so the same env vars drive all four
-# granularities side-by-side. See `scripts/example.R`.
+# granularities side-by-side. See `scripts/example-targets.R`.
 nsim <- as.integer(Sys.getenv("SSDSIMS_EXAMPLE_NSIM", "4"))
 nrow <- as.integer(strsplit(
   Sys.getenv("SSDSIMS_EXAMPLE_NROW", "5,10"),
