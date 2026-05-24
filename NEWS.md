@@ -1,5 +1,18 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9008
+
+## Chore
+
+- Replace `seq_up()` with `rlang::seq2()` (#55).
+
+## Continuous integration
+
+- Update ccache-action reference.
+
+- Bump action version.
+
+
 # ssdsims 0.0.0.9007
 
 - Ci: Unify fledge.yaml across cynkratemplate and fledge (#86).
