@@ -1,7 +1,7 @@
 # get_lecuyer_cmrg_seeds_stream repeatable
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -12,7 +12,7 @@
 # get_lecuyer_cmrg_seeds_stream seed fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 10^5))
     Output
       [[1]]
@@ -23,7 +23,7 @@
 # get_lecuyer_cmrg_seeds_stream stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
         start_sim = 1L, stream = 10^5))
     Output
       [[1]]
@@ -34,7 +34,7 @@
 # get_lecuyer_cmrg_seeds_stream seed stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
         start_sim = 10^5, stream = 10^5))
     Output
       [[1]]
@@ -53,7 +53,7 @@
 # get_lecuyer_cmrg_seeds_stream repeatable multiple seeds
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 2L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 2L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -68,7 +68,7 @@
 # get_lecuyer_cmrg_seeds_stream repeatable other starts
 
     Code
-      withr::with_seed(42, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(42, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]

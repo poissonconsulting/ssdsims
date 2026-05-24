@@ -11,7 +11,7 @@ test_that("get_lecuyer_cmrg_seeds_stream no seeds", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
-  expect_snapshot(withr::with_seed(
+  expect_snapshot(with_lecuyer_cmrg_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -21,7 +21,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
     )
   ))
   expect_identical(
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       10,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -30,7 +30,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
         start_sim = 1L
       )
     ),
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       10,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -43,7 +43,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream seed fast enough", {
-  expect_snapshot(withr::with_seed(
+  expect_snapshot(with_lecuyer_cmrg_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -55,7 +55,7 @@ test_that("get_lecuyer_cmrg_seeds_stream seed fast enough", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream stream fast enough", {
-  expect_snapshot(withr::with_seed(
+  expect_snapshot(with_lecuyer_cmrg_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -67,7 +67,7 @@ test_that("get_lecuyer_cmrg_seeds_stream stream fast enough", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream seed stream fast enough", {
-  expect_snapshot(withr::with_seed(
+  expect_snapshot(with_lecuyer_cmrg_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -79,7 +79,7 @@ test_that("get_lecuyer_cmrg_seeds_stream seed stream fast enough", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream seeds stream fast enough", {
-  seeds <- withr::with_seed(
+  seeds <- with_lecuyer_cmrg_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -93,7 +93,7 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds stream fast enough", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
-  expect_snapshot(withr::with_seed(
+  expect_snapshot(with_lecuyer_cmrg_seed(
     10,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -103,7 +103,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
     )
   ))
   expect_identical(
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       10,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -112,7 +112,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
         start_sim = 1L
       )
     )[2],
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       10,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -126,7 +126,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
 
 test_that("get_lecuyer_cmrg_seeds_stream differs multiple seeds", {
   expect_false(identical(
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       10,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -135,7 +135,7 @@ test_that("get_lecuyer_cmrg_seeds_stream differs multiple seeds", {
         start_sim = 1L
       )
     ),
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       10,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -148,7 +148,7 @@ test_that("get_lecuyer_cmrg_seeds_stream differs multiple seeds", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
-  expect_snapshot(withr::with_seed(
+  expect_snapshot(with_lecuyer_cmrg_seed(
     42,
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
@@ -158,7 +158,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
     )
   ))
   expect_identical(
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       42,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -167,7 +167,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
         start_sim = 1L
       )
     ),
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       42,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -181,7 +181,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
 
 test_that("get_lecuyer_cmrg_seeds_stream differs other starts seeds", {
   expect_false(identical(
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       10,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -190,7 +190,7 @@ test_that("get_lecuyer_cmrg_seeds_stream differs other starts seeds", {
         start_sim = 1L
       )
     ),
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       42,
       get_lecuyer_cmrg_seeds_stream(
         seed = NULL,
@@ -260,11 +260,11 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds differ with other seed types", {
 
 test_that("get_lecuyer_cmrg_seeds_stream passses seed", {
   expect_identical(
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       37,
       get_lecuyer_cmrg_seeds_stream(10, nsim = 1L, stream = 1L, start_sim = 1L)
     ),
-    withr::with_seed(
+    with_lecuyer_cmrg_seed(
       42,
       get_lecuyer_cmrg_seeds_stream(10, nsim = 1L, stream = 1L, start_sim = 1L)
     )
@@ -272,7 +272,7 @@ test_that("get_lecuyer_cmrg_seeds_stream passses seed", {
 })
 
 test_that("get_lecuyer_cmrg_seeds_stream does not advance seed", {
-  withr::with_seed(10, {
+  with_lecuyer_cmrg_seed(10, {
     seed <- globalenv()$.Random.seed
     get_lecuyer_cmrg_seeds_stream(
       seed = NULL,
