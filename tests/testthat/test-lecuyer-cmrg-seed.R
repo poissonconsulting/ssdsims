@@ -1,6 +1,6 @@
-test_that("get_lecuyer_cmrg_seeds_stream no seeds", {
+test_that("get_lecuyer_cmrg_stream_states no seeds", {
   expect_identical(
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 0L,
       stream = 1L,
@@ -10,10 +10,10 @@ test_that("get_lecuyer_cmrg_seeds_stream no seeds", {
   )
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
+test_that("get_lecuyer_cmrg_stream_states repeatable", {
   expect_snapshot(with_lecuyer_cmrg_seed(
     10,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 1L,
       stream = 1L,
@@ -23,7 +23,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
   expect_identical(
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -32,7 +32,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
     ),
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -42,10 +42,10 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable", {
   )
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream seed fast enough", {
+test_that("get_lecuyer_cmrg_stream_states seed fast enough", {
   expect_snapshot(with_lecuyer_cmrg_seed(
     10,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 1L,
       stream = 1L,
@@ -54,10 +54,10 @@ test_that("get_lecuyer_cmrg_seeds_stream seed fast enough", {
   ))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream stream fast enough", {
+test_that("get_lecuyer_cmrg_stream_states stream fast enough", {
   expect_snapshot(with_lecuyer_cmrg_seed(
     10,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 1L,
       start_sim = 1L,
@@ -66,10 +66,10 @@ test_that("get_lecuyer_cmrg_seeds_stream stream fast enough", {
   ))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream seed stream fast enough", {
+test_that("get_lecuyer_cmrg_stream_states seed stream fast enough", {
   expect_snapshot(with_lecuyer_cmrg_seed(
     10,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 1L,
       start_sim = 10^5,
@@ -78,10 +78,10 @@ test_that("get_lecuyer_cmrg_seeds_stream seed stream fast enough", {
   ))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream seeds stream fast enough", {
+test_that("get_lecuyer_cmrg_stream_states seeds stream fast enough", {
   seeds <- with_lecuyer_cmrg_seed(
     10,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       start_sim = 10^5,
       stream = 10^5,
@@ -92,10 +92,10 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds stream fast enough", {
   expect_snapshot(seeds[[10^5]])
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
+test_that("get_lecuyer_cmrg_stream_states repeatable multiple seeds", {
   expect_snapshot(with_lecuyer_cmrg_seed(
     10,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 2L,
       stream = 1L,
@@ -105,7 +105,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
   expect_identical(
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 2L,
         stream = 1L,
@@ -114,7 +114,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
     )[2],
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         start_sim = 2L,
@@ -124,11 +124,11 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable multiple seeds", {
   )
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream differs multiple seeds", {
+test_that("get_lecuyer_cmrg_stream_states differs multiple seeds", {
   expect_false(identical(
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -137,7 +137,7 @@ test_that("get_lecuyer_cmrg_seeds_stream differs multiple seeds", {
     ),
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         start_sim = 2L,
         nsim = 1L,
@@ -147,10 +147,10 @@ test_that("get_lecuyer_cmrg_seeds_stream differs multiple seeds", {
   ))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
+test_that("get_lecuyer_cmrg_stream_states repeatable other starts", {
   expect_snapshot(with_lecuyer_cmrg_seed(
     42,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 1L,
       stream = 1L,
@@ -160,7 +160,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
   expect_identical(
     with_lecuyer_cmrg_seed(
       42,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -169,7 +169,7 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
     ),
     with_lecuyer_cmrg_seed(
       42,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -179,11 +179,11 @@ test_that("get_lecuyer_cmrg_seeds_stream repeatable other starts", {
   )
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream differs other starts seeds", {
+test_that("get_lecuyer_cmrg_stream_states differs other starts seeds", {
   expect_false(identical(
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -192,7 +192,7 @@ test_that("get_lecuyer_cmrg_seeds_stream differs other starts seeds", {
     ),
     with_lecuyer_cmrg_seed(
       42,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -202,10 +202,10 @@ test_that("get_lecuyer_cmrg_seeds_stream differs other starts seeds", {
   ))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream seeds repeatable with other seed types", {
+test_that("get_lecuyer_cmrg_stream_states seeds repeatable with other seed types", {
   expect_snapshot(with_lecuyer_cmrg_seed(
     10,
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 1L,
       stream = 1L,
@@ -215,7 +215,7 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds repeatable with other seed types"
   expect_identical(
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -224,7 +224,7 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds repeatable with other seed types"
     ),
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -234,11 +234,11 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds repeatable with other seed types"
   )
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream seeds differ with other seed types", {
+test_that("get_lecuyer_cmrg_stream_states seeds differ with other seed types", {
   expect_false(identical(
     withr::with_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -248,7 +248,7 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds differ with other seed types", {
     ),
     with_lecuyer_cmrg_seed(
       10,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -258,23 +258,23 @@ test_that("get_lecuyer_cmrg_seeds_stream seeds differ with other seed types", {
   ))
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream passses seed", {
+test_that("get_lecuyer_cmrg_stream_states passses seed", {
   expect_identical(
     with_lecuyer_cmrg_seed(
       37,
-      get_lecuyer_cmrg_seeds_stream(10, nsim = 1L, stream = 1L, start_sim = 1L)
+      get_lecuyer_cmrg_stream_states(10, nsim = 1L, stream = 1L, start_sim = 1L)
     ),
     with_lecuyer_cmrg_seed(
       42,
-      get_lecuyer_cmrg_seeds_stream(10, nsim = 1L, stream = 1L, start_sim = 1L)
+      get_lecuyer_cmrg_stream_states(10, nsim = 1L, stream = 1L, start_sim = 1L)
     )
   )
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream does not advance seed", {
+test_that("get_lecuyer_cmrg_stream_states does not advance seed", {
   with_lecuyer_cmrg_seed(10, {
     seed <- globalenv()$.Random.seed
-    get_lecuyer_cmrg_seeds_stream(
+    get_lecuyer_cmrg_stream_states(
       seed = NULL,
       nsim = 100L,
       stream = 1L,
@@ -284,9 +284,9 @@ test_that("get_lecuyer_cmrg_seeds_stream does not advance seed", {
   })
 })
 
-test_that("get_lecuyer_cmrg_seeds_stream local withr work", {
+test_that("get_lecuyer_cmrg_stream_states local withr work", {
   local_lecuyer_cmrg_seed(10)
-  seed <- get_lecuyer_cmrg_seeds_stream(
+  seed <- get_lecuyer_cmrg_stream_states(
     seed = NULL,
     nsim = 1L,
     stream = 1L,
@@ -295,7 +295,7 @@ test_that("get_lecuyer_cmrg_seeds_stream local withr work", {
   with_lecuyer_cmrg_seed(10, {
     expect_identical(
       seed,
-      get_lecuyer_cmrg_seeds_stream(
+      get_lecuyer_cmrg_stream_states(
         seed = NULL,
         nsim = 1L,
         stream = 1L,
@@ -303,4 +303,96 @@ test_that("get_lecuyer_cmrg_seeds_stream local withr work", {
       )
     )
   })
+})
+
+gen_lecuyer_runif <- function(seed) {
+  local_lecuyer_cmrg_seed(seed)
+  runif(3)
+}
+
+test_that("local_lecuyer_cmrg_seed different seeds produce different outcomes", {
+  expect_false(identical(gen_lecuyer_runif(10), gen_lecuyer_runif(42)))
+})
+
+test_that("local_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)", {
+  expect_snapshot(gen_lecuyer_runif(10))
+  expect_snapshot(gen_lecuyer_runif(42))
+})
+
+test_that("with_lecuyer_cmrg_seed different seeds produce different outcomes", {
+  expect_identical(
+    with_lecuyer_cmrg_seed(10, runif(3)),
+    gen_lecuyer_runif(10)
+  )
+  expect_false(identical(
+    with_lecuyer_cmrg_seed(10, runif(3)),
+    with_lecuyer_cmrg_seed(42, runif(3))
+  ))
+})
+
+test_that("with_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)", {
+  expect_snapshot(with_lecuyer_cmrg_seed(10, runif(3)))
+  expect_snapshot(with_lecuyer_cmrg_seed(42, runif(3)))
+})
+
+test_that("get_lecuyer_cmrg_stream_states return values state different sub-streams", {
+  states <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_stream_states(
+      seed = NULL,
+      nsim = 2L,
+      stream = 1L,
+      start_sim = 1L
+    )
+  )
+  expect_false(identical(
+    with_lecuyer_cmrg_state(states[[1]], runif(3)),
+    with_lecuyer_cmrg_state(states[[2]], runif(3))
+  ))
+})
+
+test_that("get_lecuyer_cmrg_stream_states return values state different sub-streams (snapshot)", {
+  states <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_stream_states(
+      seed = NULL,
+      nsim = 2L,
+      stream = 1L,
+      start_sim = 1L
+    )
+  )
+  expect_snapshot(with_lecuyer_cmrg_state(states[[1]], runif(3)))
+  expect_snapshot(with_lecuyer_cmrg_state(states[[2]], runif(3)))
+})
+
+test_that("get_lecuyer_cmrg_stream_state return values state different streams", {
+  s1 <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_stream_state(seed = NULL, stream = 1L, start_sim = 1L)
+  )
+  s2 <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_stream_state(seed = NULL, stream = 2L, start_sim = 1L)
+  )
+  expect_false(identical(
+    with_lecuyer_cmrg_state(s1, runif(3)),
+    with_lecuyer_cmrg_state(s2, runif(3))
+  ))
+})
+
+test_that("local_lecuyer_cmrg_state different states produce different outcomes", {
+  states <- withr::with_seed(
+    10,
+    get_lecuyer_cmrg_stream_states(
+      seed = NULL,
+      nsim = 2L,
+      stream = 1L,
+      start_sim = 1L
+    )
+  )
+  gen <- function(state) {
+    local_lecuyer_cmrg_state(state)
+    runif(3)
+  }
+  expect_false(identical(gen(states[[1]]), gen(states[[2]])))
 })
