@@ -15,9 +15,9 @@ library(tarchetypes)
 # Demonstrates the "downsized first call". To go larger, bump these and
 # re-run `targets::tar_make()`; per-task and per-sim pipelines retain
 # their cache for already-computed branches (see ../README.md).
-nsim  <- 4L              # KNOB: enlarge to 100, 1000, …
-nrow  <- c(5L, 10L)      # KNOB: more nrow values
-nboot <- 50L             # KNOB: 1000+ for production
+nsim <- 4L # KNOB: enlarge to 100, 1000, …
+nrow <- c(5L, 10L) # KNOB: more nrow values
+nboot <- 50L # KNOB: 1000+ for production
 # -------------------------------------------------------------------------
 
 tar_option_set(
@@ -33,10 +33,10 @@ list(
     scenario,
     ssdsims::ssd_sim_data2(
       ssddata::ccme_boron,
-      nsim  = nsim,
-      nrow  = nrow,
+      nsim = nsim,
+      nrow = nrow,
       nboot = nboot,
-      seed  = 42
+      seed = 42
     )
   ),
 

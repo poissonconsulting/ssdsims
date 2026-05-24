@@ -103,7 +103,9 @@ ssd_write_job_parquet <- function(job, path) {
   if (!file.exists(path) || file.size(path) == 0L) {
     stop(
       "duckplyr::df_to_parquet() produced a missing or zero-byte ",
-      "Parquet file at ", path, "."
+      "Parquet file at ",
+      path,
+      "."
     )
   }
   invisible(path)

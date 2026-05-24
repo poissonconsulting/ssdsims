@@ -27,16 +27,16 @@ rlang::check_installed(
 # _targets.R so the pipeline output and manual_small are directly
 # comparable.
 small_env <- list(
-  nsim  = 4L,
-  nrow  = c(5L, 10L),
+  nsim = 4L,
+  nrow = c(5L, 10L),
   nboot = 50L
 )
 
 # full_env is for the larger manual run — illustrates how the API
 # scales but does not feed the pipelines.
 full_env <- list(
-  nsim  = 12L,
-  nrow  = c(5L, 10L),
+  nsim = 12L,
+  nrow = c(5L, 10L),
   nboot = 50L
 )
 
@@ -70,10 +70,10 @@ run_pipeline <- function(granularity) {
 run_manual <- function(env) {
   scenario <- ssdsims::ssd_sim_data2(
     ssddata::ccme_boron,
-    nsim  = env$nsim,
-    nrow  = env$nrow,
+    nsim = env$nsim,
+    nrow = env$nrow,
     nboot = env$nboot,
-    seed  = 42
+    seed = 42
   )
   ssdsims::ssd_run_scenario2(scenario)
 }
@@ -97,7 +97,11 @@ names(pipeline_results) <- granularities
 message("\n========== Manual: small ==========")
 manual_small <- run_manual(small_env)
 for (g in granularities) {
-  compare(pipeline_results[[g]], manual_small, paste0("pipeline/", g, " vs manual_small"))
+  compare(
+    pipeline_results[[g]],
+    manual_small,
+    paste0("pipeline/", g, " vs manual_small")
+  )
 }
 
 message("\n========== Manual: full ==========")

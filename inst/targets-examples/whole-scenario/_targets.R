@@ -9,9 +9,9 @@
 library(targets)
 
 # --- knobs: edit these to change scenario size ---------------------------
-nsim  <- 4L              # KNOB: enlarge to 100, 1000, …
-nrow  <- c(5L, 10L)      # KNOB: more nrow values
-nboot <- 50L             # KNOB: 1000+ for production
+nsim <- 4L # KNOB: enlarge to 100, 1000, …
+nrow <- c(5L, 10L) # KNOB: more nrow values
+nboot <- 50L # KNOB: 1000+ for production
 # -------------------------------------------------------------------------
 
 tar_option_set(
