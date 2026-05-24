@@ -13,6 +13,9 @@
 
     Code
       ssd_fit_dists_sims(data)
+    Condition
+      Warning in `RNGkind()`:
+      '.Random.seed' is not an integer vector but of type 'NULL', so ignored
     Output
       # A tibble: 1 x 12
           sim stream  nrow args   data     rescale computable at_boundary_ok min_pmix
