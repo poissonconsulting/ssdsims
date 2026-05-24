@@ -21,7 +21,7 @@ restores the previous state. A \emph{state} is the full internal RNG state
 (as returned by \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}} or
 \code{get_lecuyer_cmrg_seed_stream()}); contrast with \code{\link[base:set.seed]{base::set.seed()}}
 which takes a scalar \emph{seed} (see \code{\link[=with_lecuyer_cmrg_seed]{with_lecuyer_cmrg_seed()}}). See
-\code{\link{ssdsims-glossary}} for the distinction.
+\code{GLOSSARY.md} for the distinction.
 }
 \examples{
 
@@ -32,6 +32,5 @@ state <- with_lecuyer_cmrg_seed(
 with_lecuyer_cmrg_state(state, runif(3))
 }
 \seealso{
-\code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}, \code{\link[=with_lecuyer_cmrg_seed]{with_lecuyer_cmrg_seed()}},
-\code{\link{ssdsims-glossary}}.
+\code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}, \code{\link[=with_lecuyer_cmrg_seed]{with_lecuyer_cmrg_seed()}}.
 }

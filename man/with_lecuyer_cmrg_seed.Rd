@@ -16,8 +16,8 @@ Evaluates \code{code} with the L'Ecuyer-CMRG RNG seeded with a scalar integer
 via \code{\link[base:set.seed]{base::set.seed()}}, then restores the previous state. For a
 \code{.Random.seed}-style state vector (e.g. from
 \code{get_lecuyer_cmrg_seed_stream()} or \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}) use
-\code{\link[=with_lecuyer_cmrg_state]{with_lecuyer_cmrg_state()}}. See \code{\link{ssdsims-glossary}} for the
-distinction between a \emph{seed} and a \emph{state}.
+\code{\link[=with_lecuyer_cmrg_state]{with_lecuyer_cmrg_state()}}. See \code{GLOSSARY.md} for the distinction
+between a \emph{seed} and a \emph{state}.
 }
 \examples{
 
@@ -27,5 +27,5 @@ with_lecuyer_cmrg_seed(42, {
 }
 \seealso{
 \code{\link[withr:with_seed]{withr::with_seed()}}, \code{\link[=with_lecuyer_cmrg_state]{with_lecuyer_cmrg_state()}},
-\code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}, \code{\link{ssdsims-glossary}}.
+\code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}.
 }

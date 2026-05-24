@@ -55,11 +55,11 @@ set_seed <- function(seed) {
 #' Seeds the L'Ecuyer-CMRG RNG with a scalar integer via [base::set.seed()].
 #' For a `.Random.seed`-style state vector (e.g. from
 #' `get_lecuyer_cmrg_seed_stream()` or [`parallel::nextRNGStream()`]) use
-#' [`local_lecuyer_cmrg_state()`]. See [`ssdsims-glossary`] for the
-#' distinction between a *seed* and a *state*.
+#' [`local_lecuyer_cmrg_state()`]. See `GLOSSARY.md` for the distinction
+#' between a *seed* and a *state*.
 #' @inheritParams withr::local_seed
 #' @seealso [`withr::local_seed()`], [`local_lecuyer_cmrg_state()`],
-#'   [`parallel::nextRNGStream()`], [`ssdsims-glossary`].
+#'   [`parallel::nextRNGStream()`].
 #' @export
 #' @examples
 #'
@@ -81,11 +81,11 @@ local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
 #' via [base::set.seed()], then restores the previous state. For a
 #' `.Random.seed`-style state vector (e.g. from
 #' `get_lecuyer_cmrg_seed_stream()` or [`parallel::nextRNGStream()`]) use
-#' [`with_lecuyer_cmrg_state()`]. See [`ssdsims-glossary`] for the
-#' distinction between a *seed* and a *state*.
+#' [`with_lecuyer_cmrg_state()`]. See `GLOSSARY.md` for the distinction
+#' between a *seed* and a *state*.
 #' @inheritParams withr::with_seed
 #' @seealso [`withr::with_seed()`], [`with_lecuyer_cmrg_state()`],
-#'   [`parallel::nextRNGStream()`], [`ssdsims-glossary`].
+#'   [`parallel::nextRNGStream()`].
 #' @export
 #' @examples
 #'
@@ -105,12 +105,11 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
 #' RNG state (as returned by [`parallel::nextRNGStream()`] or
 #' `get_lecuyer_cmrg_seed_stream()`); contrast with [base::set.seed()]
 #' which takes a scalar *seed* (see [`local_lecuyer_cmrg_seed()`]). See
-#' [`ssdsims-glossary`] for the distinction.
+#' `GLOSSARY.md` for the distinction.
 #' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
 #' @inheritParams withr::local_seed
 #' @return Invisibly returns `state`.
-#' @seealso [`parallel::nextRNGStream()`], [`local_lecuyer_cmrg_seed()`],
-#'   [`ssdsims-glossary`].
+#' @seealso [`parallel::nextRNGStream()`], [`local_lecuyer_cmrg_seed()`].
 #' @export
 #' @examples
 #'
@@ -141,12 +140,11 @@ local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
 #' (as returned by [`parallel::nextRNGStream()`] or
 #' `get_lecuyer_cmrg_seed_stream()`); contrast with [base::set.seed()]
 #' which takes a scalar *seed* (see [`with_lecuyer_cmrg_seed()`]). See
-#' [`ssdsims-glossary`] for the distinction.
+#' `GLOSSARY.md` for the distinction.
 #' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
 #' @inheritParams withr::with_seed
 #' @return The value of `code`.
-#' @seealso [`parallel::nextRNGStream()`], [`with_lecuyer_cmrg_seed()`],
-#'   [`ssdsims-glossary`].
+#' @seealso [`parallel::nextRNGStream()`], [`with_lecuyer_cmrg_seed()`].
 #' @export
 #' @examples
 #'
