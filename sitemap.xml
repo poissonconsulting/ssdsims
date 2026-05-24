@@ -1,6 +1,7 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://poissonconsulting.github.io/ssdsims/404.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/CONTRIBUTING.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/GLOSSARY.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/LICENSE-text.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/SUPPORT.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/authors.html</loc></url>
@@ -8,6 +9,7 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/news/index.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/index.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/params.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.html</loc></url>
@@ -15,5 +17,6 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssdsims-package.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_seed.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_state.html</loc></url>
 </urlset>
 

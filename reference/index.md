@@ -3,7 +3,9 @@
 ## All functions
 
 - [`local_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
-  : Local L'Euyer-CMRG Seed
+  : Local L'Ecuyer-CMRG Seed
+- [`local_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md)
+  : Local L'Ecuyer-CMRG State
 - [`ssd_fit_dists_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.md)
   : Fit SSD Distributions to Simulated Data
 - [`ssd_hc_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md)
@@ -14,4 +16,6 @@
 - [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
   : Generate Data for Simulations
 - [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_seed.md)
-  : With L'Euyer-CMRG Seed
+  : With L'Ecuyer-CMRG Seed
+- [`with_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_state.md)
+  : With L'Ecuyer-CMRG State
