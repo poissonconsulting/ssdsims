@@ -4,3 +4,5 @@ rlang::local_options(
   pillar.min_title_chars = 20,
   .frame = testthat::teardown_env()
 )
+
+RNGkind("L'Ecuyer-CMRG")
