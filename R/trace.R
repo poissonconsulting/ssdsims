@@ -12,6 +12,24 @@ trace_enabled <- function() {
   isTRUE(getOption("ssdsims.trace", FALSE))
 }
 
+# Walk back through sys.calls() and return "basename(file):line" for the
+# most recent call site whose source is *outside* this trace.R file.
+# Returns "" if no usable srcref is available.
+trace_caller_loc <- function() {
+  calls <- sys.calls()
+  for (i in seq.int(length(calls), 1L)) {
+    src <- attr(calls[[i]], "srcref")
+    if (is.null(src)) next
+    sf <- attr(src, "srcfile")
+    if (is.null(sf)) next
+    file <- sf$filename
+    if (is.null(file) || !nzchar(file)) next
+    if (grepl("(^|/)trace\\.R$", file)) next
+    return(sprintf("%s:%d", basename(file), src[1L]))
+  }
+  ""
+}
+
 trace_state_hash <- function(state) {
   if (is.null(state)) {
     return("NULL")
@@ -49,6 +67,12 @@ trace_msg <- function(tag, ...) {
     return(invisible(NULL))
   }
   args <- list(...)
+  loc <- trace_caller_loc()
+  prefix <- if (nzchar(loc)) {
+    sprintf("[ssdsims %s]", loc)
+  } else {
+    "[ssdsims]"
+  }
   if (length(args)) {
     nms <- names(args)
     if (is.null(nms)) {
@@ -62,9 +86,9 @@ trace_msg <- function(tag, ...) {
       },
       character(1)
     )
-    message(sprintf("[ssdsims] %-20s %s", tag, paste(parts, collapse = " ")))
+    message(sprintf("%s %-20s %s", prefix, tag, paste(parts, collapse = " ")))
   } else {
-    message(sprintf("[ssdsims] %s", tag))
+    message(sprintf("%s %s", prefix, tag))
   }
   invisible(NULL)
 }
