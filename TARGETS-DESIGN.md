@@ -409,35 +409,38 @@ unchanged.
 
 ## 6. Target graph (small example)
 
-Concrete pipeline for a small scenario (`nsim = 4`, `nrow = c(5, 10)`,
-`nboot = c(10, 50)`, two datasets). Each of the three steps fans out
-according to **its own grid** (§5). For this scenario:
+Concrete pipeline matching `scripts/example-expanded-grids.R`:
+`nsim = 2L`, `nrow = c(5L, 10L)`, `rescale = c(FALSE, TRUE)`,
+`est_method = c("arithmetic", "multi")`, `nboot = 10`, single
+dataset (`ssddata::ccme_boron`). Each of the three steps fans out
+according to **its own grid** (§5):
 
 ```
-   data grid:  2 dataset · 4 sim · 2 nrow                    = 16 rows
-   fit  grid:  data grid · 1 (fit-arg defaults)              = 16 rows
-   hc   grid:  fit  grid · 2 nboot · 1 est_method            = 32 rows
+   data grid:  1 dataset · 2 sim · 2 nrow                     =  4 rows
+   fit  grid:  data grid · 2 rescale                          =  8 rows
+   hc   grid:  fit  grid · 1 nboot · 2 est_method             = 16 rows
 ```
 
-Each step writes a Parquet file per branch so the data, fit, and hc
-layers are independently queryable for analysis without re-running
-upstream steps.
+The script verifies this fan-out byte-for-byte against
+`ssd_run_scenario(seed = 42L, ...)`. Each step writes a Parquet
+file per branch so the data, fit, and hc layers are independently
+queryable for analysis without re-running upstream steps.
 
 ```
    scenario   (declarative; carries root_state)
        │
-       ├──▶ data_tasks  (16 rows, carries .state_data, data_id)
+       ├──▶ data_tasks  ( 4 rows, carries .state_data, data_id)
        │         │
        │         ▼  tar_group_by(data_id), pattern = map(data_groups)
        │     data_job   ──▶ results/data/<data_id>.parquet
        │
-       ├──▶ fit_tasks   (16 rows, carries .state_fit, data_id, fit_id)
+       ├──▶ fit_tasks   ( 8 rows, carries .state_fit, data_id, fit_id)
        │         │
        │         ▼  tar_group_by(fit_id), pattern = map(fit_groups)
        │     fit_job    ──▶ results/fit/<fit_id>.parquet
        │                 reads results/data/<data_id>.parquet by path
        │
-       └──▶ hc_tasks    (32 rows, carries .state_hc, fit_id, hc_id)
+       └──▶ hc_tasks    (16 rows, carries .state_hc, fit_id, hc_id)
                  │
                  ▼  tar_group_by(hc_id), pattern = map(hc_groups)
              hc_job     ──▶ results/hc/<hc_id>.parquet
@@ -451,8 +454,8 @@ The link between layers is by **content-addressed path**, not by a
 single shared dynamic-branch index — each task row carries its
 upstream IDs (`fit_tasks$data_id`, `hc_tasks$fit_id`) and the body
 opens the right upstream Parquet by that ID. This is what lets
-tweaking `dists` re-run fits without re-running data (the fit task
-row's `data_id` is unchanged).
+tweaking `rescale` re-run fits + hc without re-running data (the
+fit task row's `data_id` is unchanged).
 
 `_targets.R` sketch:
 
@@ -460,10 +463,13 @@ row's `data_id` is unchanged).
 list(
   tar_target(scenario,
     ssd_scenario(
-      list(boron   = ssddata::ccme_boron,
-           cadmium = ssddata::ccme_cadmium),
-      nsim = 4L, nrow = c(5L, 10L), nboot = c(10L, 50L),
-      seed = 42)),
+      ssddata::ccme_boron,
+      nsim = 2L,
+      nrow = c(5L, 10L),
+      rescale = c(FALSE, TRUE),
+      est_method = c("arithmetic", "multi"),
+      nboot = 10,
+      seed = 42L)),
 
   # Three separate task tables, one per grid (§5).
   tar_target(data_tasks, ssd_scenario_data_tasks(scenario)),
@@ -518,19 +524,21 @@ sprintf("%s.parquet", fit_groups$data_id[1]))`. `targets` tracks the
 *directory* by hash of all file names it contains, so adding new data
 branches does not invalidate existing fit branches.
 
-**Dependencies and what re-runs on a knob change:**
+**Dependencies and what re-runs on a knob change** (applied to the
+4/8/16 grid above):
 
-| Knob change             | data_job          | fit_job        | hc_job         | summary |
-| ----------------------- | ----------------- | -------------- | -------------- | ------- |
-| dataset appended (§1.1) | new branches only | new only       | new only       | re-run  |
-| `nrow` value added      | new branches only | new only       | new only       | re-run  |
-| `nsim` grows            | new branches only | new only       | new only       | re-run  |
-| `dists`                 | cached            | re-run all     | re-run all     | re-run  |
-| `nboot` added           | cached            | cached         | new only       | re-run  |
-| `est_method` added      | cached            | cached         | new only       | re-run  |
-| `ci_method` / `parametric` added | cached   | cached         | new only       | re-run  |
-| `seed`                  | re-run all        | re-run all     | re-run all     | re-run  |
-| dataset *renamed*       | re-run all        | re-run all     | re-run all     | re-run  |
+| Knob change                       | data_job (4)        | fit_job (8)         | hc_job (16)         | summary |
+| --------------------------------- | ------------------- | ------------------- | ------------------- | ------- |
+| dataset appended (§1.1)           | new branches only   | new only            | new only            | re-run  |
+| `nrow` value added                | new branches only   | new only            | new only            | re-run  |
+| `nsim` grows                      | new branches only   | new only            | new only            | re-run  |
+| `dists`                           | cached              | re-run all 8        | re-run all 16       | re-run  |
+| `rescale` value added             | cached              | new branches only   | new only            | re-run  |
+| `nboot` added                     | cached              | cached              | new only            | re-run  |
+| `est_method` value added          | cached              | cached              | new only            | re-run  |
+| `ci_method` / `parametric` added  | cached              | cached              | new only            | re-run  |
+| `seed`                            | re-run all 4        | re-run all 8        | re-run all 16      | re-run  |
+| dataset *renamed* (no alias, §8)  | re-run all          | re-run all          | re-run all          | re-run  |
 
 Three steps as three targets is what makes this matrix possible: the
 existing per-task design (data + fit + hc in one branch) cannot cache
@@ -542,10 +550,10 @@ After `tar_make()`, the three step layers are queryable independently
 via duckplyr without going through `targets`:
 
 ```r
-duckplyr::df_from_parquet("results/data/*.parquet") |>
+duckplyr::read_parquet_duckdb("results/data/*.parquet") |>
   dplyr::filter(nrow == 10L) |> dplyr::collect()
-duckplyr::df_from_parquet("results/fit/*.parquet")  |> ...
-duckplyr::df_from_parquet("results/hc/*.parquet")   |> ...
+duckplyr::read_parquet_duckdb("results/fit/*.parquet")  |> ...
+duckplyr::read_parquet_duckdb("results/hc/*.parquet")   |> ...
 ```
 
 A child scenario (§8) only needs `results/hc/` *plus* the parent's
