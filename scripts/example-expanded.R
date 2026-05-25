@@ -18,11 +18,10 @@
 ## `model` slot of a `fitdists` holds a C++ external pointer that
 ## `identical()` cannot meaningfully compare across two calls.
 ##
-## A single per-sim `state_list`, populated via
-## `get_lecuyer_cmrg_stream_states(seed, nsim, ...)`, is shared by
-## data, fit and hc. This matches the current package behaviour
-## where all three stages for a given `sim` start from the same
-## L'Ecuyer-CMRG sub-stream. See
+## `state_list` is the unnamed length-2 list returned directly by
+## `get_lecuyer_cmrg_stream_states()` and is accessed by index:
+## `state_list[[s]]` for sim `s`. Sub-streams are shared across data,
+## fit and hc -- the current package behaviour. See
 ## scripts/example-expanded-grids-independent.R for the alternative
 ## design where each call gets its own sub-stream.
 
@@ -49,16 +48,15 @@ reference <- ssd_run_scenario(
   .progress = FALSE
 )
 
-# --- Expansion: one substream per sim, populated in one call --------
+# --- Expansion: 2 substreams populated in one call ------------------
 RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
 set.seed(seed_val)
-states <- ssdsims:::get_lecuyer_cmrg_stream_states(
+state_list <- ssdsims:::get_lecuyer_cmrg_stream_states(
   seed = seed_val,
   nsim = 2L,
   stream = stream_val,
   start_sim = 1L
 )
-state_list <- list(s1 = states[[1L]], s2 = states[[2L]])
 
 # --- Stage 1: data slices via slice_sample_state() ------------------
 data_list <- list(
@@ -66,61 +64,61 @@ data_list <- list(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
-    state = state_list$s1
+    state = state_list[[1L]]
   ),
   s1_n6 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 6L,
     replace = FALSE,
-    state = state_list$s1
+    state = state_list[[1L]]
   ),
   s1_n10 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 10L,
     replace = FALSE,
-    state = state_list$s1
+    state = state_list[[1L]]
   ),
   s1_n20 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 20L,
     replace = FALSE,
-    state = state_list$s1
+    state = state_list[[1L]]
   ),
   s1_n50 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 50L,
     replace = FALSE,
-    state = state_list$s1
+    state = state_list[[1L]]
   ),
   s2_n5 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
-    state = state_list$s2
+    state = state_list[[2L]]
   ),
   s2_n6 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 6L,
     replace = FALSE,
-    state = state_list$s2
+    state = state_list[[2L]]
   ),
   s2_n10 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 10L,
     replace = FALSE,
-    state = state_list$s2
+    state = state_list[[2L]]
   ),
   s2_n20 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 20L,
     replace = FALSE,
-    state = state_list$s2
+    state = state_list[[2L]]
   ),
   s2_n50 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 50L,
     replace = FALSE,
-    state = state_list$s2
+    state = state_list[[2L]]
   )
 )
 
@@ -128,7 +126,7 @@ data_list <- list(
 fit_list <- list(
   s1_n5 = ssdsims:::fit_dists_state(
     data_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -140,7 +138,7 @@ fit_list <- list(
   ),
   s1_n6 = ssdsims:::fit_dists_state(
     data_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -152,7 +150,7 @@ fit_list <- list(
   ),
   s1_n10 = ssdsims:::fit_dists_state(
     data_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -164,7 +162,7 @@ fit_list <- list(
   ),
   s1_n20 = ssdsims:::fit_dists_state(
     data_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -176,7 +174,7 @@ fit_list <- list(
   ),
   s1_n50 = ssdsims:::fit_dists_state(
     data_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -188,7 +186,7 @@ fit_list <- list(
   ),
   s2_n5 = ssdsims:::fit_dists_state(
     data_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -200,7 +198,7 @@ fit_list <- list(
   ),
   s2_n6 = ssdsims:::fit_dists_state(
     data_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -212,7 +210,7 @@ fit_list <- list(
   ),
   s2_n10 = ssdsims:::fit_dists_state(
     data_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -224,7 +222,7 @@ fit_list <- list(
   ),
   s2_n20 = ssdsims:::fit_dists_state(
     data_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -236,7 +234,7 @@ fit_list <- list(
   ),
   s2_n50 = ssdsims:::fit_dists_state(
     data_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -254,7 +252,7 @@ fit_list <- list(
 hc_list <- list(
   s1_n5_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -267,7 +265,7 @@ hc_list <- list(
   ),
   s1_n5_nb1_geometric = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -280,7 +278,7 @@ hc_list <- list(
   ),
   s1_n5_nb1_multi = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -293,7 +291,7 @@ hc_list <- list(
   ),
   s1_n5_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -306,7 +304,7 @@ hc_list <- list(
   ),
   s1_n5_nb5_geometric = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -319,7 +317,7 @@ hc_list <- list(
   ),
   s1_n5_nb5_multi = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -332,7 +330,7 @@ hc_list <- list(
   ),
   s1_n5_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -345,7 +343,7 @@ hc_list <- list(
   ),
   s1_n5_nb10_geometric = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -358,7 +356,7 @@ hc_list <- list(
   ),
   s1_n5_nb10_multi = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -371,7 +369,7 @@ hc_list <- list(
   ),
   s1_n5_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -384,7 +382,7 @@ hc_list <- list(
   ),
   s1_n5_nb50_geometric = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -397,7 +395,7 @@ hc_list <- list(
   ),
   s1_n5_nb50_multi = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -410,7 +408,7 @@ hc_list <- list(
   ),
   s1_n5_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -423,7 +421,7 @@ hc_list <- list(
   ),
   s1_n5_nb100_geometric = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -436,7 +434,7 @@ hc_list <- list(
   ),
   s1_n5_nb100_multi = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -449,7 +447,7 @@ hc_list <- list(
   ),
   s1_n5_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -462,7 +460,7 @@ hc_list <- list(
   ),
   s1_n5_nb500_geometric = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -475,7 +473,7 @@ hc_list <- list(
   ),
   s1_n5_nb500_multi = ssdsims:::hc_state(
     fit_list$s1_n5,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -488,7 +486,7 @@ hc_list <- list(
   ),
   s1_n6_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -501,7 +499,7 @@ hc_list <- list(
   ),
   s1_n6_nb1_geometric = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -514,7 +512,7 @@ hc_list <- list(
   ),
   s1_n6_nb1_multi = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -527,7 +525,7 @@ hc_list <- list(
   ),
   s1_n6_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -540,7 +538,7 @@ hc_list <- list(
   ),
   s1_n6_nb5_geometric = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -553,7 +551,7 @@ hc_list <- list(
   ),
   s1_n6_nb5_multi = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -566,7 +564,7 @@ hc_list <- list(
   ),
   s1_n6_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -579,7 +577,7 @@ hc_list <- list(
   ),
   s1_n6_nb10_geometric = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -592,7 +590,7 @@ hc_list <- list(
   ),
   s1_n6_nb10_multi = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -605,7 +603,7 @@ hc_list <- list(
   ),
   s1_n6_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -618,7 +616,7 @@ hc_list <- list(
   ),
   s1_n6_nb50_geometric = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -631,7 +629,7 @@ hc_list <- list(
   ),
   s1_n6_nb50_multi = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -644,7 +642,7 @@ hc_list <- list(
   ),
   s1_n6_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -657,7 +655,7 @@ hc_list <- list(
   ),
   s1_n6_nb100_geometric = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -670,7 +668,7 @@ hc_list <- list(
   ),
   s1_n6_nb100_multi = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -683,7 +681,7 @@ hc_list <- list(
   ),
   s1_n6_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -696,7 +694,7 @@ hc_list <- list(
   ),
   s1_n6_nb500_geometric = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -709,7 +707,7 @@ hc_list <- list(
   ),
   s1_n6_nb500_multi = ssdsims:::hc_state(
     fit_list$s1_n6,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -722,7 +720,7 @@ hc_list <- list(
   ),
   s1_n10_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -735,7 +733,7 @@ hc_list <- list(
   ),
   s1_n10_nb1_geometric = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -748,7 +746,7 @@ hc_list <- list(
   ),
   s1_n10_nb1_multi = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -761,7 +759,7 @@ hc_list <- list(
   ),
   s1_n10_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -774,7 +772,7 @@ hc_list <- list(
   ),
   s1_n10_nb5_geometric = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -787,7 +785,7 @@ hc_list <- list(
   ),
   s1_n10_nb5_multi = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -800,7 +798,7 @@ hc_list <- list(
   ),
   s1_n10_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -813,7 +811,7 @@ hc_list <- list(
   ),
   s1_n10_nb10_geometric = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -826,7 +824,7 @@ hc_list <- list(
   ),
   s1_n10_nb10_multi = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -839,7 +837,7 @@ hc_list <- list(
   ),
   s1_n10_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -852,7 +850,7 @@ hc_list <- list(
   ),
   s1_n10_nb50_geometric = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -865,7 +863,7 @@ hc_list <- list(
   ),
   s1_n10_nb50_multi = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -878,7 +876,7 @@ hc_list <- list(
   ),
   s1_n10_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -891,7 +889,7 @@ hc_list <- list(
   ),
   s1_n10_nb100_geometric = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -904,7 +902,7 @@ hc_list <- list(
   ),
   s1_n10_nb100_multi = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -917,7 +915,7 @@ hc_list <- list(
   ),
   s1_n10_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -930,7 +928,7 @@ hc_list <- list(
   ),
   s1_n10_nb500_geometric = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -943,7 +941,7 @@ hc_list <- list(
   ),
   s1_n10_nb500_multi = ssdsims:::hc_state(
     fit_list$s1_n10,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -956,7 +954,7 @@ hc_list <- list(
   ),
   s1_n20_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -969,7 +967,7 @@ hc_list <- list(
   ),
   s1_n20_nb1_geometric = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -982,7 +980,7 @@ hc_list <- list(
   ),
   s1_n20_nb1_multi = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -995,7 +993,7 @@ hc_list <- list(
   ),
   s1_n20_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1008,7 +1006,7 @@ hc_list <- list(
   ),
   s1_n20_nb5_geometric = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1021,7 +1019,7 @@ hc_list <- list(
   ),
   s1_n20_nb5_multi = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1034,7 +1032,7 @@ hc_list <- list(
   ),
   s1_n20_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1047,7 +1045,7 @@ hc_list <- list(
   ),
   s1_n20_nb10_geometric = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1060,7 +1058,7 @@ hc_list <- list(
   ),
   s1_n20_nb10_multi = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1073,7 +1071,7 @@ hc_list <- list(
   ),
   s1_n20_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1086,7 +1084,7 @@ hc_list <- list(
   ),
   s1_n20_nb50_geometric = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1099,7 +1097,7 @@ hc_list <- list(
   ),
   s1_n20_nb50_multi = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1112,7 +1110,7 @@ hc_list <- list(
   ),
   s1_n20_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1125,7 +1123,7 @@ hc_list <- list(
   ),
   s1_n20_nb100_geometric = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1138,7 +1136,7 @@ hc_list <- list(
   ),
   s1_n20_nb100_multi = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1151,7 +1149,7 @@ hc_list <- list(
   ),
   s1_n20_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1164,7 +1162,7 @@ hc_list <- list(
   ),
   s1_n20_nb500_geometric = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1177,7 +1175,7 @@ hc_list <- list(
   ),
   s1_n20_nb500_multi = ssdsims:::hc_state(
     fit_list$s1_n20,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1190,7 +1188,7 @@ hc_list <- list(
   ),
   s1_n50_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1203,7 +1201,7 @@ hc_list <- list(
   ),
   s1_n50_nb1_geometric = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1216,7 +1214,7 @@ hc_list <- list(
   ),
   s1_n50_nb1_multi = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1229,7 +1227,7 @@ hc_list <- list(
   ),
   s1_n50_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1242,7 +1240,7 @@ hc_list <- list(
   ),
   s1_n50_nb5_geometric = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1255,7 +1253,7 @@ hc_list <- list(
   ),
   s1_n50_nb5_multi = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1268,7 +1266,7 @@ hc_list <- list(
   ),
   s1_n50_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1281,7 +1279,7 @@ hc_list <- list(
   ),
   s1_n50_nb10_geometric = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1294,7 +1292,7 @@ hc_list <- list(
   ),
   s1_n50_nb10_multi = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1307,7 +1305,7 @@ hc_list <- list(
   ),
   s1_n50_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1320,7 +1318,7 @@ hc_list <- list(
   ),
   s1_n50_nb50_geometric = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1333,7 +1331,7 @@ hc_list <- list(
   ),
   s1_n50_nb50_multi = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1346,7 +1344,7 @@ hc_list <- list(
   ),
   s1_n50_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1359,7 +1357,7 @@ hc_list <- list(
   ),
   s1_n50_nb100_geometric = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1372,7 +1370,7 @@ hc_list <- list(
   ),
   s1_n50_nb100_multi = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1385,7 +1383,7 @@ hc_list <- list(
   ),
   s1_n50_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1398,7 +1396,7 @@ hc_list <- list(
   ),
   s1_n50_nb500_geometric = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1411,7 +1409,7 @@ hc_list <- list(
   ),
   s1_n50_nb500_multi = ssdsims:::hc_state(
     fit_list$s1_n50,
-    state = state_list$s1,
+    state = state_list[[1L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1424,7 +1422,7 @@ hc_list <- list(
   ),
   s2_n5_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1437,7 +1435,7 @@ hc_list <- list(
   ),
   s2_n5_nb1_geometric = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1450,7 +1448,7 @@ hc_list <- list(
   ),
   s2_n5_nb1_multi = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1463,7 +1461,7 @@ hc_list <- list(
   ),
   s2_n5_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1476,7 +1474,7 @@ hc_list <- list(
   ),
   s2_n5_nb5_geometric = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1489,7 +1487,7 @@ hc_list <- list(
   ),
   s2_n5_nb5_multi = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1502,7 +1500,7 @@ hc_list <- list(
   ),
   s2_n5_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1515,7 +1513,7 @@ hc_list <- list(
   ),
   s2_n5_nb10_geometric = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1528,7 +1526,7 @@ hc_list <- list(
   ),
   s2_n5_nb10_multi = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1541,7 +1539,7 @@ hc_list <- list(
   ),
   s2_n5_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1554,7 +1552,7 @@ hc_list <- list(
   ),
   s2_n5_nb50_geometric = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1567,7 +1565,7 @@ hc_list <- list(
   ),
   s2_n5_nb50_multi = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1580,7 +1578,7 @@ hc_list <- list(
   ),
   s2_n5_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1593,7 +1591,7 @@ hc_list <- list(
   ),
   s2_n5_nb100_geometric = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1606,7 +1604,7 @@ hc_list <- list(
   ),
   s2_n5_nb100_multi = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1619,7 +1617,7 @@ hc_list <- list(
   ),
   s2_n5_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1632,7 +1630,7 @@ hc_list <- list(
   ),
   s2_n5_nb500_geometric = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1645,7 +1643,7 @@ hc_list <- list(
   ),
   s2_n5_nb500_multi = ssdsims:::hc_state(
     fit_list$s2_n5,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1658,7 +1656,7 @@ hc_list <- list(
   ),
   s2_n6_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1671,7 +1669,7 @@ hc_list <- list(
   ),
   s2_n6_nb1_geometric = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1684,7 +1682,7 @@ hc_list <- list(
   ),
   s2_n6_nb1_multi = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1697,7 +1695,7 @@ hc_list <- list(
   ),
   s2_n6_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1710,7 +1708,7 @@ hc_list <- list(
   ),
   s2_n6_nb5_geometric = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1723,7 +1721,7 @@ hc_list <- list(
   ),
   s2_n6_nb5_multi = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1736,7 +1734,7 @@ hc_list <- list(
   ),
   s2_n6_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1749,7 +1747,7 @@ hc_list <- list(
   ),
   s2_n6_nb10_geometric = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1762,7 +1760,7 @@ hc_list <- list(
   ),
   s2_n6_nb10_multi = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1775,7 +1773,7 @@ hc_list <- list(
   ),
   s2_n6_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1788,7 +1786,7 @@ hc_list <- list(
   ),
   s2_n6_nb50_geometric = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1801,7 +1799,7 @@ hc_list <- list(
   ),
   s2_n6_nb50_multi = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1814,7 +1812,7 @@ hc_list <- list(
   ),
   s2_n6_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1827,7 +1825,7 @@ hc_list <- list(
   ),
   s2_n6_nb100_geometric = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1840,7 +1838,7 @@ hc_list <- list(
   ),
   s2_n6_nb100_multi = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1853,7 +1851,7 @@ hc_list <- list(
   ),
   s2_n6_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1866,7 +1864,7 @@ hc_list <- list(
   ),
   s2_n6_nb500_geometric = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1879,7 +1877,7 @@ hc_list <- list(
   ),
   s2_n6_nb500_multi = ssdsims:::hc_state(
     fit_list$s2_n6,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1892,7 +1890,7 @@ hc_list <- list(
   ),
   s2_n10_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1905,7 +1903,7 @@ hc_list <- list(
   ),
   s2_n10_nb1_geometric = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1918,7 +1916,7 @@ hc_list <- list(
   ),
   s2_n10_nb1_multi = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1931,7 +1929,7 @@ hc_list <- list(
   ),
   s2_n10_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1944,7 +1942,7 @@ hc_list <- list(
   ),
   s2_n10_nb5_geometric = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1957,7 +1955,7 @@ hc_list <- list(
   ),
   s2_n10_nb5_multi = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -1970,7 +1968,7 @@ hc_list <- list(
   ),
   s2_n10_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -1983,7 +1981,7 @@ hc_list <- list(
   ),
   s2_n10_nb10_geometric = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -1996,7 +1994,7 @@ hc_list <- list(
   ),
   s2_n10_nb10_multi = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2009,7 +2007,7 @@ hc_list <- list(
   ),
   s2_n10_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2022,7 +2020,7 @@ hc_list <- list(
   ),
   s2_n10_nb50_geometric = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2035,7 +2033,7 @@ hc_list <- list(
   ),
   s2_n10_nb50_multi = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2048,7 +2046,7 @@ hc_list <- list(
   ),
   s2_n10_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2061,7 +2059,7 @@ hc_list <- list(
   ),
   s2_n10_nb100_geometric = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2074,7 +2072,7 @@ hc_list <- list(
   ),
   s2_n10_nb100_multi = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2087,7 +2085,7 @@ hc_list <- list(
   ),
   s2_n10_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2100,7 +2098,7 @@ hc_list <- list(
   ),
   s2_n10_nb500_geometric = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2113,7 +2111,7 @@ hc_list <- list(
   ),
   s2_n10_nb500_multi = ssdsims:::hc_state(
     fit_list$s2_n10,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2126,7 +2124,7 @@ hc_list <- list(
   ),
   s2_n20_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2139,7 +2137,7 @@ hc_list <- list(
   ),
   s2_n20_nb1_geometric = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2152,7 +2150,7 @@ hc_list <- list(
   ),
   s2_n20_nb1_multi = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2165,7 +2163,7 @@ hc_list <- list(
   ),
   s2_n20_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2178,7 +2176,7 @@ hc_list <- list(
   ),
   s2_n20_nb5_geometric = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2191,7 +2189,7 @@ hc_list <- list(
   ),
   s2_n20_nb5_multi = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2204,7 +2202,7 @@ hc_list <- list(
   ),
   s2_n20_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2217,7 +2215,7 @@ hc_list <- list(
   ),
   s2_n20_nb10_geometric = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2230,7 +2228,7 @@ hc_list <- list(
   ),
   s2_n20_nb10_multi = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2243,7 +2241,7 @@ hc_list <- list(
   ),
   s2_n20_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2256,7 +2254,7 @@ hc_list <- list(
   ),
   s2_n20_nb50_geometric = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2269,7 +2267,7 @@ hc_list <- list(
   ),
   s2_n20_nb50_multi = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2282,7 +2280,7 @@ hc_list <- list(
   ),
   s2_n20_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2295,7 +2293,7 @@ hc_list <- list(
   ),
   s2_n20_nb100_geometric = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2308,7 +2306,7 @@ hc_list <- list(
   ),
   s2_n20_nb100_multi = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2321,7 +2319,7 @@ hc_list <- list(
   ),
   s2_n20_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2334,7 +2332,7 @@ hc_list <- list(
   ),
   s2_n20_nb500_geometric = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2347,7 +2345,7 @@ hc_list <- list(
   ),
   s2_n20_nb500_multi = ssdsims:::hc_state(
     fit_list$s2_n20,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2360,7 +2358,7 @@ hc_list <- list(
   ),
   s2_n50_nb1_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2373,7 +2371,7 @@ hc_list <- list(
   ),
   s2_n50_nb1_geometric = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2386,7 +2384,7 @@ hc_list <- list(
   ),
   s2_n50_nb1_multi = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 1,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2399,7 +2397,7 @@ hc_list <- list(
   ),
   s2_n50_nb5_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2412,7 +2410,7 @@ hc_list <- list(
   ),
   s2_n50_nb5_geometric = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2425,7 +2423,7 @@ hc_list <- list(
   ),
   s2_n50_nb5_multi = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 5,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2438,7 +2436,7 @@ hc_list <- list(
   ),
   s2_n50_nb10_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2451,7 +2449,7 @@ hc_list <- list(
   ),
   s2_n50_nb10_geometric = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2464,7 +2462,7 @@ hc_list <- list(
   ),
   s2_n50_nb10_multi = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2477,7 +2475,7 @@ hc_list <- list(
   ),
   s2_n50_nb50_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2490,7 +2488,7 @@ hc_list <- list(
   ),
   s2_n50_nb50_geometric = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2503,7 +2501,7 @@ hc_list <- list(
   ),
   s2_n50_nb50_multi = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2516,7 +2514,7 @@ hc_list <- list(
   ),
   s2_n50_nb100_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2529,7 +2527,7 @@ hc_list <- list(
   ),
   s2_n50_nb100_geometric = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2542,7 +2540,7 @@ hc_list <- list(
   ),
   s2_n50_nb100_multi = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 100,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2555,7 +2553,7 @@ hc_list <- list(
   ),
   s2_n50_nb500_arithmetic = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
@@ -2568,7 +2566,7 @@ hc_list <- list(
   ),
   s2_n50_nb500_geometric = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "geometric",
     ci_method = "weighted_samples",
@@ -2581,7 +2579,7 @@ hc_list <- list(
   ),
   s2_n50_nb500_multi = ssdsims:::hc_state(
     fit_list$s2_n50,
-    state = state_list$s2,
+    state = state_list[[2L]],
     nboot = 500,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2641,33 +2639,32 @@ reference3 <- ssd_run_scenario(
 
 RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
 set.seed(seed_val)
-states3 <- ssdsims:::get_lecuyer_cmrg_stream_states(
+state_list3 <- ssdsims:::get_lecuyer_cmrg_stream_states(
   seed = seed_val,
   nsim = 2L,
   stream = stream_val,
   start_sim = 1L
 )
-state_list3 <- list(s1 = states3[[1L]], s2 = states3[[2L]])
 
 data_list3 <- list(
   s1 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
-    state = state_list3$s1
+    state = state_list3[[1L]]
   ),
   s2 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
-    state = state_list3$s2
+    state = state_list3[[2L]]
   )
 )
 
 fit_list3 <- list(
   s1_rF = ssdsims:::fit_dists_state(
     data_list3$s1,
-    state = state_list3$s1,
+    state = state_list3[[1L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -2679,7 +2676,7 @@ fit_list3 <- list(
   ),
   s1_rT = ssdsims:::fit_dists_state(
     data_list3$s1,
-    state = state_list3$s1,
+    state = state_list3[[1L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = TRUE,
     computable = FALSE,
@@ -2691,7 +2688,7 @@ fit_list3 <- list(
   ),
   s2_rF = ssdsims:::fit_dists_state(
     data_list3$s2,
-    state = state_list3$s2,
+    state = state_list3[[2L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -2703,7 +2700,7 @@ fit_list3 <- list(
   ),
   s2_rT = ssdsims:::fit_dists_state(
     data_list3$s2,
-    state = state_list3$s2,
+    state = state_list3[[2L]],
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = TRUE,
     computable = FALSE,
@@ -2718,7 +2715,7 @@ fit_list3 <- list(
 hc_list3 <- list(
   s1_rF_nb10 = ssdsims:::hc_state(
     fit_list3$s1_rF,
-    state = state_list3$s1,
+    state = state_list3[[1L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2731,7 +2728,7 @@ hc_list3 <- list(
   ),
   s1_rF_nb50 = ssdsims:::hc_state(
     fit_list3$s1_rF,
-    state = state_list3$s1,
+    state = state_list3[[1L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2744,7 +2741,7 @@ hc_list3 <- list(
   ),
   s1_rT_nb10 = ssdsims:::hc_state(
     fit_list3$s1_rT,
-    state = state_list3$s1,
+    state = state_list3[[1L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2757,7 +2754,7 @@ hc_list3 <- list(
   ),
   s1_rT_nb50 = ssdsims:::hc_state(
     fit_list3$s1_rT,
-    state = state_list3$s1,
+    state = state_list3[[1L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2770,7 +2767,7 @@ hc_list3 <- list(
   ),
   s2_rF_nb10 = ssdsims:::hc_state(
     fit_list3$s2_rF,
-    state = state_list3$s2,
+    state = state_list3[[2L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2783,7 +2780,7 @@ hc_list3 <- list(
   ),
   s2_rF_nb50 = ssdsims:::hc_state(
     fit_list3$s2_rF,
-    state = state_list3$s2,
+    state = state_list3[[2L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2796,7 +2793,7 @@ hc_list3 <- list(
   ),
   s2_rT_nb10 = ssdsims:::hc_state(
     fit_list3$s2_rT,
-    state = state_list3$s2,
+    state = state_list3[[2L]],
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
@@ -2809,7 +2806,7 @@ hc_list3 <- list(
   ),
   s2_rT_nb50 = ssdsims:::hc_state(
     fit_list3$s2_rT,
-    state = state_list3$s2,
+    state = state_list3[[2L]],
     nboot = 50,
     est_method = "multi",
     ci_method = "weighted_samples",
