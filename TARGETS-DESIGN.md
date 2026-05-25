@@ -115,9 +115,14 @@ This makes "extend by adding a dataset" the cheap extension path:
                                                 3·N_child
 ```
 
-Renaming or reordering existing datasets is *not* cache-preserving —
-the canonical order shifts and every downstream sub-stream
-re-assigns. Names are part of the scenario's content hash.
+Renaming or reordering existing datasets is *not* cache-preserving
+**at the scenario level** — the canonical order shifts and every
+downstream sub-stream re-assigns. Names are part of the scenario's
+content hash. The dag-of-dags extension primitive (§8) recovers
+cache hits across a rename or reorder by carrying an explicit
+`parent_alias` from new dataset names to parent dataset names; the
+parent's Parquets are then re-attributed (not re-computed) under
+the new labels.
 
 ---
 
@@ -126,8 +131,7 @@ re-assigns. Names are part of the scenario's content hash.
 The current per-row helpers (`fit_dists_seed()`, `hc_seed()`) call
 `get_lecuyer_cmrg_stream_state(seed, stream, start_sim = k)`, which
 advances `k − 1` sub-streams from the root state on every call.
-Across all rows in a stage this is **O(nsim²)**; across the three
-stages, **O(3 · nsim²)**.
+Across all rows in a stage this is **O(nsim²)**.
 
 The sub-stream lattice is computed **once, on demand**. It does not
 matter whether that happens at scenario construction, at the first
@@ -769,13 +773,14 @@ is recomputed.
                                                   (set difference)
 ```
 
-Three common shapes are particular cases of the same primitive:
+Four common shapes are particular cases of the same primitive:
 
 | Shape                               | `child.desired_grid`                | Missing tasks         | Sub-streams for missing tasks  |
 | ----------------------------------- | ----------------------------------- | --------------------- | ------------------------------ |
 | Append a dataset (§1.1, principal)  | parent ∪ {new dataset's tasks}      | new dataset's tasks   | fresh, from `parent.end_state` |
 | Grow `nsim`                         | parent ∪ {extra sim rows}           | extra sim rows        | fresh, from `parent.end_state` |
 | Re-run after a code fix (post-§7)   | parent's grid (unchanged)           | parent's failed IDs   | same as parent attempted       |
+| Rename / reorder datasets (§1.1)    | parent's grid with renamed labels   | ∅ (all aliased)       | none — pure re-attribution     |
 
 In all three the mechanism is identical:
 
@@ -833,25 +838,52 @@ In all three the mechanism is identical:
 The merge sits *downstream of all child targets*; the child writes
 only what is missing.
 
-**Why "re-run after a code fix" is not a third primitive.** When the
-parent's `desired_grid` equals the child's `desired_grid` (the user
-isn't adding tasks, just filling gaps), `desired \ completed` is the
-set of failed IDs. The same set-difference machinery — driven by
-`completed_ids` on the manifest — selects which tasks to run. The
-state-only primitives (§7) are pure in `(data, state, params)`, so
-re-running a failed ID under patched code with the same sub-stream
-gives the deliberate fix-only delta. If the fix changes behaviour
-*only* inside the previously-failing case, the surviving N−k
-Parquets would have been byte-identical under the new code; if it
-changes behaviour everywhere, the union is intentionally
-heterogeneous and the user owns that. Either way, no separate
-primitive is needed.
+**Why "re-run after a code fix" is not a separate primitive.** When
+the parent's `desired_grid` equals the child's `desired_grid` (the
+user isn't adding tasks, just filling gaps), `desired \ completed`
+is the set of failed IDs. The same set-difference machinery —
+driven by `completed_ids` on the manifest — selects which tasks to
+run. The state-only primitives (§7) are pure in `(data, state,
+params)`, so re-running a failed ID under patched code with the
+same sub-stream gives the deliberate fix-only delta. If the fix
+changes behaviour *only* inside the previously-failing case, the
+surviving N−k Parquets would have been byte-identical under the new
+code; if it changes behaviour everywhere, the union is intentionally
+heterogeneous and the user owns that.
+
+**Renaming / reordering datasets via `parent_alias`.** §1.1 noted
+that renaming a dataset (`boron → b`) shifts the scenario's content
+hash and would invalidate every Parquet — *at the scenario level*.
+The dag-of-dags primitive recovers full cache via an explicit
+mapping carried on the child:
+
+```r
+ssd_scenario(
+  list(b = ccme_boron, cd = ccme_cadmium),
+  parent       = "../parent",
+  parent_alias = c(b = "boron", cd = "cadmium"),
+  …
+)
+```
+
+`parent_alias` is applied *before* the set-difference: a child task
+identifier `<dataset = "b", sim, nrow, …>` is treated as completed
+iff the parent has a completed `<dataset = "boron", sim, nrow, …>`.
+The child's `summary` target unions the two result directories with
+the alias mapping; the cluster does **not** re-run the renamed
+tasks. Sub-streams: none allocated — the operation is pure
+re-attribution of existing Parquets under new labels. The same
+machinery handles reordering (the alias is the identity but
+participates in the canonical-order lookup) and column-name
+adjustments that don't change underlying data.
 
 **Manifest requirement.** The parent's manifest carries:
 - `root_state` and `end_state` (length-7 integers, §2).
 - `desired_grid_digest` (hash of parent's full intended task grid).
 - `completed_ids`: which IDs have Parquets on disk and are trusted.
 - `completed_hashes`: per-id sha256 of the local Parquet at write time (§7).
+- `dataset_names`: parent's dataset labels, so a child's
+  `parent_alias` can be validated against them.
 
 Without `completed_ids`, the child cannot distinguish "absent because
 the run hasn't reached this task yet" from "absent because the
