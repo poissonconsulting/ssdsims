@@ -18,6 +18,38 @@ do_call_seed <- function(what, args, seed) {
   })
 }
 
+fit_dists_state <- function(
+  data,
+  state,
+  dists,
+  rescale,
+  computable,
+  at_boundary_ok,
+  min_pmix,
+  range_shape1,
+  range_shape2,
+  silent,
+  ...
+) {
+  trace_msg("fit_dists_state", state = state)
+  with_lecuyer_cmrg_state(state, {
+    fit <- ssdtools::ssd_fit_dists(
+      data,
+      dists = dists,
+      rescale = rescale,
+      computable = computable,
+      at_boundary_ok = at_boundary_ok,
+      min_pmix = min_pmix(nrow(data)),
+      range_shape1 = range_shape1,
+      range_shape2 = range_shape2,
+      silent = silent,
+      nrow = 5L,
+      ...
+    )
+  })
+  fit
+}
+
 fit_dists_seed <- function(
   data,
   sim,
@@ -45,24 +77,53 @@ fit_dists_seed <- function(
     seed = seed,
     state = state
   )
+  fit_dists_state(
+    data = data,
+    state = state,
+    dists = dists,
+    rescale = rescale,
+    computable = computable,
+    at_boundary_ok = at_boundary_ok,
+    min_pmix = min_pmix,
+    range_shape1 = range_shape1,
+    range_shape2 = range_shape2,
+    silent = silent,
+    ...
+  )
+}
 
-  ## TODO: handle failure of all model to fit!!
+hc_state <- function(
+  data,
+  state,
+  nboot,
+  est_method,
+  ci_method,
+  proportion,
+  ci,
+  parametric,
+  save_to,
+  ...
+) {
+  trace_msg(
+    "hc_state",
+    nboot = nboot,
+    ci = ci,
+    state = state
+  )
   with_lecuyer_cmrg_state(state, {
-    fit <- ssdtools::ssd_fit_dists(
+    hc <- ssdtools::ssd_hc(
       data,
-      dists = dists,
-      rescale = rescale,
-      computable = computable,
-      at_boundary_ok = at_boundary_ok,
-      min_pmix = min_pmix(nrow(data)),
-      range_shape1 = range_shape1,
-      range_shape2 = range_shape2,
-      silent = silent,
-      nrow = 5L,
+      proportion = proportion,
+      ci = ci,
+      nboot = nboot,
+      est_method = est_method,
+      ci_method = ci_method,
+      parametric = parametric,
+      min_pboot = 0,
       ...
     )
   })
-  fit
+  dplyr::select(hc, !c("nboot", "est_method", "ci_method"))
 }
 
 hc_seed <- function(
@@ -93,21 +154,18 @@ hc_seed <- function(
     ci = ci,
     state = state
   )
-  ## TODO: handle failures
-  with_lecuyer_cmrg_state(state, {
-    hc <- ssdtools::ssd_hc(
-      data,
-      proportion = proportion,
-      ci = ci,
-      nboot = nboot,
-      est_method = est_method,
-      ci_method = ci_method,
-      parametric = parametric,
-      min_pboot = 0,
-      ...
-    )
-  })
-  dplyr::select(hc, !c("nboot", "est_method", "ci_method"))
+  hc_state(
+    data = data,
+    state = state,
+    nboot = nboot,
+    est_method = est_method,
+    ci_method = ci_method,
+    proportion = proportion,
+    ci = ci,
+    parametric = parametric,
+    save_to = save_to,
+    ...
+  )
 }
 
 run_scenario <- function(

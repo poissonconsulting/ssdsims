@@ -2,7 +2,9 @@
 ##
 ## Companion to scripts/example-expanded.R, downsized to make each of
 ## the three steps fan out to a different size -- a four-eight-sixteen
-## cascade keyed by sim, nrow, rescale, est_method:
+## cascade keyed by sim, nrow, rescale, est_method. Built only from the
+## state-only primitives `slice_sample_state()`, `fit_dists_state()`
+## and `hc_state()`:
 ##
 ##   data: 2 sim * 2 nrow                                    = 4
 ##   fit:  data * 2 rescale                                  = 8
@@ -17,7 +19,9 @@
 ##
 ## `nrow = c(5L, 10L)` makes `ssd_sim_data.data.frame` take the slow
 ## path, so the data states are derived with `seed = NULL` from the
-## pre-set global RNG (kind + .Random.seed).
+## pre-set global RNG; fit and hc states use `seed = seed_val` (the
+## outer seed is propagated to `fit_dists_seed`/`hc_seed` but NOT to
+## the recursive data calls).
 
 library(ssdsims)
 
@@ -48,7 +52,7 @@ reference <- ssd_run_scenario(
 RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
 set.seed(seed_val)
 
-state_list <- list(
+state_data_list <- list(
   s1 = ssdsims:::get_lecuyer_cmrg_stream_state(
     seed = NULL,
     stream = stream_val,
@@ -61,41 +65,52 @@ state_list <- list(
   )
 )
 
+state_fith_list <- list(
+  s1 = ssdsims:::get_lecuyer_cmrg_stream_state(
+    seed = seed_val,
+    stream = stream_val,
+    start_sim = 1L
+  ),
+  s2 = ssdsims:::get_lecuyer_cmrg_stream_state(
+    seed = seed_val,
+    stream = stream_val,
+    start_sim = 2L
+  )
+)
+
 # --- Stage 1: data slices (2 sim * 2 nrow = 4) ----------------------
 data_list <- list(
   s1_n5 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
-    state = state_list$s1
+    state = state_data_list$s1
   ),
   s1_n10 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 10L,
     replace = FALSE,
-    state = state_list$s1
+    state = state_data_list$s1
   ),
   s2_n5 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
-    state = state_list$s2
+    state = state_data_list$s2
   ),
   s2_n10 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 10L,
     replace = FALSE,
-    state = state_list$s2
+    state = state_data_list$s2
   )
 )
 
 # --- Stage 2: fits (data * rescale = 4 * 2 = 8) ---------------------
 fit_list <- list(
-  s1_n5_rF = ssdsims:::fit_dists_seed(
+  s1_n5_rF = ssdsims:::fit_dists_state(
     data_list$s1_n5,
-    sim = 1L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s1,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -105,11 +120,9 @@ fit_list <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s1_n5_rT = ssdsims:::fit_dists_seed(
+  s1_n5_rT = ssdsims:::fit_dists_state(
     data_list$s1_n5,
-    sim = 1L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s1,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = TRUE,
     computable = FALSE,
@@ -119,11 +132,9 @@ fit_list <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s1_n10_rF = ssdsims:::fit_dists_seed(
+  s1_n10_rF = ssdsims:::fit_dists_state(
     data_list$s1_n10,
-    sim = 1L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s1,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -133,11 +144,9 @@ fit_list <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s1_n10_rT = ssdsims:::fit_dists_seed(
+  s1_n10_rT = ssdsims:::fit_dists_state(
     data_list$s1_n10,
-    sim = 1L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s1,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = TRUE,
     computable = FALSE,
@@ -147,11 +156,9 @@ fit_list <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s2_n5_rF = ssdsims:::fit_dists_seed(
+  s2_n5_rF = ssdsims:::fit_dists_state(
     data_list$s2_n5,
-    sim = 2L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s2,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -161,11 +168,9 @@ fit_list <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s2_n5_rT = ssdsims:::fit_dists_seed(
+  s2_n5_rT = ssdsims:::fit_dists_state(
     data_list$s2_n5,
-    sim = 2L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s2,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = TRUE,
     computable = FALSE,
@@ -175,11 +180,9 @@ fit_list <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s2_n10_rF = ssdsims:::fit_dists_seed(
+  s2_n10_rF = ssdsims:::fit_dists_state(
     data_list$s2_n10,
-    sim = 2L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s2,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = FALSE,
     computable = FALSE,
@@ -189,11 +192,9 @@ fit_list <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s2_n10_rT = ssdsims:::fit_dists_seed(
+  s2_n10_rT = ssdsims:::fit_dists_state(
     data_list$s2_n10,
-    sim = 2L,
-    stream = stream_val,
-    seed = seed_val,
+    state = state_fith_list$s2,
     dists = ssdtools::ssd_dists_bcanz(),
     rescale = TRUE,
     computable = FALSE,
@@ -207,14 +208,12 @@ fit_list <- list(
 
 # --- Stage 3: hc (fit * est_method = 8 * 2 = 16) --------------------
 hc_list <- list(
-  s1_n5_rF_arith = ssdsims:::hc_seed(
+  s1_n5_rF_arith = ssdsims:::hc_state(
     fit_list$s1_n5_rF,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -222,14 +221,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n5_rF_multi = ssdsims:::hc_seed(
+  s1_n5_rF_multi = ssdsims:::hc_state(
     fit_list$s1_n5_rF,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -237,14 +234,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n5_rT_arith = ssdsims:::hc_seed(
+  s1_n5_rT_arith = ssdsims:::hc_state(
     fit_list$s1_n5_rT,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -252,14 +247,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n5_rT_multi = ssdsims:::hc_seed(
+  s1_n5_rT_multi = ssdsims:::hc_state(
     fit_list$s1_n5_rT,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -267,14 +260,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n10_rF_arith = ssdsims:::hc_seed(
+  s1_n10_rF_arith = ssdsims:::hc_state(
     fit_list$s1_n10_rF,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -282,14 +273,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n10_rF_multi = ssdsims:::hc_seed(
+  s1_n10_rF_multi = ssdsims:::hc_state(
     fit_list$s1_n10_rF,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -297,14 +286,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n10_rT_arith = ssdsims:::hc_seed(
+  s1_n10_rT_arith = ssdsims:::hc_state(
     fit_list$s1_n10_rT,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -312,14 +299,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n10_rT_multi = ssdsims:::hc_seed(
+  s1_n10_rT_multi = ssdsims:::hc_state(
     fit_list$s1_n10_rT,
-    sim = 1L,
-    stream = stream_val,
+    state = state_fith_list$s1,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -327,14 +312,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n5_rF_arith = ssdsims:::hc_seed(
+  s2_n5_rF_arith = ssdsims:::hc_state(
     fit_list$s2_n5_rF,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -342,14 +325,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n5_rF_multi = ssdsims:::hc_seed(
+  s2_n5_rF_multi = ssdsims:::hc_state(
     fit_list$s2_n5_rF,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -357,14 +338,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n5_rT_arith = ssdsims:::hc_seed(
+  s2_n5_rT_arith = ssdsims:::hc_state(
     fit_list$s2_n5_rT,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -372,14 +351,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n5_rT_multi = ssdsims:::hc_seed(
+  s2_n5_rT_multi = ssdsims:::hc_state(
     fit_list$s2_n5_rT,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -387,14 +364,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n10_rF_arith = ssdsims:::hc_seed(
+  s2_n10_rF_arith = ssdsims:::hc_state(
     fit_list$s2_n10_rF,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -402,14 +377,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n10_rF_multi = ssdsims:::hc_seed(
+  s2_n10_rF_multi = ssdsims:::hc_state(
     fit_list$s2_n10_rF,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -417,14 +390,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n10_rT_arith = ssdsims:::hc_seed(
+  s2_n10_rT_arith = ssdsims:::hc_state(
     fit_list$s2_n10_rT,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "arithmetic",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
@@ -432,14 +403,12 @@ hc_list <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n10_rT_multi = ssdsims:::hc_seed(
+  s2_n10_rT_multi = ssdsims:::hc_state(
     fit_list$s2_n10_rT,
-    sim = 2L,
-    stream = stream_val,
+    state = state_fith_list$s2,
     nboot = 10,
     est_method = "multi",
     ci_method = "weighted_samples",
-    seed = seed_val,
     proportion = 0.05,
     ci = FALSE,
     parametric = TRUE,
