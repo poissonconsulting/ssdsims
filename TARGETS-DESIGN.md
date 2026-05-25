@@ -22,15 +22,15 @@ ssdsims_scenario
 ├── master_state   ← length-7 L'Ecuyer-CMRG integer vector;
 │                    the sub-stream root this scenario advances from
 │                    (NOT a scalar seed — see §2)
-├── nsim           ← number of replicate sims in this scenario
-├── generator      ← data.frame | function | fitdists
+├── nsim           ← number of replicate sims per dataset
+├── generator      ← named list of data.frames (§1.1)  | function | fitdists
 ├── fit            ← list of ssd_fit_dists() argument vectors
 ├── hc             ← list of ssd_hc() argument vectors
 └── parent         ← NULL, or a previous ssdsims_scenario / results path
                      this scenario extends (§6)
 ```
 
-Three design points distinguish this from the current code:
+Four design points distinguish this from the current code:
 
 1. **`master_state`, not `seed`.** The scenario stores the
    *post-`set.seed` post-`RNGkind` L'Ecuyer-CMRG state*, not the integer
@@ -44,7 +44,15 @@ Three design points distinguish this from the current code:
    any scenario primitive; the stream axis is kept available for
    future applications (e.g. statistically independent batch axes
    layered on top of scenarios).
-3. **`parent`.** A scenario can point at an upstream scenario it
+3. **List of data.frames as the principal generator.** The data
+   generator is a **named list** of data.frames; a bare data.frame is
+   silently lifted to a length-1 list (named `"data"` by default).
+   Each dataset is its own cross-join axis, so a scenario with three
+   datasets and `nsim = 100` materializes `3 × 100 × |nrow| × …`
+   tasks. The `function` and `fitdists` generators remain supported
+   but are secondary; the list-of-data.frames path is the one §5 and
+   §6 exercise.
+4. **`parent`.** A scenario can point at an upstream scenario it
    extends. Extension always advances on the sub-stream axis (§6):
 
 ```
@@ -56,6 +64,44 @@ Three design points distinguish this from the current code:
             where M_next is the first sub-stream past
             v1's last consumed sub-stream (§6).
 ```
+
+### 1.1 List-of-data.frames generator
+
+```
+   generator = list(
+     boron     = ssddata::ccme_boron,
+     cadmium   = ssddata::ccme_cadmium,
+     chloride  = ssddata::ccme_chloride
+   )
+```
+
+Canonical task ordering puts the **dataset name as the outermost
+axis**, then `sim`, then the remaining cross-join axes
+(`nrow`, `dist_sim`, `nboot`, `est_method`, `ci_method`, …) in a
+fixed lexicographic order:
+
+```
+   (dataset, sim, nrow, dist_sim, ci_method, …)
+       ↑
+       outermost = adding a new dataset only appends tasks at the end,
+                   so existing tasks keep their sub-stream assignments
+                   and stay cached.
+```
+
+This makes "extend by adding a dataset" the cheap extension path:
+
+```
+   parent: generator = list(boron, cadmium)
+                       N_parent tasks consume sub-streams 1 … 3·N_parent
+   child:  generator = list(boron, cadmium, chloride)  ← appended
+           parent's tasks unchanged (same sub-streams)
+           child's new tasks consume sub-streams 3·N_parent + 1 …
+                                                3·N_child
+```
+
+Renaming or reordering existing datasets is *not* cache-preserving —
+the canonical order shifts and every downstream sub-stream
+re-assigns. Names are part of the scenario's content hash.
 
 ---
 
@@ -204,8 +250,8 @@ content, RNG, and result schema are scenario-defined.
 ## 5. Target graph (small example)
 
 Concrete pipeline for a small scenario (`nsim = 4`, `nrow = c(5, 10)`,
-`nboot = 50`, `ssddata::ccme_boron`). **Each of the three steps is its
-own dynamic-branched target**, mapped lockstep with `task_groups`. Each
+`nboot = 50`, two datasets). **Each of the three steps is its own
+dynamic-branched target**, mapped lockstep with `task_groups`. Each
 step writes a Parquet file per branch so the data, fit, and hc layers
 are independently queryable for analysis without re-running upstream
 steps.
@@ -241,9 +287,11 @@ steps.
 ```r
 list(
   tar_target(scenario,
-    ssd_scenario(ssddata::ccme_boron,
-                 nsim = 4L, nrow = c(5L, 10L), nboot = 50L,
-                 seed = 42)),
+    ssd_scenario(
+      list(boron   = ssddata::ccme_boron,
+           cadmium = ssddata::ccme_cadmium),
+      nsim = 4L, nrow = c(5L, 10L), nboot = 50L,
+      seed = 42)),
 
   tar_target(tasks, ssd_scenario_tasks(scenario)),
 
@@ -290,13 +338,15 @@ Returning that path makes the target a `format = "file"` target —
 
 **Dependencies and what re-runs on a knob change:**
 
-| Knob change           | data_job          | fit_job   | hc_job    | summary  |
-| --------------------- | ----------------- | --------- | --------- | -------- |
-| `nrow` value added    | new branches only | new only  | new only  | re-run   |
-| `nsim` grows          | new branches only | new only  | new only  | re-run   |
-| `dists`               | cached            | re-run    | re-run    | re-run   |
-| `nboot` / `ci_method` | cached            | cached    | re-run    | re-run   |
-| `seed`                | re-run all        | re-run all| re-run all| re-run   |
+| Knob change             | data_job          | fit_job    | hc_job     | summary |
+| ----------------------- | ----------------- | ---------- | ---------- | ------- |
+| dataset appended (§1.1) | new branches only | new only   | new only   | re-run  |
+| `nrow` value added      | new branches only | new only   | new only   | re-run  |
+| `nsim` grows            | new branches only | new only   | new only   | re-run  |
+| `dists`                 | cached            | re-run     | re-run     | re-run  |
+| `nboot` / `ci_method`   | cached            | cached     | re-run     | re-run  |
+| `seed`                  | re-run all        | re-run all | re-run all | re-run  |
+| dataset *renamed*       | re-run all        | re-run all | re-run all | re-run  |
 
 Three steps as three targets is what makes this matrix possible: the
 existing per-task design (data + fit + hc in one branch) cannot cache
@@ -324,7 +374,16 @@ A child scenario (§6) only needs `results/hc/` *plus* the parent's
 Extension is always on the sub-stream axis. The parent's run emits an
 **end_state**: the L'Ecuyer-CMRG sub-stream that comes immediately
 after the parent consumed its last task's `.state_hc`. The child uses
-this as its `master_state`:
+this as its `master_state`. Two extension modes share the same
+mechanism:
+
+- **Append a dataset** (the principal mode, §1.1). The child's
+  generator list extends the parent's; the child's task grid
+  contains only the new dataset's tasks.
+- **Grow `nsim`.** The child reuses the parent's generator but
+  declares additional sims.
+
+Both produce the same picture:
 
 ```
    parent run                                child run
@@ -398,6 +457,7 @@ PASS on R 4.5).
 | `stream` axis conflated with extension axis      | §1, §6 — extension lives on sub-streams only; the stream axis is reserved.                  |
 | Three steps cached as one (no per-step re-runs)  | §5 — data/fit/hc each become their own target with their own Parquet layer.                 |
 | data/fit/hc states collided in PoC               | §2 — strided enumeration: each task takes three consecutive sub-streams, no overlap.        |
+| Single-dataset scenarios only                    | §1.1 — generator is a named list of data.frames; datasets are the outermost cross-join.     |
 
 The RNGkind side-effect bug and the independent data/fit/hc substreams
 are assumed already merged from the PoC and are not re-derived here.
@@ -418,15 +478,20 @@ are assumed already merged from the PoC and are not re-derived here.
    within one sim see the same initial state. Is that comparability
    wanted, or is full per-task independence the new contract?
 3. **Canonical task ordering.** Sub-stream assignment depends on row
-   order in `ssd_scenario_tasks(scenario)`. The ordering rule must be
-   stable across R sessions and platforms (e.g. lexicographic over
-   `(sim, nrow, dist_sim, ci_method, ...)` with explicit collation).
-   Should the order be documented as part of the public contract, or
-   only the *content* (hash of the unordered task set) be stable?
-4. **Child cache stability.** Re-running the child unchanged should be
+   order in `ssd_scenario_tasks(scenario)`. The proposed order is
+   `(dataset, sim, nrow, dist_sim, ci_method, …)` with `dataset`
+   outermost so appended datasets keep existing cache. Should this
+   ordering be documented as part of the public contract, or only the
+   *content* (hash of the unordered task set) be stable?
+4. **Dataset identity.** Datasets are keyed by **name**, not by
+   `digest::digest(df)`, so two scenarios that point at semantically
+   identical but separately-loaded data.frames under the same name
+   collide. Should the name + a content hash both participate in the
+   task ID, or only the name?
+5. **Child cache stability.** Re-running the child unchanged should be
    a full cache hit, but the child also reads the parent's Parquet —
    does `targets` track those files as dependencies, and is their
    hash stable across hosts (mtime, path)?
-5. **Toy pipeline shape.** Ship a single
+6. **Toy pipeline shape.** Ship a single
    `inst/targets-templates/cluster/` that the LLM-authoring prompt
    edits, or only documentation pointing at `crew.cluster` examples?
