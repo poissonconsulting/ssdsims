@@ -147,20 +147,18 @@ data, fit and hc have different grids).
 
 ```
    root_state          (length-7 L'Ecuyer state)
-      │
-      ▼  one sub-stream advance per row, by canonical task order
+       │
+       ▼  one sub-stream advance per row, by canonical task order
    ┌──────────────────────────────────────────────────────────────────┐
-   │ data grid:   data[1]  ─sub─▶  data[2]  ─sub─▶ … ─sub─▶  data[|D|]│
-   │                                              │                   │
-   │ fit  grid:   fit[1]  ─sub─▶ … ─sub─▶  fit[|F|]                    │
-   │                                              │                   │
-   │ hc   grid:   hc[1]  ─sub─▶ … ─sub─▶  hc[|H|]                     │
-   └────────────────────────────────────┬─────────────────────────────┘
-                                        │ next sub-stream after hc[|H|]
-                                        ▼
-                              end_state  ← persisted on the scenario's
-                                            output manifest (§8);
-                                            child's root_state = end_state.
+   │  data grid:  data[1] ─sub─▶ data[2] ─sub─▶ … ─sub─▶ data[|D|]    │
+   │  fit  grid:  fit[1]  ─sub─▶ fit[2]  ─sub─▶ … ─sub─▶ fit[|F|]     │
+   │  hc   grid:  hc[1]   ─sub─▶ hc[2]   ─sub─▶ … ─sub─▶ hc[|H|]      │
+   └──────────────────────────────────────┬───────────────────────────┘
+                                          │ next sub-stream after hc[|H|]
+                                          ▼
+                              end_state  ──▶  persisted on the scenario's
+                                              output manifest (§8);
+                                              child's root_state = end_state.
 ```
 
 For the 16-fan-out example in
@@ -209,69 +207,81 @@ declarative — it does **not** expand the task grid. Expansion is
 (local) or by the `tasks` target in the cluster pipeline (§4).
 
 ```
-   ssd_scenario(...) ──▶ ssdsims_scenario  (declarative; carries root_state)
-                                │
-                                ▼
-                       ssd_scenario_tasks(scenario)
-                                │
-                                ▼
-                       one row per task (carries .state_data/fit/hc)
-                                │
-            ┌───────────────────┼─────────────────────┐
-            ▼                                         ▼
-   ssd_run_scenario(scenario)              tar_target(tasks, ssd_scenario_tasks(scenario))
-   sequential or in-process parallel       feeds `targets` (§4)
+   ssd_scenario(...) ──▶ ssdsims_scenario   (declarative; carries root_state)
+                              │
+                              ▼
+                     ssd_scenario_tasks(scenario)
+                              │
+                              ▼
+                     three task tables (data_tasks, fit_tasks, hc_tasks),
+                     each row carrying one length-7 .state column
+                              │
+            ┌─────────────────┴─────────────────┐
+            ▼                                   ▼
+   ssd_run_scenario(scenario)         tar_target(...) feeds the
+   sequential or in-process parallel  cluster pipeline (§4)
 ```
 
 ---
 
 ## 4. From local to a cluster
 
-The scenario object is unchanged. What changes is how tasks fan out.
-Three artifacts are involved:
+The scenario object is unchanged. **Three ingredients come together**
+to produce the cluster pipeline; none of them is downstream of the
+others — they're equal inputs that get assembled into the final
+`_targets.R`:
 
 ```
-   ┌─────────────────────────────────────────────────────────────────┐
-   │ A. <existing pipeline targeting cluster X>                       │
-   │    Published targets+crew pipeline (e.g. another lab's repo).    │
-   │    Source of the _targets.R skeleton:                            │
-   │      • controller construction                                   │
-   │      • tar_option_set / resources                                │
-   │      • results layout / merge target                             │
-   └─────────────────────────────────────────────────────────────────┘
-                                  │ lift skeleton, drop body
+   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+   │ A. Example       │  │ B. Toy pipeline  │  │ C. Working       │
+   │    pipeline for  │  │    for our       │  │    scenario      │
+   │    another       │  │    target        │  │    object        │
+   │    cluster       │  │    cluster       │  │                  │
+   └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+            │                     │                     │
+            └─────────────────────┼─────────────────────┘
+                                  │ assemble
                                   ▼
-   ┌─────────────────────────────────────────────────────────────────┐
-   │ B. Toy pipeline for the target cluster (LLM-assisted)            │
-   │    One trivial target through crew.cluster::crew_controller_slurm│
-   │    (or equivalent for the target scheduler).                     │
-   │    Drafted by prompting Claude Code with:                        │
-   │      1. the cluster's submission docs / sbatch template          │
-   │      2. the skeleton from A                                      │
-   │      3. "make tar_make() submit one job and return Sys.info()"   │
-   │    Iterate until one branch completes on a real submitted job.   │
-   │    Goal: prove queue + scratch + module load + R version work.   │
-   └─────────────────────────────────────────────────────────────────┘
-                                  │ swap body for ssd_run_job(tasks, scenario)
-                                  ▼
-   ┌─────────────────────────────────────────────────────────────────┐
-   │ C. ssdsims _targets.R for the target cluster                     │
-   │    scenario  ──▶  tasks  ──▶  tar_group_by(task_id)              │
-   │                                       │                          │
-   │                                       ▼                          │
-   │                               pattern = map(task_groups)         │
-   │                                       │                          │
-   │                                       ▼                          │
-   │                            crew.cluster::crew_controller_slurm() │
-   │                                       │                          │
-   │                                       ▼                          │
-   │                            one Slurm job per task group,         │
-   │                            one Parquet per job                   │
-   └─────────────────────────────────────────────────────────────────┘
+              ┌───────────────────────────────────────┐
+              │ ssdsims _targets.R for our cluster    │
+              │                                       │
+              │   scenario ─▶ tasks ─▶ task_groups    │
+              │                            │          │
+              │                            ▼          │
+              │                pattern = map(...) on  │
+              │             crew_controller_slurm()   │
+              │                            │          │
+              │                            ▼          │
+              │              one Slurm job per group, │
+              │              one Parquet per job      │
+              └───────────────────────────────────────┘
 ```
 
-Only the controller and resource specs change between clusters. Task
-content, RNG, and result schema are scenario-defined.
+The three ingredients are **equally important** and gathered in
+parallel; none is downstream of the others. Roles:
+
+- **A — example pipeline for another cluster** contributes the
+  *shape* of `_targets.R`: how a `crew` controller is constructed,
+  how dynamic branching is wired, where results land, where the
+  merge target sits. Lifted as a skeleton, not as content.
+  Source: another lab's published targets+crew repo.
+
+- **B — toy pipeline for our target cluster** contributes the
+  *backend*: a `crew.cluster::crew_controller_slurm()` (or
+  equivalent for the actual scheduler) configured with the right
+  queue, module loads, and scratch paths. Drafted with LLM help and
+  validated by submitting one trivial job end-to-end **before any
+  ssdsims logic is involved** — proves the cluster wiring works.
+
+- **C — working scenario object** contributes the *content*:
+  `root_state`, generator, fit/hc argument vectors, optional
+  `upload` (§6.1), optional `parent` (§8). Already exercised
+  locally with `ssd_run_scenario()` (§3) so the only remaining
+  unknown when assembling the three is the cluster wiring itself.
+
+Only the controller and resource specs (from B) change between
+clusters. Pipeline shape (from A) and task content + RNG (from C)
+are scheduler-independent.
 
 ---
 
@@ -690,16 +700,16 @@ convenience for inline scripting.
 ### What makes this work
 
 ```
-   ┌──────────────────────────────────────────────────────────────┐
-   │  task row + upstream Parquet = complete reproducer            │
-   │  ──────────────────────────────────────────────────           │
-   │  state    length-7 integer; survives saveRDS / rsync / git   │
-   │  upstream one Parquet per branch; content-addressed; tools-  │
-   │            agnostic (DuckDB, Python, R)                       │
-   │  params   scalars on the task row                             │
-   │  primitive `*_state()` takes (data, state, ...args); no       │
-   │            hidden dependency on targets or the orchestrator   │
-   └──────────────────────────────────────────────────────────────┘
+   ┌───────────────────────────────────────────────────────────────────┐
+   │  task row + upstream Parquet = complete reproducer                │
+   │  ───────────────────────────────────────────────────              │
+   │  state      length-7 integer; survives saveRDS / rsync / git      │
+   │  upstream   one Parquet per branch; content-addressed; tooling-   │
+   │             agnostic (DuckDB, Python, R)                          │
+   │  params     scalars on the task row                               │
+   │  primitive  `*_state()` takes (data, state, ...args); no hidden   │
+   │             dependency on targets or the orchestrator             │
+   └───────────────────────────────────────────────────────────────────┘
 ```
 
 `tarchetypes` is just the orchestrator. Removing it from the
@@ -794,23 +804,25 @@ In all three the mechanism is identical:
 
 ```
    parent
-   ┌───────────────────────────────┐
-   │ desired_grid:    N rows       │
-   │ completed_grid:  N-k Parquets │
-   │ root_state, end_state on the manifest
-   └──────────────┬────────────────┘
-                  │ parent = path / scenario object
-                  ▼
-   child (some N' rows of desired_grid)
-        ─ if id ∈ parent.desired_grid: re-use parent's sub-stream
-                                       (by canonical content-addressed allocation)
-        ─ else: allocate from parent.end_state onward
-                                       (preserves §2's linear cost)
-                  │
-                  ▼
+   ┌────────────────────────────────────────────┐
+   │ desired_grid:     N rows                   │
+   │ completed_grid:   N-k Parquets             │
+   │ manifest carries  root_state, end_state    │
+   └─────────────────────┬──────────────────────┘
+                         │ parent = path / scenario object
+                         ▼
+   child  (some N' rows of desired_grid)
+       ─ if id ∈ parent.desired_grid:
+             re-use parent's sub-stream
+             (by canonical content-addressed allocation)
+       ─ else:
+             allocate from parent.end_state onward
+             (preserves §2's linear cost)
+                         │
+                         ▼
    child runs (desired ∩ ¬completed); writes those Parquets only.
-                  │
-                  ▼
+                         │
+                         ▼
    summary unions BOTH result dirs via duckplyr.
 ```
 
