@@ -1,4 +1,10 @@
 slice_sample_state <- function(data, n, replace, state) {
+  trace_msg(
+    "slice_sample_state",
+    n = n,
+    replace = replace,
+    state = state
+  )
   with_lecuyer_cmrg_state(state, {
     data |>
       dplyr::slice_sample(n = n, replace = replace)
@@ -6,6 +12,7 @@ slice_sample_state <- function(data, n, replace, state) {
 }
 
 do_call_seed <- function(what, args, seed) {
+  trace_msg("do_call_seed", seed = seed)
   with_lecuyer_cmrg_seed(seed, {
     do.call(what, args = args)
   })
@@ -30,6 +37,13 @@ fit_dists_seed <- function(
     seed = seed,
     start_sim = sim,
     stream = stream
+  )
+  trace_msg(
+    "fit_dists_seed",
+    sim = sim,
+    stream = stream,
+    seed = seed,
+    state = state
   )
 
   ## TODO: handle failure of all model to fit!!
@@ -69,6 +83,15 @@ hc_seed <- function(
     seed = seed,
     start_sim = sim,
     stream = stream
+  )
+  trace_msg(
+    "hc_seed",
+    sim = sim,
+    stream = stream,
+    seed = seed,
+    nboot = nboot,
+    ci = ci,
+    state = state
   )
   ## TODO: handle failures
   with_lecuyer_cmrg_state(state, {

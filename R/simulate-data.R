@@ -45,6 +45,17 @@ ssd_sim_data.data.frame <- function(
   chk::chk_whole_number(stream)
   chk::chk_gt(stream)
 
+  trace_msg(
+    "ssd_sim_data.df",
+    nsim = nsim,
+    nrow = nrow,
+    replace = replace,
+    start_sim = start_sim,
+    stream = stream,
+    seed = seed
+  )
+  trace_rng_kind()
+
   sims <- sim_seq(start_sim, nsim)
   stream <- as.integer(stream)
 
@@ -61,6 +72,12 @@ ssd_sim_data.data.frame <- function(
       nsim = nsim,
       start_sim = start_sim,
       stream = stream
+    )
+    trace_msg(
+      "ssd_sim_data.states",
+      n = length(states),
+      first = states[[1L]],
+      last = states[[length(states)]]
     )
 
     data <- purrr::map(

@@ -165,6 +165,14 @@ get_lecuyer_cmrg_stream_states <- function(seed, nsim, stream, start_sim) {
     return(list())
   }
 
+  trace_msg(
+    "get_states",
+    seed = seed,
+    nsim = nsim,
+    stream = stream,
+    start_sim = start_sim
+  )
+
   ostate <- get_state()
   on.exit(set_state(ostate))
 
@@ -183,6 +191,11 @@ get_lecuyer_cmrg_stream_states <- function(seed, nsim, stream, start_sim) {
   for (i in seq_len(nsim - 1)) {
     states[[i + 1]] <- parallel::nextRNGSubStream(states[[i]])
   }
+  trace_msg(
+    "get_states.out",
+    first = states[[1]],
+    last = states[[nsim]]
+  )
   states
 }
 
