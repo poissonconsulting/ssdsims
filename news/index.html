@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9008</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9009</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,28 @@
       <small>Source: <a href="https://github.com/poissonconsulting/ssdsims/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9009" id="ssdsims-0009009">ssdsims 0.0.0.9009<a class="anchor" aria-label="anchor" href="#ssdsims-0009009"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-0-0-9009">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-0-9009"></a></h3>
+<ul><li>Fix <code><a href="../reference/ssd_run_scenario.html">ssd_run_scenario.tmbfit()</a></code> to pass fitted estimates to the rng call (<a href="https://github.com/poissonconsulting/ssdsims/issues/64" class="external-link">#64</a>).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="features-0-0-0-9009">Features<a class="anchor" aria-label="anchor" href="#features-0-0-0-9009"></a></h3>
+<ul><li>Distinguish between RNG state and seed, add glossary documentation (<a href="https://github.com/poissonconsulting/ssdsims/issues/61" class="external-link">#61</a>).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="chore-0-0-0-9009">Chore<a class="anchor" aria-label="anchor" href="#chore-0-0-0-9009"></a></h3>
+<ul><li><p>Add input validation to <code>*_lecuyer_cmrg_*</code> seed functions (<a href="https://github.com/poissonconsulting/ssdsims/issues/63" class="external-link">#63</a>).</p></li>
+<li><p>Forward <code><a href="../reference/with_lecuyer_cmrg_seed.html">with_lecuyer_cmrg_seed()</a></code> to <code><a href="../reference/local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code>.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="testing-0-0-0-9009">Testing<a class="anchor" aria-label="anchor" href="#testing-0-0-0-9009"></a></h3>
+<ul><li><p>Replace <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code> with <code><a href="../reference/with_lecuyer_cmrg_seed.html">with_lecuyer_cmrg_seed()</a></code> in tests (<a href="https://github.com/poissonconsulting/ssdsims/issues/60" class="external-link">#60</a>).</p></li>
+<li><p>Remove spurious <code>.Random.seed</code> warning.</p></li>
+<li><p>Use default pillar settings.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9008" id="ssdsims-0009008">ssdsims 0.0.0.9008<a class="anchor" aria-label="anchor" href="#ssdsims-0009008"></a></h2>
 <div class="section level3">
