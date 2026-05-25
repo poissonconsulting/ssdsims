@@ -2994,19 +2994,26 @@ message(
 
 # --- Example 3 (simplified) -----------------------------------------
 #
-# Same building blocks, downsized so this block alone fits under 500
-# lines after `air format`. Fan-out:
+# Same building blocks, downsized to show each step's grid fanning out
+# differently. With `nrow = 5L` (single) and `rescale = c(FALSE, TRUE)`
+# the fan-out grows step-by-step:
 #
-#   data: 2 sim * 2 nrow                    = 4
-#   fit:  4                                 = 4
-#   hc:   2 sim * 2 nrow * 2 nboot * 1 em   = 8
+#   data: 2 sim * 1 nrow                                  = 2
+#   fit:  data * 2 rescale                                = 4
+#   hc:   fit  * 2 nboot * 1 est_method                   = 8
+#
+# nrow being a scalar means ssd_sim_data.data.frame takes the FAST
+# path, so the data states are derived with `seed = seed_val`
+# (propagated to get_lecuyer_cmrg_stream_states), not with
+# `seed = NULL` as in example 2.
 
 RNGkind("L'Ecuyer-CMRG", "Inversion", "Rejection")
 set.seed(seed_val)
 reference3 <- ssd_run_scenario(
   ssddata::ccme_boron,
   nsim = 2L,
-  nrow = c(5L, 10L),
+  nrow = 5L,
+  rescale = c(FALSE, TRUE),
   proportion = 0.05,
   est_method = "multi",
   ci_method = "weighted_samples",
@@ -3024,47 +3031,35 @@ set.seed(seed_val)
 
 state_list3 <- list(
   s1 = ssdsims:::get_lecuyer_cmrg_stream_state(
-    seed = NULL,
+    seed = seed_val,
     stream = stream_val,
     start_sim = 1L
   ),
   s2 = ssdsims:::get_lecuyer_cmrg_stream_state(
-    seed = NULL,
+    seed = seed_val,
     stream = stream_val,
     start_sim = 2L
   )
 )
 
 data_list3 <- list(
-  s1_n5 = ssdsims:::slice_sample_state(
+  s1 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
     state = state_list3$s1
   ),
-  s1_n10 = ssdsims:::slice_sample_state(
-    ssddata::ccme_boron,
-    n = 10L,
-    replace = FALSE,
-    state = state_list3$s1
-  ),
-  s2_n5 = ssdsims:::slice_sample_state(
+  s2 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
-    replace = FALSE,
-    state = state_list3$s2
-  ),
-  s2_n10 = ssdsims:::slice_sample_state(
-    ssddata::ccme_boron,
-    n = 10L,
     replace = FALSE,
     state = state_list3$s2
   )
 )
 
 fit_list3 <- list(
-  s1_n5 = ssdsims:::fit_dists_seed(
-    data_list3$s1_n5,
+  s1_rF = ssdsims:::fit_dists_seed(
+    data_list3$s1,
     sim = 1L,
     stream = stream_val,
     seed = seed_val,
@@ -3077,13 +3072,13 @@ fit_list3 <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s1_n10 = ssdsims:::fit_dists_seed(
-    data_list3$s1_n10,
+  s1_rT = ssdsims:::fit_dists_seed(
+    data_list3$s1,
     sim = 1L,
     stream = stream_val,
     seed = seed_val,
     dists = ssdtools::ssd_dists_bcanz(),
-    rescale = FALSE,
+    rescale = TRUE,
     computable = FALSE,
     at_boundary_ok = TRUE,
     min_pmix = ssdtools::ssd_min_pmix,
@@ -3091,8 +3086,8 @@ fit_list3 <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s2_n5 = ssdsims:::fit_dists_seed(
-    data_list3$s2_n5,
+  s2_rF = ssdsims:::fit_dists_seed(
+    data_list3$s2,
     sim = 2L,
     stream = stream_val,
     seed = seed_val,
@@ -3105,13 +3100,13 @@ fit_list3 <- list(
     range_shape2 = c(0.05, 20),
     silent = TRUE
   ),
-  s2_n10 = ssdsims:::fit_dists_seed(
-    data_list3$s2_n10,
+  s2_rT = ssdsims:::fit_dists_seed(
+    data_list3$s2,
     sim = 2L,
     stream = stream_val,
     seed = seed_val,
     dists = ssdtools::ssd_dists_bcanz(),
-    rescale = FALSE,
+    rescale = TRUE,
     computable = FALSE,
     at_boundary_ok = TRUE,
     min_pmix = ssdtools::ssd_min_pmix,
@@ -3122,8 +3117,8 @@ fit_list3 <- list(
 )
 
 hc_list3 <- list(
-  s1_n5_nb10_multi = ssdsims:::hc_seed(
-    fit_list3$s1_n5,
+  s1_rF_nb10 = ssdsims:::hc_seed(
+    fit_list3$s1_rF,
     sim = 1L,
     stream = stream_val,
     nboot = 10,
@@ -3137,38 +3132,8 @@ hc_list3 <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s1_n5_nb50_multi = ssdsims:::hc_seed(
-    fit_list3$s1_n5,
-    sim = 1L,
-    stream = stream_val,
-    nboot = 50,
-    est_method = "multi",
-    ci_method = "weighted_samples",
-    seed = seed_val,
-    proportion = 0.05,
-    ci = FALSE,
-    parametric = TRUE,
-    save_to = NULL,
-    samples = FALSE,
-    delta = Inf
-  ),
-  s1_n10_nb10_multi = ssdsims:::hc_seed(
-    fit_list3$s1_n10,
-    sim = 1L,
-    stream = stream_val,
-    nboot = 10,
-    est_method = "multi",
-    ci_method = "weighted_samples",
-    seed = seed_val,
-    proportion = 0.05,
-    ci = FALSE,
-    parametric = TRUE,
-    save_to = NULL,
-    samples = FALSE,
-    delta = Inf
-  ),
-  s1_n10_nb50_multi = ssdsims:::hc_seed(
-    fit_list3$s1_n10,
+  s1_rF_nb50 = ssdsims:::hc_seed(
+    fit_list3$s1_rF,
     sim = 1L,
     stream = stream_val,
     nboot = 50,
@@ -3182,8 +3147,38 @@ hc_list3 <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n5_nb10_multi = ssdsims:::hc_seed(
-    fit_list3$s2_n5,
+  s1_rT_nb10 = ssdsims:::hc_seed(
+    fit_list3$s1_rT,
+    sim = 1L,
+    stream = stream_val,
+    nboot = 10,
+    est_method = "multi",
+    ci_method = "weighted_samples",
+    seed = seed_val,
+    proportion = 0.05,
+    ci = FALSE,
+    parametric = TRUE,
+    save_to = NULL,
+    samples = FALSE,
+    delta = Inf
+  ),
+  s1_rT_nb50 = ssdsims:::hc_seed(
+    fit_list3$s1_rT,
+    sim = 1L,
+    stream = stream_val,
+    nboot = 50,
+    est_method = "multi",
+    ci_method = "weighted_samples",
+    seed = seed_val,
+    proportion = 0.05,
+    ci = FALSE,
+    parametric = TRUE,
+    save_to = NULL,
+    samples = FALSE,
+    delta = Inf
+  ),
+  s2_rF_nb10 = ssdsims:::hc_seed(
+    fit_list3$s2_rF,
     sim = 2L,
     stream = stream_val,
     nboot = 10,
@@ -3197,8 +3192,8 @@ hc_list3 <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n5_nb50_multi = ssdsims:::hc_seed(
-    fit_list3$s2_n5,
+  s2_rF_nb50 = ssdsims:::hc_seed(
+    fit_list3$s2_rF,
     sim = 2L,
     stream = stream_val,
     nboot = 50,
@@ -3212,8 +3207,8 @@ hc_list3 <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n10_nb10_multi = ssdsims:::hc_seed(
-    fit_list3$s2_n10,
+  s2_rT_nb10 = ssdsims:::hc_seed(
+    fit_list3$s2_rT,
     sim = 2L,
     stream = stream_val,
     nboot = 10,
@@ -3227,8 +3222,8 @@ hc_list3 <- list(
     samples = FALSE,
     delta = Inf
   ),
-  s2_n10_nb50_multi = ssdsims:::hc_seed(
-    fit_list3$s2_n10,
+  s2_rT_nb50 = ssdsims:::hc_seed(
+    fit_list3$s2_rT,
     sim = 2L,
     stream = stream_val,
     nboot = 50,
@@ -3244,11 +3239,18 @@ hc_list3 <- list(
   )
 )
 
-ref3_unique <- reference3[!duplicated(reference3[c("sim", "nrow")]), ]
-stopifnot(identical(unname(data_list3), ref3_unique$data))
-stopifnot(all(mapply(fit_estimates_equal, unname(fit_list3), ref3_unique$fits)))
+# Unique by (sim, nrow): 2 data rows. By (sim, nrow, rescale): 4 fit rows.
+# hc has no deduplication (8 rows).
+ref3_unique_data <- reference3[!duplicated(reference3[c("sim", "nrow")]), ]$data
+stopifnot(identical(unname(data_list3), ref3_unique_data))
+
+ref3_unique_fits <- reference3[
+  !duplicated(reference3[c("sim", "nrow", "rescale")]),
+]$fits
+stopifnot(all(mapply(fit_estimates_equal, unname(fit_list3), ref3_unique_fits)))
+
 stopifnot(identical(unname(hc_list3), reference3$hc))
 
 message(
-  "OK example-3-simplified: 4 data + 4 fits + 8 hc match ssd_run_scenario(seed=42L,...) byte-for-byte."
+  "OK example-3-simplified: 2 data + 4 fits + 8 hc match ssd_run_scenario(seed=42L,...) byte-for-byte."
 )
