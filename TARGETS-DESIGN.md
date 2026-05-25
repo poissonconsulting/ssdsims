@@ -282,6 +282,18 @@ Confirmed by tracing `scripts/example.R`'s second scenario:
 a cross-join axis. `ci_method` and `parametric` were scalar in the
 second example but are full cross-join axes in the general case.
 
+**`dists` is not a grid axis today.** `dists` controls *which*
+distributions `ssdtools::ssd_fit_dists()` fits to a given data slice,
+but the iteration over the elements of `dists` is buried inside
+ssdtools and is not exposed at the ssdsims level. Making `dists` a
+fit-grid axis (so adding a distribution causes only the new
+sub-fits to re-run while existing ones stay cached) would require
+either wrapping each single-distribution fit in ssdsims and
+aggregating them back into a `fitdists` object, or a change to
+ssdtools to expose its per-distribution loop. The design treats
+`dists` as a scenario-scalar (a single character vector) — adding
+a distribution invalidates every fit branch.
+
 ### Implications for sub-stream allocation
 
 Each step gets **its own sub-stream block**, sized to its grid:
