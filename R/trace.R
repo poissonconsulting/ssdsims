@@ -19,12 +19,20 @@ trace_caller_loc <- function() {
   calls <- sys.calls()
   for (i in seq.int(length(calls), 1L)) {
     src <- attr(calls[[i]], "srcref")
-    if (is.null(src)) next
+    if (is.null(src)) {
+      next
+    }
     sf <- attr(src, "srcfile")
-    if (is.null(sf)) next
+    if (is.null(sf)) {
+      next
+    }
     file <- sf$filename
-    if (is.null(file) || !nzchar(file)) next
-    if (grepl("(^|/)trace\\.R$", file)) next
+    if (is.null(file) || !nzchar(file)) {
+      next
+    }
+    if (grepl("(^|/)trace\\.R$", file)) {
+      next
+    }
     return(sprintf("%s:%d", basename(file), src[1L]))
   }
   ""
