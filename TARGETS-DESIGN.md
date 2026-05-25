@@ -174,7 +174,7 @@ its row and enters `local_lecuyer_cmrg_state(.state)`.
 
 Task ordering within each grid must be canonical (same scenario →
 same row order → same sub-stream assignment); see Open question 3
-in §10.
+in §11.
 
 States survive serialization — a task row sent to a Slurm worker
 carries its own state — and re-running the same scenario re-derives
@@ -320,21 +320,32 @@ Confirmed by tracing `scripts/example.R`'s second scenario:
 a cross-join axis. `ci_method` and `parametric` were scalar in the
 second example but are full cross-join axes in the general case.
 
-**`dists` is not a grid axis today.** `dists` controls *which*
-distributions `ssdtools::ssd_fit_dists()` fits to a given data slice,
-but the iteration over the elements of `dists` is buried inside
-ssdtools and is not exposed at the ssdsims level. Making `dists` a
-fit-grid axis (so adding a distribution causes only the new
-sub-fits to re-run while existing ones stay cached) would require
-either wrapping each single-distribution fit in ssdsims and
-aggregating them back into a `fitdists` object, or a change to
-ssdtools to expose its per-distribution loop. The design treats
-`dists` as a scenario-scalar (a single character vector) — adding
-a distribution invalidates every fit branch.
+### Sub-stream allocation: current vs. aspirational
 
-### Implications for sub-stream allocation
+The package allocates one L'Ecuyer-CMRG sub-stream per `(stream,
+sim)` tuple and **reuses it across all tasks for that pair** —
+across data/fit/hc stages, and across the fit-grid and hc-grid
+cross-join axes (`nrow`, `rescale`, `nboot`, `est_method`, …).
+Multiple datasets are handled by running separate scenarios with
+distinct `stream` values, so the existing convention is **one
+(sub-)stream per dataset, reused across tasks within that
+dataset**:
 
-Each step gets **its own sub-stream block**, sized to its grid:
+```
+   stream = 1            stream = 2          ← current convention:
+       │                     │                  one L'Ecuyer stream
+       ▼                     ▼                  per dataset
+   sub-streams 1..nsim   sub-streams 1..nsim ← one sub-stream per sim
+       │                     │                  within that stream
+       ▼                     ▼                ← that sub-stream is REUSED
+   all task cells        all task cells         across data, fit, hc,
+   for that sim          for that sim           and every cross-join cell
+                                                (nrow, rescale, nboot, …)
+```
+
+The **aspirational allocation** — what TARGETS-DESIGN proposes,
+**to be confirmed** before adoption — gives each grid element its
+own sub-stream:
 
 ```
    root_state
@@ -346,14 +357,22 @@ Each step gets **its own sub-stream block**, sized to its grid:
         └─ hc   block:  nextRNGSubStream × |hc   grid|
 
    total: |data| + |fit| + |hc| sub-streams
-          (200 for the second example)
+          (200 for the second example, 28 for the small one in
+           scripts/example-expanded-grids-independent.R)
 ```
 
-This **replaces** the earlier "3 sub-streams per task" rule (§2): that
-rule assumed one canonical task lattice, but there isn't one — there
-are three. The three blocks are walked sequentially from
-`root_state`; `end_state` is the sub-stream past the last block (hc),
-so a child scenario picks up there regardless of which grid it grows.
+The aspirational model is exercised by
+`scripts/example-expanded-grids-independent.R`. Switching the
+production code to it is a design decision pending review — see
+Open question 2 in §11 ("Loss of per-sim comparability"): the
+aspirational allocation breaks the property that two tasks with
+the same `sim` but different `nrow` share a data state.
+
+The L'Ecuyer **stream axis** stays reserved in both allocations.
+`parallel::nextRNGStream()` is not invoked by any scenario
+primitive of the aspirational design; the wide-jump (~2^127) axis
+is kept available for future applications (e.g. statistically
+independent batch axes layered on top of scenarios).
 
 ### Implications for the targets pipeline
 
@@ -385,28 +404,6 @@ rows), and the per-branch body opens the right upstream Parquet by
 that ID. This is the only way `dists` re-running fits without
 re-running data can stay correct: the fit task row's `data_id` is
 unchanged.
-
-### Implications for the stream axis
-
-The reserved L'Ecuyer stream axis (§1, design point 2) has a natural
-use here: **one stream per step family** keeps data, fit, and hc
-RNG sequences ~2^127 apart by construction, eliminating any possible
-overlap between the three sub-stream blocks above.
-
-```
-   root_state
-      │
-      ├─ nextRNGStream × 0 → data stream root → sub-streams 1..|data|
-      ├─ nextRNGStream × 1 → fit  stream root → sub-streams 1..|fit|
-      └─ nextRNGStream × 2 → hc   stream root → sub-streams 1..|hc|
-```
-
-This is a clean alternative to the sequential-block model: growing
-one grid (e.g. adding `nboot` values) advances within hc's stream
-only and never disturbs data/fit assignments. The trade-off is that
-streams are then *consumed* by ssdsims rather than reserved; an
-"add a new RNG-consuming step" extension would need to mint a new
-stream. Open question — see §10.
 
 ---
 
@@ -918,7 +915,38 @@ PASS on R 4.5).
 
 ---
 
-## 9. Gaps from `RNG-FLOW.md` §5 — how this design closes them
+## 9. Limitations
+
+Constraints the design lives with rather than solves.
+
+### `dists` is not a fit-grid axis
+
+`dists` controls *which* distributions `ssdtools::ssd_fit_dists()`
+fits to a given data slice, but the iteration over the elements of
+`dists` is buried inside ssdtools and is not exposed at the ssdsims
+level. Making `dists` a fit-grid axis (so adding a distribution
+causes only the new sub-fits to re-run while existing ones stay
+cached) would require either wrapping each single-distribution fit
+in ssdsims and aggregating the results back into a `fitdists`
+object, or a change to ssdtools to expose its per-distribution loop.
+Under the current contract `dists` is a scenario-scalar (a single
+character vector) — adding a distribution invalidates every fit
+branch.
+
+### `ssdtools` RNG flow is opaque
+
+The internal RNG consumption of `ssdtools::ssd_fit_dists()` and
+`ssdtools::ssd_hc()` is treated as a black box. The state-only
+primitives (§7) install a known sub-stream before each call, but
+how many uniforms the ssdtools call draws, and in what order, is an
+ssdtools implementation detail. A breaking change to that order in
+a future ssdtools release would silently change bit-stable results
+even when the scenario `root_state` is unchanged. The mitigation is
+to pin `ssdtools` versions in the scenario manifest.
+
+---
+
+## 10. Gaps from `RNG-FLOW.md` §5 — how this design closes them
 
 | Gap                                              | Resolution                                                                                  |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
@@ -944,41 +972,36 @@ are assumed already merged from the PoC and are not re-derived here.
 
 ---
 
-## 10. Open questions for review
+## 11. Open questions for review
 
-1. **Sub-streams sequential vs. one-stream-per-step.** §5 sketches
-   both: (a) three sub-stream blocks walked sequentially from
-   `root_state`, vs. (b) one L'Ecuyer stream per step (data, fit,
-   hc) with sub-streams within each. (a) preserves the "stream axis
-   reserved" decision but couples block sizes (growing data shifts
-   fit and hc). (b) makes the three step families ~2^127 apart by
-   construction but consumes three streams. Which is the contract?
-2. **Manifest format.** Cross-project parent linking needs a manifest
+1. **Manifest format.** Cross-project parent linking needs a manifest
    that stores at minimum `end_state` (length-7 integer) and the
    parent's task-grid digest. Sidecar JSON next to Parquet, or
    `tar_read()` against the parent's `_targets/` store? The latter is
    idiomatic but couples the child to the parent's `targets` version.
-3. **Loss of per-sim comparability.** Allocating one sub-stream per
-   (task, step) means two tasks with the same `sim` but different
-   `nrow` no longer share a data state — the current package keys
-   `.Random.seed` on `(stream, sim)` so different `nrow` values
-   within one sim see the same initial state. Is that comparability
-   wanted, or is full per-task independence the new contract?
-4. **Canonical task ordering.** Sub-stream assignment depends on row
+2. **Loss of per-sim comparability.** The aspirational sub-stream
+   allocation (§5, one sub-stream per grid element) means two tasks
+   with the same `sim` but different `nrow` no longer share a data
+   state. The current allocation reuses one sub-stream per `(stream,
+   sim)` across all cells, so different `nrow` values within one sim
+   see the same initial state. Adopting the aspirational allocation
+   loses that comparability; the design proposal hasn't decided
+   whether to.
+3. **Canonical task ordering.** Sub-stream assignment depends on row
    order in `ssd_scenario_data_tasks`/`fit_tasks`/`hc_tasks`. The
    proposed order is `(dataset, sim, nrow, …)` for data and so on,
    with `dataset` outermost so appended datasets keep existing cache.
    Should this ordering be documented as part of the public contract,
    or only the *content* (hash of the unordered task set) be stable?
-5. **Dataset identity.** Datasets are keyed by **name**, not by
+4. **Dataset identity.** Datasets are keyed by **name**, not by
    `digest::digest(df)`, so two scenarios that point at semantically
    identical but separately-loaded data.frames under the same name
    collide. Should the name + a content hash both participate in the
    task ID, or only the name?
-6. **Child cache stability.** Re-running the child unchanged should be
+5. **Child cache stability.** Re-running the child unchanged should be
    a full cache hit, but the child also reads the parent's Parquet —
    does `targets` track those files as dependencies, and is their
    hash stable across hosts (mtime, path)?
-7. **Toy pipeline shape.** Ship a single
+6. **Toy pipeline shape.** Ship a single
    `inst/targets-templates/cluster/` that the LLM-authoring prompt
    edits, or only documentation pointing at `crew.cluster` examples?
