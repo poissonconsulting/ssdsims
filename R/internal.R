@@ -153,5 +153,5 @@ run_scenario <- function(
   ) |>
     c(.args_hc)
 
-  do.call("ssd_hc_sims", .args_hc)
+  do.call(ssd_hc_sims, .args_hc)
 }
