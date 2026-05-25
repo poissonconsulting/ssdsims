@@ -1,9 +1,24 @@
 # Targets design — `ssdsims`
 
-End-to-end workflow for running an `ssdsims` scenario on a cluster,
-**reproducibly** and **extensibly**. Parallelism is assumed throughout;
-this document is about the **scenario object**, **how a scenario reaches
-a cluster**, and **how a scenario extends a previous one**.
+End-to-end workflow for running an `ssdsims` scenario on a cluster.
+Three primary goals, each a hard constraint:
+
+- **Reproducibility.** A scenario's results are bit-stable across
+  reruns and machines (RNG state is explicit and serializable; §1, §2).
+- **Debuggability.** Any single failed branch on the cluster must be
+  replayable locally — with no `targets`, no orchestrator — using
+  the same inputs the cluster used. This is what the state-only
+  primitives (`slice_sample_state()`, `fit_dists_state()`,
+  `hc_state()`) and the per-Parquet content-addressed manifest are
+  *for* (§7).
+- **Extensibility.** A scenario can declare a desired task grid that
+  references a parent; the child runs only the difference between
+  its desired grid and the parent's completed grid (§8).
+
+Parallelism is assumed throughout. The document is about the
+**scenario object**, **how a scenario reaches a cluster**, **how a
+failed branch is debugged locally**, and **how a scenario extends a
+previous one**.
 
 Background and the list of gaps this design closes are in `RNG-FLOW.md`
 §5. This is a forward-looking design; it does not document the existing
@@ -19,7 +34,7 @@ materialized task grid; expansion happens at run time via
 
 ```
 ssdsims_scenario
-├── master_state   ← length-7 L'Ecuyer-CMRG integer vector;
+├── root_state   ← length-7 L'Ecuyer-CMRG integer vector;
 │                    the sub-stream root this scenario advances from
 │                    (NOT a scalar seed — see §2)
 ├── nsim           ← number of replicate sims per dataset
@@ -33,15 +48,15 @@ ssdsims_scenario
 
 Four design points distinguish this from the current code:
 
-1. **`master_state`, not `seed`.** The scenario stores the
+1. **`root_state`, not `seed`.** The scenario stores the
    *post-`set.seed` post-`RNGkind` L'Ecuyer-CMRG state*, not the integer
-   seed. Two scenarios with the same `master_state` produce identical
+   seed. Two scenarios with the same `root_state` produce identical
    task grids regardless of whether the seed→state transformation in
    `get_lecuyer_cmrg_*()` is later refactored. `ssd_scenario(seed = 42)`
    is a convenience constructor that derives and stores the state.
 2. **Sub-streams only; the stream axis is reserved.** Every scenario
    (and every child) advances via `parallel::nextRNGSubStream()` from
-   its `master_state`. `parallel::nextRNGStream()` is not invoked by
+   its `root_state`. `parallel::nextRNGStream()` is not invoked by
    any scenario primitive; the stream axis is kept available for
    future applications (e.g. statistically independent batch axes
    layered on top of scenarios).
@@ -58,7 +73,7 @@ Four design points distinguish this from the current code:
 
 ```
    scenario_v1                       scenario_v2 (parent = v1)
-   master_state = M                  master_state = M_next
+   root_state = M                  root_state = M_next
    nsim = 100                        nsim = 100
         │                                  │
         └── extend ────────────────────────┘
@@ -110,7 +125,7 @@ re-assigns. Names are part of the scenario's content hash.
 
 The current per-row helpers (`fit_dists_seed()`, `hc_seed()`) call
 `get_lecuyer_cmrg_stream_state(seed, stream, start_sim = k)`, which
-advances `k − 1` sub-streams from the master state on every call.
+advances `k − 1` sub-streams from the root state on every call.
 Across all rows in a stage this is **O(nsim²)**; across the three
 stages, **O(3 · nsim²)**.
 
@@ -125,7 +140,7 @@ each task's three sub-stream states already attached. Each task gets
 two tasks never share a sub-stream:
 
 ```
-   master_state          (length-7 L'Ecuyer state)
+   root_state          (length-7 L'Ecuyer state)
       │
       ▼  one sub-stream advance per cell, left-to-right, top-to-bottom
    ┌──────────────────────────────────────────────────────────────────┐
@@ -139,7 +154,7 @@ two tasks never share a sub-stream:
                                         ▼
                               end_state  ← persisted on the scenario's
                                             output manifest (§8);
-                                            child's master_state = end_state.
+                                            child's root_state = end_state.
 ```
 
 Cost: 3·N sub-stream advances total when the lattice is first
@@ -176,13 +191,13 @@ ssd_run_scenario(scenario)                  # sequential, in-process
 ssd_run_scenario(scenario, plan = "mirai")  # in-process parallel
 ```
 
-`ssd_scenario()` derives and stores the `master_state`. It is purely
+`ssd_scenario()` derives and stores the `root_state`. It is purely
 declarative — it does **not** expand the task grid. Expansion is
 `ssd_scenario_tasks(scenario)`, called either by `ssd_run_scenario()`
 (local) or by the `tasks` target in the cluster pipeline (§4).
 
 ```
-   ssd_scenario(...) ──▶ ssdsims_scenario  (declarative; carries master_state)
+   ssd_scenario(...) ──▶ ssdsims_scenario  (declarative; carries root_state)
                                 │
                                 ▼
                        ssd_scenario_tasks(scenario)
@@ -300,7 +315,7 @@ a distribution invalidates every fit branch.
 Each step gets **its own sub-stream block**, sized to its grid:
 
 ```
-   master_state
+   root_state
         │
         ├─ data block:  nextRNGSubStream × |data grid|
         │
@@ -315,7 +330,7 @@ Each step gets **its own sub-stream block**, sized to its grid:
 This **replaces** the earlier "3 sub-streams per task" rule (§2): that
 rule assumed one canonical task lattice, but there isn't one — there
 are three. The three blocks are walked sequentially from
-`master_state`; `end_state` is the sub-stream past the last block (hc),
+`root_state`; `end_state` is the sub-stream past the last block (hc),
 so a child scenario picks up there regardless of which grid it grows.
 
 ### Implications for the targets pipeline
@@ -357,7 +372,7 @@ RNG sequences ~2^127 apart by construction, eliminating any possible
 overlap between the three sub-stream blocks above.
 
 ```
-   master_state
+   root_state
       │
       ├─ nextRNGStream × 0 → data stream root → sub-streams 1..|data|
       ├─ nextRNGStream × 1 → fit  stream root → sub-streams 1..|fit|
@@ -390,7 +405,7 @@ layers are independently queryable for analysis without re-running
 upstream steps.
 
 ```
-   scenario   (declarative; carries master_state)
+   scenario   (declarative; carries root_state)
        │
        ├──▶ data_tasks  (16 rows, carries .state_data, data_id)
        │         │
@@ -769,7 +784,7 @@ In all three the mechanism is identical:
    ┌───────────────────────────────┐
    │ desired_grid:    N rows       │
    │ completed_grid:  N-k Parquets │
-   │ master_state, end_state on the manifest
+   │ root_state, end_state on the manifest
    └──────────────┬────────────────┘
                   │ parent = path / scenario object
                   ▼
@@ -833,7 +848,7 @@ heterogeneous and the user owns that. Either way, no separate
 primitive is needed.
 
 **Manifest requirement.** The parent's manifest carries:
-- `master_state` and `end_state` (length-7 integers, §2).
+- `root_state` and `end_state` (length-7 integers, §2).
 - `desired_grid_digest` (hash of parent's full intended task grid).
 - `completed_ids`: which IDs have Parquets on disk and are trusted.
 - `completed_hashes`: per-id sha256 of the local Parquet at write time (§7).
@@ -858,7 +873,7 @@ PASS on R 4.5).
 | No `ssd_extend_scenario()`                       | §8 — `parent` field + `ssd_extend_scenario(parent, ...)` constructor.                       |
 | No "load previous run from Parquet" path         | §8 — `parent` may be a results dir; manifest stores `end_state` (length-7 integer).         |
 | No DAG-of-DAGs primitive                         | §8 — child reads parent via `tar_read(..., store = "../parent/_targets")`.                  |
-| Persists only `seed`, not master L'Ecuyer state  | §1, §8 — scenario stores `master_state`; `seed` is a constructor convenience.               |
+| Persists only `seed`, not root L'Ecuyer state    | §1, §8 — scenario stores `root_state`; `seed` is a constructor convenience.               |
 | Positional task IDs                              | §2 — task IDs are content-addressed: hash of the canonical task row.                        |
 | Re-derivation cost is quadratic                  | §2 — 3·N sub-stream advances at grid materialization; per-task work O(1).                   |
 | `nsim`-grow cache invalidation                   | §1, §2 — scenario is declarative; downstream targets depend on individual task rows.        |
@@ -881,7 +896,7 @@ are assumed already merged from the PoC and are not re-derived here.
 
 1. **Sub-streams sequential vs. one-stream-per-step.** §5 sketches
    both: (a) three sub-stream blocks walked sequentially from
-   `master_state`, vs. (b) one L'Ecuyer stream per step (data, fit,
+   `root_state`, vs. (b) one L'Ecuyer stream per step (data, fit,
    hc) with sub-streams within each. (a) preserves the "stream axis
    reserved" decision but couples block sizes (growing data shifts
    fit and hc). (b) makes the three step families ~2^127 apart by
