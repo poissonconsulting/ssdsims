@@ -23,7 +23,7 @@ ssdsims_scenario
 │                    the sub-stream root this scenario advances from
 │                    (NOT a scalar seed — see §2)
 ├── nsim           ← number of replicate sims per dataset
-├── generator      ← named list of data.frames (§1.1)  | function | fitdists
+├── generator      ← named list of data.frames (§1.1)
 ├── fit            ← list of ssd_fit_dists() argument vectors
 ├── hc             ← list of ssd_hc() argument vectors
 └── parent         ← NULL, or a previous ssdsims_scenario / results path
@@ -44,14 +44,14 @@ Four design points distinguish this from the current code:
    any scenario primitive; the stream axis is kept available for
    future applications (e.g. statistically independent batch axes
    layered on top of scenarios).
-3. **List of data.frames as the principal generator.** The data
+3. **Named list of data.frames as the scenario generator.** The data
    generator is a **named list** of data.frames; a bare data.frame is
    silently lifted to a length-1 list (named `"data"` by default).
    Each dataset is its own cross-join axis, so a scenario with three
    datasets and `nsim = 100` materializes `3 × 100 × |nrow| × …`
-   tasks. The `function` and `fitdists` generators remain supported
-   but are secondary; the list-of-data.frames path is the one §6 and
-   §7 exercise.
+   tasks. There is no `function` or `fitdists` generator at the
+   scenario level — those alternative inputs to the current
+   `ssd_sim_data()` family are out of scope for the targets pipeline.
 4. **`parent`.** A scenario can point at an upstream scenario it
    extends. Extension always advances on the sub-stream axis (§7):
 
@@ -65,7 +65,7 @@ Four design points distinguish this from the current code:
             v1's last consumed sub-stream (§7).
 ```
 
-### 1.1 List-of-data.frames generator
+### 1.1 Named-list-of-data.frames generator
 
 ```
    generator = list(
