@@ -17,3 +17,5 @@
 ^air\.toml$
 ^\.ccache$
 ^GLOSSARY\.md$
+^RNG-FLOW\.md$
+^TARGETS-DESIGN\.md$
