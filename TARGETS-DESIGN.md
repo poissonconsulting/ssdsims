@@ -15,10 +15,14 @@ Three primary goals, each a hard constraint:
   references a parent; the child runs only the difference between
   its desired grid and the parent's completed grid (§8).
 
-Parallelism is assumed throughout. The document is about the
-**scenario object**, **how a scenario reaches a cluster**, **how a
-failed branch is debugged locally**, and **how a scenario extends a
-previous one**.
+Parallelism is assumed throughout. The document covers, in order:
+the **scenario object** (§1), the **pre-generated RNG-state lattice**
+(§2), running locally (§3), assembling the cluster pipeline (§4),
+the three step grids and their fan-outs (§5), the concrete target
+graph and the **cloud upload hook** (§6), **debugging** a cluster
+failure (§7), and **extension** of a scenario (§8). §9 lists known
+limitations, §10 maps gaps from `RNG-FLOW.md` §5 to resolutions,
+§11 collects open questions.
 
 Background and the list of gaps this design closes are in `RNG-FLOW.md`
 §5. This is a forward-looking design; it does not document the existing
@@ -108,12 +112,16 @@ This makes "extend by adding a dataset" the cheap extension path:
 
 ```
    parent: generator = list(boron, cadmium)
-                       N_parent tasks consume sub-streams 1 … 3·N_parent
+           parent's tasks consume sub-streams 1 … M_parent
    child:  generator = list(boron, cadmium, chloride)  ← appended
-           parent's tasks unchanged (same sub-streams)
-           child's new tasks consume sub-streams 3·N_parent + 1 …
-                                                3·N_child
+           parent's tasks unchanged (same sub-stream assignments)
+           child's new tasks consume sub-streams M_parent + 1 …
+                                                M_child
 ```
+
+(Whether `M_parent` equals `nsim` or `|data|+|fit|+|hc|` depends on
+the sub-stream allocation strategy, see §5; in either case the
+parent's allocation is preserved.)
 
 Renaming or reordering existing datasets is *not* cache-preserving
 **at the scenario level** — the canonical order shifts and every
@@ -140,10 +148,11 @@ of a `targets` pipeline — what matters is that all consumers see the
 same answer and pay the cost only once. The natural seam is
 `ssd_scenario_tasks(scenario)`: it returns the three task tables
 (one per step, §5) with one sub-stream state already attached to
-each row. **Each stochastic call gets its own sub-stream**, so the
-total count is `|data grid| + |fit grid| + |hc grid|`, not three
-per task (§5 explains why a single "task lattice" doesn't exist —
-data, fit and hc have different grids).
+each row. The diagram below shows the **aspirational** allocation
+where each stochastic call gets its own sub-stream (total count
+`|data grid| + |fit grid| + |hc grid|`); the current implementation
+reuses one sub-stream per `(stream, sim)` across all task cells.
+§5 details the choice and its trade-off.
 
 ```
    root_state          (length-7 L'Ecuyer state)
@@ -376,34 +385,14 @@ independent batch axes layered on top of scenarios).
 
 ### Implications for the targets pipeline
 
-A single `task_groups` mapped lockstep through all three steps does
-**not** work when the grids differ — each step needs its own task
-grouping, and §6 wires this up concretely:
-
-```
-   scenario
-       │
-       ▼
-   data_tasks   ──▶ data_jobs   pattern = map(data_groups)
-       │                              │
-       ▼                              ▼  per-data-row Parquet
-   fit_tasks    ──▶ fit_jobs    pattern = map(fit_groups)
-       │                              │  reads its data_jobs row
-       ▼                              ▼  by content-addressed path
-   hc_tasks     ──▶ hc_jobs     pattern = map(hc_groups)
-                                      │  reads its fit_jobs row
-                                      ▼
-                                summary
-```
-
-The link between layers is **by content-addressed file path** (the
-`<task_id>.parquet` naming from §6), not by a single shared dynamic
-branch index. Each step's task row carries the task IDs of the
-upstream rows it depends on (`data_id` on fit rows, `fit_id` on hc
-rows), and the per-branch body opens the right upstream Parquet by
-that ID. This is the only way `dists` re-running fits without
-re-running data can stay correct: the fit task row's `data_id` is
-unchanged.
+Each step needs its **own** task grouping (`data_tasks`, `fit_tasks`,
+`hc_tasks`) and its own dynamic-branched target — a single shared
+`task_groups` mapped lockstep through all three steps does **not**
+work when the grids differ. Layers link by **content-addressed file
+path**: each task row carries the upstream task IDs it depends on
+(`data_id` on fit rows, `fit_id` on hc rows), and the per-branch
+body opens the right upstream Parquet by that ID. §6 wires this up
+concretely.
 
 ---
 
@@ -805,7 +794,7 @@ Four common shapes are particular cases of the same primitive:
 | Re-run after a code fix (post-§7)   | parent's grid (unchanged)           | parent's failed IDs   | same as parent attempted       |
 | Rename / reorder datasets (§1.1)    | parent's grid with renamed labels   | ∅ (all aliased)       | none — pure re-attribution     |
 
-In all three the mechanism is identical:
+In all four the mechanism is identical:
 
 ```
    parent
@@ -968,7 +957,7 @@ to pin `ssdtools` versions in the scenario manifest.
 | `stream` axis conflated with extension axis      | §1, §8 — extension lives on sub-streams only; the stream axis is reserved.                  |
 | Three steps cached as one (no per-step re-runs)  | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
 | Same lattice for all steps despite grid mismatch | §5 — each step has its own grid; the lattice has three blocks rather than one shared one.   |
-| data/fit/hc states collided in PoC               | §2 — strided enumeration: each task takes three consecutive sub-streams, no overlap.        |
+| data/fit/hc states collided in PoC               | §5 — aspirational allocation gives each grid element its own sub-stream; the current allocation reuses one per `(stream, sim)` (decision pending, §11 Q2). |
 | Single-dataset scenarios only                    | §1.1 — generator is a named list of data.frames; datasets are the outermost cross-join.     |
 | Branch failure unreproducible off the cluster    | §7 — task row + immediate upstream Parquet replays the failing branch via the `_state` primitives. |
 | Code fix re-runs every branch by hash invalidation | §8 — re-run-after-fix is the same `desired \ completed` primitive as scenario extension; child runs only the missing hc_ids. |
