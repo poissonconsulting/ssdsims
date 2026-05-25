@@ -138,37 +138,45 @@ matter whether that happens at scenario construction, at the first
 call to `ssd_scenario_tasks(scenario)`, or inside the `tasks` target
 of a `targets` pipeline — what matters is that all consumers see the
 same answer and pay the cost only once. The natural seam is
-`ssd_scenario_tasks(scenario)`: it returns the full task grid with
-each task's three sub-stream states already attached. Each task gets
-**three independent sub-streams**, one for each step (data, fit, hc);
-two tasks never share a sub-stream:
+`ssd_scenario_tasks(scenario)`: it returns the three task tables
+(one per step, §5) with one sub-stream state already attached to
+each row. **Each stochastic call gets its own sub-stream**, so the
+total count is `|data grid| + |fit grid| + |hc grid|`, not three
+per task (§5 explains why a single "task lattice" doesn't exist —
+data, fit and hc have different grids).
 
 ```
    root_state          (length-7 L'Ecuyer state)
       │
-      ▼  one sub-stream advance per cell, left-to-right, top-to-bottom
+      ▼  one sub-stream advance per row, by canonical task order
    ┌──────────────────────────────────────────────────────────────────┐
-   │ task[1]:  .state_data ─sub─▶ .state_fit ─sub─▶ .state_hc         │
-   │ task[2]:  .state_data ─sub─▶ .state_fit ─sub─▶ .state_hc         │
-   │ task[3]:  .state_data ─sub─▶ .state_fit ─sub─▶ .state_hc         │
-   │   ⋮                                                              │
-   │ task[N]:  .state_data ─sub─▶ .state_fit ─sub─▶ .state_hc         │
+   │ data grid:   data[1]  ─sub─▶  data[2]  ─sub─▶ … ─sub─▶  data[|D|]│
+   │                                              │                   │
+   │ fit  grid:   fit[1]  ─sub─▶ … ─sub─▶  fit[|F|]                    │
+   │                                              │                   │
+   │ hc   grid:   hc[1]  ─sub─▶ … ─sub─▶  hc[|H|]                     │
    └────────────────────────────────────┬─────────────────────────────┘
-                                        │  next sub-stream after task[N].hc
+                                        │ next sub-stream after hc[|H|]
                                         ▼
                               end_state  ← persisted on the scenario's
                                             output manifest (§8);
                                             child's root_state = end_state.
 ```
 
-Cost: 3·N sub-stream advances total when the lattice is first
-computed, **O(N)**, where N = `nrow(ssd_scenario_tasks(scenario))`.
-Each task row carries its three states as length-7 integer columns.
-Per-task work at run time is **O(1)**: the worker reads `.state_*`
-off its row and enters `local_lecuyer_cmrg_state(.state_*)`.
+For the 16-fan-out example in
+`scripts/example-expanded-grids-independent.R`: `|D| = 4`, `|F| = 8`,
+`|H| = 16`, total **28** sub-streams in a single
+`get_lecuyer_cmrg_stream_states(nsim = 28L, ...)` call.
 
-Task ordering must be canonical (same scenario → same row order →
-same sub-stream assignment); see Open question 3 in §10.
+Cost: `|data| + |fit| + |hc|` sub-stream advances at first lattice
+computation, **O(N)** where N is that sum. Each row of the
+respective task table carries its single length-7 state column.
+Per-task work at run time is **O(1)**: the worker reads `.state` off
+its row and enters `local_lecuyer_cmrg_state(.state)`.
+
+Task ordering within each grid must be canonical (same scenario →
+same row order → same sub-stream assignment); see Open question 3
+in §10.
 
 States survive serialization — a task row sent to a Slurm worker
 carries its own state — and re-running the same scenario re-derives
@@ -907,7 +915,7 @@ PASS on R 4.5).
 | No DAG-of-DAGs primitive                         | §8 — child reads parent via `tar_read(..., store = "../parent/_targets")`.                  |
 | Persists only `seed`, not root L'Ecuyer state    | §1, §8 — scenario stores `root_state`; `seed` is a constructor convenience.               |
 | Positional task IDs                              | §2 — task IDs are content-addressed: hash of the canonical task row.                        |
-| Re-derivation cost is quadratic                  | §2 — 3·N sub-stream advances at grid materialization; per-task work O(1).                   |
+| Re-derivation cost is quadratic                  | §2 — `|data|+|fit|+|hc|` sub-stream advances at grid materialization; per-task work O(1).   |
 | `nsim`-grow cache invalidation                   | §1, §2 — scenario is declarative; downstream targets depend on individual task rows.        |
 | `stream` axis conflated with extension axis      | §1, §8 — extension lives on sub-streams only; the stream axis is reserved.                  |
 | Three steps cached as one (no per-step re-runs)  | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
