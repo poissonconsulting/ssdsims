@@ -27,7 +27,7 @@ ssdsims_scenario
 ├── fit            ← list of ssd_fit_dists() argument vectors
 ├── hc             ← list of ssd_hc() argument vectors
 └── parent         ← NULL, or a previous ssdsims_scenario / results path
-                     this scenario extends (§7)
+                     this scenario extends (§8)
 ```
 
 Four design points distinguish this from the current code:
@@ -51,9 +51,9 @@ Four design points distinguish this from the current code:
    datasets and `nsim = 100` materializes `3 × 100 × |nrow| × …`
    tasks. The `function` and `fitdists` generators remain supported
    but are secondary; the named-list-of-data.frames path is the one
-   §6 and §7 exercise.
+   §6 and §8 exercise.
 4. **`parent`.** A scenario can point at an upstream scenario it
-   extends. Extension always advances on the sub-stream axis (§7):
+   extends. Extension always advances on the sub-stream axis (§8):
 
 ```
    scenario_v1                       scenario_v2 (parent = v1)
@@ -62,7 +62,7 @@ Four design points distinguish this from the current code:
         │                                  │
         └── extend ────────────────────────┘
             where M_next is the first sub-stream past
-            v1's last consumed sub-stream (§7).
+            v1's last consumed sub-stream (§8).
 ```
 
 ### 1.1 Named-list-of-data.frames generator
@@ -137,7 +137,7 @@ two tasks never share a sub-stream:
                                         │  next sub-stream after task[N].hc
                                         ▼
                               end_state  ← persisted on the scenario's
-                                            output manifest (§7);
+                                            output manifest (§8);
                                             child's master_state = end_state.
 ```
 
@@ -148,7 +148,7 @@ Per-task work at run time is **O(1)**: the worker reads `.state_*`
 off its row and enters `local_lecuyer_cmrg_state(.state_*)`.
 
 Task ordering must be canonical (same scenario → same row order →
-same sub-stream assignment); see Open question 3 in §9.
+same sub-stream assignment); see Open question 3 in §10.
 
 States survive serialization — a task row sent to a Slurm worker
 carries its own state — and re-running the same scenario re-derives
@@ -368,7 +368,7 @@ one grid (e.g. adding `nboot` values) advances within hc's stream
 only and never disturbs data/fit assignments. The trade-off is that
 streams are then *consumed* by ssdsims rather than reserved; an
 "add a new RNG-consuming step" extension would need to mint a new
-stream. Open question — see §9.
+stream. Open question — see §10.
 
 ---
 
@@ -513,17 +513,139 @@ duckplyr::df_from_parquet("results/fit/*.parquet")  |> ...
 duckplyr::df_from_parquet("results/hc/*.parquet")   |> ...
 ```
 
-A child scenario (§7) only needs `results/hc/` *plus* the parent's
+A child scenario (§8) only needs `results/hc/` *plus* the parent's
 `end_state` to extend; it does not need to re-read fit or data.
 
 ---
 
-## 7. Extension: scenario → scenario
+## 7. Debugging a cluster failure
+
+The targets/tarchetypes layer is an abstraction, and abstractions
+cost debuggability. The cluster pipeline is only debuggable if any
+single failed branch can be replayed **outside targets, on any
+machine**, with the same inputs and the same RNG state.
+
+The state-only primitives `slice_sample_state()`,
+`fit_dists_state()`, `hc_state()` are the contract that makes this
+work. Each takes its inputs as plain values — data, a length-7
+integer state, scalar params — so the **task row plus the immediate
+upstream Parquet is a complete reproducer**.
+
+### Scenario
+
+`tar_make()` against `crew_controller_slurm()` fans out N hc
+branches; three error on remote workers:
+
+```
+   targets reports:
+     ✗ hc_job_3ab9c7   (slurm-worker-12)
+     ✗ hc_job_5fe201   (slurm-worker-04)
+     ✗ hc_job_91da33   (slurm-worker-21)
+```
+
+The user wants the three failures reproduced locally, fast, without
+re-running the other N−3 jobs.
+
+### Recipe
+
+```
+   1. Identify the task row (on the cluster, or after rsync).
+      ────────────────────────────────────────────────────────
+      task <- tar_read(hc_tasks) |> dplyr::filter(hc_id == "3ab9c7")
+
+      The row carries:
+        - .state_hc (length-7 integer)
+        - all hc params (nboot, est_method, ci_method, ...)
+        - fit_id     (content-hash of the upstream Parquet)
+
+   2. Locate the upstream artefact by content-addressed path.
+      ───────────────────────────────────────────────────────
+      results/fit/<fit_id>.parquet
+      The immediate upstream is enough; no need to walk further.
+
+   3. Sync to local.
+      ──────────────
+      rsync cluster:_targets/objects/hc_tasks       ./_targets/objects/
+      rsync cluster:results/fit/<fit_id>.parquet    ./results/fit/
+
+   4. Reproduce, no targets involved.
+      ───────────────────────────────
+      fit <- ssd_read_step("results/fit/<fit_id>.parquet")
+      options(error = recover)        # or place browser() in hc_state
+      out <- ssdsims:::hc_state(
+        data       = fit,
+        state      = task$.state_hc[[1]],
+        nboot      = task$nboot,
+        est_method = task$est_method,
+        ci_method  = task$ci_method,
+        proportion = scenario$hc$proportion,
+        ci         = scenario$hc$ci,
+        parametric = task$parametric,
+        save_to    = NULL
+      )
+```
+
+The call is the same code that ran on the worker; the state is the
+same integer vector; the upstream Parquet is the same bytes. A
+deterministic bug reproduces on the first call.
+
+### Helper
+
+A single helper compresses steps 1, 2 and 4:
+
+```r
+ssd_replay_task(task_id, store = "_targets", results_dir = "results")
+```
+
+infers the step from the task table the id sits in, opens the
+immediate upstream Parquet, and calls the matching `_state`
+primitive with the right args. The state-only primitives are the
+supported branch-replay API; the `_seed` wrappers stay as
+convenience for inline scripting.
+
+### What makes this work
+
+```
+   ┌──────────────────────────────────────────────────────────────┐
+   │  task row + upstream Parquet = complete reproducer            │
+   │  ──────────────────────────────────────────────────           │
+   │  state    length-7 integer; survives saveRDS / rsync / git   │
+   │  upstream one Parquet per branch; content-addressed; tools-  │
+   │            agnostic (DuckDB, Python, R)                       │
+   │  params   scalars on the task row                             │
+   │  primitive `*_state()` takes (data, state, ...args); no       │
+   │            hidden dependency on targets or the orchestrator   │
+   └──────────────────────────────────────────────────────────────┘
+```
+
+`tarchetypes` is just the orchestrator. Removing it from the
+reproducer is a feature, not a workaround.
+
+### Constraints
+
+- The bug must be deterministic in `(data, state, params)`. Non-
+  determinism from BLAS, system libraries, or untracked global state
+  is out of scope; capture `sessionInfo()` per-branch alongside the
+  Parquet to narrow it.
+- Content-addressing must be host-independent: the `<id>.parquet`
+  name is the task-row hash, not a path or mtime, so the same row
+  on cluster and laptop resolves to the same file name.
+- Only the immediate upstream is required. To debug `hc`, pull the
+  one `fit` Parquet; you do not have to refit. To debug `fit`, pull
+  the one `data` Parquet; you do not have to resample.
+
+Once the bug is fixed, the natural follow-up is to lock in the
+surviving N−3 results and re-run only the 3 failures despite the
+code change. That is §8.1.
+
+---
+
+## 8. Extension: scenario → scenario
 
 Extension is always on the sub-stream axis. The parent's run emits an
 **end_state**: the L'Ecuyer-CMRG sub-stream that comes immediately
 after the parent consumed its last task's `.state_hc`. The child uses
-this as its `master_state`. Two extension modes share the same
+this as its `master_state`. **Three** extension modes share the same
 mechanism:
 
 - **Append a dataset** (the principal mode, §1.1). The child's
@@ -531,8 +653,12 @@ mechanism:
   contains only the new dataset's tasks.
 - **Grow `nsim`.** The child reuses the parent's generator but
   declares additional sims.
+- **Fill gaps after a code fix.** The parent's run failed on a few
+  branches; the user fixed the bug (§7) and wants to re-run only
+  the failed rows, locking in the surviving Parquets despite the
+  code change. See §8.1.
 
-Both produce the same picture:
+Modes 1 and 2 produce the same picture:
 
 ```
    parent run                                child run
@@ -590,31 +716,90 @@ integer state is verified by
 concatenation, no-mutation under use, draw-level equivalence — all
 PASS on R 4.5).
 
+### 8.1 Filling gaps after a code fix
+
+Natural follow-up to a §7 debug session: the bug is identified and
+fixed; the user wants to re-run **only** the few failed branches and
+keep the surviving Parquets as-is, **despite** the code change.
+Targets' own content-hash invalidation would normally re-run every
+branch the moment `hc_state()` changes; this is precisely what
+dag-of-dags extensibility avoids.
+
+```
+   parent project                    child project (after code fix)
+   ──────────────                    ──────────────────────────────
+   task grid:        N rows          task grid:  inherited from parent,
+   results/hc/:      N-k Parquets    filtered to the k missing hc_ids
+                       │             results/hc/:  k Parquets
+                       │ failed: k                       │
+                       │                                 │
+                       └────── parent = ../parent ───────┘
+                                       │
+                                       ▼
+                              summary unions both dirs
+                              (N-k from old code, k from new code)
+```
+
+Steps:
+
+```
+   1. Commit the fix.
+   2. Open a child project with parent = parent's results dir.
+   3. Compute the missing set from the parent's manifest:
+        missing <- setdiff(parent_manifest$hc_ids,
+                           basename_no_ext(list.files(parent_results)))
+   4. The child's hc_tasks target keeps only the missing rows.
+      Other branches are not defined as targets at all -- the surviving
+      Parquets are immutable inputs, not targets to (re)compute.
+   5. The summary target unions parent's + child's result dirs via
+      duckplyr.
+```
+
+**Why this stays correct.** The state-only primitives (§7) are pure
+in `(data, state, params)`. The k re-runs use the **same** sub-stream
+states the parent would have used (inherited via `parent` →
+`master_state`), the **same** input Parquets (locked in by content-
+addressed path), and the **same** params (carried on the inherited
+task rows). The only thing different is the patched code path, which
+is the deliberate choice. If the fix changes behaviour only inside
+the previously-failing case, the surviving N−k Parquets would have
+been byte-identical under the new code anyway; if it changes
+behaviour everywhere, the union is intentionally heterogeneous and
+the user owns that.
+
+**Manifest requirement.** The parent's results manifest must record
+(a) the task-grid digest and (b) which `hc_ids` *successfully*
+completed, so `missing` is well-defined. Without (b), the child
+cannot distinguish "absent because the run hasn't reached it yet"
+from "absent because the branch errored".
+
 ---
 
-## 8. Gaps from `RNG-FLOW.md` §5 — how this design closes them
+## 9. Gaps from `RNG-FLOW.md` §5 — how this design closes them
 
 | Gap                                              | Resolution                                                                                  |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| No `ssd_extend_scenario()`                       | §7 — `parent` field + `ssd_extend_scenario(parent, ...)` constructor.                       |
-| No "load previous run from Parquet" path         | §7 — `parent` may be a results dir; manifest stores `end_state` (length-7 integer).         |
-| No DAG-of-DAGs primitive                         | §7 — child reads parent via `tar_read(..., store = "../parent/_targets")`.                  |
-| Persists only `seed`, not master L'Ecuyer state  | §1, §7 — scenario stores `master_state`; `seed` is a constructor convenience.               |
+| No `ssd_extend_scenario()`                       | §8 — `parent` field + `ssd_extend_scenario(parent, ...)` constructor.                       |
+| No "load previous run from Parquet" path         | §8 — `parent` may be a results dir; manifest stores `end_state` (length-7 integer).         |
+| No DAG-of-DAGs primitive                         | §8 — child reads parent via `tar_read(..., store = "../parent/_targets")`.                  |
+| Persists only `seed`, not master L'Ecuyer state  | §1, §8 — scenario stores `master_state`; `seed` is a constructor convenience.               |
 | Positional task IDs                              | §2 — task IDs are content-addressed: hash of the canonical task row.                        |
 | Re-derivation cost is quadratic                  | §2 — 3·N sub-stream advances at grid materialization; per-task work O(1).                   |
 | `nsim`-grow cache invalidation                   | §1, §2 — scenario is declarative; downstream targets depend on individual task rows.        |
-| `stream` axis conflated with extension axis      | §1, §7 — extension lives on sub-streams only; the stream axis is reserved.                  |
+| `stream` axis conflated with extension axis      | §1, §8 — extension lives on sub-streams only; the stream axis is reserved.                  |
 | Three steps cached as one (no per-step re-runs)  | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
 | Same lattice for all steps despite grid mismatch | §5 — each step has its own grid; the lattice has three blocks rather than one shared one.   |
 | data/fit/hc states collided in PoC               | §2 — strided enumeration: each task takes three consecutive sub-streams, no overlap.        |
 | Single-dataset scenarios only                    | §1.1 — generator is a named list of data.frames; datasets are the outermost cross-join.     |
+| Branch failure unreproducible off the cluster    | §7 — task row + immediate upstream Parquet replays the failing branch via the `_state` primitives. |
+| Code fix re-runs every branch by hash invalidation | §8.1 — child project locks in parent's surviving Parquets and re-runs only the missing hc_ids. |
 
 The RNGkind side-effect bug and the independent data/fit/hc substreams
 are assumed already merged from the PoC and are not re-derived here.
 
 ---
 
-## 9. Open questions for review
+## 10. Open questions for review
 
 1. **Sub-streams sequential vs. one-stream-per-step.** §5 sketches
    both: (a) three sub-stream blocks walked sequentially from
