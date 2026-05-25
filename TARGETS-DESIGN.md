@@ -26,6 +26,7 @@ ssdsims_scenario
 ├── generator      ← named list of data.frames (§1.1)  | function | fitdists
 ├── fit            ← list of ssd_fit_dists() argument vectors
 ├── hc             ← list of ssd_hc() argument vectors
+├── upload         ← NULL (no upload) or list(backend, url, container, …) (§6.1)
 └── parent         ← NULL, or a previous ssdsims_scenario / results path
                      this scenario extends (§8)
 ```
@@ -516,6 +517,62 @@ duckplyr::df_from_parquet("results/hc/*.parquet")   |> ...
 A child scenario (§8) only needs `results/hc/` *plus* the parent's
 `end_state` to extend; it does not need to re-read fit or data.
 
+### 6.1 Cloud upload hook
+
+The data/fit/hc Parquets are the user-facing artefacts and they need
+to be readable **from outside the cluster** — analysis notebooks on a
+laptop, dashboards, downstream R/Python scripts. The scenario carries
+an optional `upload` field describing a destination object store; each
+per-step target pushes its Parquet there right after the local write.
+
+```
+   scenario$upload (NULL by default; non-NULL example):
+     list(
+       backend   = "azure_blob",
+       url       = "https://<acct>.blob.core.windows.net",
+       container = "ssdsims-results"
+     )
+```
+
+Per-step flow when `upload` is non-NULL:
+
+```
+   ssd_run_<step>_step(...)
+        │
+        ▼ writes results/<step>/<id>.parquet  (local; targets tracks this)
+        │
+        ▼ pushes the same file to  <url>/<container>/<step>/<id>.parquet
+                                   (cluster-side helper, e.g. AzureStor)
+        │
+        ▼ records the upload's sha256 in the result manifest
+```
+
+The local Parquet stays on disk so `targets`' `format = "file"`
+tracking is unaffected; the cloud copy is an additional artefact.
+
+**Auth is external.** Credentials come from environment variables
+(`AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, or a service-principal
+combo). The scenario object does **not** carry secrets — it carries
+only the destination URL and container name.
+
+**Connectivity probe up front.** `ssd_test_upload(scenario)` performs
+a minimal round-trip (list the container, write and delete a small
+marker blob) and either returns silently or errors with the
+backend's diagnostic. The pipeline calls it once at the start of
+`tar_make()` so an auth or network failure aborts before any
+compute starts. Easy to run interactively too:
+
+```r
+scenario <- ssd_scenario(..., upload = list(backend = "azure_blob", ...))
+ssd_test_upload(scenario)   # silent on success, throws on failure
+tar_make()
+```
+
+**Failure mode.** A per-file upload error becomes the target's error;
+the local Parquet remains, so `tar_make()` can be re-driven and the
+upload retried. The scenario's manifest records, per `id`, the local
+sha256 and the cloud sha256; a mismatch flags a corrupted transfer.
+
 ---
 
 ## 7. Debugging a cluster failure
@@ -621,6 +678,45 @@ convenience for inline scripting.
 `tarchetypes` is just the orchestrator. Removing it from the
 reproducer is a feature, not a workaround.
 
+### Lightweight reproduction: skip the rsync, verify the inputs
+
+If the prefix of the pipeline is cheap to re-run, the recipe above
+collapses: drive a local `tar_make()` up to the failing target and
+skip step 3 entirely. The catch is **verifying that the locally
+regenerated upstream matches what the cluster's failed branch
+actually consumed** — without that, you might be debugging a
+phantom.
+
+The mechanism is content-addressed hashing. Every Parquet the
+cluster writes is fingerprinted with `sha256` and the value is
+stored in the parent's manifest before any upload happens:
+
+```r
+manifest$completed_hashes[["<fit_id>"]]
+#> "8c92…"  (sha256 of results/fit/<fit_id>.parquet at write time)
+```
+
+Local recipe:
+
+```
+   1. tar_make() locally up to fit_job, then look at the
+      regenerated results/fit/<fit_id>.parquet.
+   2. local_hash  <- digest::digest(file = "results/fit/<fit_id>.parquet",
+                                    algo = "sha256")
+      parent_hash <- parent_manifest$completed_hashes[["<fit_id>"]]
+      stopifnot(identical(local_hash, parent_hash))
+        ✓  the cluster's input is reproduced byte-for-byte;
+           continue to step 4 of the rsync recipe.
+        ✗  upstream is host-dependent (BLAS, system libs, env);
+           fall back to rsync.
+   3. With inputs verified, replay the failing hc_state() call
+      directly (no targets involved) -- same as the rsync recipe.
+```
+
+Same primitive (`hc_state(data, state, ...)`); the only thing the
+two recipes differ on is **where** the upstream Parquet came from.
+Hash verification is the bridge.
+
 ### Constraints
 
 - The bug must be deterministic in `(data, state, params)`. Non-
@@ -630,73 +726,83 @@ reproducer is a feature, not a workaround.
 - Content-addressing must be host-independent: the `<id>.parquet`
   name is the task-row hash, not a path or mtime, so the same row
   on cluster and laptop resolves to the same file name.
-- Only the immediate upstream is required. To debug `hc`, pull the
-  one `fit` Parquet; you do not have to refit. To debug `fit`, pull
-  the one `data` Parquet; you do not have to resample.
+- The manifest must record `completed_hashes` (per-id sha256). Without
+  it, lightweight reproduction can't be verified.
+- Only the immediate upstream is required. To debug `hc`, pull or
+  regenerate the one `fit` Parquet; you do not have to refit
+  upstream of that. To debug `fit`, the one `data` Parquet; you do
+  not have to resample.
 
 Once the bug is fixed, the natural follow-up is to lock in the
 surviving N−3 results and re-run only the 3 failures despite the
-code change. That is §8.1.
+code change. That is the same primitive as scenario extension —
+see §8 (the re-run-after-fix shape is just `desired \ completed`
+with `desired = parent.desired_grid`).
 
 ---
 
 ## 8. Extension: scenario → scenario
 
-Extension is always on the sub-stream axis. The parent's run emits an
-**end_state**: the L'Ecuyer-CMRG sub-stream that comes immediately
-after the parent consumed its last task's `.state_hc`. The child uses
-this as its `master_state`. **Three** extension modes share the same
-mechanism:
-
-- **Append a dataset** (the principal mode, §1.1). The child's
-  generator list extends the parent's; the child's task grid
-  contains only the new dataset's tasks.
-- **Grow `nsim`.** The child reuses the parent's generator but
-  declares additional sims.
-- **Fill gaps after a code fix.** The parent's run failed on a few
-  branches; the user fixed the bug (§7) and wants to re-run only
-  the failed rows, locking in the surviving Parquets despite the
-  code change. See §8.1.
-
-Modes 1 and 2 produce the same picture:
+Extension is **one primitive**: the child declares its desired task
+grid by reference to a parent, and runs the tasks that are missing
+from the parent's successfully-completed grid. The parent's surviving
+Parquets are immutable inputs to the child; nothing already on disk
+is recomputed.
 
 ```
-   parent run                                child run
-   ──────────                                ─────────
-   master_state = M                          master_state = end_state(parent)
-   ┌──────────────────────┐                  ┌──────────────────────────┐
-   │ task[1]: data/fit/hc │                  │ task'[1]: data/fit/hc    │
-   │ task[2]: data/fit/hc │                  │ task'[2]: data/fit/hc    │
-   │   ⋮                  │                  │   ⋮                      │
-   │ task[N]: data/fit/hc │                  │ task'[N']: data/fit/hc   │
-   └──────────┬───────────┘                  └──────────┬───────────────┘
-              │ end_state                               │ end_state
-              ▼                                         ▼
-   persisted on parent's manifest          persisted; available for grandchild
-              │                                         │
-              └──────────────────┬──────────────────────┘
-                                 ▼
-                         child inherits, no re-derivation from seed
+   child.tasks_to_run = child.desired_grid \ parent.completed_grid
+                                                  (set difference)
 ```
 
-The child does **not** re-derive from the original seed; it inherits
-`end_state` from the parent's persisted manifest. The child's task
-grid contains only the **new** tasks.
+Three common shapes are particular cases of the same primitive:
+
+| Shape                               | `child.desired_grid`                | Missing tasks         | Sub-streams for missing tasks  |
+| ----------------------------------- | ----------------------------------- | --------------------- | ------------------------------ |
+| Append a dataset (§1.1, principal)  | parent ∪ {new dataset's tasks}      | new dataset's tasks   | fresh, from `parent.end_state` |
+| Grow `nsim`                         | parent ∪ {extra sim rows}           | extra sim rows        | fresh, from `parent.end_state` |
+| Re-run after a code fix (post-§7)   | parent's grid (unchanged)           | parent's failed IDs   | same as parent attempted       |
+
+In all three the mechanism is identical:
+
+```
+   parent
+   ┌───────────────────────────────┐
+   │ desired_grid:    N rows       │
+   │ completed_grid:  N-k Parquets │
+   │ master_state, end_state on the manifest
+   └──────────────┬────────────────┘
+                  │ parent = path / scenario object
+                  ▼
+   child (some N' rows of desired_grid)
+        ─ if id ∈ parent.desired_grid: re-use parent's sub-stream
+                                       (by canonical content-addressed allocation)
+        ─ else: allocate from parent.end_state onward
+                                       (preserves §2's linear cost)
+                  │
+                  ▼
+   child runs (desired ∩ ¬completed); writes those Parquets only.
+                  │
+                  ▼
+   summary unions BOTH result dirs via duckplyr.
+```
 
 ```
    tar_make() in child project
         │
         ▼
-   read parent manifest  ──▶  end_state(parent)
+   read parent manifest  ──▶  end_state, completed_ids, completed_hashes (§7)
         │
         ▼
-   build child scenario:  master_state = end_state(parent)
+   build child scenario; compute `tasks_to_run = desired \ completed_ids`
         │
         ▼
-   child task grid       ──▶  child Parquet (parent files untouched)
+   child task table only contains `tasks_to_run`
         │
         ▼
-   merge target reads BOTH child's and parent's Parquet (duckplyr)
+   child Parquets land alongside parent's (parent files untouched)
+        │
+        ▼
+   summary reads both via duckplyr
 ```
 
 `parent` may be:
@@ -706,72 +812,42 @@ grid contains only the **new** tasks.
   (`tar_read(scenario, store = "../parent/_targets")`).
 - A Parquet results directory plus a sidecar manifest (language-
   agnostic).
+- A cloud URL (§6.1) plus a manifest blob — no local copy needed if
+  duckplyr can read Parquet over HTTP.
 
 The merge sits *downstream of all child targets*; the child writes
-only what is new.
+only what is missing.
+
+**Why "re-run after a code fix" is not a third primitive.** When the
+parent's `desired_grid` equals the child's `desired_grid` (the user
+isn't adding tasks, just filling gaps), `desired \ completed` is the
+set of failed IDs. The same set-difference machinery — driven by
+`completed_ids` on the manifest — selects which tasks to run. The
+state-only primitives (§7) are pure in `(data, state, params)`, so
+re-running a failed ID under patched code with the same sub-stream
+gives the deliberate fix-only delta. If the fix changes behaviour
+*only* inside the previously-failing case, the surviving N−k
+Parquets would have been byte-identical under the new code; if it
+changes behaviour everywhere, the union is intentionally
+heterogeneous and the user owns that. Either way, no separate
+primitive is needed.
+
+**Manifest requirement.** The parent's manifest carries:
+- `master_state` and `end_state` (length-7 integers, §2).
+- `desired_grid_digest` (hash of parent's full intended task grid).
+- `completed_ids`: which IDs have Parquets on disk and are trusted.
+- `completed_hashes`: per-id sha256 of the local Parquet at write time (§7).
+
+Without `completed_ids`, the child cannot distinguish "absent because
+the run hasn't reached this task yet" from "absent because the
+branch errored". Without `completed_hashes`, §7's lightweight
+reproduction can't verify inputs.
 
 Restartability of sub-stream enumeration from a persisted length-7
 integer state is verified by
 `scripts/experiment-substream-restart.R` (saveRDS round-trip, restart
 concatenation, no-mutation under use, draw-level equivalence — all
 PASS on R 4.5).
-
-### 8.1 Filling gaps after a code fix
-
-Natural follow-up to a §7 debug session: the bug is identified and
-fixed; the user wants to re-run **only** the few failed branches and
-keep the surviving Parquets as-is, **despite** the code change.
-Targets' own content-hash invalidation would normally re-run every
-branch the moment `hc_state()` changes; this is precisely what
-dag-of-dags extensibility avoids.
-
-```
-   parent project                    child project (after code fix)
-   ──────────────                    ──────────────────────────────
-   task grid:        N rows          task grid:  inherited from parent,
-   results/hc/:      N-k Parquets    filtered to the k missing hc_ids
-                       │             results/hc/:  k Parquets
-                       │ failed: k                       │
-                       │                                 │
-                       └────── parent = ../parent ───────┘
-                                       │
-                                       ▼
-                              summary unions both dirs
-                              (N-k from old code, k from new code)
-```
-
-Steps:
-
-```
-   1. Commit the fix.
-   2. Open a child project with parent = parent's results dir.
-   3. Compute the missing set from the parent's manifest:
-        missing <- setdiff(parent_manifest$hc_ids,
-                           basename_no_ext(list.files(parent_results)))
-   4. The child's hc_tasks target keeps only the missing rows.
-      Other branches are not defined as targets at all -- the surviving
-      Parquets are immutable inputs, not targets to (re)compute.
-   5. The summary target unions parent's + child's result dirs via
-      duckplyr.
-```
-
-**Why this stays correct.** The state-only primitives (§7) are pure
-in `(data, state, params)`. The k re-runs use the **same** sub-stream
-states the parent would have used (inherited via `parent` →
-`master_state`), the **same** input Parquets (locked in by content-
-addressed path), and the **same** params (carried on the inherited
-task rows). The only thing different is the patched code path, which
-is the deliberate choice. If the fix changes behaviour only inside
-the previously-failing case, the surviving N−k Parquets would have
-been byte-identical under the new code anyway; if it changes
-behaviour everywhere, the union is intentionally heterogeneous and
-the user owns that.
-
-**Manifest requirement.** The parent's results manifest must record
-(a) the task-grid digest and (b) which `hc_ids` *successfully*
-completed, so `missing` is well-defined. Without (b), the child
-cannot distinguish "absent because the run hasn't reached it yet"
-from "absent because the branch errored".
 
 ---
 
@@ -792,7 +868,9 @@ from "absent because the branch errored".
 | data/fit/hc states collided in PoC               | §2 — strided enumeration: each task takes three consecutive sub-streams, no overlap.        |
 | Single-dataset scenarios only                    | §1.1 — generator is a named list of data.frames; datasets are the outermost cross-join.     |
 | Branch failure unreproducible off the cluster    | §7 — task row + immediate upstream Parquet replays the failing branch via the `_state` primitives. |
-| Code fix re-runs every branch by hash invalidation | §8.1 — child project locks in parent's surviving Parquets and re-runs only the missing hc_ids. |
+| Code fix re-runs every branch by hash invalidation | §8 — re-run-after-fix is the same `desired \ completed` primitive as scenario extension; child runs only the missing hc_ids. |
+| Off-cluster access to Parquet outputs            | §6.1 — `scenario$upload` pushes each Parquet to a configurable object store (e.g. Azure Blob) right after the local write. |
+| Phantom local repros (regenerated upstream ≠ cluster's actual) | §7 — manifest's `completed_hashes` lets the lightweight recipe verify the local upstream by sha256 before running the failing step. |
 
 The RNGkind side-effect bug and the independent data/fit/hc substreams
 are assumed already merged from the PoC and are not re-derived here.
