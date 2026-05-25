@@ -73,19 +73,19 @@ data_list <- list(
     ssddata::ccme_boron,
     n = 10L,
     replace = FALSE,
-    state = state_list[[2L]]
+    state = state_list[[1L]]
   ),
   s2_n5 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 5L,
     replace = FALSE,
-    state = state_list[[3L]]
+    state = state_list[[2L]]
   ),
   s2_n10 = ssdsims:::slice_sample_state(
     ssddata::ccme_boron,
     n = 10L,
     replace = FALSE,
-    state = state_list[[4L]]
+    state = state_list[[2L]]
   )
 )
 
