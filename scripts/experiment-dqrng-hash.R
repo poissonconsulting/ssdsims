@@ -15,12 +15,13 @@
 ##       Inventory: runif, rnorm, rbinom, rexp, rgamma, rpois,
 ##       sample.int, sample, dplyr::slice_sample, ssdtools::ssd_r*.
 ##   (3) What hash function should produce the stream id?
-##       rlang::hash() is xxhash128 (128 bits hex). dqset.seed accepts
-##       integer stream — capped at signed int32 — so we mask to
-##       31 bits (`0x7FFFFFFF`). Effective entropy per task: 31 bits.
-##   (4) Collision probability (birthday paradox) at 31-bit stream
-##       width: 50% collision at sqrt(2^31) ~ 46 k tasks. Empirical
-##       check below.
+##       rlang::hash() is xxhash128 (128 bits hex). dqset.seed's
+##       `stream` argument **accepts a length-2 integer vector**
+##       interpreted as a 64-bit (hi, lo) pair, so we slice 64 bits
+##       out of the hash and pass them in as two int32s.
+##   (4) Collision probability (birthday paradox) at 64-bit stream
+##       width: 50% collision at sqrt(2^64) ~ 4 billion tasks.
+##       Empirical check below.
 ##
 ## Run:
 ##   Rscript scripts/experiment-dqrng-hash.R
@@ -36,31 +37,54 @@ cat("R version:     ", R.version.string, "\n\n")
 
 # --- 1. Hash → stream id -------------------------------------------------
 
-# rlang::hash returns 32 hex chars (xxhash128 = 128 bits). We take the
-# first 7 hex chars (28 bits) plus mask to 31 bits via the 8th nibble's
-# low 3 bits, but strtoi caps at 2^31-1 for signed int32. Simplest:
-# take 7 hex chars (= 28 bits unsigned, always fits int32). 28-bit
-# birthday at sqrt(2^28) ~ 16 k tasks.
-#
-# To get to 31 bits we can `bitwShiftL(strtoi(hex[1:7]), 3) +
-# bitwAnd(strtoi(hex[8]), 7L)`. We do that and pass through
-# `bitwAnd(., 0x7FFFFFFFL)` to clamp into [0, 2^31).
+# rlang::hash returns 32 hex chars (xxhash128 = 128 bits). dqset.seed's
+# `stream` argument accepts a length-2 integer vector interpreted as
+# a 64-bit (hi, lo) pair -- e.g. `c(1L, 2L)` differs from `c(0L, 1L)`
+# (which is the canonical single 1L). We slice 64 bits out of the
+# hash as `c(hi32, lo32)`. Each 32-bit half must fit in signed int32,
+# so we take 7 hex chars per half (28 bits) and pack them with the
+# 8th nibble's low 3 bits to fill 31 bits; the sign bit (bit 31)
+# stays zero.
 task_stream_id <- function(task_params) {
   h <- rlang::hash(task_params) # 32-char hex
-  hi28 <- strtoi(substr(h, 1L, 7L), base = 16L) # 28 bits
-  lo3 <- bitwAnd(strtoi(substr(h, 8L, 8L), base = 16L), 7L)
-  stream <- bitwOr(bitwShiftL(hi28, 3L), lo3) # 31 bits
-  bitwAnd(stream, 0x7FFFFFFFL) # signed int32 safe
+  # Two independent 31-bit halves -> 62 effective bits.
+  hi <- bitwOr(
+    bitwShiftL(strtoi(substr(h, 1L, 7L), base = 16L), 3L),
+    bitwAnd(strtoi(substr(h, 8L, 8L), base = 16L), 7L)
+  )
+  lo <- bitwOr(
+    bitwShiftL(strtoi(substr(h, 9L, 15L), base = 16L), 3L),
+    bitwAnd(strtoi(substr(h, 16L, 16L), base = 16L), 7L)
+  )
+  c(bitwAnd(hi, 0x7FFFFFFFL), bitwAnd(lo, 0x7FFFFFFFL))
 }
 
 # Smoke
 stream_a <- task_stream_id(list(sim = 1L, nrow = 5L, rescale = FALSE))
 stream_b <- task_stream_id(list(sim = 1L, nrow = 5L, rescale = TRUE))
 stream_c <- task_stream_id(list(sim = 1L, nrow = 5L, rescale = FALSE)) # = a
-cat("stream a (sim=1, nrow=5, rescale=F):", stream_a, "\n")
-cat("stream b (sim=1, nrow=5, rescale=T):", stream_b, "\n")
-cat("stream c (== a):                    ", stream_c, "\n")
-stopifnot(stream_a == stream_c, stream_a != stream_b)
+cat(
+  "stream a (sim=1, nrow=5, rescale=F): c(",
+  stream_a[1L],
+  ",",
+  stream_a[2L],
+  ")\n"
+)
+cat(
+  "stream b (sim=1, nrow=5, rescale=T): c(",
+  stream_b[1L],
+  ",",
+  stream_b[2L],
+  ")\n"
+)
+cat(
+  "stream c (== a):                     c(",
+  stream_c[1L],
+  ",",
+  stream_c[2L],
+  ")\n"
+)
+stopifnot(identical(stream_a, stream_c), !identical(stream_a, stream_b))
 
 # --- 2. Stream-keyed reproducibility & independence ---------------------
 
@@ -176,23 +200,28 @@ stream_id_for_row <- function(row) {
   task_stream_id(as.list(row))
 }
 
-cat("\n(4) collision probability at 31-bit stream:\n")
+cat("\n(4) collision probability at 62-bit stream (two int31s):\n")
 cat(sprintf(
-  "    theoretical 50%% collision around sqrt(2^31) = %g tasks\n",
-  sqrt(2^31)
+  "    theoretical 50%% collision around sqrt(2^62) = %g tasks\n",
+  sqrt(2^62)
 ))
+
+stream_id_key <- function(row) {
+  s <- stream_id_for_row(row)
+  paste0(s[1L], "_", s[2L])
+}
 
 for (n_tasks in c(1000L, 10000L, 100000L)) {
   params <- gen_task_params(n_tasks)
-  ids <- vapply(
+  keys <- vapply(
     seq_len(nrow(params)),
-    \(i) stream_id_for_row(params[i, ]),
-    integer(1L)
+    \(i) stream_id_key(params[i, ]),
+    character(1L)
   )
-  n_collisions <- n_tasks - length(unique(ids))
-  expected <- n_tasks^2 / 2^32 # = N(N-1)/(2 * 2^31) approx
+  n_collisions <- n_tasks - length(unique(keys))
+  expected <- n_tasks^2 / 2^63 # = N(N-1)/(2 * 2^62) approx
   cat(sprintf(
-    "    n_tasks = %6d : empirical collisions = %4d, expected ~ %.1f\n",
+    "    n_tasks = %6d : empirical collisions = %4d, expected ~ %.2e\n",
     n_tasks,
     n_collisions,
     expected
@@ -202,10 +231,11 @@ for (n_tasks in c(1000L, 10000L, 100000L)) {
 # --- 5. Limitations / open questions ------------------------------------
 
 cat("\n(5) limitations:\n")
-cat("    * dqset.seed() coerces both seed and stream to signed int32.\n")
-cat("      Stream entropy capped at 31 bits => ~46k-task birthday limit.\n")
-cat("      For larger scenarios, encode the high bits of the hash into\n")
-cat("      `seed` (XOR with scenario seed) to get up to ~62 bits.\n")
+cat("    * dqset.seed()'s `stream` accepts a length-2 integer vector\n")
+cat("      treated as a 64-bit (hi32, lo32) pair. We pack 62 effective\n")
+cat("      bits (two int31s) of the rlang::hash() digest. Each half\n")
+cat("      must fit in signed int32 to avoid `NAs introduced by\n")
+cat("      coercion to integer range`; the sign bit (bit 31) stays 0.\n")
 cat("    * Internal RNG consumption of ssdtools::ssd_fit_dists() and\n")
 cat("      ssd_hc() is opaque; correctness depends on those calls\n")
 cat("      consuming RNG only via base R's runif/rnorm/sample (which\n")

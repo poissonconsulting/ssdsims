@@ -7,22 +7,25 @@ Three primary goals, each a hard constraint:
   reruns and machines (RNG state is explicit and serializable; §1, §2).
 - **Debuggability.** Any single failed branch on the cluster must be
   replayable locally — with no `targets`, no orchestrator — using
-  the same inputs the cluster used. This is what the state-only
-  primitives (`slice_sample_state()`, `fit_dists_state()`,
-  `hc_state()`) and the per-Parquet content-addressed manifest are
+  the same inputs the cluster used. This is what the stream-only
+  primitives (`slice_sample_stream()`, `fit_dists_stream()`,
+  `hc_stream()`) and the per-Parquet content-addressed manifest are
   *for* (§7).
-- **Extensibility.** A scenario can declare a desired task grid that
-  references a parent; the child runs only the difference between
-  its desired grid and the parent's completed grid (§8).
+- **Extensibility.** Content-addressed Parquet files *are* the cache:
+  a larger scenario reuses Parquets whose task IDs match, computes
+  the rest, and unions everything. Two named exceptions
+  (`parent_alias` for renames, dag-of-dags for mixed-code re-runs)
+  are documented in §8.
 
 Parallelism is assumed throughout. The document covers, in order:
-the **scenario object** (§1), the **pre-generated RNG-state lattice**
-(§2), running locally (§3), assembling the cluster pipeline (§4),
-the three step grids and their fan-outs (§5), the concrete target
-graph and the **cloud upload hook** (§6), **debugging** a cluster
-failure (§7), and **extension** of a scenario (§8). §9 lists known
-limitations, §10 maps gaps from `RNG-FLOW.md` §5 to resolutions,
-§11 collects open questions.
+the **scenario object** and central registries (§1), the
+**per-task dqrng+hash RNG mechanism** (§2), running locally (§3),
+assembling the cluster pipeline (§4), the three step grids and
+their fan-outs (§5), the concrete target graph and the **cloud
+upload hook** (§6), **debugging** a cluster failure (§7), and
+**extension** (§8). §9 lists known limitations, §10 maps gaps from
+`RNG-FLOW.md` §5 to resolutions, §11 collects open questions, and
+§12 is the implementation roadmap.
 
 Background and the list of gaps this design closes are in `RNG-FLOW.md`
 §5. This is a forward-looking design; it does not document the existing
@@ -38,159 +41,235 @@ materialized task grid; expansion happens at run time via
 
 ```
 ssdsims_scenario
-├── root_state   ← length-7 L'Ecuyer-CMRG integer vector;
-│                    the sub-stream root this scenario advances from
-│                    (NOT a scalar seed — see §2)
-├── nsim           ← number of replicate sims per dataset
-├── generator      ← named list of data.frames (§1.1)  | function | fitdists
-├── fit            ← list of ssd_fit_dists() argument vectors
-├── hc             ← list of ssd_hc() argument vectors
-├── upload         ← NULL (no upload) or list(backend, url, container, …) (§6.1)
-└── parent         ← NULL, or a previous ssdsims_scenario / results path
-                     this scenario extends (§8)
+├── seed         ← scalar integer; root of the per-task RNG (§2)
+├── nsim         ← number of replicate sims per dataset
+├── datasets     ← character vector of dataset names referencing
+│                  the central dataset registry (§1.1)
+├── nrow         ← integer vector of sample sizes; subset property (§5)
+├── fit          ← list of ssd_fit_dists() argument vectors;
+│                  min_pmix uses NAME references into the
+│                  min_pmix registry (§1.1)
+├── hc           ← list of ssd_hc() argument vectors; the ci-FALSE
+│                  collapse means bootstrap-only knobs (nboot,
+│                  ci_method, parametric) are stored as NA on tasks
+│                  where ci = FALSE (§1.2)
+├── upload       ← NULL (no upload) or list(backend, url, …) (§6.1)
+└── parent       ← NULL, or a previous results dir referenced for
+                   parent_alias / mixed-code use (§8). Plain extension
+                   (more datasets, more nsim) does NOT need a parent
+                   reference — content-addressed Parquet is the cache.
 ```
 
-Four design points distinguish this from the current code:
+Three design points distinguish this from the current code:
 
-1. **`root_state`, not `seed`.** The scenario stores the
-   *post-`set.seed` post-`RNGkind` L'Ecuyer-CMRG state*, not the integer
-   seed. Two scenarios with the same `root_state` produce identical
-   task grids regardless of whether the seed→state transformation in
-   `get_lecuyer_cmrg_*()` is later refactored. `ssd_scenario(seed = 42)`
-   is a convenience constructor that derives and stores the state.
-2. **Sub-streams only; the stream axis is reserved.** Every scenario
-   (and every child) advances via `parallel::nextRNGSubStream()` from
-   its `root_state`. `parallel::nextRNGStream()` is not invoked by
-   any scenario primitive; the stream axis is kept available for
-   future applications (e.g. statistically independent batch axes
-   layered on top of scenarios).
-3. **Named list of data.frames as the principal generator.** The data
-   generator is a **named list** of data.frames; a bare data.frame is
-   silently lifted to a length-1 list (named `"data"` by default).
-   Each dataset is its own cross-join axis, so a scenario with three
-   datasets and `nsim = 100` materializes `3 × 100 × |nrow| × …`
-   tasks. The `function` and `fitdists` generators remain supported
-   but are secondary; the named-list-of-data.frames path is the one
-   §6 and §8 exercise.
-4. **`parent`.** A scenario can point at an upstream scenario it
-   extends. Extension always advances on the sub-stream axis (§8):
+1. **`seed`, a scalar integer.** Re-running a scenario with a
+   different RNG means changing this one number. The L'Ecuyer-CMRG
+   `root_state` (length-7 vector) of the previous design is gone;
+   dqrng + hash (§2) makes it unnecessary. Two scenarios with the
+   same `seed` and the same task parameters produce identical RNG
+   sequences.
+2. **Datasets and `min_pmix` are referenced by name.** Both live in
+   central registries; the scenario stores only names. This keeps the
+   scenario serializable as a tiny manifest (a few names + numeric
+   knobs) and lets the per-task hash (§2) ignore function-body
+   contents — so a non-behaviour-changing code edit to a registered
+   function does *not* invalidate cached results. See §1.1.
+3. **No `parent` for plain extension.** Adding tasks (new dataset,
+   more `nsim`, more `nrow` values, …) gives them new task hashes
+   and new streams; existing tasks' hashes are unchanged so their
+   Parquets are reused automatically. The `parent` reference is
+   only for the two cases content-addressing alone can't handle:
+   renaming/reordering datasets (`parent_alias`, §8) and mixing
+   old + new code after a fix (§8).
 
-```
-   scenario_v1                       scenario_v2 (parent = v1)
-   root_state = M                  root_state = M_next
-   nsim = 100                        nsim = 100
-        │                                  │
-        └── extend ────────────────────────┘
-            where M_next is the first sub-stream past
-            v1's last consumed sub-stream (§8).
-```
+### 1.1 Central registries: datasets and min_pmix
 
-### 1.1 Named-list-of-data.frames generator
+Both datasets and `min_pmix` functions live in **central registries**
+keyed by name; the scenario stores names, not values. Two motivations:
 
-```
-   generator = list(
-     boron     = ssddata::ccme_boron,
-     cadmium   = ssddata::ccme_cadmium,
-     chloride  = ssddata::ccme_chloride
-   )
-```
+1. **Hash stability under code edits.** Function-valued parameters
+   would otherwise force a content-hash invalidation on any source
+   edit, even cosmetic ones. By hashing the *name* and looking the
+   function up at run time, an edit to (e.g.) `ssdtools::ssd_min_pmix`
+   does not move tasks across streams. Correctness under such edits
+   is the user's contract — pin `ssdtools` versions in the manifest.
+2. **Compact, portable scenario manifests.** A scenario serializes
+   to a small JSON/Parquet sidecar containing names + numeric knobs;
+   data.frame contents and function bodies live in their own files.
 
-Canonical task ordering puts the **dataset name as the outermost
-axis**, then `sim`, then the remaining cross-join axes
-(`nrow`, `dist_sim`, `nboot`, `est_method`, `ci_method`, …) in a
-fixed lexicographic order:
+#### Dataset registry
 
 ```
-   (dataset, sim, nrow, dist_sim, ci_method, …)
-       ↑
-       outermost = adding a new dataset only appends tasks at the end,
-                   so existing tasks keep their sub-stream assignments
-                   and stay cached.
+   results/datasets/<name>.parquet     # one file per registered dataset
+   results/datasets/_index.json        # name -> { rows, conc_col, sha256, source }
 ```
 
-This makes "extend by adding a dataset" the cheap extension path:
+Registration:
 
+```r
+ssd_register_dataset("boron",   ssddata::ccme_boron)
+ssd_register_dataset("cadmium", ssddata::ccme_cadmium)
+# Synthetic / function-generated datasets are materialized at
+# registration time, not lazily; the scenario hashes the name only.
+ssd_register_dataset(
+  "rlnorm_n100",
+  generator = function(seed) {
+    dqrng::dqset.seed(seed); tibble::tibble(Conc = ssdtools::ssd_rlnorm(100))
+  },
+  seed = 1L                       # captured so registration is deterministic
+)
 ```
-   parent: generator = list(boron, cadmium)
-           parent's tasks consume sub-streams 1 … M_parent
-   child:  generator = list(boron, cadmium, chloride)  ← appended
-           parent's tasks unchanged (same sub-stream assignments)
-           child's new tasks consume sub-streams M_parent + 1 …
-                                                M_child
+
+Invariant: every registered dataset has a `Conc` column (the SSD
+convention; verified at registration). Other columns are passed
+through.
+
+Scenarios reference datasets by name:
+
+```r
+ssd_scenario(datasets = c("boron", "cadmium"), nsim = 100, …)
 ```
 
-(Whether `M_parent` equals `nsim` or `|data|+|fit|+|hc|` depends on
-the sub-stream allocation strategy, see §5; in either case the
-parent's allocation is preserved.)
+Synthetic datasets are **materialized at registration time**, not on
+demand: they live as Parquet files in the registry alongside
+real-world data. Tasks reading them via name go through the same
+content-addressed path as for empirical data. Trade-off: a
+function-generated dataset must fit in memory at registration; for
+large ones, generate directly to disk and register the resulting
+Parquet path.
 
-Renaming or reordering existing datasets is *not* cache-preserving
-**at the scenario level** — the canonical order shifts and every
-downstream sub-stream re-assigns. Names are part of the scenario's
-content hash. The dag-of-dags extension primitive (§8) recovers
-cache hits across a rename or reorder by carrying an explicit
-`parent_alias` from new dataset names to parent dataset names; the
-parent's Parquets are then re-attributed (not re-computed) under
-the new labels.
+#### `min_pmix` registry
+
+```r
+ssd_register_min_pmix("default", ssdtools::ssd_min_pmix)
+ssd_register_min_pmix("strict",  function(n) 0.05)
+```
+
+The scenario's `fit$min_pmix` entries are names from this registry;
+the task-stream hash uses the name, not the function. The actual
+function is looked up just before the call, after `dqset.seed()`.
+
+### 1.2 The `ci = FALSE` collapse
+
+The hc-arg cross-join treats `nboot`, `ci_method`, and `parametric`
+as irrelevant when `ci = FALSE` — those knobs only affect bootstrap.
+Concrete rules:
+
+- If `ci = FALSE` is the only value, `nboot` / `ci_method` /
+  `parametric` are ignored with a one-line message at scenario
+  construction (and the scenario's `print()` records the ignore so
+  it's visible in tracing).
+- If both `ci = c(FALSE, TRUE)`, the `ci = FALSE` row collapses to a
+  single task per upstream fit (bootstrap knobs are NA in the grid),
+  while `ci = TRUE` rows fan out across `nboot × ci_method ×
+  parametric` as usual.
+
+In the task grid:
+
+| sim | nrow | rescale | ci    | nboot | ci_method        | parametric |
+| --: | ---: | :------ | :---- | ----: | :--------------- | :--------- |
+| 1   | 5    | FALSE   | FALSE | NA    | NA               | NA         |
+| 1   | 5    | FALSE   | TRUE  | 100   | weighted_samples | TRUE       |
+| 1   | 5    | FALSE   | TRUE  | 1000  | weighted_samples | TRUE       |
+
+The hash of an `NA`-bearing row is well-defined as long as `NA` is
+encoded canonically — `task_stream_id()` does this via
+`rlang::hash()` on the named list. The collapse therefore stops
+phantom streams from being allocated to combinations that don't
+exist in practice.
 
 ---
 
-## 2. Pre-generated RNG states: quadratic → linear
+## 2. Per-task RNG via dqrng + hash
 
-The current per-row helpers (`fit_dists_seed()`, `hc_seed()`) call
-`get_lecuyer_cmrg_stream_state(seed, stream, start_sim = k)`, which
-advances `k − 1` sub-streams from the root state on every call.
-Across all rows in a stage this is **O(nsim²)**.
+Validated by `scripts/experiment-dqrng-hash.R`. Each task gets its own
+RNG stream, identified by a 31-bit hash of its task parameters. The
+scenario carries a single integer `seed`; per-task RNG is
 
-The sub-stream lattice is computed **once, on demand**. It does not
-matter whether that happens at scenario construction, at the first
-call to `ssd_scenario_tasks(scenario)`, or inside the `tasks` target
-of a `targets` pipeline — what matters is that all consumers see the
-same answer and pay the cost only once. The natural seam is
-`ssd_scenario_tasks(scenario)`: it returns the three task tables
-(one per step, §5) with one sub-stream state already attached to
-each row. The diagram below shows the **aspirational** allocation
-where each stochastic call gets its own sub-stream (total count
-`|data grid| + |fit grid| + |hc grid|`); the current implementation
-reuses one sub-stream per `(stream, sim)` across all task cells.
-§5 details the choice and its trade-off.
-
-```
-   root_state          (length-7 L'Ecuyer state)
-       │
-       ▼  one sub-stream advance per row, by canonical task order
-   ┌──────────────────────────────────────────────────────────────────┐
-   │  data grid:  data[1] ─sub─▶ data[2] ─sub─▶ … ─sub─▶ data[|D|]    │
-   │  fit  grid:  fit[1]  ─sub─▶ fit[2]  ─sub─▶ … ─sub─▶ fit[|F|]     │
-   │  hc   grid:  hc[1]   ─sub─▶ hc[2]   ─sub─▶ … ─sub─▶ hc[|H|]      │
-   └──────────────────────────────────────┬───────────────────────────┘
-                                          │ next sub-stream after hc[|H|]
-                                          ▼
-                              end_state  ──▶  persisted on the scenario's
-                                              output manifest (§8);
-                                              child's root_state = end_state.
+```r
+dqrng::dqset.seed(seed = scenario$seed,
+                  stream = task_stream_id(task_params))
 ```
 
-For the 16-fan-out example in
-`scripts/example-expanded-grids-independent.R`: `|D| = 4`, `|F| = 8`,
-`|H| = 16`, total **28** sub-streams in a single
-`get_lecuyer_cmrg_stream_states(nsim = 28L, ...)` call.
+where `task_stream_id(p)` is a length-2 integer vector packing
+**62 bits** of `rlang::hash(p)`:
 
-Cost: `|data| + |fit| + |hc|` sub-stream advances at first lattice
-computation, **O(N)** where N is that sum. Each row of the
-respective task table carries its single length-7 state column.
-Per-task work at run time is **O(1)**: the worker reads `.state` off
-its row and enters `local_lecuyer_cmrg_state(.state)`.
+```r
+task_stream_id <- function(p) {
+  h <- rlang::hash(p)                 # 32-char xxhash128 hex
+  c(
+    pack_int31(substr(h,  1L,  8L)),  # hi: first 31 bits
+    pack_int31(substr(h,  9L, 16L))   # lo: next 31 bits
+  )
+}
+```
 
-Task ordering within each grid must be canonical (same scenario →
-same row order → same sub-stream assignment); see Open question 3
-in §11.
+`dqset.seed()`'s `stream` argument accepts a length-2 integer vector
+interpreted as a 64-bit `(hi32, lo32)` pair; we use 31 of each half
+(sign bit zero to stay inside signed int32, the type `dqset.seed()`
+coerces to). 62 effective bits.
 
-States survive serialization — a task row sent to a Slurm worker
-carries its own state — and re-running the same scenario re-derives
-identical states deterministically. The restart property
-(`saveRDS(state) → readRDS → nextRNGSubStream` reproduces the next
-state byte-for-byte) is verified by
-`scripts/experiment-substream-restart.R`.
+`dqrng::register_methods()` is called once at pipeline init so that
+base R's `runif()`, `rnorm()`, `rbinom()`, `rexp()`, `rgamma()`,
+`rpois()`, `sample.int()`, `sample()` (and therefore
+`dplyr::slice_sample()` and `ssdtools::ssd_r*()`) all consume RNG via
+dqrng's PCG64 with the configured (seed, stream). The experiment
+script verifies this end-to-end.
+
+```
+   ┌────────────────────────────────────────────────────────────┐
+   │  task replay primitive                                     │
+   │  ────────────────────                                      │
+   │  dqRNGkind("pcg64")                                         │
+   │  dqrng::register_methods()                                  │
+   │  dqset.seed(seed = scenario$seed,                           │
+   │             stream = task$stream_id)                        │
+   │  …                          # run the step body            │
+   │  dqrng::restore_methods()   # process-global restore on exit│
+   └────────────────────────────────────────────────────────────┘
+```
+
+### Why this replaces the L'Ecuyer-CMRG sub-stream lattice
+
+- **No precomputed lattice.** Each task's RNG is fully specified by
+  the pair `(seed, stream_id)`. Both are small integers; the task row
+  carries them as ordinary columns, not length-7 state vectors.
+- **Extension is implicit.** Adding tasks (new datasets, more `sim`
+  values, …) gives them new hashes and therefore new streams.
+  Existing tasks' streams are unaffected — their hashes don't change.
+- **Re-running a scenario with a different RNG** means changing
+  `scenario$seed`. All task streams are re-rooted automatically.
+- **Debuggability.** The task row carries `(seed, stream_id)`; a
+  failing branch replays locally as a one-liner (see §7).
+
+### What goes into the hash
+
+`task_stream_id(p)` hashes a canonical, name-keyed representation of
+the task's parameters. For a data task: `(dataset_name, sim, replace,
+nrow_max)` — see §5 for the subset-property note on `nrow`. For a
+fit task: data-task identity plus the fit-arg-grid row (`rescale`,
+`computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
+`range_shape2`). For an hc task: fit-task identity plus the hc-arg-
+grid row (`nboot`, `est_method`, `ci_method`, `parametric` — modulo
+the `ci = FALSE` collapse documented in §1).
+
+Function-valued parameters (`min_pmix`) are referenced **by name**
+(§1.1) so a code edit inside the function does not change the hash;
+correctness is the user's contract.
+
+### Collision probability
+
+62-bit stream id ⇒ 50% birthday collision around `sqrt(2^62) ≈ 2.1
+billion` tasks. Empirically (script §4): 0 collisions at 1 k, 10 k,
+and 100 k tasks (theory: order of 10⁻⁹ at 100 k). For typical
+ssdsims scenarios (10²–10⁴ tasks) this is overwhelmingly safe.
+
+The restart property (`dqset.seed(seed, stream) → same sequence`)
+is exercised in `scripts/experiment-dqrng-hash.R`; the older
+sub-stream restart check
+`scripts/experiment-substream-restart.R` documents the L'Ecuyer
+property that motivated the previous design and is kept for
+reference.
 
 ---
 
@@ -210,20 +289,21 @@ ssd_run_scenario(scenario)                  # sequential, in-process
 ssd_run_scenario(scenario, plan = "mirai")  # in-process parallel
 ```
 
-`ssd_scenario()` derives and stores the `root_state`. It is purely
-declarative — it does **not** expand the task grid. Expansion is
-`ssd_scenario_tasks(scenario)`, called either by `ssd_run_scenario()`
-(local) or by the `tasks` target in the cluster pipeline (§4).
+`ssd_scenario()` stores the scenario inputs (seed, dataset names,
+fit/hc arg grids). It is purely declarative — it does **not** expand
+the task grid. Expansion is `ssd_scenario_tasks(scenario)`, called
+either by `ssd_run_scenario()` (local) or by the `tasks` target in
+the cluster pipeline (§4).
 
 ```
-   ssd_scenario(...) ──▶ ssdsims_scenario   (declarative; carries root_state)
+   ssd_scenario(...) ──▶ ssdsims_scenario   (declarative; carries seed)
                               │
                               ▼
                      ssd_scenario_tasks(scenario)
                               │
                               ▼
                      three task tables (data_tasks, fit_tasks, hc_tasks),
-                     each row carrying one length-7 .state column
+                     each row carrying its (seed, stream_id) pair (§2)
                               │
             ┌─────────────────┴─────────────────┐
             ▼                                   ▼
@@ -283,7 +363,7 @@ parallel; none is downstream of the others. Roles:
   ssdsims logic is involved** — proves the cluster wiring works.
 
 - **C — working scenario object** contributes the *content*:
-  `root_state`, generator, fit/hc argument vectors, optional
+  `seed`, dataset names, fit/hc argument vectors, optional
   `upload` (§6.1), optional `parent` (§8). Already exercised
   locally with `ssd_run_scenario()` (§3) so the only remaining
   unknown when assembling the three is the cluster wiring itself.
@@ -329,59 +409,57 @@ Confirmed by tracing `scripts/example.R`'s second scenario:
 a cross-join axis. `ci_method` and `parametric` were scalar in the
 second example but are full cross-join axes in the general case.
 
-### Sub-stream allocation: current vs. aspirational
+### Stream allocation: one per task, via hash
 
-The package allocates one L'Ecuyer-CMRG sub-stream per `(stream,
-sim)` tuple and **reuses it across all tasks for that pair** —
-across data/fit/hc stages, and across the fit-grid and hc-grid
-cross-join axes (`nrow`, `rescale`, `nboot`, `est_method`, …).
-Multiple datasets are handled by running separate scenarios with
-distinct `stream` values, so the existing convention is **one
-(sub-)stream per dataset, reused across tasks within that
-dataset**:
+Each task in each grid gets its own dqrng stream, keyed by the
+31-bit hash of the task's parameters (§2). Tasks do not share
+streams across stages or across grid axes; the only sharing is
+the deliberate `nrow` subset property below.
 
-```
-   stream = 1            stream = 2          ← current convention:
-       │                     │                  one L'Ecuyer stream
-       ▼                     ▼                  per dataset
-   sub-streams 1..nsim   sub-streams 1..nsim ← one sub-stream per sim
-       │                     │                  within that stream
-       ▼                     ▼                ← that sub-stream is REUSED
-   all task cells        all task cells         across data, fit, hc,
-   for that sim          for that sim           and every cross-join cell
-                                                (nrow, rescale, nboot, …)
-```
-
-The **aspirational allocation** — what TARGETS-DESIGN proposes,
-**to be confirmed** before adoption — gives each grid element its
-own sub-stream:
+For the small `nsim = 2, nrow = c(5, 10), rescale = c(F, T),
+est_method = c("arithmetic", "multi")` example:
 
 ```
-   root_state
-        │
-        ├─ data block:  nextRNGSubStream × |data grid|
-        │
-        ├─ fit  block:  nextRNGSubStream × |fit  grid|
-        │
-        └─ hc   block:  nextRNGSubStream × |hc   grid|
-
-   total: |data| + |fit| + |hc| sub-streams
-          (200 for the second example, 28 for the small one in
-           scripts/example-expanded-grids-independent.R)
+   data grid:    2 sim · 1 (effective nrow, subset trick below)  =  2 streams
+   fit  grid:    data ·  2 rescale                               =  8 streams
+   hc   grid:    fit  ·  2 est_method                            = 16 streams
+                                                            sum = 26 streams
 ```
 
-The aspirational model is exercised by
-`scripts/example-expanded-grids-independent.R`. Switching the
-production code to it is a design decision pending review — see
-Open question 2 in §11 ("Loss of per-sim comparability"): the
-aspirational allocation breaks the property that two tasks with
-the same `sim` but different `nrow` share a data state.
+(28 in `scripts/example-expanded-grids-independent.R` if `nrow` is
+treated as an independent axis; 26 with the subset trick.)
 
-The L'Ecuyer **stream axis** stays reserved in both allocations.
-`parallel::nextRNGStream()` is not invoked by any scenario
-primitive of the aspirational design; the wide-jump (~2^127) axis
-is kept available for future applications (e.g. statistically
-independent batch axes layered on top of scenarios).
+### `nrow` subset property
+
+For empirical-data slicing, larger `nrow` values include the same
+rows as smaller ones (with no resampling). This means `nrow` is
+**not** an independent stream axis for the data step: the stream is
+keyed by `(dataset, sim)` only, and the slice is
+
+```r
+slice_sample_stream <- function(data, n_max, n, seed, stream) {
+  dqrng::dqset.seed(seed, stream = stream)
+  idx <- sample.int(nrow(data), size = n_max, replace = FALSE)
+  data[idx[seq_len(n)], , drop = FALSE]
+}
+```
+
+with `n_max = max(scenario$nrow)` pre-computed from the scenario.
+Result: `slice_sample_stream(data, n_max, 5, …)` is a prefix of
+`slice_sample_stream(data, n_max, 10, …)` (same `(seed, stream)`,
+same `sample.int` call, just truncated). The property is
+documented as `assuming stability of sample.int()` — pin R version
+in the manifest.
+
+The trick costs one extra integer column on the data task table
+(`n_max`) and lets us cut `|data grid|` from `|dataset| · |sim| ·
+|nrow|` to `|dataset| · |sim|`. For the small example that's
+`2 → 2` (already minimal); for a scenario with `nrow = c(5, 6, 10,
+20, 50)` it cuts the data fan-out by 5×.
+
+(`replace = TRUE` does not have the subset property; if `replace =
+TRUE` appears in the scenario, the data stream reverts to keying on
+`(dataset, sim, nrow, replace)`.)
 
 ### Implications for the targets pipeline
 
@@ -416,20 +494,20 @@ file per branch so the data, fit, and hc layers are independently
 queryable for analysis without re-running upstream steps.
 
 ```
-   scenario   (declarative; carries root_state)
+   scenario   (declarative; carries seed)
        │
-       ├──▶ data_tasks  ( 4 rows, carries .state_data, data_id)
+       ├──▶ data_tasks  ( 4 rows, carries data_id, data_stream)
        │         │
        │         ▼  tar_group_by(data_id), pattern = map(data_groups)
        │     data_job   ──▶ results/data/<data_id>.parquet
        │
-       ├──▶ fit_tasks   ( 8 rows, carries .state_fit, data_id, fit_id)
+       ├──▶ fit_tasks   ( 8 rows, carries fit_id, data_id, fit_stream)
        │         │
        │         ▼  tar_group_by(fit_id), pattern = map(fit_groups)
        │     fit_job    ──▶ results/fit/<fit_id>.parquet
        │                 reads results/data/<data_id>.parquet by path
        │
-       └──▶ hc_tasks    (16 rows, carries .state_hc, fit_id, hc_id)
+       └──▶ hc_tasks    (16 rows, carries hc_id, fit_id, hc_stream)
                  │
                  ▼  tar_group_by(hc_id), pattern = map(hc_groups)
              hc_job     ──▶ results/hc/<hc_id>.parquet
@@ -613,11 +691,11 @@ cost debuggability. The cluster pipeline is only debuggable if any
 single failed branch can be replayed **outside targets, on any
 machine**, with the same inputs and the same RNG state.
 
-The state-only primitives `slice_sample_state()`,
-`fit_dists_state()`, `hc_state()` are the contract that makes this
-work. Each takes its inputs as plain values — data, a length-7
-integer state, scalar params — so the **task row plus the immediate
-upstream Parquet is a complete reproducer**.
+The stream-only primitives `slice_sample_stream()`,
+`fit_dists_stream()`, `hc_stream()` are the contract that makes this
+work. Each takes its inputs as plain values — data, a `(seed,
+stream_id)` pair, scalar params — so the **task row plus the
+immediate upstream Parquet is a complete reproducer**.
 
 ### Scenario
 
@@ -642,7 +720,7 @@ re-running the other N−3 jobs.
       task <- tar_read(hc_tasks) |> dplyr::filter(hc_id == "3ab9c7")
 
       The row carries:
-        - .state_hc (length-7 integer)
+        - hc_stream  (length-2 integer = c(hi31, lo31), §2)
         - all hc params (nboot, est_method, ci_method, ...)
         - fit_id     (content-hash of the upstream Parquet)
 
@@ -659,10 +737,11 @@ re-running the other N−3 jobs.
    4. Reproduce, no targets involved.
       ───────────────────────────────
       fit <- ssd_read_step("results/fit/<fit_id>.parquet")
-      options(error = recover)        # or place browser() in hc_state
-      out <- ssdsims:::hc_state(
+      options(error = recover)        # or place browser() in hc_stream
+      out <- ssdsims:::hc_stream(
         data       = fit,
-        state      = task$.state_hc[[1]],
+        seed       = scenario$seed,
+        stream     = task$hc_stream[[1]],
         nboot      = task$nboot,
         est_method = task$est_method,
         ci_method  = task$ci_method,
@@ -673,9 +752,9 @@ re-running the other N−3 jobs.
       )
 ```
 
-The call is the same code that ran on the worker; the state is the
-same integer vector; the upstream Parquet is the same bytes. A
-deterministic bug reproduces on the first call.
+The call is the same code that ran on the worker; the `(seed,
+stream)` pair is the same; the upstream Parquet is the same bytes.
+A deterministic bug reproduces on the first call.
 
 ### Helper
 
@@ -686,10 +765,9 @@ ssd_replay_task(task_id, store = "_targets", results_dir = "results")
 ```
 
 infers the step from the task table the id sits in, opens the
-immediate upstream Parquet, and calls the matching `_state`
-primitive with the right args. The state-only primitives are the
-supported branch-replay API; the `_seed` wrappers stay as
-convenience for inline scripting.
+immediate upstream Parquet, and calls the matching `_stream`
+primitive with the right args. The stream-only primitives are the
+supported branch-replay API.
 
 ### What makes this work
 
@@ -697,12 +775,13 @@ convenience for inline scripting.
    ┌───────────────────────────────────────────────────────────────────┐
    │  task row + upstream Parquet = complete reproducer                │
    │  ───────────────────────────────────────────────────              │
-   │  state      length-7 integer; survives saveRDS / rsync / git      │
+   │  seed       scenario-scalar integer; in the manifest              │
+   │  stream     length-2 integer (hi31, lo31); on the task row        │
    │  upstream   one Parquet per branch; content-addressed; tooling-   │
    │             agnostic (DuckDB, Python, R)                          │
    │  params     scalars on the task row                               │
-   │  primitive  `*_state()` takes (data, state, ...args); no hidden   │
-   │             dependency on targets or the orchestrator             │
+   │  primitive  `*_stream()` takes (data, seed, stream, ...args); no  │
+   │             hidden dependency on targets or the orchestrator     │
    └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -772,143 +851,99 @@ with `desired = parent.desired_grid`).
 
 ---
 
-## 8. Extension: scenario → scenario
+## 8. Extension
 
-Extension is **one primitive**: the child declares its desired task
-grid by reference to a parent, and runs the tasks that are missing
-from the parent's successfully-completed grid. The parent's surviving
-Parquets are immutable inputs to the child; nothing already on disk
-is recomputed.
+With per-task hash-keyed streams (§2) and content-addressed Parquet
+files (§6), the **default** extension story is almost trivial:
 
 ```
-   child.tasks_to_run = child.desired_grid \ parent.completed_grid
-                                                  (set difference)
+   For each task in scenario:
+     id = task_stream_id(task_params)
+     if results/<step>/<id>.parquet exists  → skip (cache hit)
+     else                                    → run, write <id>.parquet
 ```
 
-Four common shapes are particular cases of the same primitive:
+A "child" scenario is just a *bigger* scenario described by the same
+declarative API. Tasks whose `id` already has a Parquet on disk are
+not re-run; the rest are. No `parent` reference, no manifest
+plumbing, no `desired \ completed` set-difference machinery — content
+addressing handles all of it.
 
-| Shape                               | `child.desired_grid`                | Missing tasks         | Sub-streams for missing tasks  |
-| ----------------------------------- | ----------------------------------- | --------------------- | ------------------------------ |
-| Append a dataset (§1.1, principal)  | parent ∪ {new dataset's tasks}      | new dataset's tasks   | fresh, from `parent.end_state` |
-| Grow `nsim`                         | parent ∪ {extra sim rows}           | extra sim rows        | fresh, from `parent.end_state` |
-| Re-run after a code fix (post-§7)   | parent's grid (unchanged)           | parent's failed IDs   | same as parent attempted       |
-| Rename / reorder datasets (§1.1)    | parent's grid with renamed labels   | ∅ (all aliased)       | none — pure re-attribution     |
+| Extension                  | Mechanism                                                          |
+| -------------------------- | ------------------------------------------------------------------ |
+| Append a dataset           | bigger `datasets` vector ⇒ new task IDs ⇒ new Parquets only        |
+| Grow `nsim`                | bigger `nsim` ⇒ new IDs for the added `sim` values                 |
+| More `nrow` values         | data step's `n_max` increases ⇒ data stream re-hashes ⇒ re-run *data*; fit/hc may reuse via subset (open question, see §11) |
+| Add a `rescale` / `nboot`  | new fit / hc IDs ⇒ new Parquets only                               |
 
-In all four the mechanism is identical:
+Two cases need an explicit `parent` reference because content
+addressing alone doesn't cover them:
 
-```
-   parent
-   ┌────────────────────────────────────────────┐
-   │ desired_grid:     N rows                   │
-   │ completed_grid:   N-k Parquets             │
-   │ manifest carries  root_state, end_state    │
-   └─────────────────────┬──────────────────────┘
-                         │ parent = path / scenario object
-                         ▼
-   child  (some N' rows of desired_grid)
-       ─ if id ∈ parent.desired_grid:
-             re-use parent's sub-stream
-             (by canonical content-addressed allocation)
-       ─ else:
-             allocate from parent.end_state onward
-             (preserves §2's linear cost)
-                         │
-                         ▼
-   child runs (desired ∩ ¬completed); writes those Parquets only.
-                         │
-                         ▼
-   summary unions BOTH result dirs via duckplyr.
-```
+### 8.1 Rename or reorder datasets — `parent_alias`
 
-```
-   tar_make() in child project
-        │
-        ▼
-   read parent manifest  ──▶  end_state, completed_ids, completed_hashes (§7)
-        │
-        ▼
-   build child scenario; compute `tasks_to_run = desired \ completed_ids`
-        │
-        ▼
-   child task table only contains `tasks_to_run`
-        │
-        ▼
-   child Parquets land alongside parent's (parent files untouched)
-        │
-        ▼
-   summary reads both via duckplyr
-```
-
-`parent` may be:
-
-- An `ssdsims_scenario` in memory.
-- A previous project's `_targets/` store
-  (`tar_read(scenario, store = "../parent/_targets")`).
-- A Parquet results directory plus a sidecar manifest (language-
-  agnostic).
-- A cloud URL (§6.1) plus a manifest blob — no local copy needed if
-  duckplyr can read Parquet over HTTP.
-
-The merge sits *downstream of all child targets*; the child writes
-only what is missing.
-
-**Why "re-run after a code fix" is not a separate primitive.** When
-the parent's `desired_grid` equals the child's `desired_grid` (the
-user isn't adding tasks, just filling gaps), `desired \ completed`
-is the set of failed IDs. The same set-difference machinery —
-driven by `completed_ids` on the manifest — selects which tasks to
-run. The state-only primitives (§7) are pure in `(data, state,
-params)`, so re-running a failed ID under patched code with the
-same sub-stream gives the deliberate fix-only delta. If the fix
-changes behaviour *only* inside the previously-failing case, the
-surviving N−k Parquets would have been byte-identical under the new
-code; if it changes behaviour everywhere, the union is intentionally
-heterogeneous and the user owns that.
-
-**Renaming / reordering datasets via `parent_alias`.** §1.1 noted
-that renaming a dataset (`boron → b`) shifts the scenario's content
-hash and would invalidate every Parquet — *at the scenario level*.
-The dag-of-dags primitive recovers full cache via an explicit
-mapping carried on the child:
+Renaming `boron → b` changes the task ID's `dataset` field and
+therefore the hash. Without help, every Parquet would look uncached.
+The child scenario carries a name-mapping that's consulted *before*
+the cache lookup:
 
 ```r
 ssd_scenario(
-  list(b = ccme_boron, cd = ccme_cadmium),
-  parent       = "../parent",
+  datasets     = c("b", "cd"),
+  parent       = "../parent/results",
   parent_alias = c(b = "boron", cd = "cadmium"),
   …
 )
 ```
 
-`parent_alias` is applied *before* the set-difference: a child task
-identifier `<dataset = "b", sim, nrow, …>` is treated as completed
-iff the parent has a completed `<dataset = "boron", sim, nrow, …>`.
-The child's `summary` target unions the two result directories with
-the alias mapping; the cluster does **not** re-run the renamed
-tasks. Sub-streams: none allocated — the operation is pure
-re-attribution of existing Parquets under new labels. The same
-machinery handles reordering (the alias is the identity but
-participates in the canonical-order lookup) and column-name
-adjustments that don't change underlying data.
+For each new-name task, look up the parent-name task, check if its
+Parquet exists in the parent's directory; if yes, re-attribute (link
+or rename) under the new ID. No streams are allocated; no compute.
 
-**Manifest requirement.** The parent's manifest carries:
-- `root_state` and `end_state` (length-7 integers, §2).
-- `desired_grid_digest` (hash of parent's full intended task grid).
-- `completed_ids`: which IDs have Parquets on disk and are trusted.
-- `completed_hashes`: per-id sha256 of the local Parquet at write time (§7).
-- `dataset_names`: parent's dataset labels, so a child's
-  `parent_alias` can be validated against them.
+### 8.2 Mixed-code lock-in after a code fix — dag-of-dags
 
-Without `completed_ids`, the child cannot distinguish "absent because
-the run hasn't reached this task yet" from "absent because the
-branch errored". Without `completed_hashes`, §7's lightweight
-reproduction can't verify inputs.
+The post-§7 case: a bug in `hc_state()` is fixed, but the user wants
+to lock in the surviving Parquets that ran under the buggy code and
+only re-run the failed branches under the fix. Content-addressing
+alone doesn't help here — the task IDs haven't changed, so deleting
+the bad Parquets is the simplest move and lets `targets`' native
+file-tracking re-run them automatically:
 
-Restartability of sub-stream enumeration from a persisted length-7
-integer state is verified by
-`scripts/experiment-substream-restart.R` (saveRDS round-trip, restart
-concatenation, no-mutation under use, draw-level equivalence — all
-PASS on R 4.5).
+```r
+# In the parent results dir, after the fix is committed:
+unlink(failed_parquets)
+tar_make()    # re-runs only the missing branches under new code
+```
+
+The dag-of-dags variant (separate child project pointing at the
+parent's results dir) is for when the user wants the parent's
+results to remain *visibly untouched* — useful for audit trails or
+side-by-side comparison of old vs new code. The child writes its
+re-runs to its own results dir and the `summary` target unions both.
+
+(An alternative *within* a single `targets` project is
+`targets::tar_invalidate(names = failed_branch_names)` to force
+re-runs without unlinking — same end state, different bookkeeping.
+See open question 4 in §11.)
+
+### 8.3 Manifest contents
+
+Per-scenario manifest (a small JSON sidecar to the results
+directory):
+
+- `seed` — scenario's RNG root (§2).
+- `datasets` — name vector referenced from tasks (§1.1).
+- `min_pmix` — name vector ditto.
+- `fit`, `hc` — the argument-vector grids.
+- `completed_ids` — set of `id`s whose Parquet exists and is
+  trusted (recorded at write time, including the cloud copy's
+  sha256 if `upload` is set; see §6.1, §7).
+- `r_version`, `dqrng_version`, `ssdtools_version` — versions
+  pinned for bit-stability across re-runs (§9).
+- `dataset_names`, `min_pmix_names` — for `parent_alias` validation
+  in 8.1.
+
+Restart property for dqrng (same `(seed, stream)` ⇒ same draw
+sequence) is verified by `scripts/experiment-dqrng-hash.R`.
 
 ---
 
@@ -916,89 +951,134 @@ PASS on R 4.5).
 
 Constraints the design lives with rather than solves.
 
-### `dists` is not a fit-grid axis
+### `dists` and `nboot` are not fit/hc grid axes
 
 `dists` controls *which* distributions `ssdtools::ssd_fit_dists()`
-fits to a given data slice, but the iteration over the elements of
-`dists` is buried inside ssdtools and is not exposed at the ssdsims
-level. Making `dists` a fit-grid axis (so adding a distribution
-causes only the new sub-fits to re-run while existing ones stay
-cached) would require either wrapping each single-distribution fit
-in ssdsims and aggregating the results back into a `fitdists`
-object, or a change to ssdtools to expose its per-distribution loop.
-Under the current contract `dists` is a scenario-scalar (a single
-character vector) — adding a distribution invalidates every fit
-branch.
+fits to a given data slice; `nboot` controls how many bootstrap
+iterations `ssdtools::ssd_hc()` runs. Both iterations live inside
+ssdtools and are not exposed at the ssdsims level. Adding a
+distribution to `dists` therefore invalidates every fit branch (the
+hash changes); raising `nboot` invalidates every hc branch. Reusing
+partial results — `nboot = 100` ⊂ `nboot = 1000` — would require
+either (a) wrapping each per-distribution / per-bootstrap iteration
+in ssdsims with its own dqrng stream and aggregating, or (b) an
+ssdtools change to expose the inner loops. Sketch only; out of
+scope.
 
 ### `ssdtools` RNG flow is opaque
 
 The internal RNG consumption of `ssdtools::ssd_fit_dists()` and
-`ssdtools::ssd_hc()` is treated as a black box. The state-only
-primitives (§7) install a known sub-stream before each call, but
-how many uniforms the ssdtools call draws, and in what order, is an
-ssdtools implementation detail. A breaking change to that order in
-a future ssdtools release would silently change bit-stable results
-even when the scenario `root_state` is unchanged. The mitigation is
-to pin `ssdtools` versions in the scenario manifest.
+`ssd_hc()` is a black box. We install a known `(seed, stream)`
+before each call, but how many uniforms the ssdtools call draws and
+in what order is an ssdtools implementation detail. A breaking
+change to that order in a future ssdtools release would silently
+change bit-stable results even when the scenario `seed` is unchanged.
+Mitigation: pin `ssdtools` (and `dqrng`, R) versions in the
+scenario manifest.
+
+### `nrow` subset property requires stable `sample.int`
+
+§5's subset trick (`slice_sample_stream` returns a prefix of itself
+for smaller `n`) holds only as long as `sample.int(N, n_max,
+replace = FALSE)` is stable across R versions. Pinning the R
+version in the manifest covers this. `replace = TRUE` does not have
+the subset property; if `replace = TRUE` appears in the scenario
+the data stream reverts to keying on `(dataset, sim, nrow,
+replace)`.
+
+### `dqrng::register_methods()` is process-global
+
+The pipeline installs dqrng as the base R RNG backend at start-up
+and must restore on exit. Tests and helper scripts that run inside
+the same R session need the same discipline (`on.exit(restore_methods())`
+in any function that touches the methods).
 
 ---
 
 ## 10. Gaps from `RNG-FLOW.md` §5 — how this design closes them
 
-| Gap                                              | Resolution                                                                                  |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| No `ssd_extend_scenario()`                       | §8 — `parent` field + `ssd_extend_scenario(parent, ...)` constructor.                       |
-| No "load previous run from Parquet" path         | §8 — `parent` may be a results dir; manifest stores `end_state` (length-7 integer).         |
-| No DAG-of-DAGs primitive                         | §8 — child reads parent via `tar_read(..., store = "../parent/_targets")`.                  |
-| Persists only `seed`, not root L'Ecuyer state    | §1, §8 — scenario stores `root_state`; `seed` is a constructor convenience.               |
-| Positional task IDs                              | §2 — task IDs are content-addressed: hash of the canonical task row.                        |
-| Re-derivation cost is quadratic                  | §2 — `|data|+|fit|+|hc|` sub-stream advances at grid materialization; per-task work O(1).   |
-| `nsim`-grow cache invalidation                   | §1, §2 — scenario is declarative; downstream targets depend on individual task rows.        |
-| `stream` axis conflated with extension axis      | §1, §8 — extension lives on sub-streams only; the stream axis is reserved.                  |
-| Three steps cached as one (no per-step re-runs)  | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
-| Same lattice for all steps despite grid mismatch | §5 — each step has its own grid; the lattice has three blocks rather than one shared one.   |
-| data/fit/hc states collided in PoC               | §5 — aspirational allocation gives each grid element its own sub-stream; the current allocation reuses one per `(stream, sim)` (decision pending, §11 Q2). |
-| Single-dataset scenarios only                    | §1.1 — generator is a named list of data.frames; datasets are the outermost cross-join.     |
-| Branch failure unreproducible off the cluster    | §7 — task row + immediate upstream Parquet replays the failing branch via the `_state` primitives. |
-| Code fix re-runs every branch by hash invalidation | §8 — re-run-after-fix is the same `desired \ completed` primitive as scenario extension; child runs only the missing hc_ids. |
-| Off-cluster access to Parquet outputs            | §6.1 — `scenario$upload` pushes each Parquet to a configurable object store (e.g. Azure Blob) right after the local write. |
-| Phantom local repros (regenerated upstream ≠ cluster's actual) | §7 — manifest's `completed_hashes` lets the lightweight recipe verify the local upstream by sha256 before running the failing step. |
+| Gap                                                  | Resolution                                                                                  |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| No DAG-of-DAGs primitive                             | §8.2 — child reads parent's `results/` by content-addressed path; mostly unnecessary, see below. |
+| No "load previous run from Parquet" path             | §8 — content-addressed Parquet files *are* the cache; no explicit load needed.              |
+| Persists fragile RNG state                           | §1, §2 — scenario stores a single integer `seed`; per-task `(seed, stream_id)` is reproducible via `dqset.seed()`. |
+| Positional task IDs                                  | §2 — task IDs are content-addressed: `task_stream_id(p)` = 62-bit hash of canonical params. |
+| Re-derivation cost is quadratic                      | §2 — per-task hash is O(1); no precomputed lattice.                                         |
+| `nsim`-grow cache invalidation                       | §1, §2, §8 — new sim values hash to new streams; existing task IDs (and their Parquets) are untouched. |
+| Three steps cached as one (no per-step re-runs)      | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
+| Same lattice for all steps despite grid mismatch     | §5 — each step has its own grid and stream id.                                              |
+| `nrow` invalidates data states for the same `sim`    | §5 — `nrow` subset trick: data stream keyed by `(dataset, sim)`, slice truncates to `n`.    |
+| Single-dataset scenarios only                        | §1.1 — datasets are name-referenced in a central registry; cross-join axis.                 |
+| Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
+| Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci=FALSE` collapses `nboot`/`ci_method`/`parametric` to NA; one task instead of N. |
+| Branch failure unreproducible off the cluster        | §7 — task row + upstream Parquet replays the failing branch via `_stream` primitives.       |
+| Code fix re-runs every branch by hash invalidation   | §8.2 — `unlink()` failed Parquets (or `tar_invalidate`); content addressing leaves the rest untouched. |
+| Off-cluster access to Parquet outputs                | §6.1 — `scenario$upload` pushes each Parquet to a configurable object store (e.g. Azure Blob). |
+| Phantom local repros (regenerated upstream ≠ cluster's actual) | §7 — manifest's per-id sha256 lets the lightweight recipe verify the local upstream before running the failing step. |
 
-The RNGkind side-effect bug and the independent data/fit/hc substreams
-are assumed already merged from the PoC and are not re-derived here.
+The RNGkind side-effect bug and the independent data/fit/hc substream
+issues from the original L'Ecuyer design no longer apply: dqrng with
+explicit `(seed, stream)` per call has no side effects on global RNG
+state of other tasks (`register_methods()` switches the backend once
+per process and is restored on exit).
 
 ---
 
 ## 11. Open questions for review
 
-1. **Manifest format.** Cross-project parent linking needs a manifest
-   that stores at minimum `end_state` (length-7 integer) and the
-   parent's task-grid digest. Sidecar JSON next to Parquet, or
-   `tar_read()` against the parent's `_targets/` store? The latter is
-   idiomatic but couples the child to the parent's `targets` version.
-2. **Loss of per-sim comparability.** The aspirational sub-stream
-   allocation (§5, one sub-stream per grid element) means two tasks
-   with the same `sim` but different `nrow` no longer share a data
-   state. The current allocation reuses one sub-stream per `(stream,
-   sim)` across all cells, so different `nrow` values within one sim
-   see the same initial state. Adopting the aspirational allocation
-   loses that comparability; the design proposal hasn't decided
-   whether to.
-3. **Canonical task ordering.** Sub-stream assignment depends on row
-   order in `ssd_scenario_data_tasks`/`fit_tasks`/`hc_tasks`. The
-   proposed order is `(dataset, sim, nrow, …)` for data and so on,
-   with `dataset` outermost so appended datasets keep existing cache.
-   Should this ordering be documented as part of the public contract,
-   or only the *content* (hash of the unordered task set) be stable?
-4. **Dataset identity.** Datasets are keyed by **name**, not by
-   `digest::digest(df)`, so two scenarios that point at semantically
-   identical but separately-loaded data.frames under the same name
-   collide. Should the name + a content hash both participate in the
-   task ID, or only the name?
-5. **Child cache stability.** Re-running the child unchanged should be
-   a full cache hit, but the child also reads the parent's Parquet —
-   does `targets` track those files as dependencies, and is their
-   hash stable across hosts (mtime, path)?
-6. **Toy pipeline shape.** Ship a single
+1. **`nrow` subset property as a contract.** §5's `slice_sample_stream`
+   relies on `base::sample.int(N, n_max, replace = FALSE)` being a
+   prefix-of-itself when `n_max` is reduced. R has historically been
+   stable here but it isn't a documented guarantee. Document the
+   assumption in the manifest and pin R versions, or implement our
+   own `sample.int`-equivalent function with an explicit contract?
+2. **Dataset identity.** Datasets are keyed by **name** in the
+   registry, not by `digest::digest(df)`. Two registrations under the
+   same name with different bytes silently collide. Should the
+   registry refuse re-registration unless byte-identical, or carry a
+   content hash on the task ID alongside the name?
+3. **Force re-run inside one `targets` project.** §8.2 lists two
+   options for re-running after a code fix: `unlink()` the bad
+   Parquets, or `tar_invalidate(names = ...)`. Which is the
+   recommended path? `unlink` is simpler but loses the bookkeeping;
+   `tar_invalidate` is bookkeeping-preserving but cluster-aware
+   (some `targets` versions don't propagate across remote workers).
+4. **Manifest format.** A scenario manifest stores `seed`, the
+   `datasets` and `min_pmix` name lists, the `fit` and `hc`
+   argument-vector grids, the `upload` spec, and pinned package
+   versions (§9). JSON sidecar next to Parquet, or `tar_read()`
+   against the project's `_targets/` store? The latter is idiomatic
+   but couples a reader to the project's `targets` version.
+5. **Toy pipeline shape.** Ship a single
    `inst/targets-templates/cluster/` that the LLM-authoring prompt
    edits, or only documentation pointing at `crew.cluster` examples?
+
+---
+
+## 12. Roadmap
+
+In-place, step-by-step implementation. Each step lands as a coherent
+working state, in order; ssdsims has no downstream dependencies so
+breaking-change steps are acceptable.
+
+| # | Step                                                                                                                  | Verifies                                              |
+| - | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 1 | Add `dqrng` to Imports; add `dqRNGkind("pcg64")` + `register_methods()` setup on package load with restore on unload. | `scripts/experiment-dqrng-hash.R` still passes.       |
+| 2 | Replace `with_lecuyer_cmrg_state` / `local_lecuyer_cmrg_state` with `with_dqrng_stream(seed, stream, code)`.            | Smoke: existing seed-based unit tests still green by routing seed through `dqset.seed(seed)`. |
+| 3 | Introduce `task_stream_id(params)` (§2 hash helper) and write `slice_sample_stream`, `fit_dists_stream`, `hc_stream` as the new state-only primitives. | Unit tests: byte-equivalence per-call given the same `(seed, stream)`. |
+| 4 | Migrate `ssd_sim_data.data.frame`, `ssd_fit_dists_sims`, `ssd_hc_sims` to the `*_stream` primitives; keep the `_seed` wrappers as a thin shim for one release for migration. | `scripts/example-expanded.R` and `example-expanded-grids.R` updated to the new primitives; tests + tracing pass. |
+| 5 | Add the dataset registry (`ssd_register_dataset`, `ssd_dataset()`); refactor `ssd_scenario()` constructor to accept `datasets = c("name", …)`. Synthetic datasets materialised at registration. | New scenario constructor smoke-tests; verify `Conc` column invariant. |
+| 6 | Add the `min_pmix` registry (`ssd_register_min_pmix`); use names in the scenario's `fit$min_pmix`. Function-body edits no longer invalidate fit branches. | A regression test that edits the body of a registered function and re-runs without invalidation. |
+| 7 | Implement `slice_sample_stream` with the `nrow` subset trick (§5); add scenario-level `n_max` derivation. | Test: `nrow = c(5, 10)` results are byte-equivalent prefixes for the same `(dataset, sim)`. |
+| 8 | Implement the `ci = FALSE` collapse in the hc-task table (§1.2). | Test: cross-join with `ci = c(FALSE, TRUE)` produces the expected reduced fan-out. |
+| 9 | Implement the manifest writer / reader (§8.3 fields). Each step's target writes a per-id sha256 alongside the Parquet. | `scripts/experiment-substream-restart.R` adapted to verify manifest round-trips. |
+| 10 | Implement `ssd_scenario_data_tasks` / `fit_tasks` / `hc_tasks` returning the per-step task tables with `(seed, stream_id)` columns. | The targets pipeline sketch in §6 compiles and `tar_make()`s a tiny scenario. |
+| 11 | Implement the cluster pipeline (§6) under `inst/targets-templates/cluster/`. Drive via `crew.cluster::crew_controller_slurm()` against a sandbox queue (or the LLM-authored toy pipeline, §4 B). | `tar_make()` end-to-end on a real cluster; one Parquet per branch. |
+| 12 | Implement the cloud-upload hook (§6.1) and `ssd_test_upload()`. | Hello-Azure round trip from interactive R; tar_make's first target is the connectivity probe. |
+| 13 | Implement `ssd_replay_task()` (§7 helper) and the lightweight `ssd_input_hash()` verifier. Update `scripts/example-expanded*.R` to demonstrate the debug recipes. | A test that simulates a branch failure and verifies the recipe reproduces locally. |
+| 14 | Implement `parent_alias` (§8.1) and the `unlink()` / `tar_invalidate` choice (§8.2). | A test that renames a dataset and shows zero re-runs; a test that mocks a failed branch, fixes the "bug", and shows only the bad Parquet is re-run. |
+| 15 | Remove the legacy L'Ecuyer-CMRG helpers and the `_seed` shims. `scripts/experiment-substream-restart.R` becomes a historical reference. | Package check + tests green; design and code in lockstep. |
+
+Dependencies between steps: 1 is a prerequisite for 2 and the rest;
+3 is a prerequisite for 4 and 7; 5 for 6 for 8; 9 for 11–14. Steps
+10–14 can interleave once 9 has landed.
