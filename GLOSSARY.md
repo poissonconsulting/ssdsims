@@ -50,37 +50,49 @@ Terminology used throughout `ssdsims`.
   `fit_tasks` / `hc_tasks`). A task specifies the smallest unit
   of computation in the pipeline: it carries the per-task
   **primer** (§2), all parameter values for the cross-join axes
-  at that step, and the upstream task ID it depends on
-  (`data_id` on fit-task rows, `fit_id` on hc-task rows).
-  Running a task produces one **shard** (below). Tasks and
-  shards stand in 1:1 correspondence; the distinction is
-  computation vs. output.
-- **shard**: One Parquet file on disk — the on-disk output of
-  running one task. Hive-partitioned under `results/<step>/`,
-  with the leaf file name = the 64-bit `task_primer()` hex.
-  Existence of a shard at the expected path is the cache-hit
-  test for extension (§8). The 1-shard = 1-Parquet rule is the
-  design's central storage invariant.
+  at that step, and the upstream partition path it depends on.
+  Many tasks bundle into one **shard** (below) when they share
+  the step's `partition_by` column values.
+- **partition**: A Hive directory level keyed by an axis value
+  (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is
+  a *read-side* concept — query engines (duckplyr / DuckDB)
+  inspect the directory names and skip files whose path doesn't
+  match a filter (predicate pushdown). The scenario's
+  `partition_by[[step]]` picks which task-table columns become
+  partition levels for that step (§5).
+- **shard**: One Parquet file on disk — a *write-side* concept.
+  A shard is the unit of dispatch (one branch produces one
+  shard), of atomic rewrite (one Parquet rewritten when the task
+  set changes, §8), and of caching (file existence at the
+  partition path = cache hit). One shard contains 1+ task
+  results, one row per task, with `task_id` as a column. In our
+  design **one shard ≡ one partition leaf** (no `part-N` style
+  splitting); the leaf file is always named `part.parquet`.
 - **step**: One of the three RNG-touching stages of the pipeline:
   **data** (`slice_sample_state`), **fit** (`fit_dists_state`),
   **hc** (`hc_state`). Each step has its own task table
   (`data_tasks` / `fit_tasks` / `hc_tasks`), its own grid, its
-  own dynamic-branched target (`data_step` / `fit_step` /
-  `hc_step`), and its own shard directory. The word "step" is
-  reserved for these three stages.
+  own `partition_by` axes, its own dynamic-branched target
+  (`data_step` / `fit_step` / `hc_step`), and its own shard
+  directory. The word "step" is reserved for these three stages.
 - **target**: A `targets::tar_target()` declaration in the
   `_targets.R` script. A *static* target produces one object; a
-  *dynamic-branched* target with `pattern = map(...)` produces
-  one branch per row of its upstream table — and each branch
-  runs exactly one task and writes exactly one shard, so 1 task
-  = 1 branch = 1 shard.
+  *dynamic-branched* target with `pattern = map(grouped_tbl)`
+  produces one **branch** per group of the upstream grouped
+  table.
+- **branch**: One sub-target of a dynamic-branched target —
+  produced when `pattern = map(...)` is iterated over a grouped
+  task table. **1 branch = 1 group = 1 shard out**; the branch
+  body loops over the K tasks in its group, primes the RNG once
+  per task, and writes one Parquet. Under
+  `crew.cluster::crew_controller_slurm()` each branch is
+  dispatched as its own Slurm job.
 - **job**: Reserved exclusively for the cluster-scheduler term —
   a Slurm (or equivalent) work unit dispatched by a `crew`
-  controller. Under `crew.cluster::crew_controller_slurm()` and
-  `pattern = map(...)`, each branch typically becomes one Slurm
-  job, so in practice 1 Slurm job ≈ 1 task ≈ 1 shard. The terms
-  are not synonyms though: tasks and shards exist with or
-  without a scheduler; jobs only exist on a cluster.
+  controller. With `pattern = map(...)` under
+  `crew_controller_slurm()`, 1 Slurm job = 1 branch = 1 shard.
+  The terms are not synonyms though: branches and shards exist
+  with or without a scheduler; jobs only exist on a cluster.
 
 ## Simulation terms
 

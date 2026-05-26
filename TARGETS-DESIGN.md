@@ -11,11 +11,12 @@ Three primary goals, each a hard constraint:
   primitives (`slice_sample_state()`, `fit_dists_state()`,
   `hc_state()`, each taking a per-task **primer**) and the per-step
   Parquet partitions and their manifest are *for* (§7).
-- **Extensibility.** Content-addressed Parquet files *are* the cache:
-  a larger scenario reuses shards whose task IDs match, computes
-  the rest, and unions everything. Two named exceptions
-  (`parent_alias` for renames, dag-of-dags for mixed-code re-runs)
-  are documented in §8.
+- **Extensibility.** Shards are the cache unit: a larger scenario
+  reuses shards whose partition path already has a Parquet,
+  computes the rest, and unions everything. Path-axis growth adds
+  new shards; inner-axis growth rewrites affected shards atomically
+  (§8). One named exception — dag-of-dags for *pinning outputs
+  despite a code change* — is documented in §8.3.
 
 Parallelism is assumed throughout. The document covers, in order:
 the **scenario object** and central registries (§1), the
@@ -94,10 +95,11 @@ The most consequential design choices, with section refs:
   recipe verifies the upstream against `manifest$completed_hashes`
   (sha256) before running the failing step.
 - **Extension is mostly implicit (§8).** Per-step shards *are* the
-  cache: a larger scenario reuses shards whose task primers match
-  and computes the rest. Two explicit cases: `parent_alias` for
-  renames (§8.1), dag-of-dags for *pinning outputs despite a code
-  change* (§8.2 — the opposite of invalidation, achieved by
+  cache: a larger scenario reuses shards whose partition path
+  already has a Parquet, and adds shards (path-axis growth, §8.1)
+  or atomically rewrites them (inner-axis growth, §8.2) as needed.
+  One explicit case: dag-of-dags for *pinning outputs despite a
+  code change* (§8.3 — the opposite of invalidation, achieved by
   declaring parent's shards as input files in a child project).
 - **Roadmap with parallel work streams (§12).** Eighteen
   kebab-slugged steps with a Mermaid DAG showing where branches
@@ -127,9 +129,14 @@ ssdsims_scenario
 │                  collapse means bootstrap-only knobs (nboot,
 │                  ci_method, parametric) are stored as NA on tasks
 │                  where ci = FALSE (§1.2)
+├── partition_by ← list(data = ..., fit = ..., hc = ...) of character
+│                  vectors picking the Hive partition axes per step;
+│                  one shard per (step, partition-cell). Default:
+│                  data=(dataset,sim,replace), fit=(dataset,sim,rescale),
+│                  hc=(dataset,sim). See §5.
 ├── upload       ← NULL (no upload) or list(backend, url, …) (§6.1)
 └── parent       ← NULL, or a previous results dir referenced for
-                   parent_alias / mixed-code use (§8). Plain extension
+                   dag-of-dags / mixed-code use (§8). Plain extension
                    (more datasets, more nsim) does NOT need a parent
                    reference — the per-step shards are the cache (file existence ⇒ cache hit).
 ```
@@ -148,13 +155,13 @@ Three design points distinguish this from the current code:
    knobs) and lets the per-task hash (§2) ignore function-body
    contents — so a non-behaviour-changing code edit to a registered
    function does *not* invalidate cached results. See §1.1.
-3. **No `parent` for plain extension.** Adding tasks (new dataset,
-   more `nsim`, more `nrow` values, …) gives them new task hashes
-   and new primers; existing tasks' hashes are unchanged so their
-   shards are reused automatically. The `parent` reference is
-   only for the two cases content-addressing alone can't handle:
-   renaming/reordering datasets (`parent_alias`, §8) and mixing
-   old + new code after a fix (§8).
+3. **No `parent` for plain extension.** Adding tasks on a *path*
+   axis (new dataset, more `nsim`) creates new shards; existing
+   shards are unaffected. Adding tasks on an *inner* axis (new
+   `min_pmix`, new `nboot`) rewrites the affected shards atomically
+   (§8.2). The `parent` reference is only for one case
+   path-addressing alone can't handle: pinning the parent's shards
+   despite a code change in the child (`dag-of-dags`, §8.3).
 
 ### 1.1 Implicit registries: datasets and min_pmix
 
@@ -517,13 +524,16 @@ parameter grids**, and the grids grow monotonically:
                                              (10 · 6 · 3)
 ```
 
-Confirmed by tracing `scripts/example.R`'s second scenario:
+Confirmed by tracing `scripts/example.R`'s second scenario
+(pre-`nrow`-sub-truncation counts; `slice_sample_state()` now fans
+out by `2 sim · 1` since `nrow` is a sub-truncation axis, not a
+cross-join axis — see "`nrow` is never an independent axis" below):
 
 | step                  | grid size | fan-out                                       |
 | --------------------- | --------: | --------------------------------------------- |
 | `slice_sample_state()`|       10  | 2 sim · 5 nrow                                |
-| `fit_dists_seed()`    |       10  | 2 sim · 5 nrow · 1 (fit-arg grid)             |
-| `hc_seed()`           |      180  | 2 sim · 5 nrow · 6 nboot · 3 est_method       |
+| `fit_dists_state()`   |       10  | 2 sim · 5 nrow · 1 (fit-arg grid)             |
+| `hc_state()`          |      180  | 2 sim · 5 nrow · 6 nboot · 3 est_method       |
 
 `proportion` is *inside* `ssd_hc()` (rows of the hc result tibble), not
 a cross-join axis. `ci_method` and `parametric` were scalar in the
@@ -537,14 +547,57 @@ parameters (§2), passed to dqrng via its `stream` argument. Tasks
 do not share states across steps or across grid axes; the only
 sharing is the deliberate `nrow` sub-truncation below.
 
+### Tasks bundle into shards by partition
+
+Tasks are the unit of computation (one row, one primer, one
+`_state` call). Shards are the unit of *storage and dispatch*: one
+shard ≡ one Parquet file ≡ one branch of the step target ≡ one
+Slurm job. **One shard typically contains many tasks**: the
+scenario's `partition_by[[step]]` picks which task-table columns
+become Hive directory levels, and every task row sharing those
+column values goes into the same shard.
+
+Default `partition_by`:
+
+| step  | path axes                | inner axes (Parquet columns)                                  |
+| ----- | ------------------------ | ------------------------------------------------------------- |
+| data  | dataset, sim, replace    | (none — the data shard is a single sample)                     |
+| fit   | dataset, sim, rescale    | computable, at_boundary_ok, min_pmix, range_shape1, range_shape2 |
+| hc    | dataset, sim             | rescale, nboot, est_method, ci_method, parametric             |
+
+`partition_by` is **scenario-configurable**; pushing more axes into
+the path produces smaller, finer-grained shards; pushing fewer
+axes produces coarser shards.
+
+What this changes:
+
+- **Shard count** is `Π |path axis|` per step, not `Π |task axis|`.
+  For the §6 example (1 dataset · 2 sim · 2 nrow · 2 rescale · 2
+  est_method, default `partition_by`): 2 data shards, 4 fit shards,
+  2 hc shards (instead of 4 / 8 / 16 tasks-as-shards).
+- **Per-task RNG is unchanged.** Each task in the shard runs with
+  its own primer; the branch body loops over the shard's task rows
+  and primes the RNG once per task.
+- **Cache granularity is per shard, not per task.** Adding a new
+  *inner-axis* value (e.g. a new `min_pmix`) changes the task-row
+  set for every affected shard and forces an atomic rewrite of
+  those Parquets (existing branches re-run). Adding a new
+  *path-axis* value (e.g. a new dataset) creates new shards and
+  leaves existing shards untouched — see §8.
+- **Replay (§7) is still per task.** A task's primer, params, and
+  the row's upstream partition-path columns fully reproduce the
+  computation; the shard it happens to live in is incidental.
+
 For the small `nsim = 2, nrow = c(5, 10), rescale = c(F, T),
-est_method = c("arithmetic", "multi")` example:
+est_method = c("arithmetic", "multi")` example, with the default
+`partition_by` (§5):
 
 ```
-   data grid:    2 sim · 1 (nrow is sub-truncation, not an axis)  =  2 states
-   fit  grid:    data ·  2 rescale                                =  8 states
-   hc   grid:    fit  ·  2 est_method                             = 16 states
-                                                             sum = 26 states
+                                                 tasks (primers)    shards (Parquets)
+   data:  2 sim · 1 (nrow sub-trunc) · 1 replace     =  2            =  2  (1 task per shard)
+   fit :  data ·  2 rescale                          =  4            =  4  (1 task per shard)
+   hc  :  fit  ·  1 nboot · 2 est_method             =  8            =  2  (4 tasks per shard)
+                                              total = 14 tasks       =  8 shards
 ```
 
 (The legacy `scripts/example-expanded-grids-independent.R` allocated
@@ -598,11 +651,11 @@ fan-out by 5×.
 Each step needs its **own** task table (`data_tasks`, `fit_tasks`,
 `hc_tasks`) and its own dynamic-branched target — a single shared
 task table mapped lockstep through all three steps does **not**
-work when the grids differ. Layers link by **per-branch shard
-path**: each task row carries the upstream task IDs it depends on
-(`data_id` on fit rows, `fit_id` on hc rows), and the per-branch
-body opens the right upstream shard by that ID. §6 wires this up
-concretely.
+work when the grids differ. Layers link via the upstream **shard's
+partition path**: each task row carries the partition column
+values of the upstream shard it needs (the `data_id` / `fit_id`
+columns are sugar for the path), and the per-branch body opens
+that one upstream Parquet. §6 wires this up concretely.
 
 ---
 
@@ -611,50 +664,51 @@ concretely.
 Concrete pipeline matching `scripts/example-expanded-grids.R`:
 `nsim = 2L`, `nrow = c(5L, 10L)`, `rescale = c(FALSE, TRUE)`,
 `est_method = c("arithmetic", "multi")`, `nboot = 10`, single
-dataset (`ssddata::ccme_boron`). Each of the three steps fans out
-according to **its own grid** (§5):
+dataset (`ssddata::ccme_boron`). Under the default `partition_by`
+(§5), tasks fan out as:
 
 ```
-   data grid:  1 dataset · 2 sim · 2 nrow                     =  4 rows
-   fit  grid:  data grid · 2 rescale                          =  8 rows
-   hc   grid:  fit  grid · 1 nboot · 2 est_method             = 16 rows
+   step  | tasks (rows)                                      | shards (Parquets)
+   ------+---------------------------------------------------+------------------
+   data  | 1 dataset · 2 sim · 1 (nrow sub-trunc) · 1 replace =  2 |  2 (path: dataset, sim, replace)
+   fit   | data · 2 rescale                                  =  4 |  4 (path: dataset, sim, rescale)
+   hc    | fit  · 1 nboot · 2 est_method                     =  8 |  2 (path: dataset, sim — 4 tasks per shard)
 ```
 
-The script verifies this fan-out byte-for-byte against
-`ssd_run_scenario(seed = 42L, ...)`. Each step writes a Parquet
-file per branch so the data, fit, and hc layers are independently
-queryable for analysis without re-running upstream steps.
+So in this example data and fit are 1 task : 1 shard, but hc
+bundles 4 tasks into each of its 2 shards (the inner axes
+`rescale`, `nboot`, `est_method` become columns inside the
+shard's Parquet, not partition levels). Each step writes one
+Parquet per shard so the data, fit, and hc layers are
+independently queryable for analysis without re-running upstream
+steps.
 
 ```
-   scenario   (declarative; carries seed)
+   scenario   (declarative; carries seed, partition_by)
        │
-       ├──▶ data_tasks  ( 4 rows, each carries data_id, data_state)
+       ├──▶ data_tasks  ( 2 rows ; partition cols dataset,sim,replace)
        │         │
-       │         ▼  pattern = map(data_tasks)
-       │     data_step  ──▶ results/data/<data_id>.parquet   (one shard per task)
+       │         ▼  tar_group_by(..., dataset, sim, replace)
+       │     data_step  ──▶ results/data/dataset=boron/sim=1/replace=FALSE/part.parquet  (2 shards)
        │
-       ├──▶ fit_tasks   ( 8 rows, each carries fit_id, data_id, fit_state)
+       ├──▶ fit_tasks   ( 4 rows ; partition cols dataset,sim,rescale; data upstream)
        │         │
-       │         ▼  pattern = map(fit_tasks)
-       │     fit_step   ──▶ results/fit/<fit_id>.parquet      (one shard per task)
-       │                 reads results/data/<data_id>.parquet by path
+       │         ▼  tar_group_by(..., dataset, sim, rescale)
+       │     fit_step   ──▶ results/fit/dataset=boron/sim=1/rescale=FALSE/part.parquet   (4 shards)
+       │                 each shard reads the matching data shard by partition path
        │
-       └──▶ hc_tasks    (16 rows, each carries hc_id, fit_id, hc_state)
+       └──▶ hc_tasks    ( 8 rows ; partition cols dataset,sim; fit upstream)
                  │
-                 ▼  pattern = map(hc_tasks)
-             hc_step    ──▶ results/hc/<hc_id>.parquet        (one shard per task)
-                         reads results/fit/<fit_id>.parquet by path
+                 ▼  tar_group_by(..., dataset, sim)
+             hc_step    ──▶ results/hc/dataset=boron/sim=1/part.parquet                  (2 shards, 4 tasks each)
+                         each shard reads the matching fit shard(s) by partition path
 
    summary  ──▶ results/summary.parquet
                 (reads all three layers via duckplyr)
 ```
 
-The link between layers is by **per-branch shard path (passed by `targets`)**, not by a
-single shared dynamic-branch index — `targets` passes the upstream branch's shard path into each downstream branch automatically; each task row carries its
-upstream IDs (`fit_tasks$data_id`, `hc_tasks$fit_id`) and the body
-opens the right upstream shard by that ID. This is what lets
-tweaking `rescale` re-run fits + hc without re-running data (the
-fit task row's `data_id` is unchanged).
+The link between steps is by **upstream partition path (passed by `targets`)**, not by a
+single shared dynamic-branch index — `targets` passes the upstream branch's shard path into each downstream branch automatically. Each task row carries the upstream's partition column values; the body opens that one upstream Parquet. This is what lets tweaking `rescale` re-run fit + hc without re-running data (the fit task row's `data` partition columns are unchanged).
 
 `_targets.R` sketch:
 
@@ -671,11 +725,12 @@ list(
       seed = 42L)),
 
   # Three separate task tables, one per step grid (§5). tar_group_by
-  # makes each row of the task table its own branch (one task, one
-  # shard out, one Slurm job).
-  tar_group_by(data_tasks, ssd_scenario_data_tasks(scenario), data_id),
-  tar_group_by(fit_tasks,  ssd_scenario_fit_tasks(scenario),  fit_id),
-  tar_group_by(hc_tasks,   ssd_scenario_hc_tasks(scenario),   hc_id),
+  # buckets task rows by the step's partition_by columns; each group
+  # becomes one branch (= one shard out, = one Slurm job, possibly
+  # many tasks).
+  tar_group_by(data_tasks, ssd_scenario_data_tasks(scenario), dataset, sim, replace),
+  tar_group_by(fit_tasks,  ssd_scenario_fit_tasks(scenario),  dataset, sim, rescale),
+  tar_group_by(hc_tasks,   ssd_scenario_hc_tasks(scenario),   dataset, sim),
 
   tar_target(
     data_step,
@@ -710,80 +765,114 @@ list(
 )
 ```
 
-Each `ssd_run_*_step()` body reads its upstream shard by content-
-addressed path (`fit_tasks$data_id` tells the fit step which data
-shard to open), enters the appropriate `.state_*` from the task row,
-and writes a single shard to `out_dir/<id>.parquet`. To keep
-`fit_step` from depending on the whole `data_step` target (which would
-re-run every fit branch on any data branch change), we use file-path
-indirection: the fit body opens `file.path(data_dir,
-sprintf("%s.parquet", fit_tasks$data_id[1]))`. `targets` tracks the
-*directory* by hash of all file names it contains, so adding new data
-branches does not invalidate existing fit branches.
+A step body (sketch):
+
+```r
+ssd_run_fit_step <- function(fit_tasks_group, scenario, data_dir, out_dir) {
+  rows <- purrr::pmap_dfr(fit_tasks_group, function(task_id, primer, data_id,
+                                                   rescale, min_pmix, ...) {
+    upstream <- arrow::read_parquet(file.path(data_dir,
+                                              # partition path from upstream cols
+                                              .upstream_path(...),
+                                              "part.parquet"))
+    local_dqrng_state(scenario$seed, primer)
+    tibble::tibble(task_id = task_id,
+                   rescale = rescale,
+                   min_pmix = min_pmix,
+                   fit = list(fit_dists_state(upstream, rescale, min_pmix, ...)))
+  })
+  out <- file.path(out_dir,
+                   .partition_path(fit_tasks_group, scenario$partition_by$fit),
+                   "part.parquet")
+  dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
+  arrow::write_parquet(rows, out)
+  out
+}
+```
+
+The body loops once per task in the group, primes the RNG with
+that task's primer, calls the (state-less) `_state` primitive, and
+stacks K result rows into one Parquet at the shard's partition
+path. To keep `fit_step` from depending on the whole `data_step`
+target (which would re-run every fit branch on any data branch
+change), we use file-path indirection: the fit body opens the one
+upstream data shard via its partition path. `targets` tracks the
+*directory* by hash of all file names it contains, so adding new
+data shards does not invalidate existing fit shards.
 
 **Dependencies and what re-runs on a knob change** (applied to the
-4/8/16 grid above; each row of a task table = one shard out):
+2/4/2 shard counts above; "1 shard re-runs" = its Parquet is
+rewritten with the new task set):
 
-| Knob change                       | data_step (4)       | fit_step (8)        | hc_step (16)        | summary |
-| --------------------------------- | ------------------- | ------------------- | ------------------- | ------- |
-| dataset appended (§1.1)           | new tasks only      | new only            | new only            | re-run  |
-| `nrow` value added                | new tasks only      | new only            | new only            | re-run  |
-| `nsim` grows                      | new tasks only      | new only            | new only            | re-run  |
-| `dists`                           | cached              | re-run all 8        | re-run all 16       | re-run  |
-| `rescale` value added             | cached              | new tasks only      | new only            | re-run  |
-| `nboot` added                     | cached              | cached              | new only            | re-run  |
-| `est_method` value added          | cached              | cached              | new only            | re-run  |
-| `ci_method` / `parametric` added  | cached              | cached              | new only            | re-run  |
-| `seed`                            | re-run all 4        | re-run all 8        | re-run all 16      | re-run  |
-| dataset *renamed* (no alias, §8)  | re-run all          | re-run all          | re-run all          | re-run  |
+| Knob change                       | data_step (2 shards) | fit_step (4 shards) | hc_step (2 shards)  | summary |
+| --------------------------------- | -------------------- | ------------------- | ------------------- | ------- |
+| dataset appended (path axis)      | new shards only      | new only            | new only            | re-run  |
+| `nsim` grows (path axis)          | new shards only      | new only            | new only            | re-run  |
+| `nrow` value added (sub-trunc)    | new max ⇒ re-run all | new only via subset (open Q, §11) | new only via subset | re-run  |
+| `replace` value added (data path) | new shards only      | dependent on whether `replace` is in fit/hc path; default fit doesn't carry it, so existing fit shards' upstream id is unchanged | dependent | re-run |
+| `rescale` value added (fit path)  | cached               | new shards only     | rewrite all (rescale is hc *inner* axis) | re-run |
+| `dists` (fit inner)               | cached               | rewrite all 4       | rewrite all 2       | re-run  |
+| `nboot` added (hc inner)          | cached               | cached              | rewrite all 2       | re-run  |
+| `est_method` added (hc inner)     | cached               | cached              | rewrite all 2       | re-run  |
+| `ci_method` / `parametric` added  | cached               | cached              | rewrite all 2       | re-run  |
+| `seed`                            | re-run all           | re-run all          | re-run all          | re-run  |
 
-Three steps as three targets is what makes this matrix possible: the
-existing per-task design (data + fit + hc in one branch) cannot cache
-a fit when only `nboot` changes.
+Three steps as three targets is what makes this matrix possible: a
+single combined branch (data + fit + hc) cannot cache a fit shard
+when only `nboot` changes.
 
 **Available for analysis:**
 
 After `tar_make()`, the three step layers are queryable independently
-via duckplyr without going through `targets`:
+via duckplyr without going through `targets` (Hive-partitioned reads
+auto-discover the partition columns from the path):
 
 ```r
-duckplyr::read_parquet_duckdb("results/data/*.parquet") |>
-  dplyr::filter(nrow == 10L) |> dplyr::collect()
-duckplyr::read_parquet_duckdb("results/fit/*.parquet")  |> ...
-duckplyr::read_parquet_duckdb("results/hc/*.parquet")   |> ...
+duckplyr::read_parquet_duckdb("results/data/**/*.parquet") |>
+  dplyr::filter(dataset == "boron", sim == 1L) |> dplyr::collect()
+duckplyr::read_parquet_duckdb("results/fit/**/*.parquet")  |> ...
+duckplyr::read_parquet_duckdb("results/hc/**/*.parquet")   |> ...
 ```
+
+Path-axis filters push down to the directory tree (no irrelevant
+Parquets opened); inner-axis filters (e.g. `min_pmix == "default"`)
+push down to row-group metadata but still need to open the
+relevant Parquets.
 
 #### Hive-style layout for predicate pushdown
 
-The per-branch shards are written into a **Hive-partitioned**
-directory tree keyed by the scenario's cross-join axes:
+Shards are written into a **Hive-partitioned** directory tree
+keyed by the step's `partition_by` columns (defaults from §5):
 
 ```
    results/
-     data/  dataset=boron/   sim=1/  replace=FALSE/  <task-primer>.parquet
-            dataset=boron/   sim=2/  replace=FALSE/  <task-primer>.parquet
-            dataset=cadmium/ sim=1/  replace=FALSE/  <task-primer>.parquet
-     fit/   dataset=boron/   sim=1/  rescale=FALSE/  <task-primer>.parquet
+     data/  dataset=boron/   sim=1/  replace=FALSE/  part.parquet
+            dataset=boron/   sim=2/  replace=FALSE/  part.parquet
+            dataset=cadmium/ sim=1/  replace=FALSE/  part.parquet
+     fit/   dataset=boron/   sim=1/  rescale=FALSE/  part.parquet
             …
-     hc/    dataset=boron/   sim=1/  rescale=FALSE/  nboot=10/  est=arith/  <task-primer>.parquet
+     hc/    dataset=boron/   sim=1/                  part.parquet
             …
 ```
 
 duckplyr / DuckDB read the partition columns straight out of the
 directory names and use them for predicate pushdown; a query like
-`filter(nrow == 10L, dataset == "boron")` only opens the relevant
-shards, regardless of how big the rest of the tree grows. The leaf
-file name is the 64-bit `task_primer` hex (§2) — useful for
-debug (§7) but not required by the query path.
+`filter(dataset == "boron", sim == 1L)` only opens the relevant
+shards, regardless of how big the rest of the tree grows. **Inner
+axes** (those not in `partition_by`) are ordinary columns inside
+the Parquet — still filterable, just not via path-level pushdown.
+The leaf file name is the fixed string `part.parquet`; the Hive
+path uniquely identifies the shard, so no hash in the name.
 
 #### Linking between targets
 
 Within the pipeline, `targets` already wires the dependency: the
-fit branch for task *T* declares `data_step_<data_id(T)>` as its
-upstream and gets the **shard path passed in as a function
-argument** (the `format = "file"` contract). No lookup-by-hash in
-the body. The partition layout above is for *downstream queries*
-and for the debug replay (§7), not for the inter-target wiring.
+fit branch for shard *S* declares the upstream data shard at the
+matching partition path and gets the **shard path passed in as a
+function argument** (the `format = "file"` contract). No
+lookup-by-hash in the body. The partition layout above is for
+*downstream queries* and for the debug replay (§7), not for the
+inter-target wiring.
 
 ### 6.1 Cloud upload hook
 
@@ -853,13 +942,14 @@ machine**, with the same inputs and the same RNG state.
 The state-only primitives `slice_sample_state()`,
 `fit_dists_state()`, `hc_state()` are the contract that makes this
 work. Each takes its inputs as plain values — data, a `(seed,
-state)` pair, scalar params — so the **task row plus the
-immediate upstream shard is a complete reproducer**.
+state)` pair, scalar params — so the **failing task's row plus
+the immediate upstream shard is a complete reproducer**, even
+when the failing branch processed many other tasks alongside it.
 
 ### Scenario
 
 `tar_make()` against `crew_controller_slurm()` fans out N hc
-branches; three error on remote workers:
+shards; three branches error on remote workers:
 
 ```
    targets reports:
@@ -868,39 +958,46 @@ branches; three error on remote workers:
      ✗ hc_step_91da33   (slurm-worker-21)
 ```
 
-The user wants the three failures reproduced locally, fast, without
-re-running the other N−3 tasks.
+The user wants the failing tasks reproduced locally, fast,
+without re-running every other shard.
 
 ### Recipe
 
 ```
-   1. Identify the task row (on the cluster, or after rsync).
-      ────────────────────────────────────────────────────────
-      task <- tar_read(hc_tasks) |> dplyr::filter(hc_id == "3ab9c7")
+   1. Identify the failing task row.
+      ──────────────────────────────
+      # Find the task that errored within the failing branch:
+      # branch error message names the shard's partition path;
+      # within the shard the task_id of the bad row is in the log.
+      task <- tar_read(hc_tasks) |> dplyr::filter(task_id == "3ab9c7")
 
       The row carries:
-        - hc_state  (length-2 integer = c(hi31, lo31), §2)
+        - primer    (length-2 integer = c(hi31, lo31), §2)
         - all hc params (nboot, est_method, ci_method, ...)
-        - fit_id     (content-hash of the upstream shard)
+        - upstream partition path (dataset, sim) for the fit shard
 
    2. Locate the upstream shard by partition path.
-      ───────────────────────────────────────────────────────
-      results/fit/<fit_id>.parquet
+      ────────────────────────────────────────────
+      results/fit/dataset=<...>/sim=<...>/rescale=<...>/part.parquet
       The immediate upstream is enough; no need to walk further.
 
    3. Sync to local.
       ──────────────
-      rsync cluster:_targets/objects/hc_tasks        ./_targets/objects/
-      rsync cluster:results/fit/<fit_id>.parquet     ./results/fit/
+      rsync cluster:_targets/objects/hc_tasks   ./_targets/objects/
+      rsync cluster:<upstream_path>             ./<upstream_path>
 
    4. Reproduce, no targets involved.
       ───────────────────────────────
-      fit <- ssd_read_step("results/fit/<fit_id>.parquet")
+      fit <- arrow::read_parquet(<upstream_path>) |>
+             # the fit shard may contain multiple fit task rows;
+             # pick the one this hc task points to.
+             dplyr::filter(task_id == task$fit_task_id) |>
+             dplyr::pull(fit) |> .subset2(1L)
       options(error = recover)        # or place browser() in hc_state
       out <- ssdsims:::hc_state(
         data       = fit,
         seed       = scenario$seed,
-        state      = task$hc_state[[1]],
+        state      = task$primer[[1]],
         nboot      = task$nboot,
         est_method = task$est_method,
         ci_method  = task$ci_method,
@@ -924,9 +1021,10 @@ ssd_replay_task(task_id, store = "_targets", results_dir = "results")
 ```
 
 infers the step from the task table the id sits in, opens the
-immediate upstream shard, and calls the matching `_state`
-primitive with the right args. The state-only primitives are the
-supported branch-replay API.
+upstream shard at the right partition path, filters it down to the
+one upstream task row, and calls the matching `_state` primitive
+with the right args. The state-only primitives are the supported
+task-replay API.
 
 ### What makes this work
 
@@ -937,7 +1035,7 @@ supported branch-replay API.
    │  seed       scenario-scalar integer; in the manifest              │
    │  primer     length-2 integer (hi32, lo32); on the task row;       │
    │             passed to dqset.seed()'s `stream` arg                 │
-   │  upstream   one shard per branch; keyed by task-primer hash;      │
+   │  upstream   one shard per partition cell; keyed by Hive path;     │
    │             tooling-agnostic (DuckDB, Python, R)                  │
    │  params     scalars on the task row                               │
    │  primitive  `*_state()` takes (data, seed, state = primer, ...);  │
@@ -957,23 +1055,23 @@ regenerated upstream matches what the cluster's failed branch
 actually consumed** — without that, you might be debugging a
 phantom.
 
-The mechanism is per-shard content-hashing (sha256). Every shard the
-cluster writes is fingerprinted with `sha256` and the value is
-stored in the parent's manifest before any upload happens:
+The mechanism is per-shard content-hashing (sha256). Every shard
+the cluster writes is fingerprinted with `sha256` and the value is
+stored in the parent's manifest, keyed by the shard's partition
+path, before any upload happens:
 
 ```r
-manifest$completed_hashes[["<fit_id>"]]
-#> "8c92…"  (sha256 of results/fit/<fit_id>.parquet at write time)
+manifest$completed_hashes[["fit/dataset=boron/sim=1/rescale=FALSE"]]
+#> "8c92…"  (sha256 of part.parquet at write time)
 ```
 
 Local recipe:
 
 ```
    1. tar_make() locally up to fit_step, then look at the
-      regenerated results/fit/<fit_id>.parquet.
-   2. local_hash  <- digest::digest(file = "results/fit/<fit_id>.parquet",
-                                    algo = "sha256")
-      parent_hash <- parent_manifest$completed_hashes[["<fit_id>"]]
+      regenerated upstream shard at its partition path.
+   2. local_hash  <- digest::digest(file = <upstream_path>, algo = "sha256")
+      parent_hash <- parent_manifest$completed_hashes[[<partition_key>]]
       stopifnot(identical(local_hash, parent_hash))
         ✓  the cluster's input is reproduced byte-for-byte;
            continue to step 4 of the rsync recipe.
@@ -984,7 +1082,7 @@ Local recipe:
 ```
 
 Same primitive (`hc_state(data, state, ...)`); the only thing the
-two recipes differ on is **where** the upstream Parquet came from.
+two recipes differ on is **where** the upstream shard came from.
 Hash verification is the bridge.
 
 ### Constraints
@@ -993,9 +1091,10 @@ Hash verification is the bridge.
   determinism from BLAS, system libraries, or untracked global state
   is out of scope; capture `sessionInfo()` per-branch alongside the
   Parquet to narrow it.
-- Content-addressing must be host-independent: the `<id>.parquet`
-  shard name is the task-row hash, not a path or mtime, so the same
-  task on cluster and laptop resolves to the same shard name.
+- Content-addressing must be host-independent: the shard's
+  partition path is derived from task-table column values, not from
+  any host-local state, so the same task on cluster and laptop
+  resolves to the same shard path.
 - The manifest must record `completed_hashes` (per-id sha256). Without
   it, lightweight reproduction can't be verified.
 - Only the immediate upstream is required. To debug `hc`, pull or
@@ -1004,101 +1103,105 @@ Hash verification is the bridge.
   to resample.
 
 Once the bug is fixed, the natural follow-up is to lock in the
-surviving N−3 results and re-run only the 3 failures despite the
-code change. That is the same primitive as scenario extension —
-see §8 (the re-run-after-fix shape is just `desired \ completed`
-with `desired = parent.desired_grid`).
+surviving N−3 shards and re-run only the 3 failures despite the
+code change — see §8.4 (`unlink()` the bad Parquets + `tar_make()`)
+or §8.3 (dag-of-dags) depending on the scope of the change.
 
 ---
 
 ## 8. Extension
 
-With per-task hash-keyed states (§2) and per-step shards (§6), the
-**default** extension story is almost trivial:
+Shards are the cache unit. The shard's identity is its **partition
+path** (`results/<step>/dataset=.../sim=.../…/`), and its contents
+are the rows of the step's task table that share those partition
+column values. Extension is the answer to one question per
+extension type: *does the new scenario change the set of shards,
+or the contents of an existing shard?*
 
-```
-   For each task in scenario:
-     id = task_primer(task_params)
-     if results/<step>/<id>.parquet exists  → skip (cache hit)
-     else                                    → run, write <id>.parquet
-```
+### 8.1 Path-axis growth — new shards, existing shards untouched
 
-A "child" scenario is just a *bigger* scenario described by the same
-declarative API. Tasks whose `id` already has a shard on disk are
-not re-run; the rest are. No `parent` reference, no manifest
-plumbing, no `desired \ completed` set-difference machinery — content
-addressing handles all of it.
+Adding a value to an axis that is **in `partition_by`** for a step
+creates new partition cells and therefore new shards; existing
+shards' Parquets stay byte-identical and are reused. No
+bookkeeping needed beyond `targets`' usual branch-level
+dependency tracking.
 
-| Extension                  | Mechanism                                                          |
-| -------------------------- | ------------------------------------------------------------------ |
-| Append a dataset           | bigger `datasets` vector ⇒ new task IDs ⇒ new shards only          |
-| Grow `nsim`                | bigger `nsim` ⇒ new IDs for the added `sim` values                 |
-| More `nrow` values         | data step's `n_max` increases ⇒ data state re-hashes ⇒ re-run *data*; fit/hc may reuse via subset (open question, see §11) |
-| Add a `rescale` / `nboot`  | new fit / hc IDs ⇒ new shards only                                 |
+| What you added                  | Path axis for…       | Effect                                            |
+| ------------------------------- | -------------------- | ------------------------------------------------- |
+| new dataset name                | data, fit, hc        | new shards for that dataset; rest cached          |
+| `nsim` grows                    | data, fit, hc        | new shards for the added `sim` values             |
+| `replace` value (default `partition_by`) | data only (path); fit/hc (inner; if `replace` not in their path) | new data shards; fit/hc not affected unless they include `replace` in path |
+| `rescale` value (default)       | fit only (path)      | new fit shards; data cached; hc rewrites (rescale is hc *inner*) — see §8.2 |
 
-Two cases need an explicit `parent` reference because content
-addressing alone doesn't cover them:
+### 8.2 Inner-axis growth — atomic shard rewrite
 
-### 8.1 Rename or reorder datasets — `parent_alias`
+Adding a value to an axis that is **not in `partition_by`** for a
+step changes the task-row set of every shard in that step's
+partition tree (each shard now has one more row's worth of
+tasks). Each affected shard is **atomically rewritten** with the
+new task set: targets sees the grouped task table change, marks
+those branches stale, the body re-runs all K tasks in each shard
+and overwrites the Parquet.
 
-Renaming `boron → b` changes the task ID's `dataset` field and
-therefore the hash. Without help, every shard would look uncached.
-The child scenario carries a name-mapping that's consulted *before*
-the cache lookup:
+Per-task RNG identity is preserved (each task's primer is
+unchanged), so the *rows that were there before* come out
+byte-identical to the previous Parquet — but the file itself is
+new. There is no in-place append: one Parquet per shard, rewritten
+as a whole. Trade-off accepted (Q2 in the design dialogue):
+simpler cache semantics in exchange for redoing the work of every
+task already in the shard.
 
-```r
-ssd_scenario(
-  datasets     = c("b", "cd"),
-  parent       = "../parent/results",
-  parent_alias = c(b = "boron", cd = "cadmium"),
-  …
-)
-```
+| What you added             | Inner axis for…   | Cost                                  |
+| -------------------------- | ----------------- | ------------------------------------- |
+| new `min_pmix` name        | fit               | rewrite all fit shards (was K tasks each → now K+1) |
+| `dists` change             | fit               | rewrite all fit shards                 |
+| `nboot` value              | hc                | rewrite all hc shards                  |
+| `est_method` value         | hc                | rewrite all hc shards                  |
+| `ci_method` / `parametric` | hc                | rewrite all hc shards                  |
 
-For each new-name task, look up the parent-name task, check if its
-shard exists in the parent's directory; if yes, re-attribute (link
-or rename) under the new ID. No streams are allocated; no compute.
+**To avoid the rewrite cost**, move the axis into `partition_by`
+for that step. The trade is shard count vs. cache reuse: pushing
+an axis into the path means future growth on that axis adds new
+shards instead of rewriting old ones, at the cost of producing
+more (smaller) Parquets up front.
 
-### 8.2 Mixed-code lock-in after a code fix — dag-of-dags
+### 8.3 Pinning shards despite a code change — dag-of-dags
 
-Two directions of "code changed, what about my Parquets?":
-
-**(a) Force re-run of selected tasks.** A bug in `hc_state()` is
-fixed; the user wants the buggy shards re-run under the patched
-code. Task IDs are unchanged (the fix doesn't alter parameters), so
-the partition lookup would still say "cache hit". Easiest move:
-
-```r
-unlink(failed_shards)
-tar_make()    # targets sees the missing files, re-runs only those
-```
-
-`targets::tar_invalidate(names = failed_branch_names)` is the
-bookkeeping-preserving alternative — same end state.
-
-**(b) Pin existing outputs *despite* a code change.** The user
-edited an `_state` function (or `ssdtools` ticked over a version);
-`targets`' own hash-graph would now flag every dependent branch as
-out-of-date, forcing a re-run the user does *not* want. The
-question is the **opposite** of invalidation — how to keep targets
-from re-running things whose shards are still trusted.
+The user edited an `_state` function (or `ssdtools` ticked over a
+version); `targets`' own hash-graph would now flag every
+dependent branch as out-of-date, forcing a re-run the user does
+*not* want. The question is the **opposite** of invalidation —
+how to keep targets from re-running things whose shards are still
+trusted.
 
 There is no clean single-project knob for this. (`tar_target(...,
 cue = tar_cue(file = "always"))` and friends are coarse and don't
 distinguish "the file is fine" from "I haven't checked yet".) The
 canonical workaround is **dag-of-dags**: open a child project that
 declares the parent's `results/` directory as an *input* via
-`tar_target(..., format = "file", command = "../parent/results/X")`.
+`tar_target(..., format = "file", command = "../parent/results/<path>")`.
 File-as-input targets are pinned to the file's content hash, not to
 the function that produced it; the child's own functions are free to
 evolve without invalidating the parent's shards. The child does
 its new compute, writes into its own `results/`, and the `summary`
 target unions both directories.
 
-The same dag-of-dags pattern is what makes 8.1 (`parent_alias`)
-work — both shapes are "parent's shards are immutable inputs".
+### 8.4 Forced re-run after a code fix
 
-### 8.3 Manifest contents
+The dual case: a bug in `hc_state()` is fixed; the user wants the
+*buggy* shards rewritten under the patched code. Partition paths
+are unchanged (the fix doesn't alter `partition_by` columns), so
+file existence still says "cache hit". Easiest move:
+
+```r
+unlink(failed_shards)        # the specific Parquets to refresh
+tar_make()                   # targets sees the missing files, re-runs only those
+```
+
+`targets::tar_invalidate(names = failed_branch_names)` is the
+bookkeeping-preserving alternative — same end state.
+
+### 8.5 Manifest contents
 
 Per-scenario manifest (a small JSON sidecar to the results
 directory):
@@ -1107,13 +1210,13 @@ directory):
 - `datasets` — name vector referenced from tasks (§1.1).
 - `min_pmix` — name vector ditto.
 - `fit`, `hc` — the argument-vector grids.
-- `completed_ids` — set of `id`s whose shard exists and is
-  trusted (recorded at write time, including the cloud copy's
-  sha256 if `upload` is set; see §6.1, §7).
+- `partition_by` — the per-step path axes (§5).
+- `completed_shards` — set of shard partition paths whose Parquet
+  exists and is trusted, with each shard's sha256 (recorded at
+  write time, including the cloud copy's sha256 if `upload` is
+  set; see §6.1, §7).
 - `r_version`, `dqrng_version`, `ssdtools_version` — versions
   pinned for bit-stability across re-runs (§9).
-- `dataset_names`, `min_pmix_names` — for `parent_alias` validation
-  in 8.1.
 
 Restart property for dqrng (same `(seed, state)` ⇒ same draw
 sequence) is verified by `scripts/experiment-dqrng-hash.R`.
@@ -1156,7 +1259,7 @@ returns a prefix of itself for smaller `n`, for both `replace`
 values — holds only as long as `base::sample.int()` is byte-stable
 across R versions. Validated for the current R by
 `scripts/experiment-subset-property.R`; pin the R version (and
-`dqrng`, `ssdtools`) in the manifest (§8.3) to guard against future
+`dqrng`, `ssdtools`) in the manifest (§8.5) to guard against future
 behaviour changes.
 
 ### `dqrng::register_methods()` is process-global
@@ -1172,22 +1275,22 @@ in any function that touches the methods).
 
 | Gap                                                  | Resolution                                                                                  |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| No DAG-of-DAGs primitive                             | §8.2 — child reads parent's `results/` directly; partitions identify branches; mostly unnecessary, see below. |
+| No DAG-of-DAGs primitive                             | §8.3 — child reads parent's `results/` directly; partition paths identify shards.            |
 | No "load previous run from Parquet" path             | §8 — per-step shards are the cache; no explicit load needed.                          |
 | Persists fragile RNG state                           | §1, §2 — scenario stores a single integer `seed`; per-task `(seed, state)` is reproducible via `dqset.seed()`. |
 | Positional task IDs                                  | §2 — task IDs are keyed by `task_primer(p)` = 64-bit hash of canonical params. |
 | Re-derivation cost is quadratic                      | §2 — per-task hash is O(1); no precomputed lattice.                                         |
-| `nsim`-grow cache invalidation                       | §1, §2, §8 — new sim values hash to new primers; existing task IDs (and their shards) are untouched. |
+| `nsim`-grow cache invalidation                       | §1, §2, §8.1 — new sim values hash to new primers and create new shards; existing shards untouched. |
 | Three steps cached as one (no per-step re-runs)      | §5, §6 — data/fit/hc are three grids and three targets, each with its own shard layer.      |
 | Same lattice for all steps despite grid mismatch     | §5 — each step has its own grid and per-task primer.                                              |
 | `nrow` invalidates data states for the same `sim`    | §5 — `nrow` is never an axis: data state keyed by `(dataset, sim, replace)`, slice truncates to `n`.    |
 | Single-dataset scenarios only                        | §1.1 — datasets are name-referenced in a central registry; cross-join axis.                 |
 | Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
 | Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci=FALSE` collapses `nboot`/`ci_method`/`parametric` to NA; one task instead of N. |
-| Branch failure unreproducible off the cluster        | §7 — task row + upstream shard replays the failing branch via `_state` primitives.          |
-| Code fix re-runs every branch by hash invalidation   | §8.2 — `unlink()` failed shards (or `tar_invalidate`); content addressing leaves the rest untouched. |
+| Branch failure unreproducible off the cluster        | §7 — task row + upstream shard replays the failing task via `_state` primitives.          |
+| Code fix re-runs every branch by hash invalidation   | §8.4 — `unlink()` failed shards (or `tar_invalidate`); path-keyed addressing leaves the rest untouched. |
 | Off-cluster access to Parquet outputs                | §6.1 — `scenario$upload` pushes each shard to a configurable object store (e.g. Azure Blob). |
-| Phantom local repros (regenerated upstream ≠ cluster's actual) | §7 — manifest's per-id sha256 lets the lightweight recipe verify the local upstream before running the failing step. |
+| Phantom local repros (regenerated upstream ≠ cluster's actual) | §7 — manifest's per-shard sha256 lets the lightweight recipe verify the local upstream before running the failing task. |
 
 The RNGkind side-effect bug and the independent data/fit/hc substream
 issues from the original L'Ecuyer design no longer apply: dqrng with
@@ -1211,7 +1314,7 @@ per process and is restored on exit).
    same name with different bytes silently collide. Should the
    registry refuse re-registration unless byte-identical, or carry a
    content hash on the task ID alongside the name?
-3. **Force re-run inside one `targets` project.** §8.2 lists two
+3. **Force re-run inside one `targets` project.** §8.4 lists two
    options for re-running after a code fix: `unlink()` the bad
    shards, or `tar_invalidate(names = ...)`. Which is the
    recommended path? `unlink` is simpler but loses the bookkeeping;
@@ -1292,7 +1395,7 @@ shows where branches open and close.
   values per-run. Regression test: a body edit to a registered
   function does not move the hash of any cached fit branch.
 - **`manifest`** — Per-scenario manifest writer/reader with the
-  §8.3 field set; each per-task target writes its shard's sha256
+  §8.5 field set; each step target writes each shard's sha256
   alongside the Parquet on success.
 - **`task-tables`** — `ssd_scenario_data_tasks` /
   `_fit_tasks` / `_hc_tasks` returning the per-step task tables
@@ -1311,10 +1414,19 @@ shows where branches open and close.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and
   `ssd_input_hash()` for the lightweight recipe. Tests simulate a
   branch failure and reproduce locally.
-- **`parent-alias`** — §8.1 — rename/reorder datasets without
-  re-running. Test: renaming yields zero recomputed tasks.
-- **`mixed-code-lockin`** — §8.2 — `unlink()` + `tar_invalidate()`
-  for forced re-runs; dag-of-dags child project for pinning
+- **`partition-by`** — §5 / §1 — scenario knob `partition_by`
+  (named list per step) picks which task-table columns become
+  Hive path levels and which become Parquet columns. Default per
+  step ships as documented in §5. Test: changing `partition_by`
+  for a step shifts shards (file paths) but per-task results
+  inside are byte-identical.
+- **`shard-atomic-rewrite`** — §8.2 — inner-axis growth rewrites
+  affected shards. Test: adding a new `min_pmix` to the scenario
+  causes targets to re-run the affected fit branches and overwrite
+  the shards' Parquets; rows that were there before come out
+  byte-identical to the previous Parquet.
+- **`mixed-code-lockin`** — §8.3 — `unlink()` + `tar_invalidate()`
+  for forced re-runs (§8.4); dag-of-dags child project for pinning
   parent outputs against code change. Both recipes have tests.
 - **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
@@ -1335,6 +1447,7 @@ flowchart TD
     migrate[migrate-public-api]
     nrow[nrow-sub-truncation]
     ci[ci-false-collapse]
+    partby[partition-by]
 
     subgraph targets [targets-only plumbing]
         dsreg[dataset-registry]
@@ -1350,11 +1463,12 @@ flowchart TD
     cluster[cluster-pipeline]
     cloud[cloud-upload]
     replay[replay-helper]
-    alias[parent-alias]
+    rewrite[shard-atomic-rewrite]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
     define --> baseline
+    define --> partby
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims
@@ -1369,14 +1483,15 @@ flowchart TD
     migrate --> manif
     nrow --> tt
     ci --> tt
+    partby --> tt
 
     tt --> hive
     tt --> cluster
     tt --> cloud
     tt --> replay
-    tt --> alias
+    tt --> rewrite
 
-    alias --> lockin
+    rewrite --> lockin
     lockin --> cleanup
 ```
 
