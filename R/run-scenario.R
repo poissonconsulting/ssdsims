@@ -17,22 +17,55 @@ ssd_run_scenario <- function(x, ...) UseMethod("ssd_run_scenario")
 ssd_run_scenario.data.frame <- function(
   x,
   ...,
-  nrow = 6L,
+
+  limits = c(
+    replace = 2,
+    dists = 20,
+    rescale = 2,
+    computable = 2,
+    at_boundary_ok = 2,
+    min_pmix = 2,
+    range_shape1 = 2,
+    range_shape2 = 2,
+    ci = 2,
+    nboot = 10,
+    est_method = 4,
+    ci_method = 10,
+    parametric = 2
+  ),
+
+  # 1: solved with head()
+  nrow = c(6L, 20L, 100L, 200L, 500L),
+  max_nrow = 1000L, # want to specify up front to avoid relying on implementation details of slice_sample(). Alternative: use implementation of slice_sample() that we control, relying on sample.int() only.
+  # 2
   replace = FALSE,
+  # 20
   dists = ssdtools::ssd_dists_bcanz(),
-  rescale = FALSE,
+  # 2
+  rescale = c(FALSE, TRUE),
+  # 2
   computable = FALSE,
+  # 2
   at_boundary_ok = TRUE,
-  min_pmix = list(ssdtools::ssd_min_pmix),
+  # 2
+  min_pmix = list(min_pmix = ssdtools::ssd_min_pmix),
+  # 2
   range_shape1 = list(c(0.05, 20)),
+  # 2
   range_shape2 = list(c(0.05, 20)),
   proportion = 0.05,
+  # 2: ci = FALSE means nboot, ci_method and parametric are ignored, ci = TRUE means they are not
   ci = FALSE,
-  nboot = 1000,
+  # 10: reusing the value for 1000 to compute 10000 is a lot of effort for very limited gain; inferring the value for 1000 from the value for 10000 might be possible; out of scope for now.
+  nboot = c(20, 50, 100, 1000, 10000),
+  # 4
   est_method = "multi",
+  # 10
   ci_method = "weighted_samples",
+  # 2
   parametric = TRUE,
   seed = NULL,
+  # nsim
   nsim = 100L,
   stream = getOption("ssdsims.stream", 1L),
   start_sim = 1L,
