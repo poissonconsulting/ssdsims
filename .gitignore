@@ -20,3 +20,7 @@ docs
 
 inst/targets-examples/*/_targets/
 inst/targets-examples/*/results/
+
+# R CMD check build artifacts
+*.Rcheck/
+ssdsims_*.tar.gz
