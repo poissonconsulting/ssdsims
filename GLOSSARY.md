@@ -28,7 +28,7 @@ Terminology used throughout `ssdsims`.
   stream, advanced via `parallel::nextRNGSubStream()`. ssdsims's
   current package convention assigns one sub-stream per simulation
   index (`sim`). The dqrng-based design (TARGETS-DESIGN.md §2) does
-  not use sub-streams; each shard gets its own dqrng stream selected
+  not use sub-streams; each task gets its own dqrng stream selected
   by its **primer**.
 - **primer**: The value that, *together with* `seed`, fully
   initializes an RNG instance to a known starting point — i.e.
@@ -39,41 +39,48 @@ Terminology used throughout `ssdsims`.
       to the `stream` argument of `dqrng::dqset.seed()`.
     * **L'Ecuyer-CMRG**: a length-7 integer state vector
       assignable to `.Random.seed`.
-  In TARGETS-DESIGN.md, the per-shard primer is the 64-bit
-  `rlang::hash()` of the shard's parameters via `shard_primer(p)`
+  In TARGETS-DESIGN.md, the per-task primer is the 64-bit
+  `rlang::hash()` of the task's parameters via `task_primer(p)`
   (§2). The `state =` argument of the `_state` functions *is* the
-  primer for that shard.
+  primer for that task.
 
 ## Pipeline terms
 
-- **shard**: One row of a step's shard table → one Parquet file
-  on output → one branch of the corresponding dynamic-branched
-  target. Each shard has its own primer (§2), its own
-  Hive-partitioned Parquet path under `results/<step>/`, and is
-  the unit of fan-out, caching, and replay. The 1-shard =
-  1-Parquet rule is the design's central invariant. The three
-  steps (data, fit, hc) each emit their own shards; shard counts
-  differ across steps because the grids differ (§5).
+- **task**: One row of a step's task table (`data_tasks` /
+  `fit_tasks` / `hc_tasks`). A task specifies the smallest unit
+  of computation in the pipeline: it carries the per-task
+  **primer** (§2), all parameter values for the cross-join axes
+  at that step, and the upstream task ID it depends on
+  (`data_id` on fit-task rows, `fit_id` on hc-task rows).
+  Running a task produces one **shard** (below). Tasks and
+  shards stand in 1:1 correspondence; the distinction is
+  computation vs. output.
+- **shard**: One Parquet file on disk — the on-disk output of
+  running one task. Hive-partitioned under `results/<step>/`,
+  with the leaf file name = the 64-bit `task_primer()` hex.
+  Existence of a shard at the expected path is the cache-hit
+  test for extension (§8). The 1-shard = 1-Parquet rule is the
+  design's central storage invariant.
 - **step**: One of the three RNG-touching stages of the pipeline:
   **data** (`slice_sample_state`), **fit** (`fit_dists_state`),
-  **hc** (`hc_state`). Each step has its own shard table
-  (`data_shards` / `fit_shards` / `hc_shards`), its own grid, and
-  its own dynamic-branched target (`data_step` / `fit_step` /
-  `hc_step`). The word "step" is reserved for these three stages
-  and is **not** used for shards, targets, or Slurm jobs.
-- **target**: A `targets::tar_target()` definition in the
+  **hc** (`hc_state`). Each step has its own task table
+  (`data_tasks` / `fit_tasks` / `hc_tasks`), its own grid, its
+  own dynamic-branched target (`data_step` / `fit_step` /
+  `hc_step`), and its own shard directory. The word "step" is
+  reserved for these three stages.
+- **target**: A `targets::tar_target()` declaration in the
   `_targets.R` script. A *static* target produces one object; a
   *dynamic-branched* target with `pattern = map(...)` produces
-  one branch per upstream row, where each branch ≡ one shard.
-  "Target" is a targets-package term and is unrelated to the
-  Slurm/cluster word "job".
+  one branch per row of its upstream table — and each branch
+  runs exactly one task and writes exactly one shard, so 1 task
+  = 1 branch = 1 shard.
 - **job**: Reserved exclusively for the cluster-scheduler term —
   a Slurm (or equivalent) work unit dispatched by a `crew`
-  controller. With `crew.cluster::crew_controller_slurm()` and
+  controller. Under `crew.cluster::crew_controller_slurm()` and
   `pattern = map(...)`, each branch typically becomes one Slurm
-  job, so in practice one Slurm job ≈ one shard, but the two
-  terms are not synonyms: shards exist regardless of scheduler;
-  jobs only exist on a cluster.
+  job, so in practice 1 Slurm job ≈ 1 task ≈ 1 shard. The terms
+  are not synonyms though: tasks and shards exist with or
+  without a scheduler; jobs only exist on a cluster.
 
 ## Simulation terms
 
