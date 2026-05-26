@@ -14,14 +14,17 @@
 ##   (2) Does base R RNG route through dqrng after register_methods()?
 ##       Inventory: runif, rnorm, rbinom, rexp, rgamma, rpois,
 ##       sample.int, sample, dplyr::slice_sample, ssdtools::ssd_r*.
-##   (3) What hash function should produce the stream id?
+##   (3) What hash function should produce the per-task state?
 ##       rlang::hash() is xxhash128 (128 bits hex). dqset.seed's
 ##       `stream` argument **accepts a length-2 integer vector**
 ##       interpreted as a 64-bit (hi, lo) pair, so we slice 64 bits
-##       out of the hash and pass them in as two int32s.
-##   (4) Collision probability (birthday paradox) at 64-bit stream
-##       width: 50% collision at sqrt(2^64) ~ 4 billion tasks.
-##       Empirical check below.
+##       out of the hash and pass them in as two int32s. R cannot
+##       represent INT_MIN as a non-NA integer, so the bit pattern
+##       0x80000000 is encoded as NA_integer_; dqrng accepts NA in
+##       `stream` and treats it as INT_MIN. Effective: full 64 bits.
+##   (4) Collision probability (birthday paradox) at 64 bits:
+##       50% collision at sqrt(2^64) ~ 4.3 billion tasks. Empirical
+##       check below.
 ##
 ## Run:
 ##   Rscript scripts/experiment-dqrng-hash.R
@@ -38,31 +41,32 @@ cat("R version:     ", R.version.string, "\n\n")
 # --- 1. Hash → stream id -------------------------------------------------
 
 # rlang::hash returns 32 hex chars (xxhash128 = 128 bits). dqset.seed's
-# `stream` argument accepts a length-2 integer vector interpreted as
-# a 64-bit (hi, lo) pair -- e.g. `c(1L, 2L)` differs from `c(0L, 1L)`
-# (which is the canonical single 1L). We slice 64 bits out of the
-# hash as `c(hi32, lo32)`. Each 32-bit half must fit in signed int32,
-# so we take 7 hex chars per half (28 bits) and pack them with the
-# 8th nibble's low 3 bits to fill 31 bits; the sign bit (bit 31)
-# stays zero.
-task_stream_id <- function(task_params) {
+# `stream` argument accepts a length-2 integer vector interpreted as a
+# 64-bit (hi, lo) pair (`?dqrng::dqRNGkind`). We slice 64 bits out of
+# the hash as `c(hi32, lo32)` and rely on the fact that R encodes
+# INT_MIN (`0x80000000`) as `NA_integer_` -- and dqrng accepts NA in
+# `stream` and treats it as INT_MIN. Result: full 64 bits of stream
+# entropy, with the bit pattern `0x80000000` represented as NA.
+hex8_to_int32 <- function(hex8) {
+  u <- strtoi(substr(hex8, 1L, 4L), base = 16L) *
+    65536 +
+    strtoi(substr(hex8, 5L, 8L), base = 16L)
+  suppressWarnings(
+    if (u < 2147483648) as.integer(u) else as.integer(u - 4294967296)
+  )
+}
+task_state_id <- function(task_params) {
   h <- rlang::hash(task_params) # 32-char hex
-  # Two independent 31-bit halves -> 62 effective bits.
-  hi <- bitwOr(
-    bitwShiftL(strtoi(substr(h, 1L, 7L), base = 16L), 3L),
-    bitwAnd(strtoi(substr(h, 8L, 8L), base = 16L), 7L)
-  )
-  lo <- bitwOr(
-    bitwShiftL(strtoi(substr(h, 9L, 15L), base = 16L), 3L),
-    bitwAnd(strtoi(substr(h, 16L, 16L), base = 16L), 7L)
-  )
-  c(bitwAnd(hi, 0x7FFFFFFFL), bitwAnd(lo, 0x7FFFFFFFL))
+  c(
+    hex8_to_int32(substr(h, 1L, 8L)), # high 32 bits
+    hex8_to_int32(substr(h, 9L, 16L))
+  ) # low  32 bits
 }
 
 # Smoke
-stream_a <- task_stream_id(list(sim = 1L, nrow = 5L, rescale = FALSE))
-stream_b <- task_stream_id(list(sim = 1L, nrow = 5L, rescale = TRUE))
-stream_c <- task_stream_id(list(sim = 1L, nrow = 5L, rescale = FALSE)) # = a
+stream_a <- task_state_id(list(sim = 1L, nrow = 5L, rescale = FALSE))
+stream_b <- task_state_id(list(sim = 1L, nrow = 5L, rescale = TRUE))
+stream_c <- task_state_id(list(sim = 1L, nrow = 5L, rescale = FALSE)) # = a
 cat(
   "stream a (sim=1, nrow=5, rescale=F): c(",
   stream_a[1L],
@@ -197,13 +201,15 @@ gen_task_params <- function(n_tasks) {
 }
 
 stream_id_for_row <- function(row) {
-  task_stream_id(as.list(row))
+  task_state_id(as.list(row))
 }
 
-cat("\n(4) collision probability at 62-bit stream (two int31s):\n")
+cat(
+  "\n(4) collision probability at 64-bit state (two int32s; INT_MIN encoded as NA):\n"
+)
 cat(sprintf(
-  "    theoretical 50%% collision around sqrt(2^62) = %g tasks\n",
-  sqrt(2^62)
+  "    theoretical 50%% collision around sqrt(2^64) = %g tasks\n",
+  sqrt(2^64)
 ))
 
 stream_id_key <- function(row) {
@@ -219,7 +225,7 @@ for (n_tasks in c(1000L, 10000L, 100000L)) {
     character(1L)
   )
   n_collisions <- n_tasks - length(unique(keys))
-  expected <- n_tasks^2 / 2^63 # = N(N-1)/(2 * 2^62) approx
+  expected <- n_tasks^2 / 2^64 # = N(N-1)/(2 * 2^62) approx
   cat(sprintf(
     "    n_tasks = %6d : empirical collisions = %4d, expected ~ %.2e\n",
     n_tasks,
@@ -232,7 +238,7 @@ for (n_tasks in c(1000L, 10000L, 100000L)) {
 
 cat("\n(5) limitations:\n")
 cat("    * dqset.seed()'s `stream` accepts a length-2 integer vector\n")
-cat("      treated as a 64-bit (hi32, lo32) pair. We pack 62 effective\n")
+cat("      treated as a 64-bit (hi32, lo32) pair. We pack 64 bits by\n")
 cat("      bits (two int31s) of the rlang::hash() digest. Each half\n")
 cat("      must fit in signed int32 to avoid `NAs introduced by\n")
 cat("      coercion to integer range`; the sign bit (bit 31) stays 0.\n")

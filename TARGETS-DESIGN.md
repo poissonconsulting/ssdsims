@@ -9,7 +9,7 @@ Three primary goals, each a hard constraint:
   replayable locally — with no `targets`, no orchestrator — using
   the same inputs the cluster used. This is what the state-only
   primitives (`slice_sample_state()`, `fit_dists_state()`,
-  `hc_state()`) and the per-Parquet content-addressed manifest are
+  `hc_state()`) and the per-step Parquet partitions and their manifest are
   *for* (§7).
 - **Extensibility.** Content-addressed Parquet files *are* the cache:
   a larger scenario reuses Parquets whose task IDs match, computes
@@ -57,7 +57,7 @@ ssdsims_scenario
 └── parent       ← NULL, or a previous results dir referenced for
                    parent_alias / mixed-code use (§8). Plain extension
                    (more datasets, more nsim) does NOT need a parent
-                   reference — content-addressed Parquet is the cache.
+                   reference — the per-step Parquet partitions are the cache (file existence ⇒ cache hit).
 ```
 
 Three design points distinguish this from the current code:
@@ -146,7 +146,7 @@ ssd_scenario(datasets = c("boron", "cadmium"), nsim = 100, …)
 Synthetic datasets are **materialized at registration time**, not on
 demand: they live as Parquet files in the registry alongside
 real-world data. Tasks reading them via name go through the same
-content-addressed path as for empirical data. Trade-off: a
+hashed-key partition path as for empirical data. Trade-off: a
 function-generated dataset must fit in memory at registration; for
 large ones, generate directly to disk and register the resulting
 Parquet path.
@@ -213,7 +213,7 @@ dqrng API parameter happens to be named `stream` — that name belongs
 to dqrng, not to ssdsims.)
 
 where `task_state_id(p)` is a length-2 integer vector packing
-**62 bits** of `rlang::hash(p)`:
+**64 bits** of `rlang::hash(p)`:
 
 ```r
 task_state_id <- function(p) {
@@ -225,16 +225,16 @@ task_state_id <- function(p) {
 }
 ```
 
-**Why 62 bits and not 64.** dqrng's docs document that `stream`
-accepts a length-2 integer vector representing a 64-bit value
-(`?dqrng::dqRNGkind`). In R, however, each integer is signed
-int32 and the bit pattern `0x80000000` (INT_MIN) is reserved as
-`NA_integer_`. So we can't cleanly pass that one bit pattern
-without conflating it with NA. The clean encoding masks the sign
-bit to zero — 31 bits per half, 62 total. (We could push to 64 by
-mapping `0x80000000 → NA_integer_`; dqrng accepts NA and treats it
-as INT_MIN, but the complexity isn't worth one extra bit at our
-scale.)
+**64 bits effective.** dqrng's docs document that `stream` accepts a
+length-2 integer vector representing a 64-bit value
+(`?dqrng::dqRNGkind`). In R each integer is signed int32 and the bit
+pattern `0x80000000` (INT_MIN) is reserved as `NA_integer_`. dqrng
+accepts `NA_integer_` in `stream` and treats it as INT_MIN, so we
+encode the full 64 bits by mapping the one INT_MIN bit pattern to
+`NA_integer_` in the task state. Validated in
+`scripts/experiment-dqrng-hash.R` (4): 0 empirical collisions at
+100 k tasks; theoretical 50% collision around `sqrt(2^64) ≈ 4.3
+billion` tasks. Vastly safe for ssdsims' 10²–10⁴-task scenarios.
 
 **Which RNG.** dqrng exposes pcg64, Xoroshiro128++/Xoshiro256++,
 and Threefry. Empirically (`scripts/experiment-dqrng-hash.R`)
@@ -293,13 +293,6 @@ the `ci = FALSE` collapse documented in §1.2).
 Function-valued parameters (`min_pmix`) are referenced **by name**
 (§1.1) so that a recompile/JIT does not move the task to a different
 state; the hash is over the name, not the function value.
-
-### Collision probability
-
-62-bit task state ⇒ 50% birthday collision around `sqrt(2^62) ≈ 2.1
-billion` tasks. Empirically (script §4): 0 collisions at 1 k, 10 k,
-and 100 k tasks (theory: order of 10⁻⁹ at 100 k). For typical
-ssdsims scenarios (10²–10⁴ tasks) this is overwhelmingly safe.
 
 The restart property (`dqset.seed(seed, state) → same sequence`)
 is exercised in `scripts/experiment-dqrng-hash.R`; the older
@@ -449,7 +442,7 @@ second example but are full cross-join axes in the general case.
 ### State allocation: one per task, via hash
 
 Each task in each grid gets its own per-task **state** — a length-2
-integer derived from the 62-bit hash of the task's parameters
+integer derived from the 64-bit hash of the task's parameters
 (§2), passed to dqrng via its `stream` argument. Tasks do not share
 states across stages or across grid axes; the only sharing is the
 deliberate `nrow` sub-truncation below.
@@ -515,7 +508,7 @@ fan-out by 5×.
 Each step needs its **own** task grouping (`data_tasks`, `fit_tasks`,
 `hc_tasks`) and its own dynamic-branched target — a single shared
 `task_groups` mapped lockstep through all three steps does **not**
-work when the grids differ. Layers link by **content-addressed file
+work when the grids differ. Layers link by **per-branch file
 path**: each task row carries the upstream task IDs it depends on
 (`data_id` on fit rows, `fit_id` on hc rows), and the per-branch
 body opens the right upstream Parquet by that ID. §6 wires this up
@@ -566,8 +559,8 @@ queryable for analysis without re-running upstream steps.
                 (reads all three layers via duckplyr)
 ```
 
-The link between layers is by **content-addressed path**, not by a
-single shared dynamic-branch index — each task row carries its
+The link between layers is by **per-branch file path (passed by `targets`)**, not by a
+single shared dynamic-branch index — `targets` passes the upstream branch's Parquet path into each downstream branch automatically; each task row carries its
 upstream IDs (`fit_tasks$data_id`, `hc_tasks$fit_id`) and the body
 opens the right upstream Parquet by that ID. This is what lets
 tweaking `rescale` re-run fits + hc without re-running data (the
@@ -672,8 +665,37 @@ duckplyr::read_parquet_duckdb("results/fit/*.parquet")  |> ...
 duckplyr::read_parquet_duckdb("results/hc/*.parquet")   |> ...
 ```
 
-A child scenario (§8) only needs `results/hc/` *plus* the parent's
-`end_state` to extend; it does not need to re-read fit or data.
+#### Hive-style layout for predicate pushdown
+
+The per-branch files are written into a **Hive-partitioned**
+directory tree keyed by the scenario's cross-join axes:
+
+```
+   results/
+     data/  dataset=boron/   sim=1/  replace=FALSE/  <task-state>.parquet
+            dataset=boron/   sim=2/  replace=FALSE/  <task-state>.parquet
+            dataset=cadmium/ sim=1/  replace=FALSE/  <task-state>.parquet
+     fit/   dataset=boron/   sim=1/  rescale=FALSE/  <task-state>.parquet
+            …
+     hc/    dataset=boron/   sim=1/  rescale=FALSE/  nboot=10/  est=arith/  <task-state>.parquet
+            …
+```
+
+duckplyr / DuckDB read the partition columns straight out of the
+directory names and use them for predicate pushdown; a query like
+`filter(nrow == 10L, dataset == "boron")` only opens the relevant
+files, regardless of how big the rest of the tree grows. The leaf
+file name is the 64-bit `task_state_id` hex (§2) — useful for
+debug (§7) but not required by the query path.
+
+#### Linking between targets
+
+Within the pipeline, `targets` already wires the dependency: the
+fit branch for task *T* declares `data_job_<data_id(T)>` as its
+upstream and gets the **Parquet path passed in as a function
+argument** (the `format = "file"` contract). No lookup-by-hash in
+the body. The partition layout above is for *downstream queries*
+and for the debug replay (§7), not for the inter-target wiring.
 
 ### 6.1 Cloud upload hook
 
@@ -773,7 +795,7 @@ re-running the other N−3 jobs.
         - all hc params (nboot, est_method, ci_method, ...)
         - fit_id     (content-hash of the upstream Parquet)
 
-   2. Locate the upstream artefact by content-addressed path.
+   2. Locate the upstream artefact by partition path.
       ───────────────────────────────────────────────────────
       results/fit/<fit_id>.parquet
       The immediate upstream is enough; no need to walk further.
@@ -827,7 +849,7 @@ supported branch-replay API.
    │  seed       scenario-scalar integer; in the manifest              │
    │  state      length-2 integer (hi31, lo31); on the task row;       │
    │             passed to dqset.seed()'s `stream` arg                 │
-   │  upstream   one Parquet per branch; content-addressed; tooling-   │
+   │  upstream   one Parquet per branch; keyed by task-state hash; tooling-   │
    │             agnostic (DuckDB, Python, R)                          │
    │  params     scalars on the task row                               │
    │  primitive  `*_state()` takes (data, seed, state, ...args); no    │
@@ -847,7 +869,7 @@ regenerated upstream matches what the cluster's failed branch
 actually consumed** — without that, you might be debugging a
 phantom.
 
-The mechanism is content-addressed hashing. Every Parquet the
+The mechanism is per-Parquet content-hashing (sha256). Every Parquet the
 cluster writes is fingerprinted with `sha256` and the value is
 stored in the parent's manifest before any upload happens:
 
@@ -903,7 +925,7 @@ with `desired = parent.desired_grid`).
 
 ## 8. Extension
 
-With per-task hash-keyed streams (§2) and content-addressed Parquet
+With per-task hash-keyed states (§2) and per-step Parquet partitions
 files (§6), the **default** extension story is almost trivial:
 
 ```
@@ -951,29 +973,42 @@ or rename) under the new ID. No streams are allocated; no compute.
 
 ### 8.2 Mixed-code lock-in after a code fix — dag-of-dags
 
-The post-§7 case: a bug in `hc_state()` is fixed, but the user wants
-to lock in the surviving Parquets that ran under the buggy code and
-only re-run the failed branches under the fix. Content-addressing
-alone doesn't help here — the task IDs haven't changed, so deleting
-the bad Parquets is the simplest move and lets `targets`' native
-file-tracking re-run them automatically:
+Two directions of "code changed, what about my Parquets?":
+
+**(a) Force re-run of selected tasks.** A bug in `hc_state()` is
+fixed; the user wants the buggy Parquets re-run under the patched
+code. Task IDs are unchanged (the fix doesn't alter parameters), so
+the partition lookup would still say "cache hit". Easiest move:
 
 ```r
-# In the parent results dir, after the fix is committed:
 unlink(failed_parquets)
-tar_make()    # re-runs only the missing branches under new code
+tar_make()    # targets sees the missing files, re-runs only those
 ```
 
-The dag-of-dags variant (separate child project pointing at the
-parent's results dir) is for when the user wants the parent's
-results to remain *visibly untouched* — useful for audit trails or
-side-by-side comparison of old vs new code. The child writes its
-re-runs to its own results dir and the `summary` target unions both.
+`targets::tar_invalidate(names = failed_branch_names)` is the
+bookkeeping-preserving alternative — same end state.
 
-(An alternative *within* a single `targets` project is
-`targets::tar_invalidate(names = failed_branch_names)` to force
-re-runs without unlinking — same end state, different bookkeeping.
-See open question 4 in §11.)
+**(b) Pin existing outputs *despite* a code change.** The user
+edited an `_state` function (or `ssdtools` ticked over a version);
+`targets`' own hash-graph would now flag every dependent branch as
+out-of-date, forcing a re-run the user does *not* want. The
+question is the **opposite** of invalidation — how to keep targets
+from re-running things whose Parquets are still trusted.
+
+There is no clean single-project knob for this. (`tar_target(...,
+cue = tar_cue(file = "always"))` and friends are coarse and don't
+distinguish "the file is fine" from "I haven't checked yet".) The
+canonical workaround is **dag-of-dags**: open a child project that
+declares the parent's `results/` directory as an *input* via
+`tar_target(..., format = "file", command = "../parent/results/X")`.
+File-as-input targets are pinned to the file's content hash, not to
+the function that produced it; the child's own functions are free to
+evolve without invalidating the parent's Parquets. The child does
+its new compute, writes into its own `results/`, and the `summary`
+target unions both directories.
+
+The same dag-of-dags pattern is what makes 8.1 (`parent_alias`)
+work — both shapes are "parent's Parquets are immutable inputs".
 
 ### 8.3 Manifest contents
 
@@ -1049,10 +1084,10 @@ in any function that touches the methods).
 
 | Gap                                                  | Resolution                                                                                  |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| No DAG-of-DAGs primitive                             | §8.2 — child reads parent's `results/` by content-addressed path; mostly unnecessary, see below. |
-| No "load previous run from Parquet" path             | §8 — content-addressed Parquet files *are* the cache; no explicit load needed.              |
+| No DAG-of-DAGs primitive                             | §8.2 — child reads parent's `results/` directly; partitions identify branches; mostly unnecessary, see below. |
+| No "load previous run from Parquet" path             | §8 — per-step Parquet partitions are the cache; no explicit load needed.              |
 | Persists fragile RNG state                           | §1, §2 — scenario stores a single integer `seed`; per-task `(seed, state)` is reproducible via `dqset.seed()`. |
-| Positional task IDs                                  | §2 — task IDs are content-addressed: `task_state_id(p)` = 62-bit hash of canonical params. |
+| Positional task IDs                                  | §2 — task IDs are keyed by `task_state_id(p)` = 64-bit hash of canonical params. |
 | Re-derivation cost is quadratic                      | §2 — per-task hash is O(1); no precomputed lattice.                                         |
 | `nsim`-grow cache invalidation                       | §1, §2, §8 — new sim values hash to new states; existing task IDs (and their Parquets) are untouched. |
 | Three steps cached as one (no per-step re-runs)      | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
@@ -1108,28 +1143,82 @@ per process and is restored on exit).
 
 ## 12. Roadmap
 
-In-place, step-by-step implementation. Each step lands as a coherent
-working state, in order; ssdsims has no downstream dependencies so
-breaking-change steps are acceptable.
+In-place, step-by-step implementation. Each bullet is identified by
+a kebab-case slug and lands as a coherent working state. ssdsims has
+no downstream dependencies, so breaking-change steps are acceptable.
 
-| # | Step                                                                                                                  | Verifies                                              |
-| - | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| 1 | Add `dqrng` to Imports; add `dqRNGkind("pcg64")` + `register_methods()` setup on package load with restore on unload. | `scripts/experiment-dqrng-hash.R` still passes.       |
-| 2 | Replace `with_lecuyer_cmrg_state` / `local_lecuyer_cmrg_state` with `with_dqrng_state(seed, stream, code)`.            | Smoke: existing seed-based unit tests still green by routing seed through `dqset.seed(seed)`. |
-| 3 | Introduce `task_state_id(params)` (§2 hash helper) and write `slice_sample_state`, `fit_dists_state`, `hc_state` as the new state-only primitives. | Unit tests: byte-equivalence per-call given the same `(seed, state)`. |
-| 4 | Migrate `ssd_sim_data.data.frame`, `ssd_fit_dists_sims`, `ssd_hc_sims` to the `*_state` primitives; keep the `_seed` wrappers as a thin shim for one release for migration. | `scripts/example-expanded.R` and `example-expanded-grids.R` updated to the new primitives; tests + tracing pass. |
-| 5 | Add the dataset registry (`ssd_register_dataset`, `ssd_dataset()`); refactor `ssd_scenario()` constructor to accept `datasets = c("name", …)`. Synthetic datasets materialised at registration. | New scenario constructor smoke-tests; verify `Conc` column invariant. |
-| 6 | Add the `min_pmix` registry (`ssd_register_min_pmix`); use names in the scenario's `fit$min_pmix`. Function-body edits no longer invalidate fit branches. | A regression test that edits the body of a registered function and re-runs without invalidation. |
-| 7 | Implement `slice_sample_state` with `n_max` sub-truncation (§5); add scenario-level `n_max` derivation. Both `replace = FALSE` and `replace = TRUE` paths. | Test: `nrow = c(5, 10)` results are byte-equivalent prefixes for the same `(dataset, sim, replace)` (cf. `scripts/experiment-subset-property.R`). |
-| 8 | Implement the `ci = FALSE` collapse in the hc-task table (§1.2). | Test: cross-join with `ci = c(FALSE, TRUE)` produces the expected reduced fan-out. |
-| 9 | Implement the manifest writer / reader (§8.3 fields). Each step's target writes a per-id sha256 alongside the Parquet. | `scripts/experiment-substream-restart.R` adapted to verify manifest round-trips. |
-| 10 | Implement `ssd_scenario_data_tasks` / `fit_tasks` / `hc_tasks` returning the per-step task tables with `(seed, state)` columns. | The targets pipeline sketch in §6 compiles and `tar_make()`s a tiny scenario. |
-| 11 | Implement the cluster pipeline (§6) under `inst/targets-templates/cluster/`. Drive via `crew.cluster::crew_controller_slurm()` against a sandbox queue (or the LLM-authored toy pipeline, §4 B). | `tar_make()` end-to-end on a real cluster; one Parquet per branch. |
-| 12 | Implement the cloud-upload hook (§6.1) and `ssd_test_upload()`. | Hello-Azure round trip from interactive R; tar_make's first target is the connectivity probe. |
-| 13 | Implement `ssd_replay_task()` (§7 helper) and the lightweight `ssd_input_hash()` verifier. Update `scripts/example-expanded*.R` to demonstrate the debug recipes. | A test that simulates a branch failure and verifies the recipe reproduces locally. |
-| 14 | Implement `parent_alias` (§8.1) and the `unlink()` / `tar_invalidate` choice (§8.2). | A test that renames a dataset and shows zero re-runs; a test that mocks a failed branch, fixes the "bug", and shows only the bad Parquet is re-run. |
-| 15 | Remove the legacy L'Ecuyer-CMRG helpers and the `_seed` shims. `scripts/experiment-substream-restart.R` becomes a historical reference. | Package check + tests green; design and code in lockstep. |
+- **`task-list-loop-baseline`** — derive a three-step task list from
+  a scenario (data, fit, hc rows; one column per cross-join axis;
+  no RNG, no Parquet, no targets) and a runner that is just three
+  `purrr::pmap()` loops. *Why first:* establishes the data shape
+  before any of the moving parts; gives a working baseline that
+  subsequent steps swap pieces of, one at a time.
+- **`dqrng-init`** — Add `dqrng` to `Imports`; `dqRNGkind("pcg64")`
+  + `register_methods()` on package load, `restore_methods()` on
+  unload. Verifies: `scripts/experiment-dqrng-hash.R` still passes.
+- **`with-dqrng-state`** — Replace `with_lecuyer_cmrg_state()` /
+  `local_lecuyer_cmrg_state()` with `with_dqrng_state(seed, state,
+  code)` thin wrapper. Existing seed-based tests still pass.
+- **`task-state-id`** — `task_state_id(params)` per §2 (64-bit hash,
+  NA-as-INT_MIN encoding). Unit tests verify reproducibility and
+  collision-resistance on the validated examples from
+  `scripts/experiment-dqrng-hash.R`.
+- **`state-primitives`** — Write `slice_sample_state`,
+  `fit_dists_state`, `hc_state` taking `(data, seed, state, ...)`.
+  Byte-equivalence vs the existing `_seed` variants per-call.
+- **`migrate-public-api`** — Migrate `ssd_sim_data.data.frame`,
+  `ssd_fit_dists_sims`, `ssd_hc_sims` to the `_state` primitives;
+  keep `_seed` wrappers as a one-release shim. `example-expanded*.R`
+  re-runs with byte-equivalence.
+- **`dataset-registry`** — `ssd_register_dataset` /
+  `ssd_dataset()`; refactor `ssd_scenario()` to accept
+  `datasets = c("name", ...)`. Synthetic datasets materialised at
+  registration. `Conc`-column invariant enforced.
+- **`min-pmix-registry`** — `ssd_register_min_pmix`; scenario's
+  `fit$min_pmix` becomes a name vector. Regression test: editing
+  the function body of a registered name does not invalidate
+  cached fit branches.
+- **`nrow-sub-truncation`** — Implement `slice_sample_state` with
+  scenario-level `n_max` (per §5). Both `replace` values supported.
+  Test: `nrow = c(5, 10)` results are byte-equivalent prefixes
+  (cf. `scripts/experiment-subset-property.R`).
+- **`ci-false-collapse`** — Implement the §1.2 collapse in the
+  hc-task table. Test: `ci = c(FALSE, TRUE)` produces the reduced
+  fan-out described in the §1.2 example grid.
+- **`manifest`** — Per-scenario manifest writer/reader with the
+  §8.3 field set; each per-branch target writes its sha256
+  alongside the Parquet on success.
+- **`task-tables`** — `ssd_scenario_data_tasks` /
+  `_fit_tasks` / `_hc_tasks` returning the per-step task tables
+  with `(seed, state)` columns. The §6 sketch compiles and
+  `tar_make()`s a tiny scenario.
+- **`hive-partitioning`** — Write each per-branch Parquet under a
+  Hive-partitioned path (§6 layout). Smoke: duckplyr predicate
+  pushdown returns the right subset without opening unrelated
+  files.
+- **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
+  `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
+  on a real (or sandboxed) Slurm queue.
+- **`cloud-upload`** — §6.1 hook + `ssd_test_upload()`. Hello-Azure
+  round trip from interactive R; `tar_make()`'s first target is the
+  connectivity probe.
+- **`replay-helper`** — `ssd_replay_task()` (§7) and
+  `ssd_input_hash()` for the lightweight recipe. Tests simulate a
+  branch failure and reproduce locally.
+- **`parent-alias`** — §8.1 — rename/reorder datasets without
+  re-running. Test: renaming yields zero recomputed tasks.
+- **`mixed-code-lockin`** — §8.2 — `unlink()` + `tar_invalidate()`
+  for forced re-runs; dag-of-dags child project for pinning
+  parent outputs against code change. Both recipes have tests.
+- **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
+  `_seed` shims; `scripts/experiment-substream-restart.R` becomes
+  a historical reference.
 
-Dependencies between steps: 1 is a prerequisite for 2 and the rest;
-3 is a prerequisite for 4 and 7; 5 for 6 for 8; 9 for 11–14. Steps
-10–14 can interleave once 9 has landed.
+**Dependencies.** `task-list-loop-baseline` is the only one that
+isn't a prerequisite for the next: it's the framing step.
+`dqrng-init` precedes everything else. `task-state-id` precedes
+`state-primitives` precedes `migrate-public-api`.
+`dataset-registry`/`min-pmix-registry` precede
+`nrow-sub-truncation` and `task-tables`. `manifest` precedes
+`cluster-pipeline`, `cloud-upload`, `replay-helper`,
+`parent-alias`, `mixed-code-lockin`. `cleanup-lecuyer` is last.
