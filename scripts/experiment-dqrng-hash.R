@@ -1,9 +1,9 @@
 ## scripts/experiment-dqrng-hash.R
 ##
-## Validation experiment for the proposed task-keyed primer design:
+## Validation experiment for the proposed shard-keyed primer design:
 ##
 ##   dqrng::dqset.seed(seed   = scenario_seed,
-##                     stream = task_primer(task_params))   # the primer
+##                     stream = shard_primer(shard_params))   # the primer
 ##
 ## A **primer** (see GLOSSARY.md) is the value that, together with
 ## `seed`, fully initializes an RNG instance to a known starting
@@ -21,7 +21,7 @@
 ##   (2) Does base R RNG route through dqrng after register_methods()?
 ##       Inventory: runif, rnorm, rbinom, rexp, rgamma, rpois,
 ##       sample.int, sample, dplyr::slice_sample, ssdtools::ssd_r*.
-##   (3) What hash function should produce the per-task state?
+##   (3) What hash function should produce the per-shard state?
 ##       rlang::hash() is xxhash128 (128 bits hex). dqset.seed's
 ##       `stream` argument **accepts a length-2 integer vector**
 ##       interpreted as a 64-bit (hi, lo) pair, so we slice 64 bits
@@ -30,7 +30,7 @@
 ##       0x80000000 is encoded as NA_integer_; dqrng accepts NA in
 ##       `stream` and treats it as INT_MIN. Effective: full 64 bits.
 ##   (4) Collision probability (birthday paradox) at 64 bits:
-##       50% collision at sqrt(2^64) ~ 4.3 billion tasks. Empirical
+##       50% collision at sqrt(2^64) ~ 4.3 billion shards. Empirical
 ##       check below.
 ##
 ## Run:
@@ -52,7 +52,7 @@ cat("R version:     ", R.version.string, "\n\n")
 # 64-bit (hi, lo) pair (`?dqrng::dqRNGkind`). We slice 64 bits out of
 # the hash as `c(hi32, lo32)` and rely on the fact that R encodes
 # INT_MIN (`0x80000000`) as `NA_integer_` -- and dqrng accepts NA in
-# `stream` and treats it as INT_MIN. Result: full 64 bits of stream
+# `stream` and treats it as INT_MIN. Result: full 64 bits of shard
 # entropy, with the bit pattern `0x80000000` represented as NA.
 hex8_to_int32 <- function(hex8) {
   u <- strtoi(substr(hex8, 1L, 4L), base = 16L) *
@@ -62,8 +62,8 @@ hex8_to_int32 <- function(hex8) {
     if (u < 2147483648) as.integer(u) else as.integer(u - 4294967296)
   )
 }
-task_primer <- function(task_params) {
-  h <- rlang::hash(task_params) # 32-char hex
+shard_primer <- function(shard_params) {
+  h <- rlang::hash(shard_params) # 32-char hex
   c(
     hex8_to_int32(substr(h, 1L, 8L)), # high 32 bits
     hex8_to_int32(substr(h, 9L, 16L))
@@ -71,9 +71,9 @@ task_primer <- function(task_params) {
 }
 
 # Smoke
-stream_a <- task_primer(list(sim = 1L, nrow = 5L, rescale = FALSE))
-stream_b <- task_primer(list(sim = 1L, nrow = 5L, rescale = TRUE))
-stream_c <- task_primer(list(sim = 1L, nrow = 5L, rescale = FALSE)) # = a
+stream_a <- shard_primer(list(sim = 1L, nrow = 5L, rescale = FALSE))
+stream_b <- shard_primer(list(sim = 1L, nrow = 5L, rescale = TRUE))
+stream_c <- shard_primer(list(sim = 1L, nrow = 5L, rescale = FALSE)) # = a
 cat(
   "stream a (sim=1, nrow=5, rescale=F): c(",
   stream_a[1L],
@@ -193,29 +193,29 @@ for (fn_name in ssd_rs) {
 
 # --- 4. Collision probability (birthday paradox) ------------------------
 
-# Generate a realistic task-grid sample and count primer collisions.
-gen_task_params <- function(n_tasks) {
+# Generate a realistic shard-grid sample and count primer collisions.
+gen_shard_params <- function(n_shards) {
   # Mix of axes typical of ssdsims scenarios.
   expand.grid(
     dataset = c("boron", "cadmium", "chloride", "copper", "iron"),
-    sim = seq_len(ceiling(n_tasks / 200L)),
+    sim = seq_len(ceiling(n_shards / 200L)),
     nrow = c(5L, 6L, 10L, 15L, 20L),
     rescale = c(FALSE, TRUE),
     nboot = c(10L, 50L, 100L, 1000L),
     est_method = c("arithmetic", "geometric", "multi"),
     stringsAsFactors = FALSE
-  )[seq_len(n_tasks), , drop = FALSE]
+  )[seq_len(n_shards), , drop = FALSE]
 }
 
 primer_for_row <- function(row) {
-  task_primer(as.list(row))
+  shard_primer(as.list(row))
 }
 
 cat(
   "\n(4) collision probability at 64-bit state (two int32s; INT_MIN encoded as NA):\n"
 )
 cat(sprintf(
-  "    theoretical 50%% collision around sqrt(2^64) = %g tasks\n",
+  "    theoretical 50%% collision around sqrt(2^64) = %g shards\n",
   sqrt(2^64)
 ))
 
@@ -224,18 +224,18 @@ primer_key <- function(row) {
   paste0(s[1L], "_", s[2L])
 }
 
-for (n_tasks in c(1000L, 10000L, 100000L)) {
-  params <- gen_task_params(n_tasks)
+for (n_shards in c(1000L, 10000L, 100000L)) {
+  params <- gen_shard_params(n_shards)
   keys <- vapply(
     seq_len(nrow(params)),
     \(i) primer_key(params[i, ]),
     character(1L)
   )
-  n_collisions <- n_tasks - length(unique(keys))
-  expected <- n_tasks^2 / 2^64 # = N(N-1)/(2 * 2^62) approx
+  n_collisions <- n_shards - length(unique(keys))
+  expected <- n_shards^2 / 2^64 # = N(N-1)/(2 * 2^62) approx
   cat(sprintf(
-    "    n_tasks = %6d : empirical collisions = %4d, expected ~ %.2e\n",
-    n_tasks,
+    "    n_shards = %6d : empirical collisions = %4d, expected ~ %.2e\n",
+    n_shards,
     n_collisions,
     expected
   ))
