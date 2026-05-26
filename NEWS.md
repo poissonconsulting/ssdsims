@@ -1,5 +1,41 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9010
+
+## Chore
+
+- Use function instead of string in `do.call()`.
+
+## Refactoring
+
+- Extract `fit_dists_state()` and `hc_state()` from `*_seed()` helpers (#68).
+
+
+# ssdsims 0.0.0.9009
+
+## Bug fixes
+
+- Fix `ssd_run_scenario.tmbfit()` to pass fitted estimates to the rng call (#64).
+
+## Features
+
+- Distinguish between RNG state and seed, add glossary documentation (#61).
+
+## Chore
+
+- Add input validation to `*_lecuyer_cmrg_*` seed functions (#63).
+
+- Forward `with_lecuyer_cmrg_seed()` to `local_lecuyer_cmrg_seed()`.
+
+## Testing
+
+- Replace `withr::with_seed()` with `with_lecuyer_cmrg_seed()` in tests (#60).
+
+- Remove spurious `.Random.seed` warning.
+
+- Use default pillar settings.
+
+
 # ssdsims 0.0.0.9008
 
 ## Chore
