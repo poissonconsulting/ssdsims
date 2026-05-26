@@ -1317,7 +1317,7 @@ shows where branches open and close.
 
 ### Dependency DAG (parallel streams)
 
-Rendered on GitHub via Mermaid:
+Mermaid (renders inline on GitHub):
 
 ```mermaid
 flowchart TD
@@ -1375,51 +1375,6 @@ flowchart TD
     lockin --> cleanup
 ```
 
-Same DAG as plain ASCII (for terminal / diff contexts):
-
-```
-   ssd-define-scenario        dqrng-init
-            │                      │
-            ▼                      ▼
-   task-list-loop-         local-dqrng-state
-   baseline                       │
-            │                     ▼
-            │                 task-primer
-            │                     │
-            └──────────┬──────────┘
-                       ▼
-              state-primitives
-                       │
-            ┌──────────┼──────────────────────┐   ← parallel:
-            ▼          ▼                      ▼      scenario knobs
-   migrate-       nrow-sub-           ci-false-      + migration
-   public-api     truncation          collapse
-            │          │                      │
-            └──────────┴──────────┬───────────┘
-                                  │
-              ──── targets-only pipeline opens here ────
-                                  │
-            ┌──────────┬──────────┼──────────┐    ← parallel:
-            ▼          ▼          ▼          ▼       registries +
-   dataset-     min-pmix-     manifest   task-       manifest
-   registry     registry                 tables
-            │          │          │          │       (task-tables
-            └──────────┴────────┬─┴──────────┘        consumes the
-                                ▼                     three to its left)
-            ┌──────────┬────────┼────────┬──────────┐  ← parallel:
-            ▼          ▼        ▼        ▼          ▼    cluster +
-   hive-          cluster-     cloud-   replay-   parent-     analysis +
-   partitioning   pipeline     upload   helper    alias       extension
-                                                     │
-                                                     ▼
-                                            mixed-code-lockin
-                                                     │
-                                                     ▼
-                                            cleanup-lecuyer
-```
-
-Key reading: anything at the same vertical level can be worked on
-in parallel; arrows mark dependencies. The graph has three "wait
-points" (`state-primitives`, `task-tables`, `mixed-code-lockin`)
-where multiple incoming branches must land before the next layer
-can start.
+Three "wait points" (`state-primitives`, `task-tables`,
+`mixed-code-lockin`) gate the layers in between; anything not
+chained by an arrow can be worked on in parallel.
