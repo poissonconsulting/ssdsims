@@ -5,15 +5,15 @@ Three primary goals, each a hard constraint:
 
 - **Reproducibility.** A scenario's results are bit-stable across
   reruns and machines (RNG state is explicit and serializable; §1, §2).
-- **Debuggability.** Any single failed branch on the cluster must be
+- **Debuggability.** Any single failed task on the cluster must be
   replayable locally — with no `targets`, no orchestrator — using
   the same inputs the cluster used. This is what the `_state`
   primitives (`slice_sample_state()`, `fit_dists_state()`,
-  `hc_state()`, each taking a per-task **primer**) and the per-step
+  `hc_state()`, each taking a per-task **primer**) and the per-shard
   Parquet partitions and their manifest are *for* (§7).
 - **Extensibility.** Shards are the cache unit: a larger scenario
-  reuses shards whose partition path already has a Parquet,
-  computes the rest, and unions everything. Path-axis growth adds
+  reuses shards with Parquets already computed and
+  computes the rest. Path-axis growth adds
   new shards; inner-axis growth rewrites affected shards atomically
   (§8). One named exception — dag-of-dags for *pinning outputs
   despite a code change* — is documented in §8.3.
@@ -31,11 +31,11 @@ upload hook** (§6), **debugging** a cluster failure (§7), and
 Terminology (per GLOSSARY.md): a **task** is one row of a
 `{data,fit,hc}_tasks` table — the smallest unit of computation,
 carrying a primer; a **shard** is the Parquet file produced by
-running one task. **Step** = one of the three stages data / fit /
+running one or several tasks (depending on **partitioning**). **Step** = one of the three stages data / fit /
 hc; **target** = `tar_target()` declaration; **job** = Slurm work
-unit. 1 task = 1 branch of the `*_step` target = 1 shard; under
-`crew_controller_slurm()` each branch typically becomes 1 Slurm
-job.
+unit. 1 task = part of a branch of the `*_step` target = 1 shard; under
+`crew_controller_slurm()`, branches can be scheduled to different
+SLURM jobs.
 
 Background and the list of gaps this design closes are in `RNG-FLOW.md`
 §5. This is a forward-looking design; it does not document the existing
@@ -53,38 +53,34 @@ The most consequential design choices, with section refs:
   `rlang::hash(task_params)`. Validated end-to-end by
   `scripts/experiment-dqrng-hash.R`. The choice of pcg64 is forced
   because Xoroshiro128++/Xoshiro256++ hang on length-2 `stream`
-  arguments.
+  arguments. (Threefry not yet reviewed.)
 - **Primer / state / seed / stream are four distinct terms
   (GLOSSARY.md).** `seed` is the scenario scalar; `primer` is the
-  per-task initialiser; `state` is the RNG's internal state (the
+  per-task initializer; `state` is the RNG's internal state (the
   function-name suffix `_state` reflects the wrapper that installs
   the primer); `stream` is dqrng's API parameter and the
   L'Ecuyer-CMRG abstraction.
-- **Each task initialises the RNG once (§12 `state-primitives`).**
+- **Each task initializes the RNG once (§12 `state-primitives`).**
   The per-task body calls `local_dqrng_state(seed, primer)`
   exactly once and then runs the (state-less) ssdtools / dplyr ops
   against the ambient RNG. No `state =` argument on the inner ops.
 - **Scenario is purely declarative (§1).** Stores `seed`, knobs,
   and *names* of datasets and `min_pmix` entries; the values are
-  resolved by a per-project **implicit registry** (§1.1) — a
-  targets-only construct that materialises named inputs into
-  `results/datasets/<name>.parquet`. Names enter the per-task hash,
-  function values do not (so a code edit / JIT does not move tasks
-  across primers).
+  resolved from an **implicit registry** in the scenario (§1.1). Names enter the per-task hash,
+  function definitions do not (so a code edit / JIT does not move tasks
+  across primers, and the data stored in Parquet files remains simple).
 - **Three step grids, one primer per task (§5).** Data, fit and hc
   fan out independently; `nrow` is **never** an axis of the data
   step — every `nrow` value is a `head(., n)` of a single
-  `n_max`-row sample, proven for both `replace` values by
-  `scripts/experiment-subset-property.R`.
+  `n_max`-row sample.
 - **`ci = FALSE` collapses bootstrap knobs (§1.2).** When `ci =
   FALSE` the `nboot` / `ci_method` / `parametric` axes are stored
   as `NA` in the hc-task table — no phantom branches.
-- **Per-step Parquet shards, Hive-style (§6).** Each task writes
+- **Per-shard Parquet shards, Hive-style (§6).** Each task writes
   one shard (one Parquet file) under
   `results/<step>/dataset=.../sim=.../`; `targets` passes upstream
   shard paths into downstream branches via `format = "file"`, and
   duckplyr predicate-pushes filters into the partition columns.
-  The leaf file name is the 64-bit primer hex.
 - **Cloud upload as a scenario property (§6.1).** `scenario$upload`
   pushes each shard to Azure Blob (or another object store)
   right after the local write; `ssd_test_upload()` probes the
@@ -94,7 +90,7 @@ The most consequential design choices, with section refs:
   immediate-upstream shard, no `targets` needed; the lightweight
   recipe verifies the upstream against `manifest$completed_hashes`
   (sha256) before running the failing step.
-- **Extension is mostly implicit (§8).** Per-step shards *are* the
+- **Extension is mostly implicit (§8).** Shards *are* the
   cache: a larger scenario reuses shards whose partition path
   already has a Parquet, and adds shards (path-axis growth, §8.1)
   or atomically rewrites them (inner-axis growth, §8.2) as needed.
@@ -138,7 +134,7 @@ ssdsims_scenario
 └── parent       ← NULL, or a previous results dir referenced for
                    dag-of-dags / mixed-code use (§8). Plain extension
                    (more datasets, more nsim) does NOT need a parent
-                   reference — the per-step shards are the cache (file existence ⇒ cache hit).
+                   reference — the shards are the cache (file existence ⇒ cache hit).
 ```
 
 Three design points distinguish this from the current code:
@@ -880,7 +876,7 @@ The data/fit/hc shards are the user-facing artefacts and they need
 to be readable **from outside the cluster** — analysis notebooks on a
 laptop, dashboards, downstream R/Python scripts. The scenario carries
 an optional `upload` field describing a destination object store; each
-per-step target pushes its shard there right after the local write.
+branch pushes its shard there right after the local write.
 
 ```
    scenario$upload (NULL by default; non-NULL example):
@@ -891,7 +887,7 @@ per-step target pushes its shard there right after the local write.
      )
 ```
 
-Per-step flow when `upload` is non-NULL:
+Per-shard flow when `upload` is non-NULL:
 
 ```
    ssd_run_<step>_step(...)
@@ -1210,7 +1206,7 @@ directory):
 - `datasets` — name vector referenced from tasks (§1.1).
 - `min_pmix` — name vector ditto.
 - `fit`, `hc` — the argument-vector grids.
-- `partition_by` — the per-step path axes (§5).
+- `partition_by` — the per-shard path axes (§5).
 - `completed_shards` — set of shard partition paths whose Parquet
   exists and is trusted, with each shard's sha256 (recorded at
   write time, including the cloud copy's sha256 if `upload` is
@@ -1276,7 +1272,7 @@ in any function that touches the methods).
 | Gap                                                  | Resolution                                                                                  |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | No DAG-of-DAGs primitive                             | §8.3 — child reads parent's `results/` directly; partition paths identify shards.            |
-| No "load previous run from Parquet" path             | §8 — per-step shards are the cache; no explicit load needed.                          |
+| No "load previous run from Parquet" path             | §8 — shards are the cache; no explicit load needed.                          |
 | Persists fragile RNG state                           | §1, §2 — scenario stores a single integer `seed`; per-task `(seed, state)` is reproducible via `dqset.seed()`. |
 | Positional task IDs                                  | §2 — task IDs are keyed by `task_primer(p)` = 64-bit hash of canonical params. |
 | Re-derivation cost is quadratic                      | §2 — per-task hash is O(1); no precomputed lattice.                                         |

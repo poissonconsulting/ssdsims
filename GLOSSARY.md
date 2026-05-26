@@ -42,7 +42,8 @@ Terminology used throughout `ssdsims`.
   In TARGETS-DESIGN.md, the per-task primer is the 64-bit
   `rlang::hash()` of the task's parameters via `task_primer(p)`
   (§2). The `state =` argument of the `_state` functions *is* the
-  primer for that task.
+  primer for that task. (A historical misnomer, to be fixed in a future iteration:
+  `primer = ` argument of the `_primer` functions.)
 
 ## Pipeline terms
 
@@ -69,7 +70,7 @@ Terminology used throughout `ssdsims`.
   design **one shard ≡ one partition leaf** (no `part-N` style
   splitting); the leaf file is always named `part.parquet`.
 - **step**: One of the three RNG-touching stages of the pipeline:
-  **data** (`slice_sample_state`), **fit** (`fit_dists_state`),
+  **data** (`slice_sample_state()`), **fit** (`fit_dists_state()`),
   **hc** (`hc_state`). Each step has its own task table
   (`data_tasks` / `fit_tasks` / `hc_tasks`), its own grid, its
   own `partition_by` axes, its own dynamic-branched target
@@ -84,9 +85,9 @@ Terminology used throughout `ssdsims`.
   produced when `pattern = map(...)` is iterated over a grouped
   task table. **1 branch = 1 group = 1 shard out**; the branch
   body loops over the K tasks in its group, primes the RNG once
-  per task, and writes one Parquet. Under
-  `crew.cluster::crew_controller_slurm()` each branch is
-  dispatched as its own Slurm job.
+  per task, and writes one Parquet. (To be clarified: Under
+  `crew.cluster::crew_controller_slurm()`, each branch is
+  dispatched as its own Slurm job.)
 - **job**: Reserved exclusively for the cluster-scheduler term —
   a Slurm (or equivalent) work unit dispatched by a `crew`
   controller. With `pattern = map(...)` under
@@ -96,12 +97,8 @@ Terminology used throughout `ssdsims`.
 
 ## Simulation terms
 
-- **`sim`**: The index of a simulation replicate within a `stream`.
+- **`sim`**: The index of a simulation replicate.
 - **`nsim`**: The number of simulation replicates to perform.
-- **`start_sim`**: The starting `sim` index; sub-streams are advanced to
-  this position before data is generated.
-- **`stream` (argument)**: The index of the L'Ecuyer-CMRG stream to use;
-  distinct `stream` values give statistically independent sequences.
 - **`nrow`**: The number of rows (species) in each simulated dataset.
 - **`replace`**: Whether the resampling that generates simulated data is
   performed with replacement.
