@@ -85,15 +85,20 @@ Terminology used throughout `ssdsims`.
   produced when `pattern = map(...)` is iterated over a grouped
   task table. **1 branch = 1 group = 1 shard out**; the branch
   body loops over the K tasks in its group, primes the RNG once
-  per task, and writes one Parquet. (To be clarified: Under
-  `crew.cluster::crew_controller_slurm()`, each branch is
-  dispatched as its own Slurm job.)
+  per task, and writes one Parquet. **Independent branches run
+  in parallel** — that is the unit of parallelism the design
+  commits to. How branches are packed into Slurm jobs under
+  `crew_controller_slurm()` is an open question
+  (TARGETS-DESIGN.md §11).
 - **job**: Reserved exclusively for the cluster-scheduler term —
   a Slurm (or equivalent) work unit dispatched by a `crew`
-  controller. With `pattern = map(...)` under
-  `crew_controller_slurm()`, 1 Slurm job = 1 branch = 1 shard.
-  The terms are not synonyms though: branches and shards exist
-  with or without a scheduler; jobs only exist on a cluster.
+  controller. A job may host one branch or several; the precise
+  branch ↔ job mapping under `crew_controller_slurm()` is an
+  open question (TARGETS-DESIGN.md §11). What is fixed is that
+  **independent shards run in parallel** — shard granularity is
+  the unit of parallelism, regardless of how branches are
+  packed into jobs. Branches and shards exist with or without a
+  scheduler; jobs only exist on a cluster.
 
 ## Simulation terms
 

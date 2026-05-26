@@ -33,9 +33,10 @@ Terminology (per GLOSSARY.md): a **task** is one row of a
 carrying a primer; a **shard** is the Parquet file produced by
 running one or several tasks (depending on **partitioning**). **Step** = one of the three stages data / fit /
 hc; **target** = `tar_target()` declaration; **job** = Slurm work
-unit. 1 task = part of a branch of the `*_step` target = 1 shard; under
-`crew_controller_slurm()`, branches can be scheduled to different
-SLURM jobs.
+unit. 1 task is part of a branch of the `*_step` target; 1 branch
+writes 1 shard. Independent branches/shards run in parallel; how
+branches map to Slurm jobs under `crew_controller_slurm()` is an
+open question (§11).
 
 Background and the list of gaps this design closes are in `RNG-FLOW.md`
 §5. This is a forward-looking design; it does not document the existing
@@ -88,7 +89,7 @@ The most consequential design choices, with section refs:
 - **Debug = task row + one upstream shard (§7).** Any failed branch
   replays locally with `local_dqrng_state(seed, primer)` + the
   immediate-upstream shard, no `targets` needed; the lightweight
-  recipe verifies the upstream against `manifest$completed_hashes`
+  recipe verifies the upstream against `manifest$completed_shards`
   (sha256) before running the failing step.
 - **Extension is mostly implicit (§8).** Shards *are* the
   cache: a larger scenario reuses shards whose partition path
@@ -149,7 +150,7 @@ Three design points distinguish this from the current code:
    central registries; the scenario stores only names. This keeps the
    scenario serializable as a tiny manifest (a few names + numeric
    knobs) and lets the per-task hash (§2) ignore function-body
-   contents — so a non-behaviour-changing code edit to a registered
+   contents — so a non-behavior-changing code edit to a registered
    function does *not* invalidate cached results. See §1.1.
 3. **No `parent` for plain extension.** Adding tasks on a *path*
    axis (new dataset, more `nsim`) creates new shards; existing
@@ -164,7 +165,7 @@ Three design points distinguish this from the current code:
 The scenario object itself stores only names for datasets and
 `min_pmix` entries — never the values. The actual lookup is the
 **targets project's** responsibility: a `dataset-registry` target
-(and a sibling `min-pmix-registry` target, §12) materialises each
+(and a sibling `min-pmix-registry` target, §12) materializes each
 referenced name into a Parquet file (for data) or pins a function
 value (for `min_pmix`) once per project. The "registry" is
 therefore an *implicit* part of the scenario when run through
@@ -189,7 +190,7 @@ indirection:
      differently.
 
    Hashing the *name* and looking the function up at call time
-   bypasses all of these. (Source edits that change behaviour are
+   bypasses all of these. (Source edits that change behavior are
    the user's contract — pin `ssdtools` and R versions in the
    manifest, §9.)
 2. **Compact, portable scenario manifests.** A scenario serializes
@@ -464,8 +465,8 @@ others — they're equal inputs that get assembled into the final
               │             crew_controller_slurm()   │
               │                            │          │
               │                            ▼          │
-              │              one Slurm job per task,  │
-              │              one shard (Parquet) out  │
+              │           shards run in parallel;     │
+              │           each branch writes one shard│
               └───────────────────────────────────────┘
 ```
 
@@ -546,12 +547,14 @@ sharing is the deliberate `nrow` sub-truncation below.
 ### Tasks bundle into shards by partition
 
 Tasks are the unit of computation (one row, one primer, one
-`_state` call). Shards are the unit of *storage and dispatch*: one
-shard ≡ one Parquet file ≡ one branch of the step target ≡ one
-Slurm job. **One shard typically contains many tasks**: the
-scenario's `partition_by[[step]]` picks which task-table columns
-become Hive directory levels, and every task row sharing those
-column values goes into the same shard.
+`_state` call). Shards are the unit of *storage, dispatch and
+parallelism*: one shard ≡ one Parquet file ≡ one branch of the
+step target, and **independent shards run in parallel**. (How
+branches are packed into Slurm jobs under `crew_controller_slurm()`
+is an open question — see §11.) **One shard typically contains
+many tasks**: the scenario's `partition_by[[step]]` picks which
+task-table columns become Hive directory levels, and every task
+row sharing those column values goes into the same shard.
 
 Default `partition_by`:
 
@@ -632,7 +635,7 @@ same `sample.int` call, just truncated.
   `n_max` independent uniform draws; the first `n` are a size-`n`
   sample drawn from the same RNG sequence.
 
-Both cases assume the byte-stable behaviour of `base::sample.int()`
+Both cases assume the byte-stable behavior of `base::sample.int()`
 (and `dplyr::slice_sample()` which delegates to it). Pin R version
 in the manifest (§9).
 
@@ -722,8 +725,9 @@ list(
 
   # Three separate task tables, one per step grid (§5). tar_group_by
   # buckets task rows by the step's partition_by columns; each group
-  # becomes one branch (= one shard out, = one Slurm job, possibly
-  # many tasks).
+  # becomes one branch (= one shard out, possibly many tasks).
+  # Independent branches run in parallel; how they pack into Slurm
+  # jobs under crew_controller_slurm() is an open question (§11).
   tar_group_by(data_tasks, ssd_scenario_data_tasks(scenario), dataset, sim, replace),
   tar_group_by(fit_tasks,  ssd_scenario_fit_tasks(scenario),  dataset, sim, rescale),
   tar_group_by(hc_tasks,   ssd_scenario_hc_tasks(scenario),   dataset, sim),
@@ -800,18 +804,19 @@ data shards does not invalidate existing fit shards.
 2/4/2 shard counts above; "1 shard re-runs" = its Parquet is
 rewritten with the new task set):
 
-| Knob change                       | data_step (2 shards) | fit_step (4 shards) | hc_step (2 shards)  | summary |
-| --------------------------------- | -------------------- | ------------------- | ------------------- | ------- |
-| dataset appended (path axis)      | new shards only      | new only            | new only            | re-run  |
-| `nsim` grows (path axis)          | new shards only      | new only            | new only            | re-run  |
-| `nrow` value added (sub-trunc)    | new max ⇒ re-run all | new only via subset (open Q, §11) | new only via subset | re-run  |
-| `replace` value added (data path) | new shards only      | dependent on whether `replace` is in fit/hc path; default fit doesn't carry it, so existing fit shards' upstream id is unchanged | dependent | re-run |
-| `rescale` value added (fit path)  | cached               | new shards only     | rewrite all (rescale is hc *inner* axis) | re-run |
-| `dists` (fit inner)               | cached               | rewrite all 4       | rewrite all 2       | re-run  |
-| `nboot` added (hc inner)          | cached               | cached              | rewrite all 2       | re-run  |
-| `est_method` added (hc inner)     | cached               | cached              | rewrite all 2       | re-run  |
-| `ci_method` / `parametric` added  | cached               | cached              | rewrite all 2       | re-run  |
-| `seed`                            | re-run all           | re-run all          | re-run all          | re-run  |
+| Knob change                       | data_step (2 shards)              | fit_step (4 shards)               | hc_step (2 shards)                | summary |
+| --------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- | ------- |
+| dataset appended (path axis everywhere) | new shards only             | new shards only                   | new shards only                   | re-run  |
+| `sim` value (= `nsim` grows; path axis everywhere) | new shards only  | new shards only                   | new shards only                   | re-run  |
+| `nrow` value added (sub-trunc; not an axis) | rewrite all if `max(nrow)` grows; cached otherwise | inherits via prefix (open Q, §11) | inherits via prefix (open Q, §11) | re-run  |
+| `replace` value added (data path; fit/hc inner under default) | new shards only | rewrite all (`replace` ∈ fit inner) | rewrite all (`replace` ∈ hc inner) | re-run  |
+| `rescale` value added (fit path; hc inner under default) | cached    | new shards only                   | rewrite all (`rescale` ∈ hc inner) | re-run  |
+| `dists` change (fit inner)        | cached                            | rewrite all 4                     | rewrite all 2                     | re-run  |
+| `min_pmix` value (fit inner)      | cached                            | rewrite all 4                     | rewrite all 2                     | re-run  |
+| `nboot` value added (hc inner)    | cached                            | cached                            | rewrite all 2                     | re-run  |
+| `est_method` value added (hc inner) | cached                          | cached                            | rewrite all 2                     | re-run  |
+| `ci_method` / `parametric` added (hc inner) | cached                  | cached                            | rewrite all 2                     | re-run  |
+| `seed`                            | re-run all                        | re-run all                        | re-run all                        | re-run  |
 
 Three steps as three targets is what makes this matrix possible: a
 single combined branch (data + fit + hc) cannot cache a fit shard
@@ -892,9 +897,10 @@ Per-shard flow when `upload` is non-NULL:
 ```
    ssd_run_<step>_step(...)
         │
-        ▼ writes results/<step>/<id>.parquet  (local; targets tracks this)
+        ▼ writes results/<step>/<partition-path>/part.parquet
+                                   (local; targets tracks this via format = "file")
         │
-        ▼ pushes the same file to  <url>/<container>/<step>/<id>.parquet
+        ▼ pushes the same file to  <url>/<container>/<step>/<partition-path>/part.parquet
                                    (cluster-side helper, e.g. AzureStor)
         │
         ▼ records the upload's sha256 in the result manifest
@@ -970,7 +976,8 @@ without re-running every other shard.
       The row carries:
         - primer    (length-2 integer = c(hi31, lo31), §2)
         - all hc params (nboot, est_method, ci_method, ...)
-        - upstream partition path (dataset, sim) for the fit shard
+        - upstream fit-shard partition values (dataset, sim, rescale)
+          — enough to reconstruct results/fit/dataset=.../sim=.../rescale=.../part.parquet
 
    2. Locate the upstream shard by partition path.
       ────────────────────────────────────────────
@@ -987,7 +994,7 @@ without re-running every other shard.
       fit <- arrow::read_parquet(<upstream_path>) |>
              # the fit shard may contain multiple fit task rows;
              # pick the one this hc task points to.
-             dplyr::filter(task_id == task$fit_task_id) |>
+             dplyr::filter(task_id == task$fit_id) |>
              dplyr::pull(fit) |> .subset2(1L)
       options(error = recover)        # or place browser() in hc_state
       out <- ssdsims:::hc_state(
@@ -1057,7 +1064,7 @@ stored in the parent's manifest, keyed by the shard's partition
 path, before any upload happens:
 
 ```r
-manifest$completed_hashes[["fit/dataset=boron/sim=1/rescale=FALSE"]]
+manifest$completed_shards[["fit/dataset=boron/sim=1/rescale=FALSE"]]
 #> "8c92…"  (sha256 of part.parquet at write time)
 ```
 
@@ -1067,7 +1074,7 @@ Local recipe:
    1. tar_make() locally up to fit_step, then look at the
       regenerated upstream shard at its partition path.
    2. local_hash  <- digest::digest(file = <upstream_path>, algo = "sha256")
-      parent_hash <- parent_manifest$completed_hashes[[<partition_key>]]
+      parent_hash <- parent_manifest$completed_shards[[<partition_key>]]
       stopifnot(identical(local_hash, parent_hash))
         ✓  the cluster's input is reproduced byte-for-byte;
            continue to step 4 of the rsync recipe.
@@ -1091,8 +1098,8 @@ Hash verification is the bridge.
   partition path is derived from task-table column values, not from
   any host-local state, so the same task on cluster and laptop
   resolves to the same shard path.
-- The manifest must record `completed_hashes` (per-id sha256). Without
-  it, lightweight reproduction can't be verified.
+- The manifest must record `completed_shards` (partition path →
+  sha256). Without it, lightweight reproduction can't be verified.
 - Only the immediate upstream is required. To debug `hc`, pull or
   regenerate the one `fit` shard; you do not have to refit upstream
   of that. To debug `fit`, the one `data` shard; you do not have
@@ -1256,7 +1263,7 @@ values — holds only as long as `base::sample.int()` is byte-stable
 across R versions. Validated for the current R by
 `scripts/experiment-subset-property.R`; pin the R version (and
 `dqrng`, `ssdtools`) in the manifest (§8.5) to guard against future
-behaviour changes.
+behavior changes.
 
 ### `dqrng::register_methods()` is process-global
 
@@ -1325,6 +1332,16 @@ per process and is restored on exit).
 5. **Toy pipeline shape.** Ship a single
    `inst/targets-templates/cluster/` that the LLM-authoring prompt
    edits, or only documentation pointing at `crew.cluster` examples?
+6. **Branch ↔ Slurm-job mapping under `crew_controller_slurm()`.**
+   `targets` + `crew` dispatch branches across Slurm jobs but the
+   precise mapping — one branch per job vs several branches packed
+   into one job — is configurable and depends on `crew` settings.
+   The design commits only to **shards being the unit of
+   parallelism**: independent shards run concurrently, regardless
+   of job packing. Resolve by prototyping with the
+   `cluster-pipeline` step (§12) and document the chosen packing
+   convention; until then `branch ↔ job` should be read as "many
+   to one or one to one, depending on configuration".
 
 ---
 
