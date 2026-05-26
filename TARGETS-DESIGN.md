@@ -33,6 +33,72 @@ PoC (PR #59).
 
 ---
 
+## Executive summary
+
+The most consequential design choices, with section refs:
+
+- **Per-task RNG via dqrng + hash, not an L'Ecuyer sub-stream
+  lattice (§2).** Each task primes dqrng PCG64 with the scenario's
+  scalar `seed` plus a 64-bit `primer` derived from
+  `rlang::hash(task_params)`. Validated end-to-end by
+  `scripts/experiment-dqrng-hash.R`. The choice of pcg64 is forced
+  because Xoroshiro128++/Xoshiro256++ hang on length-2 `stream`
+  arguments.
+- **Primer / state / seed / stream are four distinct terms
+  (GLOSSARY.md).** `seed` is the scenario scalar; `primer` is the
+  per-task initialiser; `state` is the RNG's internal state (the
+  function-name suffix `_state` reflects the wrapper that installs
+  the primer); `stream` is dqrng's API parameter and the
+  L'Ecuyer-CMRG abstraction.
+- **Each task initialises the RNG once (§12 `state-primitives`).**
+  The per-step task body calls `local_dqrng_state(seed, primer)`
+  exactly once and then runs the (state-less) ssdtools / dplyr ops
+  against the ambient RNG. No `state =` argument on the inner ops.
+- **Scenario is purely declarative (§1).** Stores `seed`, knobs,
+  and *names* of datasets and `min_pmix` entries; the values are
+  resolved by a per-project **implicit registry** (§1.1) — a
+  targets-only construct that materialises named inputs into
+  `results/datasets/<name>.parquet`. Names enter the per-task hash,
+  function values do not (so a code edit / JIT does not move tasks
+  across primers).
+- **Three step grids, one primer per task (§5).** Data, fit and hc
+  fan out independently; `nrow` is **never** an axis of the data
+  step — every `nrow` value is a `head(., n)` of a single
+  `n_max`-row sample, proven for both `replace` values by
+  `scripts/experiment-subset-property.R`.
+- **`ci = FALSE` collapses bootstrap knobs (§1.2).** When `ci =
+  FALSE` the `nboot` / `ci_method` / `parametric` axes are stored
+  as `NA` in the task table — no phantom branches.
+- **Per-step Parquet partitions, Hive-style (§6).** Each branch
+  writes one Parquet under `results/<step>/dataset=.../sim=.../`;
+  `targets` passes upstream paths into downstream branches via
+  `format = "file"`, and duckplyr predicate-pushes filters into
+  the partition columns. The leaf file name is the 64-bit primer
+  hex.
+- **Cloud upload as a scenario property (§6.1).** `scenario$upload`
+  pushes each Parquet to Azure Blob (or another object store)
+  right after the local write; `ssd_test_upload()` probes the
+  backend at pipeline init.
+- **Debug = task row + one upstream Parquet (§7).** Any failed
+  branch replays locally with `local_dqrng_state(seed, primer)` +
+  the immediate-upstream Parquet, no `targets` needed; the
+  lightweight recipe verifies the upstream against
+  `manifest$completed_hashes` (sha256) before running the failing
+  step.
+- **Extension is mostly implicit (§8).** Per-step Parquet partitions
+  *are* the cache: a larger scenario reuses Parquets whose primers
+  match and computes the rest. Two explicit cases: `parent_alias`
+  for renames (§8.1), dag-of-dags for *pinning outputs despite a
+  code change* (§8.2 — the opposite of invalidation, achieved by
+  declaring parent's Parquets as input files in a child project).
+- **Roadmap with parallel work streams (§12).** Eighteen
+  kebab-slugged steps with an ASCII DAG showing where branches
+  open. Two ground-up entries — `ssd-define-scenario` and the
+  `task-list-loop-baseline` runner — land before any RNG / dqrng
+  machinery so the data shape is settled first.
+
+---
+
 ## 1. Scenario object
 
 The scenario is **purely declarative**. It does not carry the
@@ -82,10 +148,19 @@ Three design points distinguish this from the current code:
    renaming/reordering datasets (`parent_alias`, §8) and mixing
    old + new code after a fix (§8).
 
-### 1.1 Central registries: datasets and min_pmix
+### 1.1 Implicit registries: datasets and min_pmix
 
-Both datasets and `min_pmix` functions live in **central registries**
-keyed by name; the scenario stores names, not values. Two motivations:
+The scenario object itself stores only names for datasets and
+`min_pmix` entries — never the values. The actual lookup is the
+**targets project's** job: a `dataset-registry` target (and a
+sibling `min-pmix-registry` target, §12) materialises each
+referenced name into a Parquet file (for data) or pins a function
+value (for `min_pmix`) once per project. The "registry" is
+therefore an *implicit* part of the scenario when run through
+targets; for local use (no targets) the scenario constructor
+accepts data inline (`ssd_define_scenario(list(boron = ccme_boron,
+…))`) and the names are derived. Two motivations for the name-only
+indirection:
 
 1. **Function-value hashes are not stable.** This is the technical
    reason and the primary one. `rlang::hash()` over a function
@@ -1151,40 +1226,48 @@ per process and is restored on exit).
 ## 12. Roadmap
 
 In-place, step-by-step implementation. Each bullet is identified by
-a kebab-case slug and lands as a coherent working state. ssdsims has
-no downstream dependencies, so breaking-change steps are acceptable.
+a kebab-case slug and lands as a coherent working state. ssdsims
+has no downstream dependencies, so breaking-change steps are fine.
+**Parallel work streams are preferred** — the dependency DAG below
+shows where branches open and close.
 
-- **`task-list-loop-baseline`** — derive a three-step task list from
-  a scenario (data, fit, hc rows; one column per cross-join axis;
-  no RNG, no Parquet, no targets) and a runner that is just three
-  `purrr::pmap()` loops. *Why first:* establishes the data shape
-  before any of the moving parts; gives a working baseline that
-  subsequent steps swap pieces of, one at a time.
+- **`ssd-define-scenario`** — Public constructor for the scenario
+  object (S3); replaces the PoC's `data2`-prefixed names. Signature
+  along the lines of `ssd_define_scenario(data, ..., nsim, nrow,
+  rescale, est_method, nboot, ci, ...)`, forwarding the input data
+  through `ssd_data()` (a tiny normaliser that validates the `Conc`
+  column and tibble shape). Stores only declarative fields (seed,
+  knobs, dataset names — the data registry is *implicit*, see the
+  registry steps below). No RNG, no tasks, no targets yet.
+- **`task-list-loop-baseline`** — Derive a three-step task list
+  from a scenario (data, fit, hc rows; one column per cross-join
+  axis; no RNG, no Parquet, no targets) and a runner that is just
+  three `purrr::pmap()` loops. Establishes the data shape and a
+  working baseline that subsequent steps swap pieces of, one at a
+  time.
 - **`dqrng-init`** — Add `dqrng` to `Imports`; `dqRNGkind("pcg64")`
   + `register_methods()` on package load, `restore_methods()` on
   unload. Verifies: `scripts/experiment-dqrng-hash.R` still passes.
-- **`with-dqrng-state`** — Replace `with_lecuyer_cmrg_state()` /
-  `local_lecuyer_cmrg_state()` with `with_dqrng_state(seed, state,
-  code)` thin wrapper. Existing seed-based tests still pass.
+- **`local-dqrng-state`** — `local_dqrng_state(seed, state,
+  .local_envir = parent.frame())` thin wrapper around `dqset.seed(seed,
+  stream = state)` with a `withr`-style restore on exit. Prefer
+  `local_*` over `with_*` when touching code. Replaces
+  `local_lecuyer_cmrg_state()` for the dqrng path.
 - **`task-primer`** — `task_primer(params)` per §2 (64-bit hash,
   NA-as-INT_MIN encoding). Unit tests verify reproducibility and
   collision-resistance on the validated examples from
   `scripts/experiment-dqrng-hash.R`.
-- **`state-primitives`** — Write `slice_sample_state`,
-  `fit_dists_state`, `hc_state` taking `(data, seed, state, ...)`.
-  Byte-equivalence vs the existing `_seed` variants per-call.
+- **`state-primitives`** — Refactor `slice_sample_state`,
+  `fit_dists_state`, `hc_state` around the new contract: **each
+  per-step task body calls `local_dqrng_state(seed, primer)` exactly
+  once**, then invokes the (state-less) operation against the
+  ambient RNG. The `_state` suffix marks the wrapper that installs
+  the primer; the inner ssdtools / dplyr calls consume RNG from the
+  now-set state. No `state =` argument on the inner ops.
 - **`migrate-public-api`** — Migrate `ssd_sim_data.data.frame`,
-  `ssd_fit_dists_sims`, `ssd_hc_sims` to the `_state` primitives;
-  keep `_seed` wrappers as a one-release shim. `example-expanded*.R`
+  `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
+  `_seed` wrappers as a one-release shim. `example-expanded*.R`
   re-runs with byte-equivalence.
-- **`dataset-registry`** — `ssd_register_dataset` /
-  `ssd_dataset()`; refactor `ssd_scenario()` to accept
-  `datasets = c("name", ...)`. Synthetic datasets materialised at
-  registration. `Conc`-column invariant enforced.
-- **`min-pmix-registry`** — `ssd_register_min_pmix`; scenario's
-  `fit$min_pmix` becomes a name vector. Regression test: editing
-  the function body of a registered name does not invalidate
-  cached fit branches.
 - **`nrow-sub-truncation`** — Implement `slice_sample_state` with
   scenario-level `n_max` (per §5). Both `replace` values supported.
   Test: `nrow = c(5, 10)` results are byte-equivalent prefixes
@@ -1192,12 +1275,23 @@ no downstream dependencies, so breaking-change steps are acceptable.
 - **`ci-false-collapse`** — Implement the §1.2 collapse in the
   hc-task table. Test: `ci = c(FALSE, TRUE)` produces the reduced
   fan-out described in the §1.2 example grid.
+- **`dataset-registry`** — **Targets-only**: an implicit registry
+  of named datasets, implemented as a `tar_target` that writes
+  Parquet to `results/datasets/<name>.parquet` from the
+  `ssd_define_scenario()` input. Synthetic datasets are realised
+  here at registration time. Function-name edits don't enter task
+  hashes because the scenario already refers to datasets by name.
+- **`min-pmix-registry`** — **Targets-only**: same shape as
+  `dataset-registry` but for `min_pmix` functions. The scenario
+  refers to them by name; the targets project pins the function
+  values per-run. Regression test: a body edit to a registered
+  function does not move the hash of any cached fit branch.
 - **`manifest`** — Per-scenario manifest writer/reader with the
   §8.3 field set; each per-branch target writes its sha256
   alongside the Parquet on success.
 - **`task-tables`** — `ssd_scenario_data_tasks` /
   `_fit_tasks` / `_hc_tasks` returning the per-step task tables
-  with `(seed, state)` columns. The §6 sketch compiles and
+  with `(seed, primer)` on each row. The §6 sketch compiles and
   `tar_make()`s a tiny scenario.
 - **`hive-partitioning`** — Write each per-branch Parquet under a
   Hive-partitioned path (§6 layout). Smoke: duckplyr predicate
@@ -1221,11 +1315,51 @@ no downstream dependencies, so breaking-change steps are acceptable.
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
   a historical reference.
 
-**Dependencies.** `task-list-loop-baseline` is the only one that
-isn't a prerequisite for the next: it's the framing step.
-`dqrng-init` precedes everything else. `task-primer` precedes
-`state-primitives` precedes `migrate-public-api`.
-`dataset-registry`/`min-pmix-registry` precede
-`nrow-sub-truncation` and `task-tables`. `manifest` precedes
-`cluster-pipeline`, `cloud-upload`, `replay-helper`,
-`parent-alias`, `mixed-code-lockin`. `cleanup-lecuyer` is last.
+### Dependency DAG (parallel streams)
+
+```
+   ssd-define-scenario        dqrng-init
+            │                      │
+            ▼                      ▼
+   task-list-loop-         local-dqrng-state
+   baseline                       │
+            │                     ▼
+            │                 task-primer
+            │                     │
+            └──────────┬──────────┘
+                       ▼
+              state-primitives
+                       │
+            ┌──────────┼──────────────────────┐   ← parallel:
+            ▼          ▼                      ▼      scenario knobs
+   migrate-       nrow-sub-           ci-false-      + migration
+   public-api     truncation          collapse
+            │          │                      │
+            └──────────┴──────────┬───────────┘
+                                  │
+              ──── targets-only pipeline opens here ────
+                                  │
+            ┌──────────┬──────────┼──────────┐    ← parallel:
+            ▼          ▼          ▼          ▼       registries +
+   dataset-     min-pmix-     manifest   task-       manifest
+   registry     registry                 tables
+            │          │          │          │       (task-tables
+            └──────────┴────────┬─┴──────────┘        consumes the
+                                ▼                     three to its left)
+            ┌──────────┬────────┼────────┬──────────┐  ← parallel:
+            ▼          ▼        ▼        ▼          ▼    cluster +
+   hive-          cluster-     cloud-   replay-   parent-     analysis +
+   partitioning   pipeline     upload   helper    alias       extension
+                                                     │
+                                                     ▼
+                                            mixed-code-lockin
+                                                     │
+                                                     ▼
+                                            cleanup-lecuyer
+```
+
+Key reading: anything at the same vertical level can be worked on
+in parallel; arrows mark dependencies. The graph has three "wait
+points" (`state-primitives`, `task-tables`, `mixed-code-lockin`)
+where multiple incoming branches must land before the next layer
+can start.
