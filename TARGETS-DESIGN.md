@@ -87,12 +87,25 @@ Three design points distinguish this from the current code:
 Both datasets and `min_pmix` functions live in **central registries**
 keyed by name; the scenario stores names, not values. Two motivations:
 
-1. **Hash stability under code edits.** Function-valued parameters
-   would otherwise force a content-hash invalidation on any source
-   edit, even cosmetic ones. By hashing the *name* and looking the
-   function up at run time, an edit to (e.g.) `ssdtools::ssd_min_pmix`
-   does not move tasks across states. Correctness under such edits
-   is the user's contract — pin `ssdtools` versions in the manifest.
+1. **Function-value hashes are not stable.** This is the technical
+   reason and the primary one. `rlang::hash()` over a function
+   serializes its representation, which is **not byte-stable** across
+   apparently-equivalent forms:
+
+   - Byte-compilation changes the hash. `compiler::cmpfun(f)` has a
+     different `rlang::hash()` from the source-form `f` even though
+     they evaluate identically. R's own auto-JIT triggers this
+     unpredictably (the compiler may apply after a few calls).
+   - Loading a function from source vs. from an installed package
+     can pin different `srcref` and `environment(f)` payloads —
+     same code, different hash.
+   - Closures that capture different parent environments hash
+     differently.
+
+   Hashing the *name* and looking the function up at call time
+   bypasses all of these. (Source edits that change behaviour are
+   the user's contract — pin `ssdtools` and R versions in the
+   manifest, §9.)
 2. **Compact, portable scenario manifests.** A scenario serializes
    to a small JSON/Parquet sidecar containing names + numeric knobs;
    data.frame contents and function bodies live in their own files.
@@ -212,16 +225,31 @@ task_state_id <- function(p) {
 }
 ```
 
-`dqset.seed()`'s `stream` argument accepts a length-2 integer vector
-interpreted as a 64-bit `(hi32, lo32)` pair; we use 31 of each half
-(sign bit zero to stay inside signed int32, the type `dqset.seed()`
-coerces to). 62 effective bits.
+**Why 62 bits and not 64.** dqrng's docs document that `stream`
+accepts a length-2 integer vector representing a 64-bit value
+(`?dqrng::dqRNGkind`). In R, however, each integer is signed
+int32 and the bit pattern `0x80000000` (INT_MIN) is reserved as
+`NA_integer_`. So we can't cleanly pass that one bit pattern
+without conflating it with NA. The clean encoding masks the sign
+bit to zero — 31 bits per half, 62 total. (We could push to 64 by
+mapping `0x80000000 → NA_integer_`; dqrng accepts NA and treats it
+as INT_MIN, but the complexity isn't worth one extra bit at our
+scale.)
+
+**Which RNG.** dqrng exposes pcg64, Xoroshiro128++/Xoshiro256++,
+and Threefry. Empirically (`scripts/experiment-dqrng-hash.R`)
+only pcg64 and Threefry handle a length-2 `stream` argument
+without hanging — Xoroshiro/Xoshiro hang. We pick **pcg64**: well
+tested, fast, supports stream by construction (each stream is a
+distinct LCG increment ⇒ statistically independent sequences).
+`dqRNGkind("pcg64")` is set explicitly at pipeline init; the
+package's `dqRNGkind` default (Xoroshiro128++) is overridden.
 
 `dqrng::register_methods()` is called once at pipeline init so that
 base R's `runif()`, `rnorm()`, `rbinom()`, `rexp()`, `rgamma()`,
 `rpois()`, `sample.int()`, `sample()` (and therefore
 `dplyr::slice_sample()` and `ssdtools::ssd_r*()`) all consume RNG via
-dqrng's PCG64 with the configured (seed, state). The experiment
+dqrng's pcg64 with the configured (seed, state). The experiment
 script verifies this end-to-end.
 
 ```
@@ -253,17 +281,18 @@ script verifies this end-to-end.
 ### What goes into the hash
 
 `task_state_id(p)` hashes a canonical, name-keyed representation of
-the task's parameters. For a data task: `(dataset_name, sim, replace,
-nrow_max)` — see §5 for the subset-property note on `nrow`. For a
+the task's parameters. For a data task: `(dataset_name, sim,
+replace)` only — `nrow` is *not* in the hash because every `nrow`
+value is sub-truncation of the same `n_max`-row sample (§5). For a
 fit task: data-task identity plus the fit-arg-grid row (`rescale`,
 `computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
 `range_shape2`). For an hc task: fit-task identity plus the hc-arg-
 grid row (`nboot`, `est_method`, `ci_method`, `parametric` — modulo
-the `ci = FALSE` collapse documented in §1).
+the `ci = FALSE` collapse documented in §1.2).
 
 Function-valued parameters (`min_pmix`) are referenced **by name**
-(§1.1) so a code edit inside the function does not change the hash;
-correctness is the user's contract.
+(§1.1) so that a recompile/JIT does not move the task to a different
+state; the hash is over the name, not the function value.
 
 ### Collision probability
 
@@ -423,52 +452,63 @@ Each task in each grid gets its own per-task **state** — a length-2
 integer derived from the 62-bit hash of the task's parameters
 (§2), passed to dqrng via its `stream` argument. Tasks do not share
 states across stages or across grid axes; the only sharing is the
-deliberate `nrow` subset property below.
+deliberate `nrow` sub-truncation below.
 
 For the small `nsim = 2, nrow = c(5, 10), rescale = c(F, T),
 est_method = c("arithmetic", "multi")` example:
 
 ```
-   data grid:    2 sim · 1 (effective nrow, subset trick below)  =  2 states
-   fit  grid:    data ·  2 rescale                               =  8 states
-   hc   grid:    fit  ·  2 est_method                            = 16 states
-                                                            sum = 26 states
+   data grid:    2 sim · 1 (nrow is sub-truncation, not an axis)  =  2 states
+   fit  grid:    data ·  2 rescale                                =  8 states
+   hc   grid:    fit  ·  2 est_method                             = 16 states
+                                                             sum = 26 states
 ```
 
-(28 in `scripts/example-expanded-grids-independent.R` if `nrow` is
-treated as an independent axis; 26 with the subset trick.)
+(The legacy `scripts/example-expanded-grids-independent.R` allocated
+28 by treating `nrow` as an independent axis — the design no longer
+does that; see `scripts/experiment-subset-property.R` for the proof
+that `nrow` is sub-truncation.)
 
-### `nrow` subset property
+### `nrow` is never an independent axis
 
-For empirical-data slicing, larger `nrow` values include the same
-rows as smaller ones (with no resampling). This means `nrow` is
-**not** an independent state axis for the data step: the state is
-keyed by `(dataset, sim)` only, and the slice is
+For empirical-data slicing, **larger `nrow` values include the same
+rows as smaller ones, byte-identically**. So `nrow` is **never** an
+axis of the data state — it is just `head(., n)` of a single
+`n_max`-row sample. Proven by `scripts/experiment-subset-property.R`
+for both `replace = FALSE` and `replace = TRUE`. The data state is
+keyed by `(dataset, sim, replace)` only, and the slice is
 
 ```r
-slice_sample_state <- function(data, n_max, n, seed, state) {
+slice_sample_state <- function(data, n_max, n, seed, state, replace) {
   dqrng::dqset.seed(seed, stream = state)   # dqrng API
-  idx <- sample.int(nrow(data), size = n_max, replace = FALSE)
+  idx <- sample.int(nrow(data), size = n_max, replace = replace)
   data[idx[seq_len(n)], , drop = FALSE]
 }
 ```
 
 with `n_max = max(scenario$nrow)` pre-computed from the scenario.
 Result: `slice_sample_state(data, n_max, 5, …)` is a prefix of
-`slice_sample_state(data, n_max, 10, …)` (same `(seed, state)`,
-same `sample.int` call, just truncated). The property is
-documented as `assuming stability of sample.int()` — pin R version
-in the manifest.
+`slice_sample_state(data, n_max, 10, …)` — same `(seed, state)`,
+same `sample.int` call, just truncated.
+
+**Why the property holds for both `replace` values.**
+
+- `replace = FALSE`: `sample.int(N, n_max, replace = FALSE)` runs
+  Fisher-Yates internally; the first `n` indices are a permutation
+  prefix and a valid size-`n` sample by construction.
+- `replace = TRUE`: `sample.int(N, n_max, replace = TRUE)` is
+  `n_max` independent uniform draws; the first `n` are a size-`n`
+  sample drawn from the same RNG sequence.
+
+Both cases assume the byte-stable behaviour of `base::sample.int()`
+(and `dplyr::slice_sample()` which delegates to it). Pin R version
+in the manifest (§9).
 
 The trick costs one extra integer column on the data task table
-(`n_max`) and lets us cut `|data grid|` from `|dataset| · |sim| ·
-|nrow|` to `|dataset| · |sim|`. For the small example that's
-`2 → 2` (already minimal); for a scenario with `nrow = c(5, 6, 10,
-20, 50)` it cuts the data fan-out by 5×.
-
-(`replace = TRUE` does not have the subset property; if `replace =
-TRUE` appears in the scenario, the data state reverts to keying on
-`(dataset, sim, nrow, replace)`.)
+(`n_max`) and cuts `|data grid|` from `|dataset| · |sim| · |nrow|`
+to `|dataset| · |sim| · |replace|`. For a scenario with `nrow =
+c(5, 6, 10, 20, 50)` and `replace = FALSE` only, it cuts the data
+fan-out by 5×.
 
 ### Implications for the targets pipeline
 
@@ -986,15 +1026,15 @@ change bit-stable results even when the scenario `seed` is unchanged.
 Mitigation: pin `ssdtools` (and `dqrng`, R) versions in the
 scenario manifest.
 
-### `nrow` subset property requires stable `sample.int`
+### `nrow` sub-truncation requires stable `sample.int`
 
-§5's subset trick (`slice_sample_state` returns a prefix of itself
-for smaller `n`) holds only as long as `sample.int(N, n_max,
-replace = FALSE)` is stable across R versions. Pinning the R
-version in the manifest covers this. `replace = TRUE` does not have
-the subset property; if `replace = TRUE` appears in the scenario
-the data state reverts to keying on `(dataset, sim, nrow,
-replace)`.
+§5's "`nrow` is never an axis" property — `slice_sample_state`
+returns a prefix of itself for smaller `n`, for both `replace`
+values — holds only as long as `base::sample.int()` is byte-stable
+across R versions. Validated for the current R by
+`scripts/experiment-subset-property.R`; pin the R version (and
+`dqrng`, `ssdtools`) in the manifest (§8.3) to guard against future
+behaviour changes.
 
 ### `dqrng::register_methods()` is process-global
 
@@ -1017,7 +1057,7 @@ in any function that touches the methods).
 | `nsim`-grow cache invalidation                       | §1, §2, §8 — new sim values hash to new states; existing task IDs (and their Parquets) are untouched. |
 | Three steps cached as one (no per-step re-runs)      | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
 | Same lattice for all steps despite grid mismatch     | §5 — each step has its own grid and per-task state.                                              |
-| `nrow` invalidates data states for the same `sim`    | §5 — `nrow` subset trick: data state keyed by `(dataset, sim)`, slice truncates to `n`.    |
+| `nrow` invalidates data states for the same `sim`    | §5 — `nrow` is never an axis: data state keyed by `(dataset, sim, replace)`, slice truncates to `n`.    |
 | Single-dataset scenarios only                        | §1.1 — datasets are name-referenced in a central registry; cross-join axis.                 |
 | Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
 | Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci=FALSE` collapses `nboot`/`ci_method`/`parametric` to NA; one task instead of N. |
@@ -1036,9 +1076,10 @@ per process and is restored on exit).
 
 ## 11. Open questions for review
 
-1. **`nrow` subset property as a contract.** §5's `slice_sample_state`
-   relies on `base::sample.int(N, n_max, replace = FALSE)` being a
-   prefix-of-itself when `n_max` is reduced. R has historically been
+1. **`nrow` sub-truncation as a contract.** §5's `slice_sample_state`
+   relies on `base::sample.int()` being a prefix-of-itself when
+   `n_max` is reduced (for both `replace` values). Validated by
+   `scripts/experiment-subset-property.R`; R has historically been
    stable here but it isn't a documented guarantee. Document the
    assumption in the manifest and pin R versions, or implement our
    own `sample.int`-equivalent function with an explicit contract?
@@ -1079,7 +1120,7 @@ breaking-change steps are acceptable.
 | 4 | Migrate `ssd_sim_data.data.frame`, `ssd_fit_dists_sims`, `ssd_hc_sims` to the `*_state` primitives; keep the `_seed` wrappers as a thin shim for one release for migration. | `scripts/example-expanded.R` and `example-expanded-grids.R` updated to the new primitives; tests + tracing pass. |
 | 5 | Add the dataset registry (`ssd_register_dataset`, `ssd_dataset()`); refactor `ssd_scenario()` constructor to accept `datasets = c("name", …)`. Synthetic datasets materialised at registration. | New scenario constructor smoke-tests; verify `Conc` column invariant. |
 | 6 | Add the `min_pmix` registry (`ssd_register_min_pmix`); use names in the scenario's `fit$min_pmix`. Function-body edits no longer invalidate fit branches. | A regression test that edits the body of a registered function and re-runs without invalidation. |
-| 7 | Implement `slice_sample_state` with the `nrow` subset trick (§5); add scenario-level `n_max` derivation. | Test: `nrow = c(5, 10)` results are byte-equivalent prefixes for the same `(dataset, sim)`. |
+| 7 | Implement `slice_sample_state` with `n_max` sub-truncation (§5); add scenario-level `n_max` derivation. Both `replace = FALSE` and `replace = TRUE` paths. | Test: `nrow = c(5, 10)` results are byte-equivalent prefixes for the same `(dataset, sim, replace)` (cf. `scripts/experiment-subset-property.R`). |
 | 8 | Implement the `ci = FALSE` collapse in the hc-task table (§1.2). | Test: cross-join with `ci = c(FALSE, TRUE)` produces the expected reduced fan-out. |
 | 9 | Implement the manifest writer / reader (§8.3 fields). Each step's target writes a per-id sha256 alongside the Parquet. | `scripts/experiment-substream-restart.R` adapted to verify manifest round-trips. |
 | 10 | Implement `ssd_scenario_data_tasks` / `fit_tasks` / `hc_tasks` returning the per-step task tables with `(seed, state)` columns. | The targets pipeline sketch in §6 compiles and `tar_make()`s a tiny scenario. |
