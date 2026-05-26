@@ -4,26 +4,45 @@ Terminology used throughout `ssdsims`.
 
 ## RNG terms
 
-- **seed**: A scalar integer passed to `base::set.seed()` to initialize the
-  RNG (e.g. `42`). Exposed via the `seed` argument of `ssd_sim_data()`,
-  `ssd_fit_dists_sims()`, `ssd_hc_sims()` and `ssd_run_scenario()`, and
-  consumed by `with_lecuyer_cmrg_seed()` / `local_lecuyer_cmrg_seed()`.
-- **state**: A `.Random.seed`-style integer vector representing the full
-  internal state of the RNG. For L'Ecuyer-CMRG this is a length-7 integer
-  vector (see `?parallel::nextRNGStream`, indexed in
-  `?parallel::RNGstreams`). States are produced by
-  `parallel::nextRNGStream()` / `parallel::nextRNGSubStream()` and by
-  `get_lecuyer_cmrg_stream_state()` / `get_lecuyer_cmrg_stream_states()`;
-  they are consumed by `with_lecuyer_cmrg_state()` /
-  `local_lecuyer_cmrg_state()`. A state cannot be passed to
-  `base::set.seed()` because `set.seed()` only consumes a single integer.
-- **stream**: An independent sequence of pseudo-random numbers within the
-  L'Ecuyer-CMRG RNG, advanced via `parallel::nextRNGStream()`. Streams are
-  designed to be statistically independent across distinct values of the
-  `stream` argument.
-- **sub-stream**: A subdivision of a stream, advanced via
-  `parallel::nextRNGSubStream()`. Each simulation (`sim`) within a given
-  `stream` uses a distinct sub-stream.
+- **seed**: A scalar integer passed to `base::set.seed()` (or the
+  `seed` argument of `dqrng::dqset.seed()`). Both base R and dqrng
+  accept a single integer as the seed.
+- **state**: The full internal state of an RNG. For L'Ecuyer-CMRG,
+  the state is a length-7 integer vector assignable to
+  `.Random.seed` (it cannot be passed to `set.seed()`). For dqrng,
+  the state is opaque to user code but accessible via
+  `dqrng::dqrng_get_state()` / `dqrng_set_state()`. ssdsims function
+  names ending in `_state` (e.g. `with_lecuyer_cmrg_state`,
+  `slice_sample_state`, `fit_dists_state`, `hc_state`) take a
+  `state` argument that, in the new design, holds a **primer**
+  (see below) — the function installs it as the running RNG state
+  before executing its body.
+- **stream**: An independent sequence of pseudo-random numbers
+  within an RNG family. For L'Ecuyer-CMRG, streams are advanced via
+  `parallel::nextRNGStream()` (~2^127 jump per stream); the L'Ecuyer
+  stream selector IS a state vector. For dqrng, `stream` is a
+  separate argument to `dqset.seed()` (independent of `seed`); same
+  `seed` and different `stream` give statistically independent
+  sequences.
+- **sub-stream**: A finer subdivision within an L'Ecuyer-CMRG
+  stream, advanced via `parallel::nextRNGSubStream()`. ssdsims's
+  current package convention assigns one sub-stream per simulation
+  index (`sim`). The dqrng-based design (TARGETS-DESIGN.md §2) does
+  not use sub-streams; each task gets its own dqrng stream selected
+  by its **primer**.
+- **primer**: The value that, *together with* `seed`, fully
+  initializes an RNG instance to a known starting point — i.e.
+  picks which independent sequence to consume. Concrete type
+  depends on the RNG family:
+    * **dqrng PCG64**: a 64-bit integer packed as a length-2
+      integer vector (hi32, lo32). The primer is the value passed
+      to the `stream` argument of `dqrng::dqset.seed()`.
+    * **L'Ecuyer-CMRG**: a length-7 integer state vector
+      assignable to `.Random.seed`.
+  In TARGETS-DESIGN.md, the per-task primer is the 64-bit
+  `rlang::hash()` of the task's parameters via `task_primer(p)`
+  (§2). The `state =` argument of the `_state` functions *is* the
+  primer for that task.
 
 ## Simulation terms
 

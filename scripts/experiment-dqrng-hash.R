@@ -1,13 +1,20 @@
 ## scripts/experiment-dqrng-hash.R
 ##
-## Validation experiment for the proposed task-keyed stream design:
+## Validation experiment for the proposed task-keyed primer design:
 ##
-##   dqrng::dqset.seed(seed = scenario_seed,
-##                     stream = stream_id_from_hash(task_params))
+##   dqrng::dqset.seed(seed   = scenario_seed,
+##                     stream = task_primer(task_params))   # the primer
+##
+## A **primer** (see GLOSSARY.md) is the value that, together with
+## `seed`, fully initializes an RNG instance to a known starting
+## point. For dqrng PCG64 it is a 64-bit integer packed as a
+## length-2 integer vector (hi32, lo32) and passed to the `stream`
+## argument of `dqset.seed()`. For L'Ecuyer-CMRG it was the length-7
+## state vector assignable to `.Random.seed`.
 ##
 ## Together with `dqrng::register_methods()` so that base R's
 ## `runif()` / `rnorm()` / `sample()` etc. all flow through dqrng's
-## RNG with the configured (seed, stream).
+## RNG with the configured (seed, primer).
 ##
 ## Questions answered:
 ##   (1) Which dqrng PRNG family supports seed + stream cleanly?
@@ -38,7 +45,7 @@ library(dqrng)
 cat("dqrng version: ", as.character(packageVersion("dqrng")), "\n")
 cat("R version:     ", R.version.string, "\n\n")
 
-# --- 1. Hash → stream id -------------------------------------------------
+# --- 1. Hash → primer -------------------------------------------------
 
 # rlang::hash returns 32 hex chars (xxhash128 = 128 bits). dqset.seed's
 # `stream` argument accepts a length-2 integer vector interpreted as a
@@ -55,7 +62,7 @@ hex8_to_int32 <- function(hex8) {
     if (u < 2147483648) as.integer(u) else as.integer(u - 4294967296)
   )
 }
-task_state_id <- function(task_params) {
+task_primer <- function(task_params) {
   h <- rlang::hash(task_params) # 32-char hex
   c(
     hex8_to_int32(substr(h, 1L, 8L)), # high 32 bits
@@ -64,9 +71,9 @@ task_state_id <- function(task_params) {
 }
 
 # Smoke
-stream_a <- task_state_id(list(sim = 1L, nrow = 5L, rescale = FALSE))
-stream_b <- task_state_id(list(sim = 1L, nrow = 5L, rescale = TRUE))
-stream_c <- task_state_id(list(sim = 1L, nrow = 5L, rescale = FALSE)) # = a
+stream_a <- task_primer(list(sim = 1L, nrow = 5L, rescale = FALSE))
+stream_b <- task_primer(list(sim = 1L, nrow = 5L, rescale = TRUE))
+stream_c <- task_primer(list(sim = 1L, nrow = 5L, rescale = FALSE)) # = a
 cat(
   "stream a (sim=1, nrow=5, rescale=F): c(",
   stream_a[1L],
@@ -186,7 +193,7 @@ for (fn_name in ssd_rs) {
 
 # --- 4. Collision probability (birthday paradox) ------------------------
 
-# Generate a realistic task-grid sample and count stream-id collisions.
+# Generate a realistic task-grid sample and count primer collisions.
 gen_task_params <- function(n_tasks) {
   # Mix of axes typical of ssdsims scenarios.
   expand.grid(
@@ -200,8 +207,8 @@ gen_task_params <- function(n_tasks) {
   )[seq_len(n_tasks), , drop = FALSE]
 }
 
-stream_id_for_row <- function(row) {
-  task_state_id(as.list(row))
+primer_for_row <- function(row) {
+  task_primer(as.list(row))
 }
 
 cat(
@@ -212,8 +219,8 @@ cat(sprintf(
   sqrt(2^64)
 ))
 
-stream_id_key <- function(row) {
-  s <- stream_id_for_row(row)
+primer_key <- function(row) {
+  s <- primer_for_row(row)
   paste0(s[1L], "_", s[2L])
 }
 
@@ -221,7 +228,7 @@ for (n_tasks in c(1000L, 10000L, 100000L)) {
   params <- gen_task_params(n_tasks)
   keys <- vapply(
     seq_len(nrow(params)),
-    \(i) stream_id_key(params[i, ]),
+    \(i) primer_key(params[i, ]),
     character(1L)
   )
   n_collisions <- n_tasks - length(unique(keys))
@@ -238,10 +245,10 @@ for (n_tasks in c(1000L, 10000L, 100000L)) {
 
 cat("\n(5) limitations:\n")
 cat("    * dqset.seed()'s `stream` accepts a length-2 integer vector\n")
-cat("      treated as a 64-bit (hi32, lo32) pair. We pack 64 bits by\n")
-cat("      bits (two int31s) of the rlang::hash() digest. Each half\n")
-cat("      must fit in signed int32 to avoid `NAs introduced by\n")
-cat("      coercion to integer range`; the sign bit (bit 31) stays 0.\n")
+cat("      treated as a 64-bit (hi32, lo32) pair. We pack the full\n")
+cat("      64 bits of rlang::hash() by mapping 0x80000000 to\n")
+cat("      NA_integer_ in either slot; dqrng accepts NA and treats\n")
+cat("      it as INT_MIN.\n")
 cat("    * Internal RNG consumption of ssdtools::ssd_fit_dists() and\n")
 cat("      ssd_hc() is opaque; correctness depends on those calls\n")
 cat("      consuming RNG only via base R's runif/rnorm/sample (which\n")

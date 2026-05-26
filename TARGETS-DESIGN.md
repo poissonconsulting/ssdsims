@@ -7,10 +7,10 @@ Three primary goals, each a hard constraint:
   reruns and machines (RNG state is explicit and serializable; §1, §2).
 - **Debuggability.** Any single failed branch on the cluster must be
   replayable locally — with no `targets`, no orchestrator — using
-  the same inputs the cluster used. This is what the state-only
+  the same inputs the cluster used. This is what the `_state`
   primitives (`slice_sample_state()`, `fit_dists_state()`,
-  `hc_state()`) and the per-step Parquet partitions and their manifest are
-  *for* (§7).
+  `hc_state()`, each taking a per-task **primer**) and the per-step
+  Parquet partitions and their manifest are *for* (§7).
 - **Extensibility.** Content-addressed Parquet files *are* the cache:
   a larger scenario reuses Parquets whose task IDs match, computes
   the rest, and unions everything. Two named exceptions
@@ -76,7 +76,7 @@ Three design points distinguish this from the current code:
    function does *not* invalidate cached results. See §1.1.
 3. **No `parent` for plain extension.** Adding tasks (new dataset,
    more `nsim`, more `nrow` values, …) gives them new task hashes
-   and new states; existing tasks' hashes are unchanged so their
+   and new primers; existing tasks' hashes are unchanged so their
    Parquets are reused automatically. The `parent` reference is
    only for the two cases content-addressing alone can't handle:
    renaming/reordering datasets (`parent_alias`, §8) and mixing
@@ -159,7 +159,7 @@ ssd_register_min_pmix("strict",  function(n) 0.05)
 ```
 
 The scenario's `fit$min_pmix` entries are names from this registry;
-the per-task state hash uses the name, not the function. The actual
+the per-task primer hash uses the name, not the function. The actual
 function is looked up just before the call, after `dqset.seed()`.
 
 ### 1.2 The `ci = FALSE` collapse
@@ -186,7 +186,7 @@ In the task grid:
 | 1   | 5    | FALSE   | TRUE  | 1000  | weighted_samples | TRUE       |
 
 The hash of an `NA`-bearing row is well-defined as long as `NA` is
-encoded canonically — `task_state_id()` does this via
+encoded canonically — `task_primer()` does this via
 `rlang::hash()` on the named list. The collapse therefore stops
 phantom streams from being allocated to combinations that don't
 exist in practice.
@@ -196,31 +196,38 @@ exist in practice.
 ## 2. Per-task RNG via dqrng + hash
 
 Validated by `scripts/experiment-dqrng-hash.R`. Each task gets its
-own **state**, a length-2 integer derived from the hash of its task
-parameters. The scenario carries a single integer `seed`; per-task
-RNG is configured by passing the state into dqrng's `stream`
-argument:
+own **primer**, a length-2 integer derived from the hash of its
+task parameters. The scenario carries a single integer `seed`;
+per-task RNG is configured by passing the primer into dqrng's
+`stream` argument:
 
 ```r
 dqrng::dqset.seed(seed   = scenario$seed,
-                  stream = task_state_id(task_params))  # task's state
+                  stream = task_primer(task_params))  # task's primer
 ```
 
-(Throughout this document we call the per-task value **state** to
-match the existing `with_lecuyer_cmrg_state()` / `slice_sample_state()`
-naming and to keep `seed` unambiguously the scenario scalar. The
-dqrng API parameter happens to be named `stream` — that name belongs
-to dqrng, not to ssdsims.)
+A **primer** is the value that, together with `seed`, fully
+specifies an RNG instance's starting point — see GLOSSARY.md. For
+the dqrng path it is a 64-bit integer (length-2 int); for the
+legacy L'Ecuyer-CMRG path it was the length-7 state vector. The
+function argument `state =` of `slice_sample_state()`,
+`fit_dists_state()`, `hc_state()` carries the primer; the `_state`
+suffix reflects that the function *installs the primer as the
+running state* before its body executes.
 
-where `task_state_id(p)` is a length-2 integer vector packing
+(The dqrng API parameter happens to be named `stream` — that name
+belongs to dqrng, not to ssdsims. In our terminology the value
+passed there is a primer.)
+
+where `task_primer(p)` is a length-2 integer vector packing
 **64 bits** of `rlang::hash(p)`:
 
 ```r
-task_state_id <- function(p) {
+task_primer <- function(p) {
   h <- rlang::hash(p)                 # 32-char xxhash128 hex
   c(
-    pack_int31(substr(h,  1L,  8L)),  # hi: first 31 bits
-    pack_int31(substr(h,  9L, 16L))   # lo: next 31 bits
+    hex8_to_int32(substr(h, 1L,  8L)),  # hi32: 0x80000000 -> NA_integer_
+    hex8_to_int32(substr(h, 9L, 16L))   # lo32: ditto
   )
 }
 ```
@@ -231,7 +238,7 @@ length-2 integer vector representing a 64-bit value
 pattern `0x80000000` (INT_MIN) is reserved as `NA_integer_`. dqrng
 accepts `NA_integer_` in `stream` and treats it as INT_MIN, so we
 encode the full 64 bits by mapping the one INT_MIN bit pattern to
-`NA_integer_` in the task state. Validated in
+`NA_integer_` in the task primer. Validated in
 `scripts/experiment-dqrng-hash.R` (4): 0 empirical collisions at
 100 k tasks; theoretical 50% collision around `sqrt(2^64) ≈ 4.3
 billion` tasks. Vastly safe for ssdsims' 10²–10⁴-task scenarios.
@@ -271,16 +278,16 @@ script verifies this end-to-end.
   the pair `(seed, state)`. Both are small integers; the task row
   carries them as ordinary columns, not length-7 state vectors.
 - **Extension is implicit.** Adding tasks (new datasets, more `sim`
-  values, …) gives them new hashes and therefore new states.
+  values, …) gives them new hashes and therefore new primers.
   Existing tasks' states are unaffected — their hashes don't change.
 - **Re-running a scenario with a different RNG** means changing
-  `scenario$seed`. All task states are re-rooted automatically.
+  `scenario$seed`. All task primers are re-rooted automatically.
 - **Debuggability.** The task row carries `(seed, state)`; a
   failing branch replays locally as a one-liner (see §7).
 
 ### What goes into the hash
 
-`task_state_id(p)` hashes a canonical, name-keyed representation of
+`task_primer(p)` hashes a canonical, name-keyed representation of
 the task's parameters. For a data task: `(dataset_name, sim,
 replace)` only — `nrow` is *not* in the hash because every `nrow`
 value is sub-truncation of the same `n_max`-row sample (§5). For a
@@ -672,12 +679,12 @@ directory tree keyed by the scenario's cross-join axes:
 
 ```
    results/
-     data/  dataset=boron/   sim=1/  replace=FALSE/  <task-state>.parquet
-            dataset=boron/   sim=2/  replace=FALSE/  <task-state>.parquet
-            dataset=cadmium/ sim=1/  replace=FALSE/  <task-state>.parquet
-     fit/   dataset=boron/   sim=1/  rescale=FALSE/  <task-state>.parquet
+     data/  dataset=boron/   sim=1/  replace=FALSE/  <task-primer>.parquet
+            dataset=boron/   sim=2/  replace=FALSE/  <task-primer>.parquet
+            dataset=cadmium/ sim=1/  replace=FALSE/  <task-primer>.parquet
+     fit/   dataset=boron/   sim=1/  rescale=FALSE/  <task-primer>.parquet
             …
-     hc/    dataset=boron/   sim=1/  rescale=FALSE/  nboot=10/  est=arith/  <task-state>.parquet
+     hc/    dataset=boron/   sim=1/  rescale=FALSE/  nboot=10/  est=arith/  <task-primer>.parquet
             …
 ```
 
@@ -685,7 +692,7 @@ duckplyr / DuckDB read the partition columns straight out of the
 directory names and use them for predicate pushdown; a query like
 `filter(nrow == 10L, dataset == "boron")` only opens the relevant
 files, regardless of how big the rest of the tree grows. The leaf
-file name is the 64-bit `task_state_id` hex (§2) — useful for
+file name is the 64-bit `task_primer` hex (§2) — useful for
 debug (§7) but not required by the query path.
 
 #### Linking between targets
@@ -847,13 +854,13 @@ supported branch-replay API.
    │  task row + upstream Parquet = complete reproducer                │
    │  ───────────────────────────────────────────────────              │
    │  seed       scenario-scalar integer; in the manifest              │
-   │  state      length-2 integer (hi31, lo31); on the task row;       │
+   │  primer     length-2 integer (hi32, lo32); on the task row;       │
    │             passed to dqset.seed()'s `stream` arg                 │
-   │  upstream   one Parquet per branch; keyed by task-state hash; tooling-   │
-   │             agnostic (DuckDB, Python, R)                          │
+   │  upstream   one Parquet per branch; keyed by task-primer hash;    │
+   │             tooling-agnostic (DuckDB, Python, R)                  │
    │  params     scalars on the task row                               │
-   │  primitive  `*_state()` takes (data, seed, state, ...args); no    │
-   │             hidden dependency on targets or the orchestrator     │
+   │  primitive  `*_state()` takes (data, seed, state = primer, ...);  │
+   │             no hidden dependency on targets or the orchestrator   │
    └───────────────────────────────────────────────────────────────────┘
 ```
 
@@ -930,7 +937,7 @@ files (§6), the **default** extension story is almost trivial:
 
 ```
    For each task in scenario:
-     id = task_state_id(task_params)
+     id = task_primer(task_params)
      if results/<step>/<id>.parquet exists  → skip (cache hit)
      else                                    → run, write <id>.parquet
 ```
@@ -1087,11 +1094,11 @@ in any function that touches the methods).
 | No DAG-of-DAGs primitive                             | §8.2 — child reads parent's `results/` directly; partitions identify branches; mostly unnecessary, see below. |
 | No "load previous run from Parquet" path             | §8 — per-step Parquet partitions are the cache; no explicit load needed.              |
 | Persists fragile RNG state                           | §1, §2 — scenario stores a single integer `seed`; per-task `(seed, state)` is reproducible via `dqset.seed()`. |
-| Positional task IDs                                  | §2 — task IDs are keyed by `task_state_id(p)` = 64-bit hash of canonical params. |
+| Positional task IDs                                  | §2 — task IDs are keyed by `task_primer(p)` = 64-bit hash of canonical params. |
 | Re-derivation cost is quadratic                      | §2 — per-task hash is O(1); no precomputed lattice.                                         |
-| `nsim`-grow cache invalidation                       | §1, §2, §8 — new sim values hash to new states; existing task IDs (and their Parquets) are untouched. |
+| `nsim`-grow cache invalidation                       | §1, §2, §8 — new sim values hash to new primers; existing task IDs (and their Parquets) are untouched. |
 | Three steps cached as one (no per-step re-runs)      | §5, §6 — data/fit/hc are three grids and three targets, each with its own Parquet layer.    |
-| Same lattice for all steps despite grid mismatch     | §5 — each step has its own grid and per-task state.                                              |
+| Same lattice for all steps despite grid mismatch     | §5 — each step has its own grid and per-task primer.                                              |
 | `nrow` invalidates data states for the same `sim`    | §5 — `nrow` is never an axis: data state keyed by `(dataset, sim, replace)`, slice truncates to `n`.    |
 | Single-dataset scenarios only                        | §1.1 — datasets are name-referenced in a central registry; cross-join axis.                 |
 | Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
@@ -1159,7 +1166,7 @@ no downstream dependencies, so breaking-change steps are acceptable.
 - **`with-dqrng-state`** — Replace `with_lecuyer_cmrg_state()` /
   `local_lecuyer_cmrg_state()` with `with_dqrng_state(seed, state,
   code)` thin wrapper. Existing seed-based tests still pass.
-- **`task-state-id`** — `task_state_id(params)` per §2 (64-bit hash,
+- **`task-primer`** — `task_primer(params)` per §2 (64-bit hash,
   NA-as-INT_MIN encoding). Unit tests verify reproducibility and
   collision-resistance on the validated examples from
   `scripts/experiment-dqrng-hash.R`.
@@ -1216,7 +1223,7 @@ no downstream dependencies, so breaking-change steps are acceptable.
 
 **Dependencies.** `task-list-loop-baseline` is the only one that
 isn't a prerequisite for the next: it's the framing step.
-`dqrng-init` precedes everything else. `task-state-id` precedes
+`dqrng-init` precedes everything else. `task-primer` precedes
 `state-primitives` precedes `migrate-public-api`.
 `dataset-registry`/`min-pmix-registry` precede
 `nrow-sub-truncation` and `task-tables`. `manifest` precedes
