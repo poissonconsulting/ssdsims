@@ -1317,6 +1317,66 @@ shows where branches open and close.
 
 ### Dependency DAG (parallel streams)
 
+Rendered on GitHub via Mermaid:
+
+```mermaid
+flowchart TD
+    define[ssd-define-scenario]
+    baseline[task-list-loop-baseline]
+    dqinit[dqrng-init]
+    dqstate[local-dqrng-state]
+    primer[task-primer]
+    prims[state-primitives]
+    migrate[migrate-public-api]
+    nrow[nrow-sub-truncation]
+    ci[ci-false-collapse]
+
+    subgraph targets [targets-only plumbing]
+        dsreg[dataset-registry]
+        pmreg[min-pmix-registry]
+        manif[manifest]
+        tt[task-tables]
+        dsreg --> tt
+        pmreg --> tt
+        manif --> tt
+    end
+
+    hive[hive-partitioning]
+    cluster[cluster-pipeline]
+    cloud[cloud-upload]
+    replay[replay-helper]
+    alias[parent-alias]
+    lockin[mixed-code-lockin]
+    cleanup[cleanup-lecuyer]
+
+    define --> baseline
+    dqinit --> dqstate
+    dqstate --> primer
+    baseline --> prims
+    primer --> prims
+
+    prims --> migrate
+    prims --> nrow
+    prims --> ci
+
+    migrate --> dsreg
+    migrate --> pmreg
+    migrate --> manif
+    nrow --> tt
+    ci --> tt
+
+    tt --> hive
+    tt --> cluster
+    tt --> cloud
+    tt --> replay
+    tt --> alias
+
+    alias --> lockin
+    lockin --> cleanup
+```
+
+Same DAG as plain ASCII (for terminal / diff contexts):
+
 ```
    ssd-define-scenario        dqrng-init
             │                      │
