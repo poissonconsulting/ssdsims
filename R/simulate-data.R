@@ -56,7 +56,7 @@ ssd_sim_data.data.frame <- function(
   )
 
   if (nrow(data) == nsim) {
-    seeds <- get_lecuyer_cmrg_seeds_stream(
+    states <- get_lecuyer_cmrg_stream_states(
       seed = seed,
       nsim = nsim,
       start_sim = start_sim,
@@ -64,8 +64,10 @@ ssd_sim_data.data.frame <- function(
     )
 
     data <- purrr::map(
-      seeds,
-      \(seed) slice_sample_seed(x, n = nrow, replace = replace, seed = seed),
+      states,
+      \(state) {
+        slice_sample_state(x, n = nrow, replace = replace, state = state)
+      },
       .progress = .progress
     ) |>
       purrr::map2(sims, \(.x, .y) {
@@ -134,9 +136,9 @@ ssd_sim_data.fitdists <- function(
     wch <- which(dist_sim == "all")
     n <- length(dist_sim)
     dist_sim <- c(
-      dist_sim[seq_up(1, wch - 1)],
+      dist_sim[rlang::seq2(1, wch - 1)],
       names(x),
-      dist_sim[seq_up(wch + 1, n)]
+      dist_sim[rlang::seq2(wch + 1, n)]
     )
     dist_sim <- unique(dist_sim)
   }
@@ -306,7 +308,7 @@ ssd_sim_data.function <- function(
   data <- tidyr::expand_grid(sim = sims, stream = stream, nrow = nrow)
 
   if (nrow(data) == nsim) {
-    seeds <- get_lecuyer_cmrg_seeds_stream(
+    seeds <- get_lecuyer_cmrg_stream_states(
       seed = seed,
       nsim = nsim,
       start_sim = start_sim,

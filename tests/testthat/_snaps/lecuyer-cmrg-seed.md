@@ -1,7 +1,7 @@
-# get_lecuyer_cmrg_seeds_stream repeatable
+# get_lecuyer_cmrg_stream_states repeatable
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -9,10 +9,10 @@
       [7]   645839282
       
 
-# get_lecuyer_cmrg_seeds_stream seed fast enough
+# get_lecuyer_cmrg_stream_states seed fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 10^5))
     Output
       [[1]]
@@ -20,10 +20,10 @@
       [7] -1427362856
       
 
-# get_lecuyer_cmrg_seeds_stream stream fast enough
+# get_lecuyer_cmrg_stream_states stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         start_sim = 1L, stream = 10^5))
     Output
       [[1]]
@@ -31,10 +31,10 @@
       [7]  1725202986
       
 
-# get_lecuyer_cmrg_seeds_stream seed stream fast enough
+# get_lecuyer_cmrg_stream_states seed stream fast enough
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         start_sim = 10^5, stream = 10^5))
     Output
       [[1]]
@@ -42,7 +42,7 @@
       [7]   248690873
       
 
-# get_lecuyer_cmrg_seeds_stream seeds stream fast enough
+# get_lecuyer_cmrg_stream_states seeds stream fast enough
 
     Code
       seeds[[10^5]]
@@ -50,10 +50,10 @@
       [1]       10407  1222159184  2127954179   -48790419    17570307 -1110399007
       [7] -1488892956
 
-# get_lecuyer_cmrg_seeds_stream repeatable multiple seeds
+# get_lecuyer_cmrg_stream_states repeatable multiple seeds
 
     Code
-      withr::with_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 2L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 2L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -65,10 +65,10 @@
       [7]   734238052
       
 
-# get_lecuyer_cmrg_seeds_stream repeatable other starts
+# get_lecuyer_cmrg_stream_states repeatable other starts
 
     Code
-      withr::with_seed(42, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(42, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
@@ -76,14 +76,136 @@
       [7] -1522797297
       
 
-# get_lecuyer_cmrg_seeds_stream seeds repeatable with other seed types
+# get_lecuyer_cmrg_stream_states seeds repeatable with other seed types
 
     Code
-      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_seeds_stream(seed = NULL, nsim = 1L,
+      with_lecuyer_cmrg_seed(10, get_lecuyer_cmrg_stream_states(seed = NULL, nsim = 1L,
         stream = 1L, start_sim = 1L))
     Output
       [[1]]
       [1]       10407   115614581  1315917716   768866738 -1769155862  1955826369
       [7]   645839282
       
+
+# local_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)
+
+    Code
+      gen_lecuyer_runif(10)
+    Output
+      [1] 0.3276690 0.7040534 0.3022566
+
+---
+
+    Code
+      gen_lecuyer_runif(42)
+    Output
+      [1] 0.1738456 0.5547401 0.4833771
+
+# with_lecuyer_cmrg_seed different seeds produce different outcomes (snapshot)
+
+    Code
+      with_lecuyer_cmrg_seed(10, runif(3))
+    Output
+      [1] 0.3276690 0.7040534 0.3022566
+
+---
+
+    Code
+      with_lecuyer_cmrg_seed(42, runif(3))
+    Output
+      [1] 0.1738456 0.5547401 0.4833771
+
+# get_lecuyer_cmrg_stream_states return values state different sub-streams (snapshot)
+
+    Code
+      with_lecuyer_cmrg_state(states[[1]], runif(3))
+    Output
+      [1] 0.4075339 0.6022828 0.9188258
+
+---
+
+    Code
+      with_lecuyer_cmrg_state(states[[2]], runif(3))
+    Output
+      [1] 0.0006085795 0.0701991342 0.7472101830
+
+# local_lecuyer_cmrg_seed rejects non-scalar seed
+
+    Code
+      local_lecuyer_cmrg_seed(state)
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      local_lecuyer_cmrg_seed(integer())
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      local_lecuyer_cmrg_seed(NA_integer_)
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      local_lecuyer_cmrg_seed("10")
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+# local_lecuyer_cmrg_seed rejects non-environment .local_envir
+
+    Code
+      local_lecuyer_cmrg_seed(10, .local_envir = "env")
+    Condition
+      Error in `local_lecuyer_cmrg_seed()`:
+      ! `.local_envir` must be an environment.
+
+# local_lecuyer_cmrg_state rejects non-integer state
+
+    Code
+      local_lecuyer_cmrg_state(10)
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must be integer.
+
+---
+
+    Code
+      local_lecuyer_cmrg_state(1:6)
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must be length 7 not 6.
+
+---
+
+    Code
+      local_lecuyer_cmrg_state(c(1L, 2L, 3L, 4L, 5L, 6L, NA_integer_))
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must not have any missing values.
+
+---
+
+    Code
+      local_lecuyer_cmrg_state("a")
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `state` must be integer.
+
+# local_lecuyer_cmrg_state rejects non-environment .local_envir
+
+    Code
+      local_lecuyer_cmrg_state(state, .local_envir = "env")
+    Condition
+      Error in `local_lecuyer_cmrg_state()`:
+      ! `.local_envir` must be an environment.
 

@@ -27,7 +27,8 @@ ssd_run_scenario(
   parametric = TRUE,
   nboot = c(1, 5, 10, 50, 100, 500), # * 100,
   samples = TRUE,
-  delta = Inf
+  delta = Inf,
+  .progress = TRUE
 )
 
 ssd_run_scenario(
@@ -40,5 +41,6 @@ ssd_run_scenario(
   parametric = TRUE,
   nboot = c(1, 5, 10, 50, 100, 500), # * 100,
   samples = FALSE,
-  delta = Inf
+  delta = Inf,
+  .progress = TRUE
 )
