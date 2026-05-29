@@ -1028,6 +1028,19 @@ Two constraints, both confirmed by independent experiments:
   muffles only that one expected warning rather than relaxing the
   global option.
 
+**The `NULL` must flow cleanly downstream.** A failed shard's value is
+`NULL`, and the targets immediately downstream — the `upload_<step>`
+branch (§6.1) and the two manifests — have to tolerate it rather than
+choke. `ssd_upload_shard(NULL, ...)` records the shard as a skip
+instead of erroring, and the compute / upload manifests simply omit
+it; the survivors still upload and `summary` still unions them. An
+independent experiment that composed a dynamically-sized fan-out, this
+`error = "null"` handling, and the per-shard upload target found this
+`NULL`-tolerance in the upload and manifest helpers was the *only*
+glue the composition needed — and that once the failing branch is
+fixed under the §8.3 pin, only that one shard rebuilds, re-uploads,
+and is re-queried (a minimal re-run, not a full redo).
+
 ---
 
 ## 7. Debugging a cluster failure
@@ -1286,7 +1299,7 @@ The question is the **opposite** of invalidation — how to keep
 `targets` from re-running things whose shards are still trusted.
 
 This stays inside the one project. An independent experiment settled
-it: `tar_cue(depend = FALSE)` is exactly the knob. It tells a target
+it: `tar_cue(depend = FALSE)` does exactly this. It tells a target
 to ignore changes to its upstream dependencies — including the
 function bodies it calls — so editing an `_state` function (or
 bumping an `ssdtools` version) rebuilds *nothing*:
