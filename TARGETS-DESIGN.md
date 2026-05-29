@@ -34,10 +34,11 @@ Terminology (per GLOSSARY.md): a **task** is one row of a
 carrying a primer; a **shard** is the Parquet file produced by
 running one or several tasks (depending on **partitioning**). **Step** = one of the three stages data / fit /
 hc; **target** = `tar_target()` declaration; **job** = Slurm work
-unit. 1 task is part of a branch of the `*_step` target; 1 branch
-writes 1 shard. Independent branches/shards run in parallel; how
-branches map to Slurm jobs under `crew_controller_slurm()` is an
-open question (§11).
+unit. Each shard is its own named `*_step` target (minted by
+`tar_map` at construction time — **static branching**, §6); a shard's
+tasks run inside that one target, which writes 1 shard. Independent
+shard targets run in parallel; how they map to Slurm jobs under
+`crew_controller_slurm()` is an open question (§11).
 
 Background and the list of gaps this design closes are in `RNG-FLOW.md`
 §5. This is a forward-looking design; it does not document the existing
@@ -78,10 +79,17 @@ The most consequential design choices, with section refs:
 - **`ci = FALSE` collapses bootstrap knobs (§1.2).** When `ci =
   FALSE` the `nboot` / `ci_method` / `parametric` axes are stored
   as `NA` in the hc-task table — no phantom branches.
-- **Per-shard Parquet shards, Hive-style (§6).** Each task writes
-  one shard (one Parquet file) under
-  `results/<step>/dataset=.../sim=.../`; `targets` passes upstream
-  shard paths into downstream branches via `format = "file"`, and
+- **Static branching — one named target per shard (§6).** The shard
+  set is a pure function of the scenario, known when `_targets.R` is
+  sourced, so `tarchetypes::tar_map()` mints one named target per
+  shard (no `pattern = map` over a runtime task-table target). The
+  scenario is a plain construction-time object, not a `tar_target()`.
+  Dynamic branching stays available as a documented fallback for
+  extreme-scale fan-outs (§6).
+- **Per-shard Parquet shards, Hive-style (§6).** Each shard target
+  writes one Parquet file under
+  `results/<step>/dataset=.../sim=.../`; downstream shards open the
+  upstream shard by partition path (`format = "file"`), and
   duckplyr predicate-pushes filters into the partition columns.
 - **Cloud upload as a separate target (§6.1).** When
   `scenario$upload` is set, an `upload_<step>` target sits
@@ -119,8 +127,12 @@ The most consequential design choices, with section refs:
 ## 1. Scenario object
 
 The scenario is **purely declarative**. It does not carry the
-materialized task grid; expansion happens at run time via
-`ssd_scenario_tasks(scenario)` (§2). An S3 object holding:
+materialized task grid; expansion happens via
+`ssd_scenario_tasks(scenario)` (§2). It is a **plain construction-time
+object** built at the top of `_targets.R`, not a `tar_target()` — so
+the shard set it expands to is known when the pipeline is sourced,
+which is what lets the steps use static branching (§6). An S3 object
+holding:
 
 ```
 ssdsims_scenario
@@ -430,8 +442,9 @@ ssd_run_scenario(scenario, plan = "mirai")  # in-process parallel
 `ssd_scenario()` stores the scenario inputs (seed, dataset names,
 fit/hc arg grids). It is purely declarative — it does **not** expand
 the task tables. Expansion is `ssd_scenario_tasks(scenario)`, called
-either by `ssd_run_scenario()` (local) or by the `data_tasks` /
-`fit_tasks` / `hc_tasks` targets in the cluster pipeline (§4).
+either by `ssd_run_scenario()` (local) or, in the cluster pipeline
+(§4), while `_targets.R` is sourced to build the per-shard task tables
+that `tar_map` fans out over (§6).
 
 ```
    ssd_scenario(...) ──▶ ssdsims_scenario   (declarative; carries seed)
@@ -472,15 +485,15 @@ others — they're equal inputs that get assembled into the final
               ┌───────────────────────────────────────┐
               │ ssdsims _targets.R for our cluster    │
               │                                       │
-              │   scenario ─▶ {data,fit,hc}_tasks     │
+              │   scenario ─▶ {data,fit,hc}_shards    │
               │                            │          │
               │                            ▼          │
-              │                pattern = map(...) on  │
+              │              tar_map(...) targets on  │
               │             crew_controller_slurm()   │
               │                            │          │
               │                            ▼          │
               │           shards run in parallel;     │
-              │           each branch writes one shard│
+              │           each target writes one shard│
               └───────────────────────────────────────┘
 ```
 
@@ -489,7 +502,7 @@ parallel; none is downstream of the others. Roles:
 
 - **A — example pipeline for another cluster** contributes the
   *shape* of `_targets.R`: how a `crew` controller is constructed,
-  how dynamic branching is wired, where results land, where the
+  how the per-shard branching is wired, where results land, where the
   merge target sits. Lifted as a skeleton, not as content.
   Source: another lab's published targets+crew repo.
 
@@ -562,10 +575,11 @@ sharing is the deliberate `nrow` sub-truncation below.
 
 Tasks are the unit of computation (one row, one primer, one
 `_state` call). Shards are the unit of *storage, dispatch and
-parallelism*: one shard ≡ one Parquet file ≡ one branch of the
-step target, and **independent shards run in parallel**. (How
-branches are packed into Slurm jobs under `crew_controller_slurm()`
-is an open question — see §11.) **One shard typically contains
+parallelism*: one shard ≡ one Parquet file ≡ one named step target
+(minted by `tar_map`, §6), and **independent shards run in
+parallel**. (How shard targets are packed into Slurm jobs under
+`crew_controller_slurm()` is an open question — see §11.) **One
+shard typically contains
 many tasks**: the scenario's `partition_by[[step]]` picks which
 task-table columns become Hive directory levels, and every task
 row sharing those column values goes into the same shard.
@@ -662,13 +676,13 @@ fan-out by 5×.
 ### Implications for the targets pipeline
 
 Each step needs its **own** task table (`data_tasks`, `fit_tasks`,
-`hc_tasks`) and its own dynamic-branched target — a single shared
-task table mapped lockstep through all three steps does **not**
-work when the grids differ. Layers link via the upstream **shard's
-partition path**: each task row carries the partition column
-values of the upstream shard it needs (the `data_id` / `fit_id`
-columns are sugar for the path), and the per-branch body opens
-that one upstream Parquet. §6 wires this up concretely.
+`hc_tasks`) and its own per-shard targets (one named target per
+shard, §6) — a single shared task table mapped lockstep through all
+three steps does **not** work when the grids differ. Layers link via
+the upstream **shard's partition path**: each task row carries the
+partition column values of the upstream shard it needs (the `data_id`
+/ `fit_id` columns are sugar for the path), and the per-shard body
+opens that one upstream Parquet. §6 wires this up concretely.
 
 ---
 
@@ -696,80 +710,157 @@ Parquet per shard so the data, fit, and hc layers are
 independently queryable for analysis without re-running upstream
 steps.
 
+### Static branching: one named target per shard
+
+The shard set is a **pure function of the scenario**, and the
+scenario is known when `_targets.R` is *sourced* — it is a plain
+constructor call at the top of the file, not a `tar_target()`. So
+the fan-out width is fixed at construction time, never data-dependent
+at run time. By the standard rule of thumb — *static branching when
+the branch count is known at sourcing time, dynamic branching only
+when it depends on data computed during the run* — this design uses
+**static branching**: `tarchetypes::tar_map()` mints one named target
+per shard while the pipeline is built. An independent experiment
+exercised both styles head to head and confirmed the rule applies
+here; the most complete experiment (pinning + `error = "null"` +
+per-shard upload, all composed) is itself built on static branching.
+
+Why static fits this design specifically:
+
+- **The scenario need not live in a target.** It is a construction-time
+  object; `ssd_scenario_*_shards(scenario)` evaluate at sourcing time
+  and feed `tar_map()`'s `values`. `targets` still tracks the scenario
+  as a referenced global, so editing a knob still invalidates the
+  dependent shards — tracking is not lost by taking it out of a target.
+- **Named, addressable shards.** Each shard is its own DAG node
+  (`fit_step_boron_sim1_rescaleFALSE`), so `tar_read()` /
+  `tar_invalidate()` (§8.3–§8.4) and the replay story (§7) can point at
+  one shard by name, and `tar_mermaid()` shows the real per-shard graph
+  with per-shard status colours.
+- **Extension is literally "more named targets."** Adding a dataset or
+  growing `nsim` (path-axis growth, §8.1) mints new shard targets at
+  the next sourcing; `targets` diffs the target set and builds only the
+  new ones — exactly the §8 cache story, with no directory-hash
+  indirection needed to keep existing shards from rebuilding.
+- **Precise upstream edges.** A fit shard target can name its one
+  upstream data shard target directly, so a changed data shard
+  invalidates only its dependent fit/hc shards — strictly better than
+  depending on a whole pattern target. (The Hive partition-path layout
+  below is still kept, but for the off-cluster query layer and replay,
+  not as the inter-target wiring crutch dynamic branching would force.)
+
+**The bounded exception — scale.** `tar_map()` builds one target object
+per shard every time `_targets.R` is sourced, so a scenario with very
+many shards (thousands: many datasets × large `nsim` under a
+fine-grained `partition_by`) makes sourcing and the graph tooling
+heavy, where dynamic branching's single pattern node stays light.
+Branching is an implementation detail *behind the shard abstraction* —
+one Parquet per shard, identical per-task RNG, partition-path linking,
+and replay contract either way — so a step whose fan-out is large
+enough to hurt may opt into dynamic branching
+(`tar_target(pattern = map(<step>_tasks))` over a grouped task-table
+target) without changing anything else. Static is the default; dynamic
+is the documented escape hatch for extreme fan-outs.
+
 ```
-   scenario   (declarative; carries seed, partition_by)
+   scenario   (plain construction-time object; carries seed, partition_by)
        │
-       ├──▶ data_tasks  ( 2 rows ; partition cols dataset,sim,replace)
+       ├──▶ data_shards  ( 2 rows ; partition cols dataset,sim,replace)
        │         │
-       │         ▼  tar_group_by(..., dataset, sim, replace)
-       │     data_step  ──▶ results/data/dataset=boron/sim=1/replace=FALSE/part.parquet  (2 shards)
+       │         ▼  tar_map(values = data_shards, names = c(dataset, sim, replace))
+       │     data_step_*  ──▶ results/data/dataset=boron/sim=1/replace=FALSE/part.parquet  (2 named shard targets)
        │
-       ├──▶ fit_tasks   ( 4 rows ; partition cols dataset,sim,rescale; data upstream)
+       ├──▶ fit_shards   ( 4 rows ; partition cols dataset,sim,rescale; data upstream)
        │         │
-       │         ▼  tar_group_by(..., dataset, sim, rescale)
-       │     fit_step   ──▶ results/fit/dataset=boron/sim=1/rescale=FALSE/part.parquet   (4 shards)
-       │                 each shard reads the matching data shard by partition path
+       │         ▼  tar_map(values = fit_shards, names = c(dataset, sim, rescale))
+       │     fit_step_*   ──▶ results/fit/dataset=boron/sim=1/rescale=FALSE/part.parquet   (4 named shard targets)
+       │                  each shard reads the matching data shard by partition path
        │
-       └──▶ hc_tasks    ( 8 rows ; partition cols dataset,sim; fit upstream)
+       └──▶ hc_shards    ( 2 rows ; partition cols dataset,sim; fit upstream)
                  │
-                 ▼  tar_group_by(..., dataset, sim)
-             hc_step    ──▶ results/hc/dataset=boron/sim=1/part.parquet                  (2 shards, 4 tasks each)
+                 ▼  tar_map(values = hc_shards, names = c(dataset, sim))
+             hc_step_*  ──▶ results/hc/dataset=boron/sim=1/part.parquet                  (2 named shard targets, 4 tasks each)
                          each shard reads the matching fit shard(s) by partition path
 
    summary  ──▶ results/summary.parquet
                 (reads all three layers via duckplyr)
 ```
 
-The link between steps is by **upstream partition path (passed by `targets`)**, not by a
-single shared dynamic-branch index — `targets` passes the upstream branch's shard path into each downstream branch automatically. Each task row carries the upstream's partition column values; the body opens that one upstream Parquet. This is what lets tweaking `rescale` re-run fit + hc without re-running data (the fit task row's `data` partition columns are unchanged).
+The link between steps is by **upstream partition path**: each shard
+row carries the partition column values of the upstream shard it needs,
+and the body opens that one upstream Parquet. Under static branching a
+shard target can additionally name its specific upstream shard target
+for a precise dependency edge; the partition path remains the portable
+contract used for the off-cluster query layer (the Hive-style layout
+below) and replay (§7).
+This is what lets tweaking `rescale` re-run fit + hc without re-running
+data (the fit shard's `data` partition columns are unchanged).
 
 `_targets.R` sketch:
 
 ```r
+library(targets)
+library(tarchetypes)
+
+# The scenario is a plain object built HERE, at sourcing time — not a
+# tar_target. Everything downstream is a pure function of it, so the
+# shard set is fixed before any target runs (static branching).
+scenario <- ssd_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  nrow = c(5L, 10L),
+  rescale = c(FALSE, TRUE),
+  est_method = c("arithmetic", "multi"),
+  nboot = 10,
+  seed = 42L
+)
+
+# One row per shard, computed now (sourcing time). Each row carries the
+# step's partition_by values (which become the tar_map target-name
+# suffix and the Hive path) plus a list-column `tasks` of the task rows
+# that shard must run.
+data_shards <- ssd_scenario_data_shards(scenario)  # 2 rows
+fit_shards  <- ssd_scenario_fit_shards(scenario)   # 4 rows
+hc_shards   <- ssd_scenario_hc_shards(scenario)    # 2 rows (4 tasks each)
+
 list(
-  tar_target(scenario,
-    ssd_scenario(
-      ssddata::ccme_boron,
-      nsim = 2L,
-      nrow = c(5L, 10L),
-      rescale = c(FALSE, TRUE),
-      est_method = c("arithmetic", "multi"),
-      nboot = 10,
-      seed = 42L)),
-
-  # Three separate task tables, one per step grid (§5). tar_group_by
-  # buckets task rows by the step's partition_by columns; each group
-  # becomes one branch (= one shard out, possibly many tasks).
-  # Independent branches run in parallel; how they pack into Slurm
-  # jobs under crew_controller_slurm() is an open question (§11).
-  tar_group_by(data_tasks, ssd_scenario_data_tasks(scenario), dataset, sim, replace),
-  tar_group_by(fit_tasks,  ssd_scenario_fit_tasks(scenario),  dataset, sim, rescale),
-  tar_group_by(hc_tasks,   ssd_scenario_hc_tasks(scenario),   dataset, sim),
-
-  # error = "null" so one bad shard does not abort the run: the
-  # branch goes NULL, the error is recorded, the rest keeps building
-  # and summary unions the survivors (§6.2). format = "file" passes
-  # the shard path, not its value, between targets (see below).
-  tar_target(
-    data_step,
-    ssd_run_data_step(data_tasks, scenario, out_dir = "results/data"),
-    pattern = map(data_tasks), format = "file", error = "null"
+  # tar_map mints one named target per shard at sourcing time. Independent
+  # shard targets run in parallel; how they pack into Slurm jobs under
+  # crew_controller_slurm() is an open question (§11).
+  #
+  # error = "null" so one bad shard does not abort the run: the target
+  # goes NULL, the error is recorded, the rest keeps building and summary
+  # unions the survivors (§6.2). format = "file" passes the shard path,
+  # not its value, between targets (see below).
+  tar_map(
+    values = data_shards, names = c(dataset, sim, replace),
+    tar_target(
+      data_step,
+      ssd_run_data_step(tasks, scenario, out_dir = "results/data"),
+      format = "file", error = "null"
+    )
   ),
 
-  tar_target(
-    fit_step,
-    ssd_run_fit_step(fit_tasks, scenario,
-                     data_dir = "results/data",
-                     out_dir  = "results/fit"),
-    pattern = map(fit_tasks), format = "file", error = "null"
+  tar_map(
+    values = fit_shards, names = c(dataset, sim, rescale),
+    tar_target(
+      fit_step,
+      ssd_run_fit_step(tasks, scenario,
+                       data_dir = "results/data",
+                       out_dir  = "results/fit"),
+      format = "file", error = "null"
+    )
   ),
 
-  tar_target(
-    hc_step,
-    ssd_run_hc_step(hc_tasks, scenario,
-                    fit_dir = "results/fit",
-                    out_dir = "results/hc"),
-    pattern = map(hc_tasks), format = "file", error = "null"
+  tar_map(
+    values = hc_shards, names = c(dataset, sim),
+    tar_target(
+      hc_step,
+      ssd_run_hc_step(tasks, scenario,
+                      fit_dir = "results/fit",
+                      out_dir = "results/hc"),
+      format = "file", error = "null"
+    )
   ),
 
   tar_target(
@@ -783,12 +874,20 @@ list(
 )
 ```
 
+`summary` reads the three result directories directly with duckplyr
+rather than depending on each shard target — so it sees whatever
+shards landed (survivors included, §6.2) and does not pull every
+shard's value back into R. `tarchetypes::tar_combine()` is the
+alternative fan-in when an in-memory bind is wanted instead.
+
 A step body (sketch):
 
 ```r
-ssd_run_fit_step <- function(fit_tasks_group, scenario, data_dir, out_dir) {
-  rows <- purrr::pmap_dfr(fit_tasks_group, function(task_id, primer, data_id,
-                                                   rescale, min_pmix, ...) {
+# `tasks` is the shard row's list-column of task rows (one per task in
+# this shard), supplied by tar_map from fit_shards.
+ssd_run_fit_step <- function(tasks, scenario, data_dir, out_dir) {
+  rows <- purrr::pmap_dfr(tasks, function(task_id, primer, data_id,
+                                          rescale, min_pmix, ...) {
     upstream <- arrow::read_parquet(file.path(data_dir,
                                               # partition path from upstream cols
                                               .upstream_path(...),
@@ -800,7 +899,7 @@ ssd_run_fit_step <- function(fit_tasks_group, scenario, data_dir, out_dir) {
                    fit = list(fit_dists_state(upstream, rescale, min_pmix, ...)))
   })
   out <- file.path(out_dir,
-                   .partition_path(fit_tasks_group, scenario$partition_by$fit),
+                   .partition_path(tasks, scenario$partition_by$fit),
                    "part.parquet")
   dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
   arrow::write_parquet(rows, out)
@@ -808,15 +907,16 @@ ssd_run_fit_step <- function(fit_tasks_group, scenario, data_dir, out_dir) {
 }
 ```
 
-The body loops once per task in the group, primes the RNG with
+The body loops once per task in the shard, primes the RNG with
 that task's primer, calls the (state-less) `_state` primitive, and
 stacks K result rows into one Parquet at the shard's partition
-path. To keep `fit_step` from depending on the whole `data_step`
-target (which would re-run every fit branch on any data branch
-change), we use file-path indirection: the fit body opens the one
-upstream data shard via its partition path. `targets` tracks the
-*directory* by hash of all file names it contains, so adding new
-data shards does not invalidate existing fit shards.
+path. Each fit shard opens the one upstream data shard via its
+partition path, so a fit shard never depends on the whole data step.
+Under static branching that scoping is natural: a fit shard target can
+name its single upstream data shard target (`data_step_boron_sim1_…`)
+for a precise edge, so adding new data shards mints new targets and
+leaves existing fit shards untouched — no directory-hash indirection
+required to avoid spurious rebuilds.
 
 **Dependencies and what re-runs on a knob change** (applied to the
 2/4/2 shard counts above; "1 shard re-runs" = its Parquet is
@@ -926,14 +1026,16 @@ an optional `upload` field describing a destination object store.
 ```
 
 **Upload is its own target, not an inline side effect.** When
-`upload` is non-NULL the pipeline adds an `upload_<step>` target
-downstream of each step, mapping over the same shards:
+`upload` is non-NULL the pipeline adds one `upload_<step>` target per
+shard, paired with its step target by the same `tar_map`:
 
 ```r
-tar_target(
-  upload_fit,
-  ssd_upload_shard(fit_step, scenario$upload),   # fit_step = the shard path
-  pattern = map(fit_step), format = "file", error = "null"
+tar_map(
+  values = fit_shards, names = c(dataset, sim, rescale),
+  tar_target(fit_step, ssd_run_fit_step(tasks, scenario, ...),
+             format = "file", error = "null"),
+  tar_target(upload_fit, ssd_upload_shard(fit_step, scenario$upload),
+             format = "file", error = "null")   # fit_step = the shard path
 )
 ```
 
@@ -1030,14 +1132,15 @@ Two constraints, both confirmed by independent experiments:
 
 **The `NULL` must flow cleanly downstream.** A failed shard's value is
 `NULL`, and the targets immediately downstream — the `upload_<step>`
-branch (§6.1) and the two manifests — have to tolerate it rather than
+target (§6.1) and the two manifests — have to tolerate it rather than
 choke. `ssd_upload_shard(NULL, ...)` records the shard as a skip
 instead of erroring, and the compute / upload manifests simply omit
 it; the survivors still upload and `summary` still unions them. An
-independent experiment that composed a dynamically-sized fan-out, this
-`error = "null"` handling, and the per-shard upload target found this
-`NULL`-tolerance in the upload and manifest helpers was the *only*
-glue the composition needed — and that once the failing branch is
+independent experiment that composed a construction-time-sized fan-out
+(static branching), this `error = "null"` handling, and the per-shard
+upload target found this `NULL`-tolerance in the upload and manifest
+helpers was the *only* glue the composition needed — and that once the
+failing branch is
 fixed under the §8.3 pin, only that one shard rebuilds, re-uploads,
 and is re-queried (a minimal re-run, not a full redo).
 
@@ -1305,12 +1408,15 @@ function bodies it calls — so editing an `_state` function (or
 bumping an `ssdtools` version) rebuilds *nothing*:
 
 ```r
-tar_target(
-  fit_step,
-  ssd_run_fit_step(fit_tasks, scenario, data_dir = "results/data",
-                   out_dir = "results/fit"),
-  pattern = map(fit_tasks), format = "file", error = "null",
-  cue = tar_cue(depend = FALSE)   # pin against upstream code edits
+tar_map(
+  values = fit_shards, names = c(dataset, sim, rescale),
+  tar_target(
+    fit_step,
+    ssd_run_fit_step(tasks, scenario, data_dir = "results/data",
+                     out_dir = "results/fit"),
+    format = "file", error = "null",
+    cue = tar_cue(depend = FALSE)   # pin against upstream code edits
+  )
 )
 ```
 
@@ -1475,15 +1581,15 @@ per process and is restored on exit).
 5. **Toy pipeline shape.** Ship a single
    `inst/targets-templates/cluster/` that the LLM-authoring prompt
    edits, or only documentation pointing at `crew.cluster` examples?
-6. **Branch ↔ Slurm-job mapping under `crew_controller_slurm()`.**
-   `targets` + `crew` dispatch branches across Slurm jobs but the
-   precise mapping — one branch per job vs several branches packed
+6. **Shard-target ↔ Slurm-job mapping under `crew_controller_slurm()`.**
+   `targets` + `crew` dispatch the per-shard targets across Slurm jobs
+   but the precise mapping — one shard target per job vs several packed
    into one job — is configurable and depends on `crew` settings.
    The design commits only to **shards being the unit of
-   parallelism**: independent shards run concurrently, regardless
+   parallelism**: independent shard targets run concurrently, regardless
    of job packing. Resolve by prototyping with the
    `cluster-pipeline` step (§12) and document the chosen packing
-   convention; until then `branch ↔ job` should be read as "many
+   convention; until then `shard target ↔ job` should be read as "many
    to one or one to one, depending on configuration".
 
 ---
@@ -1555,8 +1661,13 @@ shows where branches open and close.
   alongside the Parquet on success.
 - **`task-tables`** — `ssd_scenario_data_tasks` /
   `_fit_tasks` / `_hc_tasks` returning the per-step task tables
-  with `(seed, primer)` on each row. The §6 sketch compiles and
-  `tar_make()`s a tiny scenario.
+  with `(seed, primer)` on each row, plus the `ssd_scenario_*_shards`
+  wrappers that group those rows by `partition_by` into one row per
+  shard (a `tasks` list-column) for `tar_map`'s `values`. The §6
+  sketch compiles and `tar_make()`s a tiny scenario. **Static
+  branching**: the scenario is a plain construction-time object and
+  `tar_map` mints one named target per shard (§6) — no
+  `pattern = map` over a runtime target.
 - **`shard-failure-survival`** — §6.2 — step targets carry
   `error = "null"` and `summary` unions the survivors; the runner
   muffles only the expected end-of-pipeline "errored" warning under
