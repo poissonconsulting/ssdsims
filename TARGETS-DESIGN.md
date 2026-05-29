@@ -15,8 +15,9 @@ Three primary goals, each a hard constraint:
   reuses shards with Parquets already computed and
   computes the rest. Path-axis growth adds
   new shards; inner-axis growth rewrites affected shards atomically
-  (§8). One named exception — dag-of-dags for *pinning outputs
-  despite a code change* — is documented in §8.3.
+  (§8). Pinning outputs *despite a code change* stays inside the one
+  project via `tar_cue(depend = FALSE)` — no second project needed
+  (§8.3).
 
 Parallelism is assumed throughout. The document covers, in order:
 the **scenario object** and central registries (§1), the
@@ -82,10 +83,18 @@ The most consequential design choices, with section refs:
   `results/<step>/dataset=.../sim=.../`; `targets` passes upstream
   shard paths into downstream branches via `format = "file"`, and
   duckplyr predicate-pushes filters into the partition columns.
-- **Cloud upload as a scenario property (§6.1).** `scenario$upload`
-  pushes each shard to Azure Blob (or another object store)
-  right after the local write; `ssd_test_upload()` probes the
-  backend at pipeline init.
+- **Cloud upload as a separate target (§6.1).** When
+  `scenario$upload` is set, an `upload_<step>` target sits
+  downstream of each shard file and pushes it to Azure Blob (or
+  another object store). Because it is its own `format = "file"`
+  target, content-hashing skips re-uploading shards that did not
+  change; `ssd_test_upload()` probes the backend at pipeline init,
+  and the graph still builds and dry-runs with no credentials.
+- **One bad shard does not abort the run (§6.2).** Step targets
+  carry `error = "null"`: a branch that errors goes `NULL`,
+  `targets` records the error, and the pipeline keeps building so
+  `summary` unions the survivors. Errors are read from `tar_meta()`
+  *after* `tar_make()` returns (a target cannot call it mid-run).
 - **Debug = task row + one upstream shard (§7).** Any failed branch
   replays locally with `local_dqrng_state(seed, primer)` + the
   immediate-upstream shard, no `targets` needed; the lightweight
@@ -95,9 +104,10 @@ The most consequential design choices, with section refs:
   cache: a larger scenario reuses shards whose partition path
   already has a Parquet, and adds shards (path-axis growth, §8.1)
   or atomically rewrites them (inner-axis growth, §8.2) as needed.
-  One explicit case: dag-of-dags for *pinning outputs despite a
-  code change* (§8.3 — the opposite of invalidation, achieved by
-  declaring parent's shards as input files in a child project).
+  Pinning shards *despite a code change* (the opposite of
+  invalidation) is `tar_cue(depend = FALSE)` on the step targets,
+  all in the one project — no child project, no `parent` reference
+  (§8.3).
 - **Roadmap with parallel work streams (§12).** Eighteen
   kebab-slugged steps with a Mermaid DAG showing where branches
   open. Two ground-up entries — `ssd-define-scenario` and the
@@ -131,12 +141,15 @@ ssdsims_scenario
 │                  one shard per (step, partition-cell). Default:
 │                  data=(dataset,sim,replace), fit=(dataset,sim,rescale),
 │                  hc=(dataset,sim). See §5.
-├── upload       ← NULL (no upload) or list(backend, url, …) (§6.1)
-└── parent       ← NULL, or a previous results dir referenced for
-                   dag-of-dags / mixed-code use (§8). Plain extension
-                   (more datasets, more nsim) does NOT need a parent
-                   reference — the shards are the cache (file existence ⇒ cache hit).
+└── upload       ← NULL (no upload) or list(backend, url, …) (§6.1)
 ```
+
+There is no `parent` field. Extension never needs one: plain growth
+(more datasets, more `nsim`) reuses shards by file existence
+(`file existence ⇒ cache hit`, §8.1), inner-axis growth rewrites the
+affected shards (§8.2), and pinning shards against a code change is
+done in-project with `tar_cue(depend = FALSE)` (§8.3) rather than by
+pointing a second project at this one's outputs.
 
 Three design points distinguish this from the current code:
 
@@ -152,13 +165,14 @@ Three design points distinguish this from the current code:
    knobs) and lets the per-task hash (§2) ignore function-body
    contents — so a non-behavior-changing code edit to a registered
    function does *not* invalidate cached results. See §1.1.
-3. **No `parent` for plain extension.** Adding tasks on a *path*
-   axis (new dataset, more `nsim`) creates new shards; existing
-   shards are unaffected. Adding tasks on an *inner* axis (new
-   `min_pmix`, new `nboot`) rewrites the affected shards atomically
-   (§8.2). The `parent` reference is only for one case
-   path-addressing alone can't handle: pinning the parent's shards
-   despite a code change in the child (`dag-of-dags`, §8.3).
+3. **No `parent` reference at all.** Adding tasks on a *path* axis
+   (new dataset, more `nsim`) creates new shards; existing shards
+   are unaffected. Adding tasks on an *inner* axis (new `min_pmix`,
+   new `nboot`) rewrites the affected shards atomically (§8.2). The
+   one case that once seemed to need a second project pointing back
+   at this one — pinning shards despite a code change — is handled
+   in-project with `tar_cue(depend = FALSE)` (§8.3), so the scenario
+   carries no `parent`.
 
 ### 1.1 Implicit registries: datasets and min_pmix
 
@@ -488,7 +502,7 @@ parallel; none is downstream of the others. Roles:
 
 - **C — working scenario object** contributes the *content*:
   `seed`, dataset names, fit/hc argument vectors, optional
-  `upload` (§6.1), optional `parent` (§8). Already exercised
+  `upload` (§6.1). Already exercised
   locally with `ssd_run_scenario()` (§3) so the only remaining
   unknown when assembling the three is the cluster wiring itself.
 
@@ -732,10 +746,14 @@ list(
   tar_group_by(fit_tasks,  ssd_scenario_fit_tasks(scenario),  dataset, sim, rescale),
   tar_group_by(hc_tasks,   ssd_scenario_hc_tasks(scenario),   dataset, sim),
 
+  # error = "null" so one bad shard does not abort the run: the
+  # branch goes NULL, the error is recorded, the rest keeps building
+  # and summary unions the survivors (§6.2). format = "file" passes
+  # the shard path, not its value, between targets (see below).
   tar_target(
     data_step,
     ssd_run_data_step(data_tasks, scenario, out_dir = "results/data"),
-    pattern = map(data_tasks), format = "file"
+    pattern = map(data_tasks), format = "file", error = "null"
   ),
 
   tar_target(
@@ -743,7 +761,7 @@ list(
     ssd_run_fit_step(fit_tasks, scenario,
                      data_dir = "results/data",
                      out_dir  = "results/fit"),
-    pattern = map(fit_tasks), format = "file"
+    pattern = map(fit_tasks), format = "file", error = "null"
   ),
 
   tar_target(
@@ -751,7 +769,7 @@ list(
     ssd_run_hc_step(hc_tasks, scenario,
                     fit_dir = "results/fit",
                     out_dir = "results/hc"),
-    pattern = map(hc_tasks), format = "file"
+    pattern = map(hc_tasks), format = "file", error = "null"
   ),
 
   tar_target(
@@ -875,13 +893,28 @@ lookup-by-hash in the body. The partition layout above is for
 *downstream queries* and for the debug replay (§7), not for the
 inter-target wiring.
 
+#### Why `format = "file"`, not the native Parquet store
+
+`targets` ships a native Parquet store (`tar_option_set(format =
+"parquet")`) that serialises each target's value to Parquet with no
+explicit write — the obvious first reach. An independent experiment
+ruled it out: depending on such a target **eagerly deserialises its
+value back into R**, even when the downstream body only wants the
+store path, so it does *not* avoid the R roundtrip; and the store
+layout (`_targets/objects/<name>`, no extension) is not a stable
+contract to read against from outside `targets`. `format = "file"`
+is the seam that actually passes storage between targets without the
+roundtrip: the target's value *is* the Parquet path, so a downstream
+branch receives a string and hands it straight to duckplyr / `arrow`
+/ the uploader. That is why every step target here — and the
+`summary` and `upload_<step>` targets — is `format = "file"`.
+
 ### 6.1 Cloud upload hook
 
 The data/fit/hc shards are the user-facing artefacts and they need
 to be readable **from outside the cluster** — analysis notebooks on a
 laptop, dashboards, downstream R/Python scripts. The scenario carries
-an optional `upload` field describing a destination object store; each
-branch pushes its shard there right after the local write.
+an optional `upload` field describing a destination object store.
 
 ```
    scenario$upload (NULL by default; non-NULL example):
@@ -892,16 +925,45 @@ branch pushes its shard there right after the local write.
      )
 ```
 
+**Upload is its own target, not an inline side effect.** When
+`upload` is non-NULL the pipeline adds an `upload_<step>` target
+downstream of each step, mapping over the same shards:
+
+```r
+tar_target(
+  upload_fit,
+  ssd_upload_shard(fit_step, scenario$upload),   # fit_step = the shard path
+  pattern = map(fit_step), format = "file", error = "null"
+)
+```
+
+An independent experiment showed why this beats pushing the blob
+from inside `ssd_run_<step>_step()` right after the local write:
+
+- **Content-hashing skips unchanged shards.** Because `upload_<step>`
+  takes the shard's path (`format = "file"`) as input, `targets`
+  re-runs it only when that shard's content hash changes. A re-driven
+  `tar_make()` that rebuilt nothing uploads nothing; a partial
+  extension uploads only the new/rewritten shards.
+- **The graph builds and dry-runs with no credentials.**
+  `ssd_upload_shard()` checks for credentials and, when absent,
+  returns the local path as a no-op (a dry run) instead of erroring —
+  so the same pipeline is runnable offline and against real cloud
+  storage, and the upload nodes still appear in the DAG.
+- **Concerns stay separated by dependency.** The compute manifest
+  depends only on the shard targets (what was produced); the upload
+  manifest depends on the `upload_<step>` targets (what was shipped).
+  A reader that needs only uploaded data depends on the latter.
+
 Per-shard flow when `upload` is non-NULL:
 
 ```
-   ssd_run_<step>_step(...)
-        │
-        ▼ writes results/<step>/<partition-path>/part.parquet
-                                   (local; targets tracks this via format = "file")
-        │
-        ▼ pushes the same file to  <url>/<container>/<step>/<partition-path>/part.parquet
-                                   (cluster-side helper, e.g. AzureStor)
+   <step>_step branch  ──▶ results/<step>/<partition-path>/part.parquet
+        │                  (local shard; targets tracks it, format = "file")
+        ▼
+   upload_<step> branch ──▶ <url>/<container>/<step>/<partition-path>/part.parquet
+                            (own target; runs only if the shard hash changed,
+                             dry-run no-op when credentials are absent)
         │
         ▼ records the upload's sha256 in the result manifest
 ```
@@ -912,7 +974,8 @@ tracking is unaffected; the cloud copy is an additional artefact.
 **Auth is external.** Credentials come from environment variables
 (`AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, or a service-principal
 combo). The scenario object does **not** carry secrets — it carries
-only the destination URL and container name.
+only the destination URL and container name. Their absence is what
+flips `ssd_upload_shard()` into its dry-run no-op.
 
 **Connectivity probe up front.** `ssd_test_upload(scenario)` performs
 a minimal round-trip (list the container, write and delete a small
@@ -927,10 +990,43 @@ ssd_test_upload(scenario)   # silent on success, throws on failure
 tar_make()
 ```
 
-**Failure mode.** A per-shard upload error becomes the target's error;
-the local shard remains, so `tar_make()` can be re-driven and the
-upload retried. The scenario's manifest records, per `id`, the local
-sha256 and the cloud sha256; a mismatch flags a corrupted transfer.
+**Failure mode.** A per-shard upload error becomes that
+`upload_<step>` branch's error (and, under `error = "null"`, leaves
+the rest uploading); the local shard remains, so `tar_make()` can be
+re-driven and only the failed uploads retried. The scenario's
+manifest records, per shard, the local sha256 and the cloud sha256; a
+mismatch flags a corrupted transfer.
+
+### 6.2 Surviving a failed shard
+
+A single bad shard must not abort an N-shard cluster run. Every step
+target (and `upload_<step>`) carries `error = "null"`: a branch that
+errors has its value set to `NULL`, `targets` records the error in
+its metadata, and the rest of the pipeline keeps building, so
+`summary` unions the shards that did land instead of `tar_make()`
+halting on the first failure. An errored branch is always out of
+date, so a re-driven `tar_make()` after a fix retries only the failed
+shards (§8.4).
+
+Two constraints, both confirmed by independent experiments:
+
+- **Errors are read *after* the run, not inside it.** A target cannot
+  call `tar_meta()` (or other store functions) while the pipeline is
+  running. So `summary` detects a gap from the missing shard / `NULL`
+  value *inside* the DAG, and the error *messages* are pulled from
+  metadata once `tar_make()` returns:
+
+  ```r
+  tar_make()
+  tar_meta(fields = "error") |> dplyr::filter(!is.na(error))
+  ```
+
+- **The end-of-pipeline warning needs handling, not silencing.** Even
+  with `error = "null"`, `tar_make()` emits a "some targets errored"
+  warning at the end; under `options(warn = 2)` that becomes an abort.
+  The runner wraps `tar_make()` in a `withCallingHandlers()` that
+  muffles only that one expected warning rather than relaxing the
+  global option.
 
 ---
 
@@ -1060,7 +1156,7 @@ phantom.
 
 The mechanism is per-shard content-hashing (sha256). Every shard
 the cluster writes is fingerprinted with `sha256` and the value is
-stored in the parent's manifest, keyed by the shard's partition
+stored in the cluster run's manifest, keyed by the shard's partition
 path, before any upload happens:
 
 ```r
@@ -1073,9 +1169,9 @@ Local recipe:
 ```
    1. tar_make() locally up to fit_step, then look at the
       regenerated upstream shard at its partition path.
-   2. local_hash  <- digest::digest(file = <upstream_path>, algo = "sha256")
-      parent_hash <- parent_manifest$completed_shards[[<partition_key>]]
-      stopifnot(identical(local_hash, parent_hash))
+   2. local_hash   <- digest::digest(file = <upstream_path>, algo = "sha256")
+      cluster_hash <- cluster_manifest$completed_shards[[<partition_key>]]
+      stopifnot(identical(local_hash, cluster_hash))
         ✓  the cluster's input is reproduced byte-for-byte;
            continue to step 4 of the rsync recipe.
         ✗  upstream is host-dependent (BLAS, system libs, env);
@@ -1107,8 +1203,9 @@ Hash verification is the bridge.
 
 Once the bug is fixed, the natural follow-up is to lock in the
 surviving N−3 shards and re-run only the 3 failures despite the
-code change — see §8.4 (`unlink()` the bad Parquets + `tar_make()`)
-or §8.3 (dag-of-dags) depending on the scope of the change.
+code change — see §8.4 (`unlink()` the bad Parquets + `tar_make()`),
+or §8.3 (`tar_cue(depend = FALSE)` to pin the survivors against the
+edit) depending on the scope of the change.
 
 ---
 
@@ -1154,6 +1251,18 @@ as a whole. Trade-off accepted (Q2 in the design dialogue):
 simpler cache semantics in exchange for redoing the work of every
 task already in the shard.
 
+**Whether `summary` rebuilds depends on the bytes, not the rewrite.**
+An independent experiment confirmed `targets` propagates on *value*,
+not on the act of rebuilding: a recomputed target whose value is
+byte-identical leaves its dependents skipped. Here the shard *did*
+gain a row, so its Parquet bytes change and `summary` (which reads
+the shard) re-runs. But the corollary matters for §8.4 and for any
+no-op rewrite: if a rewrite reproduced the exact same bytes,
+`format = "file"` content-hashing would see no change and `summary`
+would not rebuild. Byte-stable Parquet writes (pinned `arrow`,
+deterministic column order) are what make that hash comparison
+meaningful.
+
 | What you added             | Inner axis for…   | Cost                                  |
 | -------------------------- | ----------------- | ------------------------------------- |
 | new `min_pmix` name        | fit               | rewrite all fit shards (was K tasks each → now K+1) |
@@ -1168,26 +1277,43 @@ an axis into the path means future growth on that axis adds new
 shards instead of rewriting old ones, at the cost of producing
 more (smaller) Parquets up front.
 
-### 8.3 Pinning shards despite a code change — dag-of-dags
+### 8.3 Pinning shards despite a code change — `tar_cue(depend = FALSE)`
 
 The user edited an `_state` function (or `ssdtools` ticked over a
-version); `targets`' own hash-graph would now flag every
-dependent branch as out-of-date, forcing a re-run the user does
-*not* want. The question is the **opposite** of invalidation —
-how to keep targets from re-running things whose shards are still
-trusted.
+version); `targets`' own hash-graph would now flag every dependent
+branch as out-of-date, forcing a re-run the user does *not* want.
+The question is the **opposite** of invalidation — how to keep
+`targets` from re-running things whose shards are still trusted.
 
-There is no clean single-project knob for this. (`tar_target(...,
-cue = tar_cue(file = "always"))` and friends are coarse and don't
-distinguish "the file is fine" from "I haven't checked yet".) The
-canonical workaround is **dag-of-dags**: open a child project that
-declares the parent's `results/` directory as an *input* via
-`tar_target(..., format = "file", command = "../parent/results/<path>")`.
-File-as-input targets are pinned to the file's content hash, not to
-the function that produced it; the child's own functions are free to
-evolve without invalidating the parent's shards. The child does
-its new compute, writes into its own `results/`, and the `summary`
-target unions both directories.
+This stays inside the one project. An independent experiment settled
+it: `tar_cue(depend = FALSE)` is exactly the knob. It tells a target
+to ignore changes to its upstream dependencies — including the
+function bodies it calls — so editing an `_state` function (or
+bumping an `ssdtools` version) rebuilds *nothing*:
+
+```r
+tar_target(
+  fit_step,
+  ssd_run_fit_step(fit_tasks, scenario, data_dir = "results/data",
+                   out_dir = "results/fit"),
+  pattern = map(fit_tasks), format = "file", error = "null",
+  cue = tar_cue(depend = FALSE)   # pin against upstream code edits
+)
+```
+
+`tar_invalidate(names = ...)` still forces a rebuild of the specific
+shards the user *does* want refreshed — it deletes the metadata the
+cue compares against, overriding the pin per-target (§8.4). So the
+mixed-code case — keep the trusted shards, recompute a few under the
+new code — is two single-project moves: pin everything with the cue,
+then `tar_invalidate()` the handful to refresh. No second project,
+no `parent` reference, no cross-project file-input wiring.
+
+(`tar_cue(depend = FALSE)` pins against *dependency/code* changes
+only; the target still rebuilds if its own `format = "file"` output
+goes missing or if its task-table grouping changes — which is what
+makes path-axis and inner-axis growth in §8.1–§8.2 still work while
+the pin is in place.)
 
 ### 8.4 Forced re-run after a code fix
 
@@ -1202,7 +1328,11 @@ tar_make()                   # targets sees the missing files, re-runs only thos
 ```
 
 `targets::tar_invalidate(names = failed_branch_names)` is the
-bookkeeping-preserving alternative — same end state.
+bookkeeping-preserving alternative — same end state, and the same
+call that overrides a §8.3 pin on the shards you do want refreshed.
+Either way the patched code produces different bytes, so the
+rewritten shards' content hashes change and `summary` rebuilds from
+them (value-propagation, §8.2); the shards left alone stay cached.
 
 ### 8.5 Manifest contents
 
@@ -1278,7 +1408,7 @@ in any function that touches the methods).
 
 | Gap                                                  | Resolution                                                                                  |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| No DAG-of-DAGs primitive                             | §8.3 — child reads parent's `results/` directly; partition paths identify shards.            |
+| No DAG-of-DAGs primitive                             | Not needed — §8.3 pins shards against code changes in-project with `tar_cue(depend = FALSE)`; §8.1–§8.2 handle extension via the shards-as-cache. |
 | No "load previous run from Parquet" path             | §8 — shards are the cache; no explicit load needed.                          |
 | Persists fragile RNG state                           | §1, §2 — scenario stores a single integer `seed`; per-task `(seed, state)` is reproducible via `dqset.seed()`. |
 | Positional task IDs                                  | §2 — task IDs are keyed by `task_primer(p)` = 64-bit hash of canonical params. |
@@ -1291,8 +1421,8 @@ in any function that touches the methods).
 | Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
 | Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci=FALSE` collapses `nboot`/`ci_method`/`parametric` to NA; one task instead of N. |
 | Branch failure unreproducible off the cluster        | §7 — task row + upstream shard replays the failing task via `_state` primitives.          |
-| Code fix re-runs every branch by hash invalidation   | §8.4 — `unlink()` failed shards (or `tar_invalidate`); path-keyed addressing leaves the rest untouched. |
-| Off-cluster access to Parquet outputs                | §6.1 — `scenario$upload` pushes each shard to a configurable object store (e.g. Azure Blob). |
+| Code fix re-runs every branch by hash invalidation   | §8.3 — `tar_cue(depend = FALSE)` pins shards against the edit; §8.4 — `tar_invalidate()` / `unlink()` refreshes only the chosen shards. |
+| Off-cluster access to Parquet outputs                | §6.1 — `scenario$upload` adds a per-shard `upload_<step>` target (content-hashed, dry-run offline) to a configurable object store (e.g. Azure Blob). |
 | Phantom local repros (regenerated upstream ≠ cluster's actual) | §7 — manifest's per-shard sha256 lets the lightweight recipe verify the local upstream before running the failing task. |
 
 The RNGkind side-effect bug and the independent data/fit/hc substream
@@ -1414,6 +1544,12 @@ shows where branches open and close.
   `_fit_tasks` / `_hc_tasks` returning the per-step task tables
   with `(seed, primer)` on each row. The §6 sketch compiles and
   `tar_make()`s a tiny scenario.
+- **`shard-failure-survival`** — §6.2 — step targets carry
+  `error = "null"` and `summary` unions the survivors; the runner
+  muffles only the expected end-of-pipeline "errored" warning under
+  `options(warn = 2)`. Test: a deterministically-failing shard
+  leaves the others built and the error readable via `tar_meta()`
+  after the run.
 - **`hive-partitioning`** — Write each per-task shard under a
   Hive-partitioned path (§6 layout). Smoke: duckplyr predicate
   pushdown returns the right subset without opening unrelated
@@ -1421,9 +1557,13 @@ shows where branches open and close.
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
   `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
   on a real (or sandboxed) Slurm queue.
-- **`cloud-upload`** — §6.1 hook + `ssd_test_upload()`. Hello-Azure
-  round trip from interactive R; `tar_make()`'s first target is the
-  connectivity probe.
+- **`cloud-upload`** — §6.1 — per-shard `upload_<step>` target +
+  `ssd_test_upload()` probe + `ssd_upload_shard()` with a credential
+  check that dry-runs (no-op) when secrets are absent. Hello-Azure
+  round trip from interactive R; the connectivity probe is
+  `tar_make()`'s first target. Test: a second `tar_make()` with no
+  shard changes uploads nothing (content-hash skip); the graph
+  builds offline.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and
   `ssd_input_hash()` for the lightweight recipe. Tests simulate a
   branch failure and reproduce locally.
@@ -1438,9 +1578,10 @@ shows where branches open and close.
   causes targets to re-run the affected fit branches and overwrite
   the shards' Parquets; rows that were there before come out
   byte-identical to the previous Parquet.
-- **`mixed-code-lockin`** — §8.3 — `unlink()` + `tar_invalidate()`
-  for forced re-runs (§8.4); dag-of-dags child project for pinning
-  parent outputs against code change. Both recipes have tests.
+- **`mixed-code-lockin`** — §8.3 — `tar_cue(depend = FALSE)` on the
+  step targets to pin shards against a code change (in-project, no
+  child project); `tar_invalidate()` / `unlink()` for forced re-runs
+  of the chosen shards (§8.4). Both recipes have tests.
 - **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
   a historical reference.
@@ -1474,6 +1615,7 @@ flowchart TD
 
     hive[hive-partitioning]
     cluster[cluster-pipeline]
+    survive[shard-failure-survival]
     cloud[cloud-upload]
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
@@ -1500,10 +1642,12 @@ flowchart TD
 
     tt --> hive
     tt --> cluster
+    tt --> survive
     tt --> cloud
     tt --> replay
     tt --> rewrite
 
+    cluster --> survive
     rewrite --> lockin
     lockin --> cleanup
 ```
