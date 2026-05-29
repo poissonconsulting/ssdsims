@@ -17,3 +17,5 @@
 ^air\.toml$
 ^\.ccache$
 ^GLOSSARY\.md$
+^openspec$
+^\.claude$
