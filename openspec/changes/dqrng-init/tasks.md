@@ -27,7 +27,7 @@
 
 Adds the nesting guarantee on top of the implemented backend: `register_methods()` / `restore_methods()` keep a single global save-slot, so a nested `reset_dqrng_backend()` would tear the backend down for the still-open outer scope. The fix is to make activation reentrant so a nested `local_dqrng_backend()` call is a no-op and the RNG stream is identical with or without it (verified against dqrng 0.4.1).
 
-- [x] 5.1 Add an internal predicate `dqrng_backend_active()` returning `identical(RNGkind()[1], "user-supplied")` (the observable signal that `register_methods()` is in effect; dqrng 0.4.1 exposes no `dqRNGkind()` getter)
+- [x] 5.1 Add an internal predicate `dqrng_backend_active()` backed by package-private state (`set_dqrng_backend()` sets it, `reset_dqrng_backend()` clears it). Tracks ssdsims' own activation, so it is not confused by a foreign user-supplied RNG backend (a bare `RNGkind()[1] == "user-supplied"` probe would be — Copilot review of #74)
 - [x] 5.2 Make `local_dqrng_backend()` reentrant: if `dqrng_backend_active()`, return a no-op invisibly (no re-`set`, no deferred `reset`); only the outermost scope registers on entry and resets on exit
-- [x] 5.3 Reentrancy test in `test-dqrng-backend.R`: a nested `local_dqrng_backend()` call is a no-op and the draw sequence is **identical with vs. without** the nested call; outer backend stays active until the outermost scope exits
+- [x] 5.3 Reentrancy tests in `test-dqrng-backend.R`: a nested `local_dqrng_backend()` call is a no-op and the draw sequence is **identical with vs. without** the nested call; outer backend stays active until the outermost scope exits; `dqrng_backend_active()` tracks ssdsims' set/reset rather than `RNGkind()`
 - [x] 5.4 Note the reentrant nesting contract in the docs and CLAUDE.md; re-run `devtools::document()`, `air` formatting, and `devtools::check()`

@@ -33,11 +33,11 @@ deferred reset so the backend is always restored, including on error.
 The helper is reentrant. \code{dqrng::register_methods()} /
 \code{dqrng::restore_methods()} keep a single global save-slot, so a nested
 reset would tear the backend down for the still-open outer scope. To avoid
-this, a \code{local_dqrng_backend()} call made while the backend is already
-active is a no-op: it does not re-activate the backend and schedules no
-further reset. Only the outermost call activates the backend on entry and
-resets it on exit, so the RNG stream is identical whether or not a nested
-call occurs.
+this, a \code{local_dqrng_backend()} call made while ssdsims already has the
+backend active is a no-op: it does not re-activate the backend and
+schedules no further reset. Only the outermost call activates the backend
+on entry and resets it on exit, so the RNG stream is identical whether or
+not a nested call occurs.
 }
 \examples{
 

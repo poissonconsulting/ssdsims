@@ -6,6 +6,15 @@
 # the caller's session RNG behaviour is left untouched outside of scenario
 # execution. See `openspec/changes/dqrng-init/design.md`.
 
+# Package-private state recording whether *ssdsims* has the dqrng backend
+# active. This is the source of truth for reentrancy: it tracks our own
+# activation precisely, so a nested `local_dqrng_backend()` no-ops only when
+# ssdsims itself activated the backend. Probing `RNGkind()` instead would be
+# ambiguous -- any user-supplied RNG (not just dqrng) reports
+# `"user-supplied"`, so a foreign backend could make us wrongly no-op.
+the <- new.env(parent = emptyenv())
+the$backend_active <- FALSE
+
 # Activate the dqrng pcg64 backend for the current process.
 #
 # Sets `dqRNGkind("pcg64")` -- overriding dqrng's own default generator
@@ -22,6 +31,7 @@
 set_dqrng_backend <- function() {
   dqrng::dqRNGkind("pcg64")
   dqrng::register_methods()
+  the$backend_active <- TRUE
   invisible(NULL)
 }
 
@@ -29,18 +39,19 @@ set_dqrng_backend <- function() {
 # defaults (the inverse of `set_dqrng_backend()`'s `register_methods()`).
 reset_dqrng_backend <- function() {
   dqrng::restore_methods()
+  the$backend_active <- FALSE
   invisible(NULL)
 }
 
-# Is the dqrng backend currently active?
+# Has ssdsims activated the dqrng backend?
 #
-# `dqrng::register_methods()` installs base R's RNG functions as
-# "user-supplied", so `RNGkind()[1] == "user-supplied"` is the observable
-# signal that the backend is in effect. dqrng (0.4.1) exposes no getter for
-# the active generator (`dqRNGkind()` is a setter only), so this is the
-# stateless probe `local_dqrng_backend()` uses to detect nesting.
+# Tracked via package-private state set by `set_dqrng_backend()` and cleared
+# by `reset_dqrng_backend()`. This is the reentrancy signal used by
+# `local_dqrng_backend()`: it reflects *our own* activation, unlike a
+# `RNGkind()` probe, which any user-supplied RNG (not just dqrng) would
+# satisfy.
 dqrng_backend_active <- function() {
-  identical(RNGkind()[1L], "user-supplied")
+  isTRUE(the$backend_active)
 }
 
 #' Local dqrng pcg64 Backend
@@ -62,11 +73,11 @@ dqrng_backend_active <- function() {
 #' The helper is reentrant. `dqrng::register_methods()` /
 #' `dqrng::restore_methods()` keep a single global save-slot, so a nested
 #' reset would tear the backend down for the still-open outer scope. To avoid
-#' this, a `local_dqrng_backend()` call made while the backend is already
-#' active is a no-op: it does not re-activate the backend and schedules no
-#' further reset. Only the outermost call activates the backend on entry and
-#' resets it on exit, so the RNG stream is identical whether or not a nested
-#' call occurs.
+#' this, a `local_dqrng_backend()` call made while ssdsims already has the
+#' backend active is a no-op: it does not re-activate the backend and
+#' schedules no further reset. Only the outermost call activates the backend
+#' on entry and resets it on exit, so the RNG stream is identical whether or
+#' not a nested call occurs.
 #' @inheritParams withr::local_seed
 #' @return Invisibly returns `TRUE` if this call activated the backend (the
 #'   outermost scope) or `FALSE` if the backend was already active and the call
