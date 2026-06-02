@@ -263,18 +263,17 @@
 <p>To ask for <em>both</em> a point estimate and bootstrap intervals — the common case — set <code>ci = c(FALSE, TRUE)</code> (as in the scenario above) rather than a bare <code>ci = TRUE</code>. This keeps the study symmetric: the <code>ci = FALSE</code> row is retained and collapses its bootstrap knobs to <code>NA</code> at expansion time, while the <code>ci = TRUE</code> rows fan out across the full bootstrap grid.</p>
 </section></section><section class="level2"><h2 id="stage-3-expand-into-task-tables">Stage 3: expand into task tables<a class="anchor" aria-label="anchor" href="#stage-3-expand-into-task-tables"></a>
 </h2>
-<p><code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks()</a></code> expands the scenario into the four per-step task tables — <code>sample</code>, <code>data</code>, <code>fit</code>, and <code>hc</code> — bundled into a task set. This is still RNG-free: no draws happen here.</p>
+<p><code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks()</a></code> expands the scenario into the three per-step task tables — <code>sample</code>, <code>fit</code>, and <code>hc</code> — bundled into a task set. This is still RNG-free: no draws happen here.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">tasks</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_task_set&gt;</span></span>
 <span><span class="co">#&gt;   sample tasks: 6</span></span>
-<span><span class="co">#&gt;   data   tasks: 18</span></span>
 <span><span class="co">#&gt;   fit    tasks: 18</span></span>
 <span><span class="co">#&gt;   hc     tasks: 54</span></span></code></pre></div>
 </div>
-<p>The counts show how each step fans out from its parent. The key design choice is that the single expensive <strong>random draw</strong> is its own <code>sample</code> task, keyed only by <code>(dataset, sim, replace)</code>. The draw is of <code>n_max = max(nrow)</code> rows; every <code>nrow</code> value is then a cheap, RNG-free <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> <em>sub-truncation</em> of that one draw at the <code>data</code> step. So <code>nrow</code> is an ordinary cross-join axis of the <code>data</code> step and never multiplies the underlying draw — one draw is shared across all sample sizes.</p>
+<p>The counts show how each step fans out from its parent. The key design choice is that the single expensive <strong>random draw</strong> is its own <code>sample</code> task, keyed only by <code>(dataset, sim, replace)</code>. The draw is of <code>n_max = max(nrow)</code> rows; every <code>nrow</code> value is then a cheap, RNG-free <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> <em>sub-truncation</em> of that one draw, done inline at the <code>fit</code> step. So <code>nrow</code> is an ordinary cross-join axis of the <code>fit</code> step and never multiplies the underlying draw — one draw is shared across all sample sizes.</p>
 <p>Each row carries a path-style <code>&lt;step&gt;_id</code> primary key (the Hive partition path) plus its parent step’s id as a foreign key, so dependencies are explicit and joinable:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
@@ -317,20 +316,20 @@
 <span><span class="co">#&gt; #   nboot &lt;int&gt;, est_method &lt;chr&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;,</span></span>
 <span><span class="co">#&gt; #   hc_id &lt;chr&gt;, fit_id &lt;chr&gt;</span></span></code></pre></div>
 </div>
-<p>The per-step derivations are also available individually (<code><a href="../reference/ssd_scenario_sample_tasks.html">ssd_scenario_sample_tasks()</a></code>, <code><a href="../reference/ssd_scenario_data_tasks.html">ssd_scenario_data_tasks()</a></code>, <code><a href="../reference/ssd_scenario_fit_tasks.html">ssd_scenario_fit_tasks()</a></code>, <code><a href="../reference/ssd_scenario_hc_tasks.html">ssd_scenario_hc_tasks()</a></code>) when you only need one table.</p>
+<p>The per-step derivations are also available individually (<code><a href="../reference/ssd_scenario_sample_tasks.html">ssd_scenario_sample_tasks()</a></code>, <code><a href="../reference/ssd_scenario_fit_tasks.html">ssd_scenario_fit_tasks()</a></code>, <code><a href="../reference/ssd_scenario_hc_tasks.html">ssd_scenario_hc_tasks()</a></code>) when you only need one table.</p>
 </section><section class="level2"><h2 id="stage-4-run-the-baseline-loop">Stage 4: run the baseline loop<a class="anchor" aria-label="anchor" href="#stage-4-run-the-baseline-loop"></a>
 </h2>
-<p><code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> is the no-frills runner. It executes the four task tables in dependency order, threading each task’s result forward to its children by the foreign-key id. It runs <strong>in-process</strong>, with no <code>targets</code>, no shard grouping, and no Parquet I/O.</p>
-<p>It is also <strong>not reproducible on its own</strong> — no per-task RNG seeding happens yet (that arrives with the <code>state-primitives</code> roadmap step). The runner draws from the <em>ambient</em> RNG, so pin it for a deterministic local run:</p>
+<p><code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> is the no-frills runner. It executes the three task tables in dependency order, threading each task’s result forward to its children by the foreign-key id. It runs <strong>in-process</strong>, with no <code>targets</code>, no shard grouping, and no Parquet I/O.</p>
+<p>It is also <strong>not reproducible on its own</strong> — no per-task RNG seeding happens yet (that arrives with the <code>primer-primitives</code> roadmap step). The runner draws from the <em>ambient</em> RNG, so pin it for a deterministic local run:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">withr</span><span class="fu">::</span><span class="fu"><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">with_seed</a></span><span class="op">(</span><span class="fl">42L</span>, <span class="op">{</span></span>
 <span>  <span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="op">}</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "sample" "data"   "fit"    "hc"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "sample" "fit"    "hc"</span></span></code></pre></div>
 </div>
-<p>Each element is the corresponding task table augmented with a list column of per-task results — <code>sample</code> draws, <code>data</code> truncations, <code>fits</code> objects, and <code>hc</code> tibbles:</p>
+<p>Each element is the corresponding task table augmented with a list column of per-task results — <code>sample</code> draws, <code>fits</code> objects, and <code>hc</code> tibbles (the <code>fit</code> step truncates its sample inline before fitting):</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span>

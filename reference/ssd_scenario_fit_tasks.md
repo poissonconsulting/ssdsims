@@ -1,11 +1,15 @@
 # Derive the fit Task Table from a Scenario
 
-Crosses each data-task identity (`dataset`, `sim`, `replace`, `nrow`)
-with each row of the scenario's `fit` argument grid (`rescale`,
-`computable`, `at_boundary_ok`, `min_pmix` name, `range_shape1`,
-`range_shape2`). Parent-identity columns are preserved verbatim so the
-table can be grouped directly downstream. `min_pmix` is referenced by
-name, not by function value (`TARGETS-DESIGN.md` section 1.1).
+Crosses each sample-task identity (`dataset`, `sim`, `replace`) with the
+scenario's `nrow` values and each row of the scenario's `fit` argument
+grid (`rescale`, `computable`, `at_boundary_ok`, `min_pmix` name,
+`range_shape1`, `range_shape2`). `nrow` is a genuine `fit` cross-join
+axis: the `fit` step truncates its parent sample inline
+(`head(sample, nrow)`, RNG-free) before fitting, so the shared draw is
+sub-truncated without a separate `data` step (`TARGETS-DESIGN.md`
+section 5). Parent-identity columns are preserved verbatim so the table
+can be grouped directly downstream. `min_pmix` is referenced by name,
+not by function value (`TARGETS-DESIGN.md` section 1.1).
 
 ## Usage
 
@@ -23,12 +27,12 @@ ssd_scenario_fit_tasks(scenario)
 ## Value
 
 An `ssdsims_tasks` object recording the `"fit"` step, with one row per
-data-task identity crossed with the fit grid.
+`(dataset, sim, replace, nrow)` identity crossed with the fit grid.
 
 ## Details
 
-Each row carries a `fit_id` primary key and a `data_id` foreign key
-referencing its parent data task.
+Each row carries a `fit_id` primary key and a `sample_id` foreign key
+referencing its parent sample task.
 
 ## Examples
 
@@ -53,5 +57,5 @@ ssd_scenario_fit_tasks(scenario)
 #> 5 ccme_boron     3 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
 #> 6 ccme_boron     3 FALSE       6 TRUE    FALSE      TRUE           ssd_min_pmix
 #> # ℹ 4 more variables: range_shape1 <list>, range_shape2 <list>, fit_id <chr>,
-#> #   data_id <chr>
+#> #   sample_id <chr>
 ```

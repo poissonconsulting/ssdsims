@@ -56,7 +56,7 @@
 <li>
 <strong>Primer / state / seed / stream are four distinct terms (GLOSSARY.md).</strong> <code>seed</code> is the scenario scalar; <code>primer</code> is the per-task initializer; <code>state</code> is the RNG’s internal state (the function-name suffix <code>_state</code> reflects the wrapper that installs the primer); <code>stream</code> is dqrng’s API parameter and the L’Ecuyer-CMRG abstraction.</li>
 <li>
-<strong>Each task initializes the RNG once (§12 <code>state-primitives</code>).</strong> The per-task body calls <code>local_dqrng_state(seed, primer)</code> exactly once and then runs the (state-less) ssdtools / dplyr ops against the ambient RNG. No <code>state =</code> argument on the inner ops.</li>
+<strong>Each task initializes the RNG once (§12 <code>primer-primitives</code>).</strong> The per-task body calls <code>local_dqrng_state(seed, primer)</code> exactly once and then runs the (state-less) ssdtools / dplyr ops against the ambient RNG. No <code>state =</code> argument on the inner ops.</li>
 <li>
 <strong>Scenario is purely declarative (§1).</strong> Stores <code>seed</code>, knobs, and <em>names</em> of datasets and <code>min_pmix</code> entries; the values are resolved from an <strong>implicit registry</strong> in the scenario (§1.1). Names enter the per-task hash, function definitions do not (so a code edit / JIT does not move tasks across primers, and the data stored in Parquet files remains simple).</li>
 <li>
@@ -401,9 +401,9 @@
    hc    | fit  · 1 nboot · 2 est_method                     =  8 |  2 (path: dataset, sim — 4 tasks per shard)</code></pre>
 <p>So in this example data and fit are 1 task : 1 shard, but hc bundles 4 tasks into each of its 2 shards (the inner axes <code>rescale</code>, <code>nboot</code>, <code>est_method</code> become columns inside the shard’s Parquet, not partition levels). Each step writes one Parquet per shard so the data, fit, and hc layers are independently queryable for analysis without re-running upstream steps.</p>
 <div class="section level3">
-<h3 id="implemented-refinement-sample-as-a-fourth-task-type-task-list-loop-baseline">Implemented refinement: <code>sample</code> as a fourth task type (<code>task-list-loop-baseline</code>)<a class="anchor" aria-label="anchor" href="#implemented-refinement-sample-as-a-fourth-task-type-task-list-loop-baseline"></a></h3>
-<p>The <code>task-list-loop-baseline</code> step materialises the grids above as <strong>four</strong> task tables rather than three, splitting the conflated <code>data</code> step into the <em>draw</em> and the <em>truncation</em>:</p>
-<table class="table"><colgroup><col width="7%"><col width="41%"><col width="3%"><col width="48%"></colgroup><thead><tr><th>step</th>
+<h3 id="implemented-refinement-sample-as-a-distinct-draw-step-task-list-loop-baseline">Implemented refinement: <code>sample</code> as a distinct draw step (<code>task-list-loop-baseline</code>)<a class="anchor" aria-label="anchor" href="#implemented-refinement-sample-as-a-distinct-draw-step-task-list-loop-baseline"></a></h3>
+<p>The <code>task-list-loop-baseline</code> step splits the conflated <code>data</code> step into the <em>draw</em> and the <em>truncation</em>, materialising the grids above as these task tables:</p>
+<table class="table"><colgroup><col width="6%"><col width="39%"><col width="3%"><col width="50%"></colgroup><thead><tr><th>step</th>
 <th>identity axes</th>
 <th>RNG?</th>
 <th>note</th>
@@ -411,22 +411,19 @@
 <td><code>dataset, sim, replace</code></td>
 <td>yes</td>
 <td>one draw of <code>n_max = max(nrow)</code> rows (carried column)</td>
-</tr><tr><td><code>data</code></td>
-<td><code>dataset, sim, replace, nrow</code></td>
-<td>no</td>
-<td>
-<code>head(sample, nrow)</code> — <code>nrow</code> is a clean axis here</td>
 </tr><tr><td><code>fit</code></td>
-<td>data axes <code>× fit grid</code>
+<td>
+<code>sample</code> axes, <code>nrow</code> <code>× fit grid</code>
 </td>
-<td>—</td>
-<td>as above</td>
+<td>yes</td>
+<td>truncates <code>head(sample, nrow)</code> inline (RNG-free) then fits</td>
 </tr><tr><td><code>hc</code></td>
 <td>fit axes <code>× hc grid</code> (§1.2 collapse)</td>
 <td>yes</td>
 <td>as above</td>
-</tr></tbody></table><p>This keeps the sub-truncation property <strong>structural</strong>: there is exactly one <code>sample</code> task per <code>(dataset, sim, replace)</code>, so the expensive draw is shared across every <code>nrow</code>, while <code>nrow</code> is an ordinary scalar cross-join axis from the (RNG-free) <code>data</code> step down — no compound/list column on the draw. The original three-step <code>partition_by</code> table still applies, with the <code>data</code> <em>path</em> axes being the <code>sample</code> identity (<code>dataset, sim, replace</code>) and <code>nrow</code> an inner axis of the truncation.</p>
-<p>Dependencies between tasks are <strong>explicit</strong>: each row carries a path-style <code>&lt;step&gt;_id</code> primary key — the Hive partition path itself, e.g. <code>dataset=boron/sim=1/replace=FALSE</code> — plus its parent step’s id as a foreign key (<code>sample_id</code> on <code>data</code>, <code>data_id</code> on <code>fit</code>, <code>fit_id</code> on <code>hc</code>). These are the <code>data_id</code> / <code>fit_id</code> “sugar for the path” columns referenced above, made concrete: a child references its parent by a single joinable column, and the baseline runner threads results by that foreign key. The ids are deterministic and stable under scenario growth (adding a dataset does not renumber existing rows), so they compose with the cache-by-existence story in §8.</p>
+</tr></tbody></table><p>This keeps the sub-truncation property <strong>structural</strong>: there is exactly one <code>sample</code> task per <code>(dataset, sim, replace)</code>, so the expensive draw is shared across every <code>nrow</code>, while <code>nrow</code> is an ordinary scalar cross-join axis at the <code>fit</code> step — no compound/list column on the draw. <code>partition_by</code> is correspondingly three-step (<code>sample</code>/<code>fit</code>/<code>hc</code>); by default <code>nrow</code> shards at the <code>fit</code> level (<code>dataset, sim, nrow, rescale</code>).</p>
+<p>This fold is <strong>provisional</strong>: whether to reinstate an explicit <code>data</code> step (as a buffering checkpoint) is a deferred decision tied to the caching/invalidation model — see the note in §8.</p>
+<p>Dependencies between tasks are <strong>explicit</strong>: each row carries a path-style <code>&lt;step&gt;_id</code> primary key — the Hive partition path itself, e.g. <code>dataset=boron/sim=1/replace=FALSE</code> — plus its parent step’s id as a foreign key (<code>sample_id</code> on <code>fit</code>, <code>fit_id</code> on <code>hc</code>). These are the <code>fit_id</code> “sugar for the path” columns referenced above, made concrete: a child references its parent by a single joinable column, and the baseline runner threads results by that foreign key. The ids are deterministic and stable under scenario growth (adding a dataset does not renumber existing rows), so they compose with the cache-by-existence story in §8.</p>
 </div>
 <div class="section level3">
 <h3 id="static-branching-one-named-target-per-shard">Static branching: one named target per shard<a class="anchor" aria-label="anchor" href="#static-branching-one-named-target-per-shard"></a></h3>
@@ -837,6 +834,10 @@
 <div class="section level2">
 <h2 id="id_8-extension">8. Extension<a class="anchor" aria-label="anchor" href="#id_8-extension"></a></h2>
 <p>Shards are the cache unit. The shard’s identity is its <strong>partition path</strong> (<code>results/&lt;step&gt;/dataset=.../sim=.../…/</code>), and its contents are the rows of the step’s task table that share those partition column values. Extension is the answer to one question per extension type: <em>does the new scenario change the set of shards, or the contents of an existing shard?</em></p>
+<blockquote>
+<p><strong>Deferred decision — explicit <code>data</code> step vs. inline <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> in <code>fit</code>.</strong> The §8 examples below are written for the four-step model and still reference a materialised <code>data</code> shard. The implemented baseline currently <em>folds</em> that RNG-free <code>head(sample, nrow)</code> truncation into <code>fit</code> (<code>task-list-loop-baseline-fold</code>), so there is no <code>data</code> shard today. Whether to reinstate an explicit <code>data</code> step is <strong>left open until the invalidation model here is finalised</strong> (<code>task-tables</code> / <code>hive-partitioning</code>), because the answer depends entirely on that model: - Under <strong>cache-by-existence</strong> (this section’s model), a <code>fit</code> shard is keyed by <code>fit_id</code>, which includes <code>nrow</code>. Extending <code>nrow</code> only mints new <code>fit</code> shards and leaves existing ones cached — the fold is sufficient and a <code>data</code> shard would be redundant. - Under <strong>content-hash invalidation</strong> (targets’ native default), <code>fit</code> depends on the <code>sample</code> <em>value</em>; growing <code>n_max</code> (e.g. extending <code>nrow</code> upward) changes that value and cascades a rerun into every <code>fit</code> branch — even those whose <code>head(sample, nrow)</code> is byte-identical. A materialised <code>data</code> step is then a <em>buffering checkpoint</em>: <code>data_n = head(sample, n)</code> recomputes byte-identically, so targets prunes the expensive <code>fit</code> rerun. It is also the natural place to handle the dual hazard that, under cache-by-existence, growing <code>n_max</code> does <strong>not</strong> invalidate the <code>sample</code> shard (keyed <code>dataset, sim, replace</code>), risking a stale short draw.</p>
+<p>When <code>task-tables</code>/<code>hive-partitioning</code> pin the invalidation model, revisit this and either keep the fold or restore the <code>data</code> step — and reconcile the four-step examples below at the same time.</p>
+</blockquote>
 <div class="section level3">
 <h3 id="id_81-path-axis-growth--new-shards-existing-shards-untouched">8.1 Path-axis growth — new shards, existing shards untouched<a class="anchor" aria-label="anchor" href="#id_81-path-axis-growth--new-shards-existing-shards-untouched"></a></h3>
 <p>Adding a value to an axis that is <strong>in <code>partition_by</code></strong> for a step creates new partition cells and therefore new shards; existing shards’ Parquets stay byte-identical and are reused. No bookkeeping needed beyond <code>targets</code>’ usual branch-level dependency tracking.</p>
@@ -1026,7 +1027,7 @@
 <li>
 <strong><code>scenario-input-types</code></strong> — Extend <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> to accept the remaining input types <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> handles today — <code>fitdists</code>, <code>tmbfit</code>, a generator function, and a function-name string — not just data frames / lists of data frames. Each non-data-frame input is a data <em>generator</em>: the constructor derives a dataset name (by symbol capture, as for data frames) and records the generator by name, storing no function bodies; the data itself is materialised by <code>dataset-registry</code> (synthetic datasets are realised at registration time, §1.1), keeping the scenario declarative. Until this lands, <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> is data-frame-only — a documented gap vs. <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code>.</li>
 <li>
-<strong><code>task-list-loop-baseline</code></strong> — Derive three task lists (data, fit, hc rows; one column per cross-join axis; no RNG, no shards, no targets) from a scenario, and a runner that is just three <code><a href="https://purrr.tidyverse.org/reference/pmap.html" class="external-link">purrr::pmap()</a></code> loops. Establishes the data shape and a working baseline that subsequent steps swap pieces of, one at a time.</li>
+<strong><code>task-list-loop-baseline</code></strong> — Derive three task lists (data, fit, hc rows; one column per cross-join axis; no RNG, no shards, no targets) from a scenario, and a runner that is just three <code><a href="https://purrr.tidyverse.org/reference/pmap.html" class="external-link">purrr::pmap()</a></code> loops. Establishes the data shape and a working baseline that subsequent steps swap pieces of, one at a time. <em>Expanded by <code>task-list-loop-baseline-fold</code></em> (applied; not a new DAG node): the steps are <code>sample</code>/<code>fit</code>/<code>hc</code> — <code>fit</code> truncates <code>head(sample, nrow)</code> inline rather than via a separate <code>data</code> step.</li>
 <li>
 <strong><code>dqrng-init</code></strong> — Add <code>dqrng</code> to <code>Imports</code>; <code>dqRNGkind("pcg64")</code>
 <ul><li>
@@ -1037,13 +1038,9 @@
 <li>
 <strong><code>task-primer</code></strong> — <code>task_primer(params)</code> per §2 (64-bit hash, NA-as-INT_MIN encoding). Unit tests verify reproducibility and collision-resistance on the validated examples from <code>scripts/experiment-dqrng-hash.R</code>.</li>
 <li>
-<strong><code>state-primitives</code></strong> — Refactor <code>slice_sample_state</code>, <code>fit_dists_state</code>, <code>hc_state</code> around the new contract: <strong>each per-task body calls <code>local_dqrng_state(seed, primer)</code> exactly once</strong>, then invokes the (state-less) operation against the ambient RNG. The <code>_state</code> suffix marks the wrapper that installs the primer; the inner ssdtools / dplyr calls consume RNG from the now-set state. No <code>state =</code> argument on the inner ops.</li>
+<strong><code>primer-primitives</code></strong> — Refactor <code>slice_sample_state</code>, <code>fit_dists_state</code>, <code>hc_state</code> around the new contract: <strong>each per-task body calls <code>local_dqrng_state(seed, primer)</code> exactly once</strong>, then invokes the (state-less) operation against the ambient RNG. The <code>_state</code> suffix marks the wrapper that installs the primer; the inner ssdtools / dplyr calls consume RNG from the now-set state. No <code>state =</code> argument on the inner ops. (The seeded <code>n_max</code> draw lives here as <code>slice_sample_state</code>; the <code>head(sample, nrow)</code> truncation is the <code>fit</code> step’s inline, RNG-free step — there is no separate sub-truncation step.)</li>
 <li>
 <strong><code>migrate-public-api</code></strong> — Migrate <code>ssd_sim_data.data.frame</code>, <code>ssd_fit_dists_sims</code>, <code>ssd_hc_sims</code> to the new contract; keep the <code>_seed</code> wrappers as a one-release shim. <code>example-expanded*.R</code> re-runs with byte-equivalence.</li>
-<li>
-<strong><code>nrow-sub-truncation</code></strong> — Implement <code>slice_sample_state</code> with scenario-level <code>n_max</code> (per §5). Both <code>replace</code> values supported. Test: <code>nrow = c(5, 10)</code> results are byte-equivalent prefixes (cf. <code>scripts/experiment-subset-property.R</code>).</li>
-<li>
-<strong><code>ci-false-collapse</code></strong> — Implement the §1.2 collapse in the hc task table. Test: <code>ci = c(FALSE, TRUE)</code> produces the reduced fan-out described in the §1.2 example grid.</li>
 <li>
 <strong><code>dataset-registry</code></strong> — <strong>Targets-only</strong>: an implicit registry of named datasets, implemented as a <code>tar_target</code> that writes Parquet to <code>results/datasets/&lt;name&gt;.parquet</code> from the <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> input. Synthetic datasets are realised here at registration time. Function-name edits don’t enter task hashes because the scenario already refers to datasets by name.</li>
 <li>
@@ -1055,7 +1052,7 @@
 <li>
 <strong><code>shard-failure-survival</code></strong> — §6.2 — step targets carry <code>error = "null"</code> and <code>summary</code> unions the survivors; the runner muffles only the expected end-of-pipeline “errored” warning under <code>options(warn = 2)</code>. Test: a deterministically-failing shard leaves the others built and the error readable via <code>tar_meta()</code> after the run.</li>
 <li>
-<strong><code>hive-partitioning</code></strong> — Write each per-task shard under a Hive-partitioned path (§6 layout). Smoke: duckplyr predicate pushdown returns the right subset without opening unrelated shards.</li>
+<strong><code>hive-partitioning</code></strong> — Write each per-task shard under a Hive-partitioned path (§6 layout). Smoke: duckplyr predicate pushdown returns the right subset without opening unrelated shards. Pins the invalidation model, so it also settles the deferred <code>data</code>-step-vs-fold decision recorded in §8.</li>
 <li>
 <strong><code>cluster-pipeline</code></strong> — <code>inst/targets-templates/cluster/</code> with <code>crew.cluster::crew_controller_slurm()</code>. End-to-end <code>tar_make()</code> on a real (or sandboxed) Slurm queue.</li>
 <li>
@@ -1088,10 +1085,8 @@
     dqinit[dqrng-init]
     dqstate[local-dqrng-state]
     primer[task-primer]
-    prims[state-primitives]
+    prims[primer-primitives]
     migrate[migrate-public-api]
-    nrow[nrow-sub-truncation]
-    ci[ci-false-collapse]
     partby[partition-by]
 
     subgraph targets [targets-only plumbing]
@@ -1123,14 +1118,11 @@
     primer --&gt; prims
 
     prims --&gt; migrate
-    prims --&gt; nrow
-    prims --&gt; ci
+    prims --&gt; tt
 
     migrate --&gt; dsreg
     migrate --&gt; pmreg
     migrate --&gt; manif
-    nrow --&gt; tt
-    ci --&gt; tt
     partby --&gt; tt
 
     tt --&gt; hive
@@ -1143,7 +1135,7 @@
     cluster --&gt; survive
     rewrite --&gt; lockin
     lockin --&gt; cleanup</code></pre>
-<p>Three “wait points” (<code>state-primitives</code>, <code>task-tables</code>, <code>mixed-code-lockin</code>) gate the layers in between; anything not chained by an arrow can be worked on in parallel.</p>
+<p>Three “wait points” (<code>primer-primitives</code>, <code>task-tables</code>, <code>mixed-code-lockin</code>) gate the layers in between; anything not chained by an arrow can be worked on in parallel.</p>
 </div>
 </div>
 </div>

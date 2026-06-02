@@ -271,9 +271,9 @@ while the `ci = TRUE` rows fan out across the full bootstrap grid.
 ## Stage 3: expand into task tables
 
 [`ssd_scenario_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
-expands the scenario into the four per-step task tables — `sample`,
-`data`, `fit`, and `hc` — bundled into a task set. This is still
-RNG-free: no draws happen here.
+expands the scenario into the three per-step task tables — `sample`,
+`fit`, and `hc` — bundled into a task set. This is still RNG-free: no
+draws happen here.
 
 ``` r
 
@@ -281,7 +281,6 @@ tasks <- ssd_scenario_tasks(scenario)
 tasks
 #> <ssdsims_task_set>
 #>   sample tasks: 6
-#>   data   tasks: 18
 #>   fit    tasks: 18
 #>   hc     tasks: 54
 ```
@@ -291,9 +290,9 @@ choice is that the single expensive **random draw** is its own `sample`
 task, keyed only by `(dataset, sim, replace)`. The draw is of
 `n_max = max(nrow)` rows; every `nrow` value is then a cheap, RNG-free
 [`head()`](https://rdrr.io/r/utils/head.html) *sub-truncation* of that
-one draw at the `data` step. So `nrow` is an ordinary cross-join axis of
-the `data` step and never multiplies the underlying draw — one draw is
-shared across all sample sizes.
+one draw, done inline at the `fit` step. So `nrow` is an ordinary
+cross-join axis of the `fit` step and never multiplies the underlying
+draw — one draw is shared across all sample sizes.
 
 Each row carries a path-style `<step>_id` primary key (the Hive
 partition path) plus its parent step’s id as a foreign key, so
@@ -347,7 +346,6 @@ tasks$hc
 
 The per-step derivations are also available individually
 ([`ssd_scenario_sample_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_tasks.md),
-[`ssd_scenario_data_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data_tasks.md),
 [`ssd_scenario_fit_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_tasks.md),
 [`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_tasks.md))
 when you only need one table.
@@ -355,15 +353,15 @@ when you only need one table.
 ## Stage 4: run the baseline loop
 
 [`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
-is the no-frills runner. It executes the four task tables in dependency
+is the no-frills runner. It executes the three task tables in dependency
 order, threading each task’s result forward to its children by the
 foreign-key id. It runs **in-process**, with no `targets`, no shard
 grouping, and no Parquet I/O.
 
 It is also **not reproducible on its own** — no per-task RNG seeding
-happens yet (that arrives with the `state-primitives` roadmap step). The
-runner draws from the *ambient* RNG, so pin it for a deterministic local
-run:
+happens yet (that arrives with the `primer-primitives` roadmap step).
+The runner draws from the *ambient* RNG, so pin it for a deterministic
+local run:
 
 ``` r
 
@@ -371,12 +369,12 @@ withr::with_seed(42L, {
   out <- ssd_run_scenario_baseline(scenario)
 })
 names(out)
-#> [1] "sample" "data"   "fit"    "hc"
+#> [1] "sample" "fit"    "hc"
 ```
 
 Each element is the corresponding task table augmented with a list
-column of per-task results — `sample` draws, `data` truncations, `fits`
-objects, and `hc` tibbles:
+column of per-task results — `sample` draws, `fits` objects, and `hc`
+tibbles (the `fit` step truncates its sample inline before fitting):
 
 ``` r
 

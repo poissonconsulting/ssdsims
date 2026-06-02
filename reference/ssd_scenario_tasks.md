@@ -1,11 +1,10 @@
-# Expand a Scenario into all Four Task Tables
+# Expand a Scenario into all Three Task Tables
 
 The canonical expansion entry point (`TARGETS-DESIGN.md` section
-1/section 2): derives the `sample`, `data`, `fit`, and `hc` task tables
-from a scenario in one call and bundles them into an `ssdsims_task_set`.
-The per-step derivations
+1/section 2): derives the `sample`, `fit`, and `hc` task tables from a
+scenario in one call and bundles them into an `ssdsims_task_set`. The
+per-step derivations
 ([`ssd_scenario_sample_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_tasks.md),
-[`ssd_scenario_data_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data_tasks.md),
 [`ssd_scenario_fit_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_tasks.md),
 [`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_tasks.md))
 remain available for callers that need a single table.
@@ -25,8 +24,8 @@ ssd_scenario_tasks(scenario)
 
 ## Value
 
-An `ssdsims_task_set` object: a list with `sample`, `data`, `fit`, and
-`hc` elements, each an `ssdsims_tasks` table.
+An `ssdsims_task_set` object: a list with `sample`, `fit`, and `hc`
+elements, each an `ssdsims_tasks` table.
 
 ## Examples
 
@@ -36,7 +35,6 @@ tasks <- ssd_scenario_tasks(scenario)
 tasks
 #> <ssdsims_task_set>
 #>   sample tasks: 3
-#>   data   tasks: 3
 #>   fit    tasks: 3
 #>   hc     tasks: 3
 tasks$hc

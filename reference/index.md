@@ -3,19 +3,17 @@
 ## Scenarios and task expansion
 
 Define a declarative simulation scenario and expand it into the per-step
-task tables (`sample`, `data`, `fit`, `hc`) that the targets-based
-pipeline builds on, with a baseline loop runner.
+task tables (`sample`, `fit`, `hc`) that the targets-based pipeline
+builds on, with a baseline loop runner.
 
 - [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
   : Assemble and Validate Datasets for a Simulation Scenario
 - [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   : Define a Simulation Scenario
 - [`ssd_scenario_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
-  : Expand a Scenario into all Four Task Tables
+  : Expand a Scenario into all Three Task Tables
 - [`ssd_scenario_sample_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_tasks.md)
   : Derive the sample Task Table from a Scenario
-- [`ssd_scenario_data_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data_tasks.md)
-  : Derive the data Task Table from a Scenario
 - [`ssd_scenario_fit_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_tasks.md)
   : Derive the fit Task Table from a Scenario
 - [`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_tasks.md)

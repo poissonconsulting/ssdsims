@@ -1,10 +1,12 @@
 # Run a Scenario with the Baseline Loop Runner
 
-Executes the four task tables in dependency order - `sample`, `data`,
-`fit`, then `hc` - by looping over each table with
+Executes the three task tables in dependency order - `sample`, `fit`,
+then `hc` - by looping over each table with
 [`purrr::pmap()`](https://purrr.tidyverse.org/reference/pmap.html) and
 looking up each task's parent result by the parent's `<step>_id` foreign
-key. The runner does no task expansion of its own (it consumes
+key. The `fit` step truncates its parent sample inline
+(`head(sample, nrow)`) before fitting. The runner does no task expansion
+of its own (it consumes
 [`ssd_scenario_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md));
 it just threads outputs forward and returns the collected per-step
 results.
@@ -24,17 +26,16 @@ ssd_run_scenario_baseline(scenario)
 
 ## Value
 
-A named list with `sample`, `data`, `fit`, and `hc` elements: each the
+A named list with `sample`, `fit`, and `hc` elements: each the
 corresponding task table augmented with a list column of per-task
-results (`sample` draws, `data` truncations, `fits` objects, and `hc`
-tibbles).
+results (`sample` draws, `fits` objects, and `hc` tibbles).
 
 ## Details
 
 This is the no-frills baseline: it runs in-process, with **no**
 `targets` dependency, **no** shard grouping or `partition_by`, and
 **no** Parquet I/O. It is also **not** reproducible - no per-task RNG
-seeding happens here (that arrives with the `state-primitives` roadmap
+seeding happens here (that arrives with the `primer-primitives` roadmap
 step); pin the ambient RNG (e.g.
 [`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html))
 for deterministic draws.
