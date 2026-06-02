@@ -46,7 +46,7 @@ scenario <- ssd_define_scenario(
 )
 print(scenario)
 
-# --- 3. Expand into the four per-step task tables -------------------
+# --- 3. Expand into the three per-step task tables -------------------
 # Still RNG-free. Each table carries a path-style `<step>_id` primary key and
 # its parent's id as a foreign key. The single expensive draw lives in the
 # `sample` step (keyed by dataset/sim/replace); `nrow` is just a cross-join

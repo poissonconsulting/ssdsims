@@ -10,22 +10,23 @@ ssd_run_scenario_baseline(scenario)
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 }
 \value{
-A named list with \code{sample}, \code{data}, \code{fit}, and \code{hc} elements: each the
+A named list with \code{sample}, \code{fit}, and \code{hc} elements: each the
 corresponding task table augmented with a list column of per-task results
-(\code{sample} draws, \code{data} truncations, \code{fits} objects, and \code{hc} tibbles).
+(\code{sample} draws, \code{fits} objects, and \code{hc} tibbles).
 }
 \description{
-Executes the four task tables in dependency order - \code{sample}, \code{data}, \code{fit},
-then \code{hc} - by looping over each table with \code{purrr::pmap()} and looking up
-each task's parent result by the parent's \verb{<step>_id} foreign key. The runner
-does no task expansion of its own (it consumes \code{\link[=ssd_scenario_tasks]{ssd_scenario_tasks()}}); it
-just threads outputs forward and returns the collected per-step results.
+Executes the three task tables in dependency order - \code{sample}, \code{fit}, then
+\code{hc} - by looping over each table with \code{purrr::pmap()} and looking up each
+task's parent result by the parent's \verb{<step>_id} foreign key. The \code{fit} step
+truncates its parent sample inline (\code{head(sample, nrow)}) before fitting. The
+runner does no task expansion of its own (it consumes \code{\link[=ssd_scenario_tasks]{ssd_scenario_tasks()}});
+it just threads outputs forward and returns the collected per-step results.
 }
 \details{
 This is the no-frills baseline: it runs in-process, with \strong{no} \code{targets}
 dependency, \strong{no} shard grouping or \code{partition_by}, and \strong{no} Parquet I/O.
 It is also \strong{not} reproducible - no per-task RNG seeding happens here (that
-arrives with the \code{state-primitives} roadmap step); pin the ambient RNG (e.g.
+arrives with the \code{primer-primitives} roadmap step); pin the ambient RNG (e.g.
 \code{\link[withr:with_seed]{withr::with_seed()}}) for deterministic draws.
 
 The scenario retains the data frames it was built from, so the runner reads
