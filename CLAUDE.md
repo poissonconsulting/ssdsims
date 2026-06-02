@@ -130,7 +130,7 @@ air format .
 The package uses two RNG paths:
 
 1.  **L’Ecuyer-CMRG** (legacy, will be removed) —
-    [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_seed.md),
+    [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md),
     [`local_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md).
 2.  **dqrng + hash** (new targets-based path) —
     `dqrng::dqset.seed(seed, stream)` with task-derived primers. The

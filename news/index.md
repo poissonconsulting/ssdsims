@@ -32,7 +32,7 @@
   ([\#63](https://github.com/poissonconsulting/ssdsims/issues/63)).
 
 - Forward
-  [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_seed.md)
+  [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
   to
   [`local_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md).
 
@@ -41,7 +41,7 @@
 - Replace
   [`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html)
   with
-  [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_seed.md)
+  [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
   in tests
   ([\#60](https://github.com/poissonconsulting/ssdsims/issues/60)).
 
