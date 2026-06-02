@@ -2,7 +2,7 @@
 # tables (`sample`, `data`, `fit`, `hc`) and run them in order with a baseline
 # loop runner. This is the data shape later roadmap steps decorate with
 # `(seed, primer)` and group into shards (TARGETS-DESIGN.md §2, §5, §12).
-# No RNG, no `targets`, no shards, no Parquet I/O at this step.
+# No per-task RNG seeding, no `targets`, no shards, no Parquet I/O at this step.
 #
 # The expensive random draw is its own `sample` task, keyed only by
 # `(dataset, sim, replace)`; `nrow` then becomes an ordinary cross-join axis of
