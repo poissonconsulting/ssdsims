@@ -38,6 +38,24 @@
       Error in `ssd_define_scenario()`:
       ! Each `min_pmix` function must take a single argument (the number of rows).
 
+# scenario-definition: min_pmix rejects multi-argument functions
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = function(a, b)
+        0.05)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Each `min_pmix` function must take a single argument (the number of rows).
+
+# scenario-definition: min_pmix rejects duplicate names
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(a = ssdtools::ssd_min_pmix,
+      a = ssdtools::ssd_min_pmix))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `min_pmix` names must be unique.
+
 # scenario-definition: ssd_data() collection plus name= is an error
 
     Code
@@ -45,6 +63,15 @@
     Condition
       Error in `ssd_define_scenario()`:
       ! `name` must not be supplied when `data` is an `ssd_data()` collection.
+
+# scenario-definition: duplicate dataset names in a list error
+
+    Code
+      ssd_define_scenario(list(x = ssddata::ccme_boron, x = ssddata::ccme_cadmium),
+      seed = 1L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Dataset names must be unique.
 
 # scenario-definition: named list plus name= is an error
 
@@ -93,6 +120,14 @@
     Condition
       Error in `ssd_define_scenario()`:
       ! Bootstrap-only knob ('parametric') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
+
+# scenario-definition: seed is required
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `seed` must be supplied (a scalar whole number); it is the scenario's RNG root.
 
 # scenario-definition: invalid seed errors
 

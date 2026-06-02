@@ -45,6 +45,8 @@
 #' @param name An optional dataset name for the single-data-frame form,
 #'   overriding the derived name. Must not be combined with a named list or an
 #'   [ssd_data()] collection.
+#' @param seed A scalar whole number; the scenario's RNG root. Required -
+#'   changing it fully re-roots the scenario's random-number draws.
 #' @param min_pmix The `min_pmix` function(s), referenced **by name**. Supply
 #'   either a character vector of names, or a function (or list of functions)
 #'   with a single argument that inputs the number of rows of data and returns
@@ -72,7 +74,7 @@ ssd_define_scenario <- function(
   name = NULL,
   nsim = 100L,
   nrow = 6L,
-  seed = NULL,
+  seed,
   dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
@@ -95,6 +97,13 @@ ssd_define_scenario <- function(
   chk::chk_unused(...)
 
   # --- scalar / vector knob validation ----------------------------------
+  if (missing(seed)) {
+    chk::abort_chk(
+      "`seed` must be supplied (a scalar whole number); ",
+      "it is the scenario's RNG root.",
+      call = call
+    )
+  }
   chk::chk_whole_number(seed)
 
   chk::chk_whole_number(nsim)
@@ -206,7 +215,9 @@ ssd_define_scenario <- function(
   # --- min_pmix names (no function bodies stored) ------------------------
   min_pmix <- scenario_min_pmix_names(min_pmix, min_pmix_expr, call = call)
 
-  partition_by <- partition_by %||% scenario_default_partition_by()
+  if (is.null(partition_by)) {
+    partition_by <- scenario_default_partition_by()
+  }
 
   structure(
     list(
@@ -309,6 +320,9 @@ scenario_dataset_names <- function(
       }
       nms <- list_expr_names(data_expr, label = "dataset", call = call)
     }
+    if (anyDuplicated(nms)) {
+      chk::abort_chk("Dataset names must be unique.", call = call)
+    }
     for (i in seq_along(data)) {
       ssd_data_validate(data[[i]], name = nms[[i]], call = call)
     }
@@ -356,7 +370,10 @@ list_expr_names <- function(
   elems <- rlang::call_args(list_expr)
   nms <- vapply(
     elems,
-    function(e) expr_to_name(e) %||% NA_character_,
+    function(e) {
+      nm <- expr_to_name(e)
+      if (is.null(nm)) NA_character_ else nm
+    },
     character(1),
     USE.NAMES = FALSE
   )
@@ -413,9 +430,14 @@ scenario_min_pmix_names <- function(
     }
     list_names <- names(min_pmix)
     if (!is.null(list_names) && all(nzchar(list_names))) {
-      return(list_names)
+      nms <- list_names
+    } else {
+      nms <- list_expr_names(min_pmix_expr, label = "min_pmix", call = call)
     }
-    return(list_expr_names(min_pmix_expr, label = "min_pmix", call = call))
+    if (anyDuplicated(nms)) {
+      chk::abort_chk("`min_pmix` names must be unique.", call = call)
+    }
+    return(nms)
   }
 
   chk::abort_chk(
@@ -429,7 +451,7 @@ scenario_min_pmix_names <- function(
 #' `call`).
 #' @noRd
 check_min_pmix_function <- function(f, call = rlang::caller_env()) {
-  if (!is.function(f) || length(formals(f)) < 1L) {
+  if (!is.function(f) || length(formals(f)) != 1L) {
     chk::abort_chk(
       "Each `min_pmix` function must take a single argument ",
       "(the number of rows).",

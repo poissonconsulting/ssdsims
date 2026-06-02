@@ -139,6 +139,26 @@ test_that("scenario-definition: min_pmix rejects non-function list elements", {
   })
 })
 
+test_that("scenario-definition: min_pmix rejects multi-argument functions", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      min_pmix = function(a, b) 0.05
+    )
+  })
+})
+
+test_that("scenario-definition: min_pmix rejects duplicate names", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      min_pmix = list(a = ssdtools::ssd_min_pmix, a = ssdtools::ssd_min_pmix)
+    )
+  })
+})
+
 test_that("scenario-definition: partition_by defaults are populated", {
   s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
   expect_identical(
@@ -207,6 +227,15 @@ test_that("scenario-definition: unnamed list derives names per element", {
     seed = 1L
   )
   expect_identical(s$datasets, c("ccme_boron", "ccme_cadmium"))
+})
+
+test_that("scenario-definition: duplicate dataset names in a list error", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      list(x = ssddata::ccme_boron, x = ssddata::ccme_cadmium),
+      seed = 1L
+    )
+  })
 })
 
 test_that("scenario-definition: named list plus name= is an error", {
@@ -283,6 +312,12 @@ test_that("scenario-definition: ci = c(FALSE, TRUE) retains bootstrap knobs", {
 })
 
 # ---- argument validation ---------------------------------------------------
+
+test_that("scenario-definition: seed is required", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(ssddata::ccme_boron)
+  })
+})
 
 test_that("scenario-definition: invalid seed errors", {
   expect_snapshot(error = TRUE, {

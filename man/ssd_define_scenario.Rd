@@ -10,7 +10,7 @@ ssd_define_scenario(
   name = NULL,
   nsim = 100L,
   nrow = 6L,
-  seed = NULL,
+  seed,
   dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
@@ -43,7 +43,8 @@ overriding the derived name. Must not be combined with a named list or an
 
 \item{nrow}{A positive whole number of the minimum number of non-missing rows.}
 
-\item{seed}{An integer of the starting seed or NULL.}
+\item{seed}{A scalar whole number; the scenario's RNG root. Required -
+changing it fully re-roots the scenario's random-number draws.}
 
 \item{dists}{A character vector of the distribution names.}
 

@@ -99,6 +99,10 @@ When `ci = FALSE` is the only confidence-interval setting, `ssd_define_scenario(
 ### Requirement: Argument validation
 `ssd_define_scenario()` SHALL validate its declarative arguments and abort with an informative error on invalid input.
 
+#### Scenario: Seed is required
+- **WHEN** `ssd_define_scenario()` is called without a `seed`
+- **THEN** the function SHALL abort with an informative error (the seed is the scenario's RNG root and has no default)
+
 #### Scenario: Invalid seed
 - **WHEN** `ssd_define_scenario()` is called with a `seed` that is not a scalar whole number
 - **THEN** the function SHALL abort with an error
