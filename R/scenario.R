@@ -376,12 +376,8 @@ scenario_min_pmix_names <- function(min_pmix, min_pmix_expr) {
   )
 }
 
-#' Print a Simulation Scenario
-#'
-#' @param x An `ssdsims_scenario` object.
-#' @param ... Unused.
-#' @return `x`, invisibly.
 #' @export
+#' @noRd
 print.ssdsims_scenario <- function(x, ...) {
   cat("<ssdsims_scenario>\n")
   cat("  seed:     ", x$seed, "\n", sep = "")
