@@ -26,19 +26,22 @@
 
 R's `strtoi(., 16L)` overflows on 8 hex digits, so the helper splits into two 16-bit halves, combines in double precision (`hi * 65536 + lo`), and maps `u >= 2^31` to `u - 2^32` (signed wrap), with `0x80000000` landing on `NA_integer_` because R encodes INT_MIN as `NA`. This is exactly the experiment's implementation. *Alternative considered:* `bitwShiftL`/`bitwOr` — rejected; those operate on R int32 and overflow on the high bit, the very value we must represent.
 
-### Decision: `task_primer()` hashes its input faithfully; the name-keyed canonical form is a caller contract
+### Decision: `task_primer()` accepts a plain list or a task-table row, normalising the row to a canonical plain list
 
-`task_primer(params)` is a pure function of `params` — it hashes whatever it is given. The "`min_pmix` by name" and "`nrow` excluded" rules are therefore properties of **how callers construct `params`**, which this change *documents and tests* but does not enforce by inspecting `params` (the function is intentionally schema-agnostic so all three step tables can share it). The spec's `min_pmix`-by-name and `nrow`-excluded scenarios are exercised by passing name-keyed params (a name string in place of a function; no `nrow` key for data tasks) and asserting primer stability — demonstrating the contract the `task-tables` step must honour. *Alternative considered:* a typed `task_params` object that strips function values and `nrow`; rejected as premature — the canonicalisation belongs with the task-table construction that knows each step's schema, and a schema-agnostic `task_primer()` keeps this change small and the function reusable.
+The `{data,fit,hc}_tasks` tables are tibbles, and a task is one **row**, so passing the row directly is the natural call — and the §7 replay path reconstructs a task from its row. But a one-row tibble carries class / `row.names` / pillar attributes and wraps list-valued columns; none of that should enter (or destabilise) the hash. So `task_primer(params)` accepts **either** a plain named list **or** a single-row data frame, and when given a row it applies an internal `normalize_task_row()` — effectively the **inverse of `tibble::tibble_row()`** (answering the review question directly: yes, we need it): `as.list()` the row, drop all attributes, unwrap length-1 **list-style** columns to their element, but leave **df-style** (packed/nested data-frame) columns as data frames. The hashed value is that canonical plain list, so `task_primer(tasks[i, ])` and `task_primer(as.list(row))` agree byte-for-byte.
+
+`task_primer()` normalises **structure, not meaning**. The *semantic* canonical form — `min_pmix` referenced by name, `nrow` absent from a data task — stays a caller/`task-tables` contract, because which columns exist in the row is a schema decision only the table construction can make; the function remains schema-agnostic so all three step tables share it. *Alternative considered:* require callers to pre-flatten rows themselves — rejected; the table runner and the §7 replay helper would each re-implement the same attribute-strip/unwrap, and any drift between them would silently move primers. Centralising the row→list inverse in `task_primer()` keeps one source of truth.
 
 ### Decision: validate input minimally
 
-`params` must be hashable by `rlang::hash()` (any R object is). We add a light `chk` guard that `params` is a list (the canonical name-keyed form) to catch obvious misuse with an actionable message in the user-facing frame, but otherwise rely on `rlang::hash()`. *Alternative considered:* no validation — rejected; a bare scalar passed by mistake would hash to a valid-but-meaningless primer, so the list guard earns its keep.
+`params` must be a plain named list or a single-row data frame; we add a light `chk` guard to that effect (and, for a data-frame input, that it has exactly one row) so obvious misuse aborts with an actionable message in the user-facing frame. After normalisation we rely on `rlang::hash()` (any R object is hashable). *Alternative considered:* no validation — rejected; a bare scalar or a multi-row frame passed by mistake would hash to a valid-but-meaningless primer, so the guard earns its keep.
 
 ## Risks / Trade-offs
 
 - **Hash stability across R / `rlang` versions** → if `rlang::hash()` changes its algorithm, primers (and thus RNG sequences) move. Mitigation: this is the same reproducibility envelope the whole design pins in the manifest (§9: pin R and package versions); the function is deterministic *within* a pinned environment, which is the contract. A test asserts stability against a recorded primer for a fixed `params` to catch an unexpected change.
 - **Caller passes a function value or includes `nrow`** → primer silently differs from intent. Mitigation: documented contract + the spec scenarios; `task-tables` (downstream) builds `params` and is where the canonical form is assembled and tested at the table level.
 - **64-bit collision** → theoretical 50% at ~4.3 billion tasks, far beyond ssdsims' 10²–10⁴-task scenarios; validated at 100 k with 0 collisions. Accepted.
+- **List-column vs df-column ambiguity in `normalize_task_row()`** → unwrapping must distinguish a list-style column (a length-1 list → unwrap to its element) from a df-style column (a one-row data frame → keep as a data frame). Mitigation: decide per column with `is.data.frame()` first (df-column, keep), then `is.list()` (list-column, unwrap `[[1]]`), else an atomic column (take the scalar) — and test a row carrying each kind.
 
 ## Migration Plan
 
@@ -46,4 +49,5 @@ Additive: a new file, one new export, one internal helper, and tests. No existin
 
 ## Open Questions
 
-- Should `task_primer()` accept the eventual typed `task_params`/row object directly (once `task-tables` defines one), or keep taking a plain list? Leaning plain list now; revisit when `task-tables` lands so the table can pass a row's name-keyed slice without an adapter.
+- ~~Should `task_primer()` accept the eventual typed `task_params`/row object directly, or keep taking a plain list?~~ **Resolved** (review, krlmlr): accept **both** a plain list and a single-row data frame, normalising the row to a canonical plain list via `normalize_task_row()` (the inverse of `tibble::tibble_row()`). The semantic name-keyed form stays a `task-tables` contract.
+- Does `normalize_task_row()` belong in this change or with `task-tables`? Kept here so the row→list inverse is defined alongside the function that depends on it; `task-tables` consumes it without re-implementing.

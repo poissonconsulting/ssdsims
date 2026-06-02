@@ -19,6 +19,25 @@ The package SHALL expose `task_primer(params)` returning a length-2 integer vect
 - **WHEN** `dqrng::dqset.seed(seed, stream = task_primer(p))` is set twice with the same `seed` and `p`, drawing the same number of values each time
 - **THEN** the two draw sequences SHALL be identical; a different `p` (or `seed`) SHALL yield a different sequence
 
+### Requirement: Accepts a task-table row, normalised to a canonical plain list
+`task_primer()` SHALL accept its argument either as a plain named list or as a single-row data frame (one row of a `{data,fit,hc}_tasks` table). A data-frame input SHALL be normalised to a canonical plain list — the inverse of `tibble::tibble_row()` — by dropping all attributes, unwrapping length-1 list-style columns to their element, and leaving df-style (nested data-frame) columns as data frames, before hashing. The resulting primer SHALL be identical whether derived from the row or from the equivalent plain list. The function SHALL abort, in the user-facing frame, when given input that is neither a plain list nor a single-row data frame.
+
+#### Scenario: Row and equivalent list agree
+- **WHEN** `task_primer()` is called on a single-row tibble and on the plain named list obtained by unwrapping that row
+- **THEN** the two primers SHALL be identical
+
+#### Scenario: Tibble attributes do not affect the primer
+- **WHEN** the same task parameters are passed once as a one-row tibble (carrying class / `row.names` attributes and list-style columns) and once as a plain list
+- **THEN** the primers SHALL be identical
+
+#### Scenario: df-style columns preserved, list-style columns unwrapped
+- **WHEN** a row carries both a list-style column (a length-1 list) and a df-style column (a one-row data frame)
+- **THEN** normalisation SHALL unwrap the list-style column to its element and keep the df-style column as a data frame
+
+#### Scenario: Multi-row data frame rejected
+- **WHEN** `task_primer()` is given a data frame with more than one row (or a non-list, non-data-frame value)
+- **THEN** the function SHALL abort with an informative error in the user-facing frame
+
 ### Requirement: 64-bit primer encoding with NA/INT_MIN mapping
 `task_primer()` SHALL encode each 32-bit half of the hash slice as a signed int32, mapping the reserved bit pattern `0x80000000` (INT_MIN, which R cannot represent as a non-NA integer) to `NA_integer_`. dqrng accepts `NA_integer_` in `stream` and treats it as INT_MIN, so the encoding SHALL recover the full 64 bits of stream entropy.
 

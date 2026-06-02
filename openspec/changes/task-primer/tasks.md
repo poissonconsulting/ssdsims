@@ -1,8 +1,9 @@
 ## 1. Primer derivation
 
 - [ ] 1.1 Add `R/task-primer.R` with internal `hex8_to_int32(hex8)`: split into two 16-bit halves, combine in double precision, wrap `u >= 2^31` to signed int32, with `0x80000000` mapping to `NA_integer_` (lift from `scripts/experiment-dqrng-hash.R`)
-- [ ] 1.2 Add exported `task_primer(params)`: `rlang::hash(params)` then `c(hex8_to_int32(substr(h, 1, 8)), hex8_to_int32(substr(h, 9, 16)))`
-- [ ] 1.3 Add a light `chk` guard that `params` is a list, aborting in the user-facing frame on misuse
+- [ ] 1.2 Add internal `normalize_task_row(row)` (inverse of `tibble::tibble_row()`): `as.list()`, drop attributes, decide per column — df-column (`is.data.frame()`) kept, list-column (`is.list()`) unwrapped to `[[1]]`, else the atomic scalar
+- [ ] 1.3 Add exported `task_primer(params)`: accept a plain list or single-row data frame (normalise the latter via `normalize_task_row()`), then `rlang::hash(.)` and `c(hex8_to_int32(substr(h, 1, 8)), hex8_to_int32(substr(h, 9, 16)))`
+- [ ] 1.4 Add a light `chk` guard that `params` is a plain list or single-row data frame, aborting in the user-facing frame on misuse (incl. a multi-row data frame)
 
 ## 2. Docs
 
@@ -17,5 +18,6 @@
 - [ ] 3.3 dqrng round-trip (under a `local_dqrng_backend()` scope): same `(seed, params)` ⇒ identical draws; different `params` ⇒ different draws
 - [ ] 3.4 Contract tests: name-keyed `min_pmix` stable across function-value changes; `nrow`-excluded params equal for differing `nrow`
 - [ ] 3.5 Stability guard: assert `task_primer()` matches a recorded primer for a fixed `params` (catches an unexpected `rlang::hash()` change)
-- [ ] 3.6 List-guard validation test: non-list `params` aborts with the user-facing error
-- [ ] 3.7 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`
+- [ ] 3.6 Row-normalisation tests: primer from a single-row tibble equals the primer from the unwrapped plain list; tibble attributes/list-columns do not affect it; a row with both a list-column and a df-column unwraps the former and keeps the latter
+- [ ] 3.7 Guard validation test: a multi-row data frame and a non-list/non-data-frame value each abort with the user-facing error
+- [ ] 3.8 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`
