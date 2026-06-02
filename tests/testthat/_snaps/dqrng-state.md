@@ -20,5 +20,5 @@
       local_dqrng_state(42L, c(1L, 2L, 3L))
     Condition
       Error in `local_dqrng_state()`:
-      ! `state` must be length 2 not 3.
+      ! `primer` must be length 2 not 3.
 

@@ -24,13 +24,13 @@ set_dqrng_state <- function(state) {
 
 #' Local/With dqrng State
 #'
-#' `local_dqrng_state()` installs a per-task `(seed, state)` starting point as
+#' `local_dqrng_state()` installs a per-task `(seed, primer)` starting point as
 #' the running dqrng RNG state via [dqrng::dqset.seed()], restoring the previous
 #' state when `.local_envir` exits. `with_dqrng_state()` evaluates `code` with
-#' that state installed, then restores the previous state. The `state` argument
-#' carries the per-task *primer* (the value handed to dqrng's `stream` argument,
-#' per `TARGETS-DESIGN.md` §2 and the GLOSSARY); the `_state` suffix marks that
-#' the wrapper installs that primer as the running RNG state.
+#' that state installed, then restores the previous state. The `primer` argument
+#' is the per-task primer (the value handed to dqrng's `stream` argument, per
+#' `TARGETS-DESIGN.md` §2 and the GLOSSARY); the `_state` suffix marks that the
+#' wrapper installs that primer as the running RNG state.
 #'
 #' These are the dqrng-path analogues of [local_lecuyer_cmrg_state()] /
 #' [with_lecuyer_cmrg_state()]. Like those helpers they snapshot the RNG state
@@ -44,12 +44,12 @@ set_dqrng_state <- function(state) {
 #'
 #' @param seed `[whole number]`\cr A scalar seed passed to
 #'   [dqrng::dqset.seed()].
-#' @param state `[integer(2)]`\cr A length-2 integer primer passed as the
+#' @param primer `[integer(2)]`\cr A length-2 integer primer passed as the
 #'   `stream` argument of [dqrng::dqset.seed()]. `NA_integer_` is permitted (the
 #'   reserved INT_MIN encoding of `TARGETS-DESIGN.md` §2).
 #' @inheritParams withr::local_seed
 #' @inheritParams withr::with_seed
-#' @return `local_dqrng_state()` invisibly returns `state`; `with_dqrng_state()`
+#' @return `local_dqrng_state()` invisibly returns `primer`; `with_dqrng_state()`
 #'   returns the value of `code`.
 #' @seealso [withr::local_seed()], [local_dqrng_backend()],
 #'   [local_lecuyer_cmrg_state()].
@@ -61,21 +61,21 @@ set_dqrng_state <- function(state) {
 #' runif(3)
 #'
 #' with_dqrng_state(42, c(1L, 2L), runif(3))
-local_dqrng_state <- function(seed, state, .local_envir = parent.frame()) {
+local_dqrng_state <- function(seed, primer, .local_envir = parent.frame()) {
   chk::chk_whole_number(seed)
-  chk::chk_integer(state)
-  chk::chk_length(state, length = 2L)
+  chk::chk_integer(primer)
+  chk::chk_length(primer, length = 2L)
   chk::chk_environment(.local_envir)
   chk_dqrng_backend_active()
   old <- get_dqrng_state()
   withr::defer(set_dqrng_state(old), envir = .local_envir)
-  dqrng::dqset.seed(seed, stream = state)
-  invisible(state)
+  dqrng::dqset.seed(seed, stream = primer)
+  invisible(primer)
 }
 
 #' @rdname local_dqrng_state
 #' @export
-with_dqrng_state <- function(seed, state, code) {
-  local_dqrng_state(seed, state)
+with_dqrng_state <- function(seed, primer, code) {
+  local_dqrng_state(seed, primer)
   code
 }
