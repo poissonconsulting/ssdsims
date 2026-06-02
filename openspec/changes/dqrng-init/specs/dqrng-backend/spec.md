@@ -11,30 +11,37 @@ The package SHALL provide `local_dqrng_backend(.local_envir = parent.frame())` t
 - **WHEN** the backend is activated
 - **THEN** the package SHALL explicitly set `pcg64`, overriding dqrng's own default generator (`Xoroshiro128++`)
 
-### Requirement: Restore backend on scope exit
-When the frame that activated the backend exits (normally or via error), the package SHALL restore the previous (base R) RNG backend via `dqrng::restore_methods()`, leaving the session's RNG behaviour as it was before the scope was entered.
+### Requirement: Reset backend on scope exit
+When the frame that activated the backend exits (normally or via error), ssdsims SHALL reset the base R RNG backend via `dqrng::restore_methods()`, leaving the session's RNG routing as it was before the scope was entered.
 
-#### Scenario: Methods restored on scope exit
+#### Scenario: Methods reset on scope exit
 - **WHEN** the frame that activated the backend with `local_dqrng_backend()` exits
-- **THEN** `dqrng::restore_methods()` SHALL be called and base R RNG functions SHALL no longer be routed through dqrng (`RNGkind()` SHALL report its pre-scope value)
+- **THEN** the backend SHALL be reset (`dqrng::restore_methods()`) and base R RNG functions SHALL no longer be routed through dqrng (`RNGkind()` SHALL report its pre-scope value)
+
+### Requirement: withr-style local backend helper
+ssdsims SHALL provide an exported `local_dqrng_backend()` helper that activates the dqrng `pcg64` backend and, following the withr convention (compare `withr::local_seed()`), defers the reset to the exit of `.local_envir`. Scenario execution and any test or script that touches the backend mid-session SHALL use this helper (or the internal `set_dqrng_backend()` paired with `on.exit(reset_dqrng_backend())`).
+
+#### Scenario: Backend reset on scope exit
+- **WHEN** `local_dqrng_backend()` is called within a function or block
+- **THEN** the dqrng `pcg64` backend SHALL be active until `.local_envir` exits, at which point it SHALL be reset (including on error)
 
 ### Requirement: Reentrant nesting leaves the RNG stream unchanged
-`local_dqrng_backend()` SHALL be reentrant: when called while the backend is already active, the call SHALL be a no-op (it SHALL NOT re-register the methods and SHALL NOT defer a further restore). Only the outermost call SHALL register on entry and restore on exit. Consequently the RNG stream SHALL be identical whether or not a nested `local_dqrng_backend()` call occurs.
+`local_dqrng_backend()` SHALL be reentrant: when called while the backend is already active, the call SHALL be a no-op (it SHALL NOT re-register the methods and SHALL NOT defer a further reset). Only the outermost call SHALL register on entry and reset on exit. Consequently the RNG stream SHALL be identical whether or not a nested `local_dqrng_backend()` call occurs.
 
 #### Scenario: Nested call detected as no-op
 - **WHEN** `local_dqrng_backend()` is called while a backend scope is already open (detected via `RNGkind()[1] == "user-supplied"`)
-- **THEN** the nested call SHALL neither re-register methods nor schedule an additional `restore_methods()`, and the backend SHALL remain active until the outermost scope exits
+- **THEN** the nested call SHALL neither re-register methods nor schedule an additional reset, and the backend SHALL remain active until the outermost scope exits
 
 #### Scenario: Stream identical with or without a nested call
 - **WHEN** the same seeded draw sequence is taken once with an intervening nested `local_dqrng_backend()` call and once without it
 - **THEN** the two draw sequences SHALL be identical
 
 ### Requirement: dqrng is a package dependency
-The package SHALL declare `dqrng (>= 0.4.0)` in `Imports`.
+The package SHALL declare `dqrng` in `Imports`.
 
 #### Scenario: dqrng available at runtime
 - **WHEN** ssdsims is installed
-- **THEN** `dqrng` (at least version 0.4.0, providing `dqrng_get_state()` / `dqrng_set_state()`) SHALL be installed as a hard dependency and available to the backend helper
+- **THEN** `dqrng` SHALL be installed as a hard dependency and available to the backend helpers
 
 ### Requirement: Reproducible draws under the dqrng backend
 With the dqrng pcg64 backend active, seeding via `dqrng::dqset.seed(seed, stream)` SHALL produce a reproducible draw sequence for a given `(seed, stream)` pair.

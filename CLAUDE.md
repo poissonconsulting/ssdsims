@@ -32,6 +32,16 @@ Read these before major implementation work.
 - **Linting**: Run `air format` to apply formatters.
 - **Type checks**: No explicit type hints; rely on `chk::*()` for runtime validation in function bodies.
 - **Validation**: Use `chk` for all input validation; keep error messages informative and actionable.
+- **Minimal diffs**: touch only the lines your change requires; don't reformat
+  unrelated lines or let editors rewrite whitespace. Leave `DESCRIPTION`
+  formatting to `usethis`/`desc` (e.g. keep the trailing space after field names
+  like `Imports: `).
+- **Orthography**: UK/AU (Commonwealth) English — prefer `-ise`/`-isation`
+  (`initialise`, `serialisable`) over `-ize`, and `-our` (`behaviour`, `colour`)
+  over `-or`. This matches the package's R source and OpenSpec artifacts and the
+  authors' Australian/Canadian convention. Exceptions: code identifiers and base
+  R/API names keep their canonical spelling (e.g. `color`, `center`,
+  `RNGkind`), as do proper nouns (e.g. "Apache License").
 
 Example:
 ```r
@@ -66,11 +76,11 @@ devtools::check()
 The package uses two RNG paths:
 
 1. **L'Ecuyer-CMRG** (legacy, will be removed) — `with_lecuyer_cmrg_seed()`, `local_lecuyer_cmrg_state()`.
-2. **dqrng + hash** (new targets-based path) — `dqrng::dqset.seed(seed, stream)` with task-derived primers.
+2. **dqrng + hash** (new targets-based path) — `dqrng::dqset.seed(seed, stream)` with task-derived primers. The `pcg64` backend is scenario-scoped via `local_dqrng_backend()`; see `R/dqrng-backend.R` and `openspec/changes/dqrng-init/design.md`.
 
 When touching RNG-consuming code:
 - Do **not** assume a fixed global `.Random.seed` across function calls.
-- Use `local_lecuyer_cmrg_seed()` / `local_lecuyer_cmrg_state()` / `withr::local_seed()` to scope RNG changes.
+- Use `local_lecuyer_cmrg_seed()` / `local_lecuyer_cmrg_state()` / `local_dqrng_backend()` / `withr::local_seed()` to scope RNG changes.
 - On exit, RNG state **must** be restored (use `on.exit()` or withr scoping helpers).
 - Test for `.Random.seed` being unchanged before and after (see `tests/testthat/test-lecuyer-cmrg-seed.R` for examples).
 
@@ -157,6 +167,17 @@ See `DESCRIPTION` for versions and imports.
 - Edit `DESCRIPTION` version field (e.g., `0.0.0.9010` → `0.0.0.9011`).
 - Add a note to `NEWS.md` (or use fledge: `fledge::bump_version()` to automate).
 - Commit with a note referencing the change.
+
+## Pull Requests
+
+- **Titles follow Conventional Commits**: `<type>: <summary>`, where `type` is
+  one of `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, etc. (e.g.
+  `feat: add scenario-scoped dqrng pcg64 RNG backend`). Use the imperative mood
+  and keep the summary concise.
+- **Escape function, object, and file names in backticks** in PR titles and
+  descriptions (e.g. `local_dqrng_backend()`, `run_scenario()`, `DESCRIPTION`).
+- Keep the PR title and description in sync with the change as it evolves; the
+  description should capture the *current* state, not a revision log.
 
 ## Continuous Integration
 
