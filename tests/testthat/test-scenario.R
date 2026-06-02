@@ -222,14 +222,22 @@ test_that("scenario: print is stable for a single dataset", {
   expect_snapshot(print(s))
 })
 
-test_that("scenario: print is stable for multiple datasets", {
+test_that("scenario: print is stable for multiple datasets and vector knobs", {
   s <- ssd_define_scenario(
     list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
     nsim = 50L,
-    nrow = 6L,
+    nrow = c(5L, 6L, 10L),
     seed = 1L,
+    rescale = c(FALSE, TRUE),
+    computable = c(FALSE, TRUE),
+    at_boundary_ok = c(TRUE, FALSE),
+    range_shape1 = list(c(0.05, 20), c(0.1, 10)),
+    proportion = c(0.05, 0.1),
     ci = c(FALSE, TRUE),
-    nboot = c(100, 1000)
+    nboot = c(100, 1000),
+    est_method = c("multi", "geometric"),
+    ci_method = c("weighted_samples", "MACL"),
+    parametric = c(TRUE, FALSE)
   )
   expect_snapshot(print(s))
 })

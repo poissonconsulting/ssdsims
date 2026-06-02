@@ -24,7 +24,7 @@
           ci_method: weighted_samples
           parametric: TRUE
 
-# scenario: print is stable for multiple datasets
+# scenario: print is stable for multiple datasets and vector knobs
 
     Code
       print(s)
@@ -33,20 +33,20 @@
         seed:     1
         datasets: boron, cadmium
         nsim:     50
-        nrow:     6
+        nrow:     5, 6, 10
         fit grid:
           dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
-          rescale: FALSE
-          computable: FALSE
-          at_boundary_ok: TRUE
+          rescale: FALSE, TRUE
+          computable: FALSE, TRUE
+          at_boundary_ok: TRUE, FALSE
           min_pmix: {<fn>}
-          range_shape1: {0.05, 20}
+          range_shape1: {0.05, 20; 0.1, 10}
           range_shape2: {0.05, 20}
         hc grid:
-          proportion: 0.05
+          proportion: 0.05, 0.1
           ci: FALSE, TRUE
           nboot: 100, 1000
-          est_method: multi
-          ci_method: weighted_samples
-          parametric: TRUE
+          est_method: multi, geometric
+          ci_method: weighted_samples, MACL
+          parametric: TRUE, FALSE
 
