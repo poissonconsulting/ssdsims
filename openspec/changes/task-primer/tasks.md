@@ -8,7 +8,7 @@
 ## 2. Docs
 
 - [ ] 2.1 Roxygen for `task_primer()` with `@export`: document the length-2 integer primer, the 64-bit / NA-INT_MIN encoding, and that it pairs with `local_dqrng_state(seed, primer)` / `dqrng::dqset.seed(seed, stream = primer)`
-- [ ] 2.2 Document the canonical name-keyed input contract per RNG-consuming step of #80's model (`sample` `(dataset, sim, replace)`; `fit`/`hc` parent identity + grid row, hc incl. `ci`; the `data` truncation is RNG-free, no primer), `min_pmix` by name — pointing to `task-tables` as where `params` is assembled
+- [ ] 2.2 Document the canonical name-keyed input contract per RNG-consuming step (`sample` `(dataset, sim, replace)`; `fit` parent identity + `nrow` + grid row; `hc` + grid row incl. `ci`; `fit` truncates inline, RNG-free, no separate primer), `min_pmix` by name — pointing to `task-tables` as where `params` is assembled
 - [ ] 2.3 `@seealso` `local_dqrng_state()`, `local_dqrng_backend()`; add to `_pkgdown.yml`
 
 ## 3. Tests and checks

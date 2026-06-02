@@ -8,11 +8,11 @@
 
 - Exported `task_primer(params)` returning a length-2 integer primer, deterministic in `params`, suitable for `dqset.seed(seed, stream = .)`.
 - Internal `hex8_to_int32()` performing the signed-int32 conversion with the `0x80000000` → `NA_integer_` mapping (the §2 64-bit encoding).
-- Document the canonical, name-keyed hash-input contract per RNG-consuming step of #80's model (`sample`/`fit`/`hc`; the `data` truncation is RNG-free) and the `min_pmix`-by-name rule, so `task-tables` builds the right `params`.
+- Document the canonical, name-keyed hash-input contract per RNG-consuming step (`sample`/`fit`/`hc`; `fit` truncates inline, RNG-free) and the `min_pmix`-by-name rule, so `task-tables` builds the right `params`.
 
 **Non-Goals:**
 
-- Building the `sample`/`data`/`fit`/`hc` task tables or deciding which columns exist (`task-list-loop-baseline` #80, `task-tables`).
+- Building the `sample`/`fit`/`hc` task tables or deciding which columns exist (`task-list-loop-baseline` #80 + fold, `task-tables`).
 - Calling `dqset.seed()` / installing the primer (`local-dqrng-state`) or wiring it into the per-task operations (`state-primitives`).
 - Activating the dqrng backend (`dqrng-init`).
 
@@ -28,19 +28,19 @@ R's `strtoi(., 16L)` overflows on 8 hex digits, so the helper splits into two 16
 
 ### Decision: `task_primer()` accepts a plain list or a task-table row, normalising the row to a canonical plain list
 
-The `{data,fit,hc}_tasks` tables are tibbles, and a task is one **row**, so passing the row directly is the natural call — and the §7 replay path reconstructs a task from its row. But a one-row tibble carries class / `row.names` / pillar attributes and wraps list-valued columns; none of that should enter (or destabilise) the hash. So `task_primer(params)` accepts **either** a plain named list **or** a single-row data frame, and when given a row it applies an internal `normalize_task_row()` — effectively the **inverse of `tibble::tibble_row()`** (answering the review question directly: yes, we need it): `as.list()` the row, drop all attributes, unwrap length-1 **list-style** columns to their element, but leave **df-style** (packed/nested data-frame) columns as data frames. The hashed value is that canonical plain list, so `task_primer(tasks[i, ])` and `task_primer(as.list(row))` agree byte-for-byte.
+The `{sample,fit,hc}_tasks` tables are tibbles, and a task is one **row**, so passing the row directly is the natural call — and the §7 replay path reconstructs a task from its row. But a one-row tibble carries class / `row.names` / pillar attributes and wraps list-valued columns; none of that should enter (or destabilise) the hash. So `task_primer(params)` accepts **either** a plain named list **or** a single-row data frame, and when given a row it applies an internal `normalize_task_row()` — effectively the **inverse of `tibble::tibble_row()`** (answering the review question directly: yes, we need it): `as.list()` the row, drop all attributes, unwrap length-1 **list-style** columns to their element, but leave **df-style** (packed/nested data-frame) columns as data frames. The hashed value is that canonical plain list, so `task_primer(tasks[i, ])` and `task_primer(as.list(row))` agree byte-for-byte.
 
 `task_primer()` normalises **structure, not meaning**. The *semantic* canonical form — `min_pmix` referenced by name, and `nrow` absent from the **`sample`** primer (see the next decision) — stays a caller/`task-tables` contract, because which columns exist in the row is a schema decision only the table construction can make; the function remains schema-agnostic so all four step tables share it. *Alternative considered:* require callers to pre-flatten rows themselves — rejected; the table runner and the §7 replay helper would each re-implement the same attribute-strip/unwrap, and any drift between them would silently move primers. Centralising the row→list inverse in `task_primer()` keeps one source of truth.
 
-### Decision: where truncation lives (#80's `data` step) and what it means for primers
+### Decision: where truncation lives (inline in `fit`) and what it means for primers
 
-#80 puts the data truncation in its own **`data`** step: the `sample` step draws `n_max = max(nrow)` rows once (`slice_sample`, RNG), and the `data` step is a pure `head(sample, nrow)` — **RNG-free**. Three consequences for the primer contract, all now reflected in the spec:
+After `task-list-loop-baseline-fold`, the truncation lives **inline in the `fit` step**: the `sample` step draws `n_max = max(nrow)` rows once (`slice_sample`, RNG), and `fit` does a pure `head(sample, nrow)` — **RNG-free** — before fitting. Three consequences for the primer contract, all reflected in the spec:
 
-1. **The `data` step takes no primer.** It consumes no randomness, so there is nothing to seed; a data task carries no `(seed, primer)`.
+1. **The truncation takes no primer.** `head()` consumes no randomness, so there is nothing to seed; there is no separate truncation task carrying `(seed, primer)`.
 2. **`nrow` must be absent from the `sample` primer — load-bearing, not cosmetic.** The §5 sub-truncation guarantee (a size-`n` result is a byte-identical prefix of the size-`n_max` draw) holds only because every `nrow` shares *one* `sample` draw, keyed `(dataset, sim, replace)`. If `nrow` entered the sample primer, each size would seed a different stream and `head()` would no longer be a valid prefix — the property collapses. So excluding `nrow` from the sample primer is a correctness requirement.
-3. **`nrow` IS in the `fit`/`hc` primers — and should be.** Those steps inherit the `data` identity (which includes `nrow`), so their primers vary with `nrow`. That is correct: a fit/hc on a 5-row truncation is a genuinely different computation from one on a 10-row truncation, and must get its own stream. The earlier reconciliation wrongly said "`nrow` never enters an RNG primer"; the precise statement is "`nrow` is excluded from the **sample** primer only".
+3. **`nrow` IS in the `fit`/`hc` primers — and should be.** `nrow` is a `fit` axis (inherited by `hc`), so their primers vary with `nrow`. That is correct: a fit/hc on a 5-row truncation is a genuinely different computation from one on a 10-row truncation, and must get its own stream. The earlier reconciliation wrongly said "`nrow` never enters an RNG primer"; the precise statement is "`nrow` is excluded from the **sample** primer only".
 
-**Replay implication (§7).** Because the `data` step has no primer, a failed `data`/`fit`/`hc` task is *not* replayed by seeding a "data primer". A data truncation is reproduced by reconstructing its parent **`sample`** draw — seed by the `sample` primer (looked up via the row's `sample_id` foreign key), draw `n_max`, then `head(nrow)`. The replay-helper therefore follows the `<parent>_id` chain to the `sample` row rather than expecting every step to carry its own primer; `task-primer` only needs to guarantee that the `sample` primer is reproducible from `(dataset, sim, replace)`.
+**Replay implication (§7).** A failed `fit`/`hc` task reconstructs its data by reconstructing its parent **`sample`** draw — seed by the `sample` primer (looked up via the row's `sample_id` foreign key), draw `n_max`, then `head(nrow)` — exactly the truncation `fit` does inline. The replay-helper follows the `<parent>_id` chain to the `sample` row; `task-primer` only needs to guarantee that the `sample` primer is reproducible from `(dataset, sim, replace)`.
 
 ### Decision: validate input minimally
 
