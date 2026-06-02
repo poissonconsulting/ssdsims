@@ -70,6 +70,13 @@ ssd_fit_dists_sims <- function(
     return(dplyr::mutate(x, dists = list()))
   }
 
+  trace_msg(
+    "ssd_fit_dists_sims",
+    n_in = nrow(x),
+    seed = seed
+  )
+  trace_rng_kind()
+
   x <- x |>
     dplyr::cross_join(tidyr::expand_grid(
       rescale = rescale,

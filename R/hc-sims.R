@@ -60,6 +60,14 @@ ssd_hc_sims <- function(
     return(dplyr::mutate(x, hc = list()))
   }
 
+  trace_msg(
+    "ssd_hc_sims",
+    n_in = nrow(x),
+    ci = ci,
+    seed = seed
+  )
+  trace_rng_kind()
+
   x <- x |>
     dplyr::cross_join(tidyr::expand_grid(
       nboot = nboot,

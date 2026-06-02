@@ -19,3 +19,5 @@
 ^GLOSSARY\.md$
 ^openspec$
 ^\.claude$
+^RNG-FLOW\.md$
+^TARGETS-DESIGN\.md$

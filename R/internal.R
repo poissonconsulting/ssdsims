@@ -1,4 +1,10 @@
 slice_sample_state <- function(data, n, replace, state) {
+  trace_msg(
+    "slice_sample_state",
+    n = n,
+    replace = replace,
+    state = state
+  )
   with_lecuyer_cmrg_state(state, {
     data |>
       dplyr::slice_sample(n = n, replace = replace)
@@ -6,6 +12,7 @@ slice_sample_state <- function(data, n, replace, state) {
 }
 
 do_call_seed <- function(what, args, seed) {
+  trace_msg("do_call_seed", seed = seed)
   with_lecuyer_cmrg_seed(seed, {
     do.call(what, args = args)
   })
@@ -24,6 +31,7 @@ fit_dists_state <- function(
   silent,
   ...
 ) {
+  trace_msg("fit_dists_state", state = state)
   with_lecuyer_cmrg_state(state, {
     fit <- ssdtools::ssd_fit_dists(
       data,
@@ -62,6 +70,13 @@ fit_dists_seed <- function(
     start_sim = sim,
     stream = stream
   )
+  trace_msg(
+    "fit_dists_seed",
+    sim = sim,
+    stream = stream,
+    seed = seed,
+    state = state
+  )
   fit_dists_state(
     data = data,
     state = state,
@@ -89,6 +104,12 @@ hc_state <- function(
   save_to,
   ...
 ) {
+  trace_msg(
+    "hc_state",
+    nboot = nboot,
+    ci = ci,
+    state = state
+  )
   with_lecuyer_cmrg_state(state, {
     hc <- ssdtools::ssd_hc(
       data,
@@ -123,6 +144,15 @@ hc_seed <- function(
     seed = seed,
     start_sim = sim,
     stream = stream
+  )
+  trace_msg(
+    "hc_seed",
+    sim = sim,
+    stream = stream,
+    seed = seed,
+    nboot = nboot,
+    ci = ci,
+    state = state
   )
   hc_state(
     data = data,
