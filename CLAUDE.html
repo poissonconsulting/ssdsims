@@ -78,25 +78,50 @@
 <code class="sourceCode R"><span><span class="fu">chk</span><span class="fu">::</span><span class="fu"><a href="https://poissonconsulting.github.io/chk/reference/chk_whole_number.html" class="external-link">chk_whole_number</a></span><span class="op">(</span><span class="va">seed</span><span class="op">)</span></span>
 <span><span class="fu">chk</span><span class="fu">::</span><span class="fu"><a href="https://poissonconsulting.github.io/chk/reference/chk_range.html" class="external-link">chk_range</a></span><span class="op">(</span><span class="va">nrow</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">1000</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">chk</span><span class="fu">::</span><span class="fu"><a href="https://poissonconsulting.github.io/chk/reference/chk_character.html" class="external-link">chk_character</a></span><span class="op">(</span><span class="va">dataset_names</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="coding-rules">Coding rules<a class="anchor" aria-label="anchor" href="#coding-rules"></a></h3>
+<ul><li>Always run <code>air format .</code> after generating or editing code.</li>
+<li>Use the base pipe operator (<code>|&gt;</code>), not the magrittr pipe (<code>%&gt;%</code>).</li>
+<li>Use <code>\() ...</code> for single-line anonymous functions. For all other cases, use <code>function() {...}</code>.</li>
+<li>Permissions for the common tooling (<code>air</code>, <code>R</code>, <code>Rscript</code>, read-only <code>git</code>/<code>gh</code>, <code>quarto</code>, <code>Skill</code>) are pre-approved in <code>.claude/settings.json</code>, so these run without a prompt.</li>
+</ul></div>
 </div>
 <div class="section level2">
 <h2 id="development-workflow">Development Workflow<a class="anchor" aria-label="anchor" href="#development-workflow"></a></h2>
 <div class="section level3">
 <h3 id="setup">Setup<a class="anchor" aria-label="anchor" href="#setup"></a></h3>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Install development dependencies</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">devtools::install_dev_deps()</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># Load the package for interactive use</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">devtools::load_all()</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># Run tests</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="fu">devtools::test()</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a></span>
-<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co"># Build documentation</span></span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="fu">devtools::document()</span></span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co"># Full check</span></span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="fu">devtools::check()</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Install development dependencies</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_dev_deps</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Load the package for interactive use</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">load_all</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run all tests</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">test</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run all tests for files starting with {name}</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">test</span><span class="op">(</span>filter <span class="op">=</span> <span class="st">"^{name}"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run all tests for R/{name}.R</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">test_active_file</span><span class="op">(</span><span class="st">"R/{name}.R"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Run a single test "blah" for R/{name}.R</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">test_active_file</span><span class="op">(</span><span class="st">"R/{name}.R"</span>, desc <span class="op">=</span> <span class="st">"blah"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># (Re)build documentation</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">document</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check that all topics are in the reference index</span></span>
+<span><span class="fu">pkgdown</span><span class="fu">::</span><span class="fu"><a href="https://pkgdown.r-lib.org/reference/check_pkgdown.html" class="external-link">check_pkgdown</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Full check</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">check</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<blockquote>
+<p>When invoking R from the shell, use <code>Rscript --no-environ -e "..."</code>. Without <code>--no-environ</code> the sandbox blocks reads of <code>~/.Renviron</code> and R fails to create its <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code>.</p>
+</blockquote>
+<p>Format code from the shell:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">air</span> format .</span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="rng-discipline">RNG Discipline<a class="anchor" aria-label="anchor" href="#rng-discipline"></a></h3>
@@ -109,15 +134,21 @@
 </div>
 <div class="section level3">
 <h3 id="testing">Testing<a class="anchor" aria-label="anchor" href="#testing"></a></h3>
-<ul><li>Write snapshot tests for any output that should be stable (use <code><a href="https://testthat.r-lib.org/reference/expect_snapshot.html" class="external-link">testthat::expect_snapshot()</a></code>).</li>
-<li>Tests live in <code>tests/testthat/test-*.R</code>; run with <code>devtools::test()</code>.</li>
-<li>Snapshots update with <code><a href="https://testthat.r-lib.org/reference/snapshot_accept.html" class="external-link">testthat::snapshot_review()</a></code>.</li>
-<li>RNG-touching tests must pin the seed explicitly.</li>
+<ul><li>Tests for <code>R/{name}.R</code> go in <code>tests/testthat/test-{name}.R</code>; place new tests next to similar existing ones.</li>
+<li>All new code should have an accompanying test. Keep tests minimal with few comments.</li>
+<li>Never put code in a <code>test-{name}.R</code> file outside a <code>test_that()</code> block; use <code>tests/testthat/helper.R</code> (or <code>helper-{name}.R</code>) instead.</li>
+<li>Write snapshot tests for any output that should be stable (use <code><a href="https://testthat.r-lib.org/reference/expect_snapshot.html" class="external-link">testthat::expect_snapshot()</a></code>); update with <code><a href="https://testthat.r-lib.org/reference/snapshot_accept.html" class="external-link">testthat::snapshot_review()</a></code>.</li>
+<li>Prefer specific expectations over <code>expect_true()</code> / <code>expect_false()</code> — they give better failure messages.</li>
+<li>When testing errors and warnings, do <strong>not</strong> use <code>expect_error()</code> / <code>expect_warning()</code>. Use <code>expect_snapshot(error = TRUE)</code> for errors and <code>expect_snapshot()</code> for warnings so the full text is reviewable.</li>
+<li>Avoid the <code>.package</code> argument to <code>local_mocked_bindings()</code> (it mutates another package’s namespace); create a mockable wrapper in this package instead.</li>
+<li>RNG-touching tests must pin the seed explicitly (<code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code> or <code><a href="reference/local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code>).</li>
 </ul></div>
 <div class="section level3">
 <h3 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a></h3>
-<ul><li>Functions are documented inline with roxygen comments (<code>#' @param</code>, <code>#' @return</code>, etc.).</li>
-<li>Run <code>devtools::document()</code> to generate <code>man/</code> pages and update <code>NAMESPACE</code>.</li>
+<ul><li>Functions are documented inline with roxygen comments (<code>#' @param</code>, <code>#' @return</code>, etc.); wrap roxygen comments at 80 characters.</li>
+<li>Every user-facing function should be exported and documented; internal functions should not have roxygen documentation.</li>
+<li>Run <code>devtools::document()</code> to generate <code>man/</code> pages and update <code>NAMESPACE</code> — always re-document after changing a roxygen comment, and never edit <code>man/</code> or <code>NAMESPACE</code> by hand.</li>
+<li>Whenever you add a new (non-internal) topic, add it to <code>_pkgdown.yml</code> and confirm with <code><a href="https://pkgdown.r-lib.org/reference/check_pkgdown.html" class="external-link">pkgdown::check_pkgdown()</a></code>.</li>
 <li>Examples in <code>@examples</code> are part of the spec — keep them small and runnable.</li>
 </ul></div>
 </div>
@@ -187,10 +218,14 @@
 </ul></div>
 <div class="section level3">
 <h3 id="update-package-version-and-news">Update package version and news<a class="anchor" aria-label="anchor" href="#update-package-version-and-news"></a></h3>
-<ul><li>Edit <code>DESCRIPTION</code> version field (e.g., <code>0.0.0.9010</code> → <code>0.0.0.9011</code>).</li>
-<li>Add a note to <code>NEWS.md</code> (or use fledge: <code>fledge::bump_version()</code> to automate).</li>
-<li>Commit with a note referencing the change.</li>
-</ul></div>
+<p><code>NEWS.md</code> and the dev version are managed by <a href="https://fledge.cynkra.com" class="external-link">fledge</a> — <strong>do not hand-edit <code>NEWS.md</code></strong> (its header says as much). Entries are generated from commit messages and grouped by Conventional Commit type (Features, Bug fixes, Chore, Refactoring), so the way to shape a changelog entry is to write a clear, conventionally-typed commit message (see Pull Requests below).</p>
+<ul><li>
+<code>fledge::bump_version()</code> bumps the <code>DESCRIPTION</code> version and assembles <code>NEWS.md</code> from the commits since the last bump; a scheduled GitHub Action (<code>.github/workflows/fledge.yaml</code>) also runs this on <code>main</code>.</li>
+<li>Reference the related issue in the commit message (e.g. <code>(#64)</code>) so it carries through to the changelog.</li>
+</ul><blockquote>
+<p><strong>Deviation from tidyverse/r-lib</strong>: those packages have contributors hand-add a <code>NEWS.md</code> bullet (and order bullets alphabetically by function). This package does <strong>not</strong> — fledge derives the changelog from commits, so skip the manual bullet entirely and put the effort into the commit message instead.</p>
+</blockquote>
+</div>
 </div>
 <div class="section level2">
 <h2 id="pull-requests">Pull Requests<a class="anchor" aria-label="anchor" href="#pull-requests"></a></h2>
