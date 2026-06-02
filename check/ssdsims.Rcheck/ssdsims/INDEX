@@ -1,0 +1,27 @@
+local_dqrng_backend     Local dqrng pcg64 Backend
+local_lecuyer_cmrg_seed
+                        Local L'Ecuyer-CMRG Seed
+local_lecuyer_cmrg_state
+                        Local L'Ecuyer-CMRG State
+ssd_data                Assemble and Validate Datasets for a Simulation
+                        Scenario
+ssd_define_scenario     Define a Simulation Scenario
+ssd_fit_dists_sims      Fit SSD Distributions to Simulated Data
+ssd_hc_sims             Estimate hazard concentrations for multiple
+                        simulations using bootstrapping
+ssd_run_scenario        Run Scenario
+ssd_run_scenario_baseline
+                        Run a Scenario with the Baseline Loop Runner
+ssd_scenario_data_tasks
+                        Derive the data Task Table from a Scenario
+ssd_scenario_fit_tasks
+                        Derive the fit Task Table from a Scenario
+ssd_scenario_hc_tasks   Derive the hc Task Table from a Scenario
+ssd_scenario_sample_tasks
+                        Derive the sample Task Table from a Scenario
+ssd_scenario_tasks      Expand a Scenario into all Four Task Tables
+ssd_sim_data            Generate Data for Simulations
+with_lecuyer_cmrg_seed
+                        With L'Ecuyer-CMRG Seed
+with_lecuyer_cmrg_state
+                        With L'Ecuyer-CMRG State

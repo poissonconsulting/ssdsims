@@ -455,7 +455,7 @@ that `tar_map` fans out over (§6).
                      ssd_scenario_tasks(scenario)
                               │
                               ▼
-                     three task tables (data_tasks, fit_tasks, hc_tasks),
+                     four task tables (sample, data, fit, hc tasks; see §5),
                      each row = one task carrying its (seed, state) pair (§2)
                               │
             ┌─────────────────┴─────────────────┐
@@ -711,6 +711,39 @@ shard's Parquet, not partition levels). Each step writes one
 Parquet per shard so the data, fit, and hc layers are
 independently queryable for analysis without re-running upstream
 steps.
+
+### Implemented refinement: `sample` as a fourth task type (`task-list-loop-baseline`)
+
+The `task-list-loop-baseline` step materialises the grids above as
+**four** task tables rather than three, splitting the conflated `data`
+step into the *draw* and the *truncation*:
+
+| step     | identity axes                                  | RNG? | note                                                   |
+| -------- | ---------------------------------------------- | ---- | ------------------------------------------------------ |
+| `sample` | `dataset, sim, replace`                        | yes  | one draw of `n_max = max(nrow)` rows (carried column)  |
+| `data`   | `dataset, sim, replace, nrow`                  | no   | `head(sample, nrow)` — `nrow` is a clean axis here     |
+| `fit`    | data axes `× fit grid`                         | —    | as above                                               |
+| `hc`     | fit axes `× hc grid` (§1.2 collapse)           | yes  | as above                                               |
+
+This keeps the sub-truncation property **structural**: there is
+exactly one `sample` task per `(dataset, sim, replace)`, so the
+expensive draw is shared across every `nrow`, while `nrow` is an
+ordinary scalar cross-join axis from the (RNG-free) `data` step down —
+no compound/list column on the draw. The original three-step
+`partition_by` table still applies, with the `data` *path* axes being
+the `sample` identity (`dataset, sim, replace`) and `nrow` an inner
+axis of the truncation.
+
+Dependencies between tasks are **explicit**: each row carries a
+path-style `<step>_id` primary key — the Hive partition path itself,
+e.g. `dataset=boron/sim=1/replace=FALSE` — plus its parent step's id
+as a foreign key (`sample_id` on `data`, `data_id` on `fit`, `fit_id`
+on `hc`). These are the `data_id` / `fit_id` "sugar for the path"
+columns referenced above, made concrete: a child references its parent
+by a single joinable column, and the baseline runner threads results
+by that foreign key. The ids are deterministic and stable under
+scenario growth (adding a dataset does not renumber existing rows), so
+they compose with the cache-by-existence story in §8.
 
 ### Static branching: one named target per shard
 
@@ -1736,6 +1769,21 @@ shows where branches open and close.
   check). Not on the dependency DAG — it can land at any time; the
   `ssd-define-scenario` work already follows the convention (see the
   repo `CLAUDE.md` "Error origin" note).
+
+### Cleanup
+
+Independent tidy-ups with no dependants — each can land at any time and
+is **not** on the dependency DAG. Grown as review turns up small
+public-API or ergonomics gaps.
+
+- **`cleanup-as-ssd-data`** — Add a public `as_ssd_data()` that coerces
+  the already-named input forms (an `ssd_data()` collection passthrough, a
+  named list, or a single data frame with an explicit `name=`) into a
+  validated `ssd_data()` collection. The scenario's internal
+  `scenario_datasets()` does this coercion today, but it cannot simply
+  delegate to a public `as_ssd_data()` because the bare-data-frame and
+  unnamed-list forms derive names by **symbol capture**, which must happen
+  in the `ssd_define_scenario()` frame. Surfaced in PR #80.
 
 ### Dependency DAG (parallel streams)
 

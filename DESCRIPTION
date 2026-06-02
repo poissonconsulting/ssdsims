@@ -15,12 +15,13 @@ Depends:
 Imports: 
     chk,
     dplyr,
-    dqrng,
+    dqrng (>= 0.4.1),
     methods,
     parallel,
     purrr,
     rlang,
     ssdtools (>= 2.6.0),
+    tibble,
     tidyr,
     withr
 Suggests: 
