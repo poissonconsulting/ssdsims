@@ -253,7 +253,7 @@
                      ssd_scenario_tasks(scenario)
                               │
                               ▼
-                     three task tables (data_tasks, fit_tasks, hc_tasks),
+                     four task tables (sample, data, fit, hc tasks; see §5),
                      each row = one task carrying its (seed, state) pair (§2)
                               │
             ┌─────────────────┴─────────────────┐
@@ -396,6 +396,34 @@
    fit   | data · 2 rescale                                  =  4 |  4 (path: dataset, sim, rescale)
    hc    | fit  · 1 nboot · 2 est_method                     =  8 |  2 (path: dataset, sim — 4 tasks per shard)</code></pre>
 <p>So in this example data and fit are 1 task : 1 shard, but hc bundles 4 tasks into each of its 2 shards (the inner axes <code>rescale</code>, <code>nboot</code>, <code>est_method</code> become columns inside the shard’s Parquet, not partition levels). Each step writes one Parquet per shard so the data, fit, and hc layers are independently queryable for analysis without re-running upstream steps.</p>
+<div class="section level3">
+<h3 id="implemented-refinement-sample-as-a-fourth-task-type-task-list-loop-baseline">Implemented refinement: <code>sample</code> as a fourth task type (<code>task-list-loop-baseline</code>)<a class="anchor" aria-label="anchor" href="#implemented-refinement-sample-as-a-fourth-task-type-task-list-loop-baseline"></a></h3>
+<p>The <code>task-list-loop-baseline</code> step materialises the grids above as <strong>four</strong> task tables rather than three, splitting the conflated <code>data</code> step into the <em>draw</em> and the <em>truncation</em>:</p>
+<table class="table"><colgroup><col width="7%"><col width="41%"><col width="3%"><col width="48%"></colgroup><thead><tr><th>step</th>
+<th>identity axes</th>
+<th>RNG?</th>
+<th>note</th>
+</tr></thead><tbody><tr><td><code>sample</code></td>
+<td><code>dataset, sim, replace</code></td>
+<td>yes</td>
+<td>one draw of <code>n_max = max(nrow)</code> rows (carried column)</td>
+</tr><tr><td><code>data</code></td>
+<td><code>dataset, sim, replace, nrow</code></td>
+<td>no</td>
+<td>
+<code>head(sample, nrow)</code> — <code>nrow</code> is a clean axis here</td>
+</tr><tr><td><code>fit</code></td>
+<td>data axes <code>× fit grid</code>
+</td>
+<td>—</td>
+<td>as above</td>
+</tr><tr><td><code>hc</code></td>
+<td>fit axes <code>× hc grid</code> (§1.2 collapse)</td>
+<td>yes</td>
+<td>as above</td>
+</tr></tbody></table><p>This keeps the sub-truncation property <strong>structural</strong>: there is exactly one <code>sample</code> task per <code>(dataset, sim, replace)</code>, so the expensive draw is shared across every <code>nrow</code>, while <code>nrow</code> is an ordinary scalar cross-join axis from the (RNG-free) <code>data</code> step down — no compound/list column on the draw. The original three-step <code>partition_by</code> table still applies, with the <code>data</code> <em>path</em> axes being the <code>sample</code> identity (<code>dataset, sim, replace</code>) and <code>nrow</code> an inner axis of the truncation.</p>
+<p>Dependencies between tasks are <strong>explicit</strong>: each row carries a path-style <code>&lt;step&gt;_id</code> primary key — the Hive partition path itself, e.g. <code>dataset=boron/sim=1/replace=FALSE</code> — plus its parent step’s id as a foreign key (<code>sample_id</code> on <code>data</code>, <code>data_id</code> on <code>fit</code>, <code>fit_id</code> on <code>hc</code>). These are the <code>data_id</code> / <code>fit_id</code> “sugar for the path” columns referenced above, made concrete: a child references its parent by a single joinable column, and the baseline runner threads results by that foreign key. The ids are deterministic and stable under scenario growth (adding a dataset does not renumber existing rows), so they compose with the cache-by-existence story in §8.</p>
+</div>
 <div class="section level3">
 <h3 id="static-branching-one-named-target-per-shard">Static branching: one named target per shard<a class="anchor" aria-label="anchor" href="#static-branching-one-named-target-per-shard"></a></h3>
 <p>The shard set is a <strong>pure function of the scenario</strong>, and the scenario is known when <code>_targets.R</code> is <em>sourced</em> — it is a plain constructor call at the top of the file, not a <code>tar_target()</code>. So the fan-out width is fixed at construction time, never data-dependent at run time. By the standard rule of thumb — <em>static branching when the branch count is known at sourcing time, dynamic branching only when it depends on data computed during the run</em> — this design uses <strong>static branching</strong>: <code>tarchetypes::tar_map()</code> mints one named target per shard while the pipeline is built. An independent experiment exercised both styles head to head and confirmed the rule applies here; the most complete experiment (pinning + <code>error = "null"</code> + per-shard upload, all composed) is itself built on static branching.</p>
@@ -1041,6 +1069,12 @@
 <li>
 <strong><code>error-call-origin</code></strong> — <em>Cosmetic, independent of the rest.</em> Audit every user-facing function so its validation errors report the <strong>calling function</strong> as the origin (<code>Error in \</code>ssd_<em>()`:<code>), never an internal frame (</code>purrr::map()<code>,</code>lapply()<code>, a private helper). Thread the public frame into validators (</code>chk::abort_chk(…, call = call)<code>with</code>call = environment()<code>), and prefer plain loops over</code>purrr::walk<code>/</code>chk::chk_all<code>where those wrappers would surface in the error header. May need upstream</code>chk<code>changes (e.g. a</code>call<code>/</code>error_call<code>argument on</code>chk_</em>()<code>so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the</code>ssd-define-scenario<code>work already follows the convention (see the repo</code>CLAUDE.md` “Error origin” note).</li>
 </ul><div class="section level3">
+<h3 id="cleanup">Cleanup<a class="anchor" aria-label="anchor" href="#cleanup"></a></h3>
+<p>Independent tidy-ups with no dependants — each can land at any time and is <strong>not</strong> on the dependency DAG. Grown as review turns up small public-API or ergonomics gaps.</p>
+<ul><li>
+<strong><code>cleanup-as-ssd-data</code></strong> — Add a public <code>as_ssd_data()</code> that coerces the already-named input forms (an <code><a href="reference/ssd_data.html">ssd_data()</a></code> collection passthrough, a named list, or a single data frame with an explicit <code>name=</code>) into a validated <code><a href="reference/ssd_data.html">ssd_data()</a></code> collection. The scenario’s internal <code>scenario_datasets()</code> does this coercion today, but it cannot simply delegate to a public <code>as_ssd_data()</code> because the bare-data-frame and unnamed-list forms derive names by <strong>symbol capture</strong>, which must happen in the <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> frame. Surfaced in PR #80.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="dependency-dag-parallel-streams">Dependency DAG (parallel streams)<a class="anchor" aria-label="anchor" href="#dependency-dag-parallel-streams"></a></h3>
 <p>Mermaid (renders inline on GitHub):</p>
 <pre class="mermaid"><code>flowchart TD

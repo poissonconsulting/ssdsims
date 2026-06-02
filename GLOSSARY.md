@@ -59,6 +59,16 @@ Terminology used throughout `ssdsims`.
   values for the cross-join axes at that step, and the upstream
   partition path it depends on. Many tasks bundle into one **shard**
   (below) when they share the step’s `partition_by` column values.
+- **axis** (cross-join axis): A scenario knob a step *fans out* over —
+  one task per combination of the step’s axis values. The `sample` axes
+  are `(dataset, sim, replace)`; `data` adds `nrow`; `fit` adds the
+  fit-grid axes (`rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
+  `range_shape1`, `range_shape2`); `hc` adds the hc-grid axes (`ci`,
+  `nboot`, `est_method`, `ci_method`, `parametric`). Contrast a *carried
+  column* (e.g. `n_max`), which is data on the row but is **not** fanned
+  out over: `nrow` is deliberately not a `sample` axis because every
+  `nrow` is a sub-truncation of one `n_max`-row draw (TARGETS-DESIGN.md
+  §5), so it is an axis only of the (RNG-free) `data` truncation step.
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is a
   *read-side* concept — query engines (duckplyr / DuckDB) inspect the

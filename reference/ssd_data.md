@@ -33,8 +33,8 @@ becomes `"ccme_boron"`). A literal with no derivable name (e.g. a bare
 `data.frame(...)` call) must be given an explicit name.
 
 `ssd_data()` is intended to grow: the planned `scenario-input-types`
-change (see `TARGETS-DESIGN.md` §12) will let each input also be one of
-the data *generators*
+change (see `TARGETS-DESIGN.md` section 12) will let each input also be
+one of the data *generators*
 [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
 accepts today - a `fitdists` or `tmbfit` object, a generator function,
 or a function-name string - with the data materialised by the dataset

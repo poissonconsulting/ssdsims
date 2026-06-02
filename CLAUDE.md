@@ -76,6 +76,24 @@ chk::chk_character(dataset_names)
 - Use the base pipe operator (`|>`), not the magrittr pipe (`%>%`).
 - Use `\() ...` for single-line anonymous functions. For all other
   cases, use `function() {...}`.
+- Prefer `purrr` functionals (`map()`, `map_chr()`, `map_int()`,
+  `map2()`, `pmap()`, …) over the base `*apply`/`Map`/`mapply` family.
+  (Exception: where the error-call-origin rule needs a plain `for` loop
+  to keep `purrr` frames out of an error header — see Error origin
+  above.)
+- Prefer `rlang` helpers over their base equivalents:
+  [`rlang::set_names()`](https://rlang.r-lib.org/reference/set_names.html)
+  over [`stats::setNames()`](https://rdrr.io/r/stats/setNames.html),
+  [`rlang::exec()`](https://rlang.r-lib.org/reference/exec.html) over
+  [`do.call()`](https://rdrr.io/r/base/do.call.html),
+  [`rlang::env_get()`](https://rlang.r-lib.org/reference/env_get.html) /
+  [`rlang::is_function()`](https://rlang.r-lib.org/reference/is_function.html)
+  over [`get()`](https://rdrr.io/r/base/get.html) /
+  [`getExportedValue()`](https://rdrr.io/r/base/ns-reflect.html) /
+  [`is.function()`](https://rdrr.io/r/base/is.function.html).
+- Reserve the `with_`/`local_` prefixes for RAII (withr-style) scope
+  helpers; do not use them for ordinary transforms (e.g. name a
+  column-adder `add_*()`).
 - Permissions for the common tooling (`air`, `R`, `Rscript`, read-only
   `git`/`gh`, `quarto`, `Skill`) are pre-approved in
   `.claude/settings.json`, so these run without a prompt.

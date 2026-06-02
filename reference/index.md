@@ -24,5 +24,17 @@
   bootstrapping
 - [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
   : Run Scenario
+- [`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
+  : Run a Scenario with the Baseline Loop Runner
+- [`ssd_scenario_data_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data_tasks.md)
+  : Derive the data Task Table from a Scenario
+- [`ssd_scenario_fit_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_tasks.md)
+  : Derive the fit Task Table from a Scenario
+- [`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_tasks.md)
+  : Derive the hc Task Table from a Scenario
+- [`ssd_scenario_sample_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_tasks.md)
+  : Derive the sample Task Table from a Scenario
+- [`ssd_scenario_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
+  : Expand a Scenario into all Four Task Tables
 - [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
   : Generate Data for Simulations

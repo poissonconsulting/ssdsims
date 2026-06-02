@@ -1,11 +1,12 @@
 # Define a Simulation Scenario
 
 Constructs a purely declarative `ssdsims_scenario` object: the root of
-the targets-based pipeline (see `TARGETS-DESIGN.md` §1). The object
-stores only declarative fields - a scalar `seed`, the replicate count
-`nsim`, the sample sizes `nrow`, the dataset *names*, and the `fit` and
-`hc` argument grids. It performs **no** random-number generation, **no**
-task expansion, and has **no** dependency on `targets`.
+the targets-based pipeline (see `TARGETS-DESIGN.md` section 1). The
+object stores only declarative fields - a scalar `seed`, the replicate
+count `nsim`, the sample sizes `nrow`, the dataset *names*, and the
+`fit` and `hc` argument grids. It performs **no** random-number
+generation, **no** task expansion, and has **no** dependency on
+`targets`.
 
 ## Usage
 
@@ -17,6 +18,7 @@ ssd_define_scenario(
   ...,
   name = NULL,
   nrow = 6L,
+  replace = FALSE,
   dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
@@ -69,6 +71,10 @@ ssd_define_scenario(
 - nrow:
 
   A positive whole number of the minimum number of non-missing rows.
+
+- replace:
+
+  A logical vector specifying whether to sample with replacement.
 
 - dists:
 
@@ -188,9 +194,12 @@ An S3 object of class `ssdsims_scenario`.
 
 Input data is forwarded through
 [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-for validation (a numeric `Conc` column is required) but the data frames
-themselves are *not* stored; only their names are kept, so the scenario
-serialises to a compact manifest.
+for validation (a numeric `Conc` column is required) and retained on the
+scenario (as `$data`) so a local run
+([`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md))
+can sample it directly. The dataset *names* (`$datasets`) are what the
+targets/cluster path hashes and resolves through the registry, so that
+path need not carry the data frames.
 
 ## Dataset input
 
@@ -232,6 +241,7 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 
 #>   nsim:     100
 #>   datasets: ccme_boron
 #>   nrow:     5, 10
+#>   replace:  FALSE
 #>   fit grid:
 #>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
 #>     rescale: FALSE
