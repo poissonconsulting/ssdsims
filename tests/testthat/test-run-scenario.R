@@ -27,12 +27,17 @@ test_that("ssd_run_scenario.data.frame errors unknown argument", {
 })
 
 test_that("ssd_run_scenario.data.frame passes vectorized arguments fits", {
-  scenario <- ssd_run_scenario(
-    ssddata::ccme_boron,
-    nrow = 5,
-    nsim = 1,
-    rescale = c(TRUE, FALSE)
-  )
+  # Pin the seed so the sampled data (and therefore the fitted coefficients)
+  # are deterministic on their own, rather than depending on the ambient RNG
+  # state left by earlier tests in the session.
+  with_lecuyer_cmrg_seed(10, {
+    scenario <- ssd_run_scenario(
+      ssddata::ccme_boron,
+      nrow = 5,
+      nsim = 1,
+      rescale = c(TRUE, FALSE)
+    )
+  })
   coef <- coef(scenario$fits[[1]])
   expect_snapshot_data(coef, "coef_rescale1")
   coef <- coef(scenario$fits[[2]])
