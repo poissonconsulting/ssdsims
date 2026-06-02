@@ -1682,18 +1682,24 @@ shows where branches open and close.
   once**, then invokes the (state-less) operation against the
   ambient RNG. The `_state` suffix marks the wrapper that installs
   the primer; the inner ssdtools / dplyr calls consume RNG from the
-  now-set state. No `state =` argument on the inner ops.
+  now-set state. No `state =` argument on the inner ops. **Subsumes
+  `nrow-sub-truncation`** (below): the seeded `n_max` draw is
+  `slice_sample_state`; the `head(sample, nrow)` truncation is the
+  `fit` step's inline, RNG-free step.
 - **`migrate-public-api`** — Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
   re-runs with byte-equivalence.
-- **`nrow-sub-truncation`** — Implement `slice_sample_state` with
-  scenario-level `n_max` (per §5). Both `replace` values supported.
-  Test: `nrow = c(5, 10)` results are byte-equivalent prefixes
-  (cf. `scripts/experiment-subset-property.R`).
-- **`ci-false-collapse`** — Implement the §1.2 collapse in the hc
-  task table. Test: `ci = c(FALSE, TRUE)` produces the reduced
-  fan-out described in the §1.2 example grid.
+- **`nrow-sub-truncation`** — *Done* (no separate step needed):
+  `task-list-loop-baseline` (+ `…-fold`) realises §5 structurally —
+  the `sample` step draws `n_max = max(nrow)` once (keyed without
+  `nrow`) and the `fit` step truncates `head(sample, nrow)` inline.
+  The byte-equivalent-prefix property is tested; the seeded draw is
+  folded into `state-primitives`.
+- **`ci-false-collapse`** — *Done*: the §1.2 collapse is implemented
+  in `task-list-loop-baseline`'s hc task table (bootstrap-only knobs
+  stored `NA`, not fanned out) and the construction-time rejection in
+  `ssd-define-scenario`; both tested.
 - **`dataset-registry`** — **Targets-only**: an implicit registry
   of named datasets, implemented as a `tar_target` that writes
   Parquet to `results/datasets/<name>.parquet` from the
@@ -1800,8 +1806,6 @@ flowchart TD
     primer[task-primer]
     prims[state-primitives]
     migrate[migrate-public-api]
-    nrow[nrow-sub-truncation]
-    ci[ci-false-collapse]
     partby[partition-by]
 
     subgraph targets [targets-only plumbing]
@@ -1833,14 +1837,11 @@ flowchart TD
     primer --> prims
 
     prims --> migrate
-    prims --> nrow
-    prims --> ci
+    prims --> tt
 
     migrate --> dsreg
     migrate --> pmreg
     migrate --> manif
-    nrow --> tt
-    ci --> tt
     partby --> tt
 
     tt --> hive
