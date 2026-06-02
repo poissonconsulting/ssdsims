@@ -7,11 +7,12 @@
 ## 2. Scenario constructor
 
 - [ ] 2.1 Add `ssd_define_scenario()` in `R/scenario.R` returning an `ssdsims_scenario` S3 object
-- [ ] 2.2 Forward input data through `ssd_data()` and derive/accept the dataset name(s)
-- [ ] 2.3 Store declarative fields only: `seed`, `nsim`, `nrow`, dataset names, `fit` grid, `hc` grid, `partition_by`, `upload`
-- [ ] 2.4 Populate documented `partition_by` per-step defaults when not supplied; default `upload` to `NULL`
-- [ ] 2.5 Validate arguments with `chk` (scalar whole-number `seed`, `nrow` in `[5, 1000]`, `nsim`, etc.); abort on invalid input
-- [ ] 2.6 Ensure the constructor performs no RNG draws and leaves `.Random.seed` untouched
+- [ ] 2.2 Accept datasets as: single data frame (implicit/explicit name), named list, or unnamed list; forward through `ssd_data()` and derive/accept dataset names per the four-form API
+- [ ] 2.3 Implement symbol-capture name derivation (e.g., `rlang::enexpr()`) for implicit cases; fallback to required `name=` for unnamed literals
+- [ ] 2.4 Store declarative fields only: `seed`, `nsim`, `nrow`, dataset names (NOT data frames), `fit` grid, `hc` grid, `partition_by`, `upload`
+- [ ] 2.5 Populate documented `partition_by` per-step defaults when not supplied; default `upload` to `NULL`
+- [ ] 2.6 Validate arguments with `chk` (scalar whole-number `seed`, `nrow` in `[5, 1000]`, `nsim`, etc.); abort on invalid input; error if both named list and `name=` are supplied
+- [ ] 2.7 Ensure the constructor performs no RNG draws and leaves `.Random.seed` untouched
 
 ## 3. ci = FALSE collapse
 
@@ -29,6 +30,7 @@
 
 - [ ] 5.1 `tests/testthat/test-scenario.R`: minimal construction, declarative-only fields, no RNG side effect (`.Random.seed` unchanged)
 - [ ] 5.2 Tests for `ssd_data()`: `Conc` required, valid pass-through preserves extra columns
-- [ ] 5.3 Tests for the `ci = FALSE` collapse (message + recorded ignore) and the `ci = c(FALSE, TRUE)` non-collapse
-- [ ] 5.4 Snapshot test for `print.ssdsims_scenario()` (with and without ignored knobs)
-- [ ] 5.5 Run `devtools::document()`, `air` formatting, and `devtools::check()`; update `NAMESPACE`/`man/`
+- [ ] 5.3 Tests for dataset input API: single data frame (implicit name + explicit `name=`), named list, unnamed list; symbol capture for common patterns; error on conflict (both named list + `name=`)
+- [ ] 5.4 Tests for the `ci = FALSE` rejection (error on bootstrap knobs) and the `ci = c(FALSE, TRUE)` non-rejection
+- [ ] 5.5 Snapshot test for `print.ssdsims_scenario()` (with various dataset counts and forms)
+- [ ] 5.6 Run `devtools::document()`, `air` formatting, and `devtools::check()`; update `NAMESPACE`/`man/`

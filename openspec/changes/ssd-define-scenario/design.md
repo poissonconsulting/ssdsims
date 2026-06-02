@@ -40,8 +40,40 @@ Constraints:
 
 Additive — no migration. New exports only; no existing behaviour changes. A follow-up (`migrate-public-api`) will later route `ssd_run_scenario()` through the scenario object behind a one-release shim.
 
+## Dataset Input API (resolved)
+
+The constructor accepts datasets in four forms:
+
+1. **Single data frame, implicit name** (symbol capture):
+   ```r
+   ssd_define_scenario(ssddata::ccme_boron, ...)
+   # → datasets = "ccme_boron"
+   ```
+
+2. **Single data frame, explicit name**:
+   ```r
+   ssd_define_scenario(ssddata::ccme_boron, name = "boron", ...)
+   # → datasets = "boron"
+   ```
+
+3. **Named list** (name derivation skipped):
+   ```r
+   ssd_define_scenario(list(boron = ccme_boron, cadmium = ccme_cadmium), ...)
+   # → datasets = c("boron", "cadmium")
+   ```
+
+4. **Unnamed list** (symbol capture per element):
+   ```r
+   ssd_define_scenario(list(ccme_boron, ccme_cadmium), ...)
+   # → datasets = c("ccme_boron", "ccme_cadmium")
+   ```
+
+Symbol capture (form 1 & 4) extracts names from the call AST; for data frame literals (`data.frame(...)`) with no meaningful name, the user must supply `name=` (form 2) or use a named list (form 3). If both a named list and `name=` are supplied, error (cannot have conflicting names).
+
+For local use (ssd_run_scenario() without targets), the data frames are materialised inline and stored in an implicit per-scenario registry that `ssd_scenario_tasks()` consults. For cluster use, a `dataset-registry` targets step (roadmap entry) materialises and persists them to Parquet.
+
 ## Open Questions
 
 - Exact constructor signature for fit/hc arg grids: flat named arguments (`rescale=`, `est_method=`, …) forwarded into `fit`/`hc` lists, versus explicit `fit = list(...)` / `hc = list(...)`. Leaning flat-with-internal-grouping to match `ssd_run_scenario()`'s current surface.
-- How dataset names are derived for inline data (symbol capture vs required `name=`) — see Risks; resolve during implementation.
 - Whether `ssd_data()` should also assert positivity/finiteness of `Conc` now or defer to the fitting step.
+- Symbol-capture implementation (deparse, `rlang::enexpr()`, etc.); refine during implementation.

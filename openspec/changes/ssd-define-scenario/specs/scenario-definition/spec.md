@@ -26,6 +26,29 @@ The `ssdsims_scenario` object SHALL store `seed` (a scalar integer), `nsim`, `nr
 - **WHEN** `ssd_define_scenario()` is called without an `upload` argument
 - **THEN** the object's `upload` field SHALL be `NULL`
 
+### Requirement: Dataset input (single or list)
+`ssd_define_scenario()` SHALL accept datasets as either a single data frame or a list of data frames, and SHALL derive or accept dataset names for each.
+
+#### Scenario: Single data frame, implicit name
+- **WHEN** `ssd_define_scenario(ssddata::ccme_boron, ...)` is called with a single data frame as the first argument
+- **THEN** the scenario SHALL derive the dataset name from the argument name (e.g., `"ccme_boron"` from the symbol or the variable name) and store it as the sole dataset name
+
+#### Scenario: Single data frame, explicit name
+- **WHEN** `ssd_define_scenario(ssddata::ccme_boron, name = "boron_data", ...)` is called
+- **THEN** the scenario SHALL use the explicit `name` parameter as the dataset name, overriding automatic derivation
+
+#### Scenario: List of data frames with implicit names
+- **WHEN** `ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium), ...)` is called with a named list
+- **THEN** the scenario SHALL use the list names as the dataset names and store them all (e.g., `c("boron", "cadmium")`)
+
+#### Scenario: List of data frames with derived names
+- **WHEN** `ssd_define_scenario(list(ssddata::ccme_boron, ssddata::ccme_cadmium), ...)` is called with an unnamed list
+- **THEN** the scenario SHALL derive names from the data frame arguments (e.g., `c("ccme_boron", "ccme_cadmium")`)
+
+#### Scenario: Named list overrides explicit name parameter
+- **WHEN** both a named list and an explicit `name=` are supplied
+- **THEN** the scenario SHALL use the list element names and ignore the `name=` parameter; provide a warning or error to signal the conflict
+
 ### Requirement: Input data normalisation
 The package SHALL expose `ssd_data()` that normalises input data to a validated tibble, and `ssd_define_scenario()` SHALL forward all input data through it. `ssd_data()` SHALL require a `Conc` column and a valid tibble shape.
 
