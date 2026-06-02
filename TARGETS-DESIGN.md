@@ -724,14 +724,6 @@ these task tables:
 | `fit`    | `sample` axes, `nrow` `× fit grid`             | yes  | truncates `head(sample, nrow)` inline (RNG-free) then fits |
 | `hc`     | fit axes `× hc grid` (§1.2 collapse)           | yes  | as above                                                   |
 
-> **Expanded by `task-list-loop-baseline-fold`.** The step originally
-> materialised **four** tables, with the RNG-free `head(sample, nrow)`
-> truncation as its own `data` step. That step was folded into `fit`:
-> SSD datasets are tiny, so materialising the truncation buys no I/O
-> amortisation while it duplicates a prefix of the `sample` shard on
-> disk and adds a task/shard layer whose only consumer is `fit`. So
-> `nrow` is now a `fit` cross-join axis and `fit` truncates inline.
-
 This keeps the sub-truncation property **structural**: there is
 exactly one `sample` task per `(dataset, sim, replace)`, so the
 expensive draw is shared across every `nrow`, while `nrow` is an
@@ -1670,10 +1662,8 @@ shows where branches open and close.
   `purrr::pmap()` loops. Establishes the data shape and a working
   baseline that subsequent steps swap pieces of, one at a time.
   *Expanded by `task-list-loop-baseline-fold`* (applied; not a new DAG
-  node): the RNG-free `head(sample, nrow)` truncation is folded into
-  the `fit` step rather than a separate `data` step (datasets are tiny,
-  so materialising it buys nothing — see the §5 refinement note), so
-  the steps are `sample`/`fit`/`hc` and `nrow` is a `fit` axis.
+  node): the steps are `sample`/`fit`/`hc` — `fit` truncates
+  `head(sample, nrow)` inline rather than via a separate `data` step.
 - **`dqrng-init`** — Add `dqrng` to `Imports`; `dqRNGkind("pcg64")`
   + `register_methods()` on package load, `restore_methods()` on
   unload. Verifies: `scripts/experiment-dqrng-hash.R` still passes.
