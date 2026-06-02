@@ -25,6 +25,7 @@ Imports:
     tidyr,
     withr
 Suggests: 
+    knitr,
     quarto,
     readr,
     ssddata,

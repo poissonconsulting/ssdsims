@@ -13,7 +13,7 @@
 ^LICENSE\.md$
 ^_pkgdown\.yml$
 ^README\.Rmd$
-^.*\.html$
+^[^/]*\.html$
 ^air\.toml$
 ^\.ccache$
 ^CLAUDE\.md$
