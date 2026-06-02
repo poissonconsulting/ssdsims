@@ -412,19 +412,15 @@ path_key <- function(tbl, cols) {
   do.call(paste, c(parts, sep = "/"))
 }
 
-# Attach the `<step>_id` primary key and (for non-root steps) the parent's
-# `<parent>_id` as a foreign key, both up front.
+# Append the `<step>_id` primary key and (for non-root steps) the parent's
+# `<parent>_id` as a foreign key. They go last so the cross-join axes lead.
 with_task_ids <- function(tbl, step) {
-  id <- paste0(step, "_id")
-  tbl[[id]] <- path_key(tbl, task_axes(step))
+  tbl[[paste0(step, "_id")]] <- path_key(tbl, task_axes(step))
   parent <- task_parent(step)
-  front <- id
   if (!is.na(parent)) {
-    parent_id <- paste0(parent, "_id")
-    tbl[[parent_id]] <- path_key(tbl, task_axes(parent))
-    front <- c(id, parent_id)
+    tbl[[paste0(parent, "_id")]] <- path_key(tbl, task_axes(parent))
   }
-  dplyr::relocate(tbl, dplyr::all_of(front))
+  tbl
 }
 
 # ---- internal per-task operations (no RNG seeding) -------------------------
@@ -539,12 +535,13 @@ resolve_scenario_data <- function(data, scenario, call = rlang::caller_env()) {
 
 new_ssdsims_tasks <- function(tbl, step) {
   tbl <- with_task_ids(tbl, step)
-  structure(
-    tbl,
-    step = step,
-    axes = task_axes(step),
-    class = c("ssdsims_tasks", class(tbl))
-  )
+  # Set attributes individually rather than via `structure()`: a bulk
+  # `attributes<-` normalises the tibble's compact row names to explicit
+  # `1:n`, which tibble then flags with a `*` on print.
+  attr(tbl, "step") <- step
+  attr(tbl, "axes") <- task_axes(step)
+  class(tbl) <- c("ssdsims_tasks", class(tbl))
+  tbl
 }
 
 #' @export
