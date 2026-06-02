@@ -85,7 +85,9 @@ The most consequential design choices, with section refs:
   shard (no `pattern = map` over a runtime task-table target). The
   scenario is a plain construction-time object, not a `tar_target()`.
   Dynamic branching stays available as a documented fallback for
-  extreme-scale fan-outs (§6).
+  extreme-scale fan-outs (§6). The targets lab exercised both styles
+  head to head and confirmed the rule, including the cheap-extension
+  payoff static branching relies on (§6).
 - **Per-shard Parquet shards, Hive-style (§6).** Each shard target
   writes one Parquet file under
   `results/<step>/dataset=.../sim=.../`; downstream shards open the
@@ -116,11 +118,14 @@ The most consequential design choices, with section refs:
   invalidation) is `tar_cue(depend = FALSE)` on the step targets,
   all in the one project — no child project, no `parent` reference
   (§8.3).
-- **Roadmap with parallel work streams (§12).** Eighteen
-  kebab-slugged steps with a Mermaid DAG showing where branches
-  open. Two ground-up entries — `ssd-define-scenario` and the
-  `task-list-loop-baseline` runner — land before any RNG / dqrng
-  machinery so the data shape is settled first.
+- **Roadmap with parallel work streams (§12).** Kebab-slugged steps
+  with a Mermaid DAG showing where branches open. Two ground-up
+  entries — `ssd-define-scenario` and the `task-list-loop-baseline`
+  runner — land before any RNG / dqrng machinery so the data shape is
+  settled first. `migrate-public-api` is a cosmetic rename that the
+  targets-only plumbing no longer waits on (trusting the design), and
+  the datasets / `min_pmix` registries collapse into one `registry`
+  step.
 
 ---
 
@@ -190,11 +195,13 @@ Three design points distinguish this from the current code:
 
 The scenario object itself stores only names for datasets and
 `min_pmix` entries — never the values. The actual lookup is the
-**targets project's** responsibility: a `dataset-registry` target
-(and a sibling `min-pmix-registry` target, §12) materializes each
-referenced name into a Parquet file (for data) or pins a function
-value (for `min_pmix`) once per project. The "registry" is
-therefore an *implicit* part of the scenario when run through
+**targets project's** responsibility: a single `registry` target
+(§12) materializes each referenced name into a Parquet file (for
+data) or pins a function value (for `min_pmix`) once per project —
+datasets and `min_pmix` share one registry step because they have
+the same name-only-indirection shape (only the resolved payload
+differs: a Parquet file vs. a pinned function value). The "registry"
+is therefore an *implicit* part of the scenario when run through
 targets; for local use (no targets) the scenario constructor
 accepts data inline (`ssd_define_scenario(list(boron = ccme_boron,
 …))`) and the names are derived. Two motivations for the name-only
@@ -525,6 +532,19 @@ Only the controller and resource specs (from B) change between
 clusters. Pipeline shape (from A) and task content + RNG (from C)
 are scheduler-independent.
 
+**Validated by the crew labs.** Ingredients A and B are no longer
+hypothetical: the project's crew labs (in the sister planning repo)
+have assembled and run them end to end on a SLURM cluster. One lab is
+the bare shape (A) — a `crew.cluster::crew_controller_slurm()`
+dispatching a no-op workload — and a second drives the real ssdsims
+per-sim pipeline (C) through that same controller, with a
+`crew::crew_controller_local()` fallback for off-cluster smoke tests.
+The labs also pinned down the operational backend (B): a ManyLinux
+binary install path so worker nodes resolve the dependency tree
+without compiling, plus a login-node prerequisite checker.
+`cluster-pipeline` (§12) therefore ports a proven shape, not an
+untested sketch.
+
 ---
 
 ## 5. Three grids, three fan-outs
@@ -757,9 +777,12 @@ at run time. By the standard rule of thumb — *static branching when
 the branch count is known at sourcing time, dynamic branching only
 when it depends on data computed during the run* — this design uses
 **static branching**: `tarchetypes::tar_map()` mints one named target
-per shard while the pipeline is built. An independent experiment
-exercised both styles head to head and confirmed the rule applies
-here; the most complete experiment (pinning + `error = "null"` +
+per shard while the pipeline is built. The project's targets lab (a
+set of single-behaviour toy pipelines in the sister planning repo)
+exercised both styles head to head — a static-branch axis and a
+dynamic-branch axis as the pair to compare: the same fan-out shape,
+decided at construction time vs at run time — and confirmed the rule
+applies here. Its most complete pipeline (pinning + `error = "null"` +
 per-shard upload, all composed) is itself built on static branching.
 
 Why static fits this design specifically:
@@ -798,6 +821,30 @@ enough to hurt may opt into dynamic branching
 (`tar_target(pattern = map(<step>_tasks))` over a grouped task-table
 target) without changing anything else. Static is the default; dynamic
 is the documented escape hatch for extreme fan-outs.
+
+**What the targets lab validated.** The lab isolates each `targets`
+behaviour as its own laptop-runnable toy pipeline; three findings from
+the branching axes carry back here:
+
+- **The static default holds, and its cheap-extension payoff is real.**
+  A grow-the-pipeline spike bumps the variant count `4 -> 6` and
+  re-runs: the existing four variants are skipped (their commands are
+  unchanged and they never depended on the count), so extending costs
+  *build the new variants + redo the fan-in*, not *redo everything*.
+  That is precisely the path-axis-growth story this design leans on
+  (§8.1) — confirmed, not assumed.
+- **Static mints separately-named, addressable nodes.** `tar_map()`
+  produces N separately-named targets, each its own
+  `tar_read()`-addressable DAG node, matching the named-shard rationale
+  above; dynamic branching instead tracks branches under hashed names
+  with a downstream target that row-binds them automatically. The
+  escape hatch works; it just trades addressability for a single light
+  pattern node.
+- **A shard is just a multi-row target value.** A sharding spike
+  confirms a shard target is simply a target that returns many rows;
+  the branching axes only add ways to *generate* such targets — so
+  branching stays an implementation detail behind the shard
+  abstraction, as claimed.
 
 ```
    scenario   (plain construction-time object; carries seed, partition_by)
@@ -1034,10 +1081,12 @@ inter-target wiring.
 
 `targets` ships a native Parquet store (`tar_option_set(format =
 "parquet")`) that serialises each target's value to Parquet with no
-explicit write — the obvious first reach. An independent experiment
-ruled it out: depending on such a target **eagerly deserialises its
-value back into R**, even when the downstream body only wants the
-store path, so it does *not* avoid the R roundtrip; and the store
+explicit write — the obvious first reach. The targets lab's Parquet
+spike ruled it out and works the reasoning through in full: depending
+on such a target **eagerly deserialises its value back into R**, even
+when the downstream body only wants the store path (a probe confirmed
+the loaded data frame is present even when only the path is used), so
+it does *not* avoid the R roundtrip; and the store
 layout (`_targets/objects/<name>`, no extension) is not a stable
 contract to read against from outside `targets`. `format = "file"`
 is the seam that actually passes storage between targets without the
@@ -1076,14 +1125,17 @@ tar_map(
 )
 ```
 
-An independent experiment showed why this beats pushing the blob
+The targets lab's Azure spike showed why this beats pushing the blob
 from inside `ssd_run_<step>_step()` right after the local write:
 
 - **Content-hashing skips unchanged shards.** Because `upload_<step>`
   takes the shard's path (`format = "file"`) as input, `targets`
   re-runs it only when that shard's content hash changes. A re-driven
   `tar_make()` that rebuilt nothing uploads nothing; a partial
-  extension uploads only the new/rewritten shards.
+  extension uploads only the new/rewritten shards. (A combined lab
+  pipeline composes this with `error = "null"` and a pinning cue:
+  fixing one failed branch becomes a *minimal* re-upload, not a full
+  redo.)
 - **The graph builds and dry-runs with no credentials.**
   `ssd_upload_shard()` checks for credentials and, when absent,
   returns the local path as a no-op (a dry run) instead of erroring —
@@ -1093,6 +1145,15 @@ from inside `ssd_run_<step>_step()` right after the local write:
   depends only on the shard targets (what was produced); the upload
   manifest depends on the `upload_<step>` targets (what was shipped).
   A reader that needs only uploaded data depends on the latter.
+
+**Read the shards back in place, no download.** The same Azure spike
+closes the loop on the off-cluster read story: a query step reads the
+uploaded blobs **in place on Azure** with DuckDB's `azure` extension
+(a Hive-glob `az://…/<partition>=*/part.parquet`) — the analysis layer
+never downloads the Parquet, it predicate-pushes straight against blob
+storage. So the Hive partition layout (above) pays off identically
+whether the shards sit on the cluster filesystem or in the object
+store.
 
 Per-shard flow when `upload` is non-NULL:
 
@@ -1147,7 +1208,7 @@ halting on the first failure. An errored branch is always out of
 date, so a re-driven `tar_make()` after a fix retries only the failed
 shards (§8.4).
 
-Two constraints, both confirmed by independent experiments:
+Two constraints, both confirmed by the targets lab's failure spike:
 
 - **Errors are read *after* the run, not inside it.** A target cannot
   call `tar_meta()` (or other store functions) while the pipeline is
@@ -1172,14 +1233,26 @@ Two constraints, both confirmed by independent experiments:
 target (§6.1) and the two manifests — have to tolerate it rather than
 choke. `ssd_upload_shard(NULL, ...)` records the shard as a skip
 instead of erroring, and the compute / upload manifests simply omit
-it; the survivors still upload and `summary` still unions them. An
-independent experiment that composed a construction-time-sized fan-out
+it; the survivors still upload and `summary` still unions them. A
+combined lab pipeline composed a construction-time-sized fan-out
 (static branching), this `error = "null"` handling, and the per-shard
-upload target found this `NULL`-tolerance in the upload and manifest
-helpers was the *only* glue the composition needed — and that once the
-failing branch is
-fixed under the §8.3 pin, only that one shard rebuilds, re-uploads,
-and is re-queried (a minimal re-run, not a full redo).
+upload target, and found this `NULL`-tolerance in the upload and
+manifest helpers was the *only* glue the composition needed — and that
+once the failing branch is fixed under the §8.3 pin, only that one
+shard rebuilds, re-uploads, and is re-queried (a minimal re-run, not a
+full redo).
+
+**Two granularities of survival.** `error = "null"` is the
+*across-shard* guarantee: a whole shard that errors goes `NULL` and
+the others keep building. A two-layer sharding spike adds the
+complementary *within-shard* one: a shard tolerates *partial*
+computation failure — the shard body keeps the survivors and fails
+only if *every* computation in it fails, so one bad computation yields
+a smaller shard, not a failure. A step body that runs many tasks per
+shard should follow
+the same rule — drop the failed tasks, write the survivors, and only
+let the shard target itself error when *every* task in it failed — so
+`error = "null"` is reserved for genuine whole-shard loss.
 
 ---
 
@@ -1431,9 +1504,9 @@ simpler cache semantics in exchange for redoing the work of every
 task already in the shard.
 
 **Whether `summary` rebuilds depends on the bytes, not the rewrite.**
-An independent experiment confirmed `targets` propagates on *value*,
-not on the act of rebuilding: a recomputed target whose value is
-byte-identical leaves its dependents skipped. Here the shard *did*
+The targets lab's invalidation spike confirmed `targets` propagates on
+*value*, not on the act of rebuilding: a recomputed target whose value
+is byte-identical leaves its dependents skipped. Here the shard *did*
 gain a row, so its Parquet bytes change and `summary` (which reads
 the shard) re-runs. But the corollary matters for §8.4 and for any
 no-op rewrite: if a rewrite reproduced the exact same bytes,
@@ -1464,9 +1537,9 @@ branch as out-of-date, forcing a re-run the user does *not* want.
 The question is the **opposite** of invalidation — how to keep
 `targets` from re-running things whose shards are still trusted.
 
-This stays inside the one project. An independent experiment settled
-it: `tar_cue(depend = FALSE)` does exactly this. It tells a target
-to ignore changes to its upstream dependencies — including the
+This stays inside the one project. The targets lab's invalidation
+spike settled it: `tar_cue(depend = FALSE)` does exactly this. It
+tells a target to ignore changes to its upstream dependencies — including the
 function bodies it calls — so editing an `_state` function (or
 bumping an `ssdtools` version) rebuilds *nothing*:
 
@@ -1495,7 +1568,10 @@ no `parent` reference, no cross-project file-input wiring.
 only; the target still rebuilds if its own `format = "file"` output
 goes missing or if its task-table grouping changes — which is what
 makes path-axis and inner-axis growth in §8.1–§8.2 still work while
-the pin is in place.)
+the pin is in place. The lab also found one case the pin does **not**
+hold: an already-errored target reruns regardless, so a shard left
+broken under `error = "null"` retries on the next `tar_make()` even
+when pinned — exactly what you want for the §8.4 fix-and-refresh case.)
 
 ### 8.4 Forced re-run after a code fix
 
@@ -1666,6 +1742,14 @@ has no downstream dependencies, so breaking-change steps are fine.
 **Parallel work streams are preferred** — the dependency DAG below
 shows where branches open and close.
 
+**De-risked by the labs.** The targets-mechanics steps —
+`shard-failure-survival`, `hive-partitioning`, `cloud-upload`,
+`mixed-code-lockin`, and the `format = "file"` choice underneath them —
+each have a working single-behaviour spike in the project's targets
+lab, and `cluster-pipeline` ports a crew + SLURM shape the crew labs
+already ran end to end (see §4, §6). These steps are therefore
+*porting* validated behaviour into the package, not discovering it.
+
 - **`ssd-define-scenario`** — Public constructor for the scenario
   object (S3); replaces the PoC's `data2`-prefixed names. Signature
   along the lines of `ssd_define_scenario(data, ..., nsim, nrow,
@@ -1682,7 +1766,7 @@ shows where branches open and close.
   not just data frames / lists of data frames. Each non-data-frame input
   is a data *generator*: the constructor derives a dataset name (by symbol
   capture, as for data frames) and records the generator by name, storing
-  no function bodies; the data itself is materialised by `dataset-registry`
+  no function bodies; the data itself is materialised by `registry`
   (synthetic datasets are realised at registration time, §1.1), keeping the
   scenario declarative. Until this lands, `ssd_define_scenario()` is
   data-frame-only — a documented gap vs. `ssd_run_scenario()`.
@@ -1716,21 +1800,26 @@ shows where branches open and close.
   `n_max` draw lives here as `slice_sample_state`; the
   `head(sample, nrow)` truncation is the `fit` step's inline, RNG-free
   step — there is no separate sub-truncation step.)
-- **`migrate-public-api`** — Migrate `ssd_sim_data.data.frame`,
+- **`migrate-public-api`** — *Cosmetic, independent of the targets
+  work (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
-  re-runs with byte-equivalence.
-- **`dataset-registry`** — **Targets-only**: an implicit registry
-  of named datasets, implemented as a `tar_target` that writes
-  Parquet to `results/datasets/<name>.parquet` from the
-  `ssd_define_scenario()` input. Synthetic datasets are realised
-  here at registration time. Function-name edits don't enter task
-  hashes because the scenario already refers to datasets by name.
-- **`min-pmix-registry`** — **Targets-only**: same shape as
-  `dataset-registry` but for `min_pmix` functions. The scenario
-  refers to them by name; the targets project pins the function
-  values per-run. Regression test: a body edit to a registered
-  function does not move the hash of any cached fit branch.
+  re-runs with byte-equivalence. This is a surface rename over
+  `primer-primitives`, which already establishes the contract — so,
+  **trusting the design**, none of the targets-only plumbing (`registry`,
+  `manifest`, `task-tables`, …) waits on it. It can land at any time;
+  it is **not** on the dependency DAG.
+- **`registry`** — **Targets-only**: an implicit registry of the
+  scenario's *named* entries, implemented as `tar_target`s that resolve
+  each name once per project — datasets to a Parquet file
+  (`results/datasets/<name>.parquet` from the `ssd_define_scenario()`
+  input; synthetic datasets realised here at registration time), and
+  `min_pmix` functions to a pinned per-run function value. One step,
+  not two, because both are the same name-only indirection (§1.1) and
+  differ only in the resolved payload. Function-name / body edits don't
+  enter task hashes because the scenario refers to both by name.
+  Regression test: a body edit to a registered `min_pmix` function does
+  not move the hash of any cached fit branch.
 - **`manifest`** — Per-scenario manifest writer/reader with the
   §8.5 field set; each step target writes each shard's sha256
   alongside the Parquet on success.
@@ -1826,16 +1915,13 @@ flowchart TD
     dqstate[local-dqrng-state]
     primer[task-primer]
     prims[primer-primitives]
-    migrate[migrate-public-api]
     partby[partition-by]
 
     subgraph targets [targets-only plumbing]
-        dsreg[dataset-registry]
-        pmreg[min-pmix-registry]
+        reg[registry]
         manif[manifest]
         tt[task-tables]
-        dsreg --> tt
-        pmreg --> tt
+        reg --> tt
         manif --> tt
     end
 
@@ -1851,18 +1937,13 @@ flowchart TD
     define --> baseline
     define --> partby
     define --> inputs
-    inputs --> dsreg
+    inputs --> reg
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims
     primer --> prims
 
-    prims --> migrate
     prims --> tt
-
-    migrate --> dsreg
-    migrate --> pmreg
-    migrate --> manif
     partby --> tt
 
     tt --> hive
@@ -1876,6 +1957,10 @@ flowchart TD
     rewrite --> lockin
     lockin --> cleanup
 ```
+
+`migrate-public-api` is **not** shown: trusting the design, it is a
+cosmetic rename that no targets step depends on, so it can land any
+time (like `error-call-origin` and the Cleanup items).
 
 Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not
