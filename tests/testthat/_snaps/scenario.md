@@ -1,14 +1,127 @@
+# scenario: ssd_data requires a Conc column
+
+    Code
+      ssd_data(data.frame(x = 1:5))
+    Condition
+      Error:
+      ! `data` must have a column named `Conc`.
+
+# scenario: ssd_data rejects a non-numeric Conc column
+
+    Code
+      ssd_data(data.frame(Conc = c("a", "b")))
+    Condition
+      Error in `ssd_data()`:
+      ! Column `Conc` must be numeric.
+
+# scenario: min_pmix rejects non-function list elements
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(1))
+    Condition
+      Error in `lapply()`:
+      ! All elements of `min_pmix` must be a function.
+
+# scenario: named list plus name= is an error
+
+    Code
+      ssd_define_scenario(list(boron = ssddata::ccme_boron), name = "x", seed = 1L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `name` must not be supplied with a named list of datasets.
+
+# scenario: data frame literal with no derivable name errors
+
+    Code
+      ssd_define_scenario(data.frame(Conc = 1:5), seed = 1L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Unable to derive a dataset name from the data argument; supply an explicit `name=`.
+
+# scenario: bad data in a list aborts via ssd_data
+
+    Code
+      ssd_define_scenario(list(good = ssddata::ccme_boron, bad = 1:5), seed = 1L)
+    Condition
+      Error in `map()`:
+      i In index: 2.
+      i With name: bad.
+      Caused by error in `.f()`:
+      ! `data` must be a data.frame.
+
+# scenario: ci = FALSE rejects an explicit nboot
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, nboot = 500)
+    Condition
+      Error:
+      ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
+
+# scenario: ci = FALSE rejects ci_method and parametric
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, ci_method = "MACL")
+    Condition
+      Error:
+      ! Bootstrap-only knob ('ci_method') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, parametric = FALSE)
+    Condition
+      Error:
+      ! Bootstrap-only knob ('parametric') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
+
+# scenario: invalid seed errors
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = c(1L, 2L))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1.5)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = NULL)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
+
+# scenario: out-of-range nrow errors
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 4L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow` must be between 5 and 1000, not 4.
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 1001L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow` must be between 5 and 1000, not 1001.
+
 # scenario: print is stable for a single dataset
 
     Code
-      s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L),
-      seed = 42L)
-      print(s)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 42L)
     Output
       <ssdsims_scenario>
         seed:     42
-        datasets: ccme_boron
         nsim:     100
+        datasets: ccme_boron
         nrow:     5, 10
         fit grid:
           dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
@@ -29,18 +142,17 @@
 # scenario: print is stable for multiple datasets and vector knobs
 
     Code
-      s <- ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+      ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
       nsim = 50L, nrow = c(5L, 6L, 10L), seed = 1L, rescale = c(FALSE, TRUE),
       computable = c(FALSE, TRUE), at_boundary_ok = c(TRUE, FALSE), range_shape1 = list(
         c(0.05, 20), c(0.1, 10)), proportion = c(0.05, 0.1), ci = c(FALSE, TRUE),
       nboot = c(100, 1000), est_method = c("multi", "geometric"), ci_method = c(
         "weighted_samples", "MACL"), parametric = c(TRUE, FALSE))
-      print(s)
     Output
       <ssdsims_scenario>
         seed:     1
-        datasets: boron, cadmium
         nsim:     50
+        datasets: boron, cadmium
         nrow:     5, 6, 10
         fit grid:
           dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull

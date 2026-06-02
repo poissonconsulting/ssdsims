@@ -1,10 +1,9 @@
 # ---- ssd_data() ------------------------------------------------------------
 
 test_that("scenario: ssd_data requires a Conc column", {
-  expect_error(
-    ssd_data(data.frame(x = 1:5)),
-    "`data` must have a column named `Conc`"
-  )
+  expect_snapshot(error = TRUE, {
+    ssd_data(data.frame(x = 1:5))
+  })
 })
 
 test_that("scenario: ssd_data passes valid data through, preserving columns", {
@@ -16,10 +15,9 @@ test_that("scenario: ssd_data passes valid data through, preserving columns", {
 })
 
 test_that("scenario: ssd_data rejects a non-numeric Conc column", {
-  expect_error(
-    ssd_data(data.frame(Conc = c("a", "b"))),
-    "Conc"
-  )
+  expect_snapshot(error = TRUE, {
+    ssd_data(data.frame(Conc = c("a", "b")))
+  })
 })
 
 # ---- minimal construction & declarative-only fields ------------------------
@@ -110,10 +108,9 @@ test_that("scenario: min_pmix accepts names, functions, and lists", {
 })
 
 test_that("scenario: min_pmix rejects non-function list elements", {
-  expect_error(
-    ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(1)),
-    "function"
-  )
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(1))
+  })
 })
 
 test_that("scenario: partition_by defaults are populated", {
@@ -169,63 +166,57 @@ test_that("scenario: unnamed list derives names per element", {
 })
 
 test_that("scenario: named list plus name= is an error", {
-  expect_error(
+  expect_snapshot(error = TRUE, {
     ssd_define_scenario(
       list(boron = ssddata::ccme_boron),
       name = "x",
       seed = 1L
-    ),
-    "named list"
-  )
+    )
+  })
 })
 
 test_that("scenario: data frame literal with no derivable name errors", {
-  expect_error(
-    ssd_define_scenario(data.frame(Conc = 1:5), seed = 1L),
-    "supply an explicit `name=`"
-  )
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(data.frame(Conc = 1:5), seed = 1L)
+  })
 })
 
 test_that("scenario: bad data in a list aborts via ssd_data", {
-  expect_error(
-    ssd_define_scenario(list(good = ssddata::ccme_boron, bad = 1:5), seed = 1L),
-    "data"
-  )
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(list(good = ssddata::ccme_boron, bad = 1:5), seed = 1L)
+  })
 })
 
 # ---- ci = FALSE rejects bootstrap-only knobs -------------------------------
 
 test_that("scenario: ci = FALSE rejects an explicit nboot", {
-  expect_error(
+  expect_snapshot(error = TRUE, {
     ssd_define_scenario(
       ssddata::ccme_boron,
       seed = 1L,
       ci = FALSE,
       nboot = 500
-    ),
-    "ci = FALSE"
-  )
+    )
+  })
 })
 
 test_that("scenario: ci = FALSE rejects ci_method and parametric", {
-  expect_error(
+  expect_snapshot(error = TRUE, {
     ssd_define_scenario(
       ssddata::ccme_boron,
       seed = 1L,
       ci = FALSE,
       ci_method = "MACL"
-    ),
-    "ci = FALSE"
-  )
-  expect_error(
+    )
+  })
+  expect_snapshot(error = TRUE, {
     ssd_define_scenario(
       ssddata::ccme_boron,
       seed = 1L,
       ci = FALSE,
       parametric = FALSE
-    ),
-    "ci = FALSE"
-  )
+    )
+  })
 })
 
 test_that("scenario: ci = FALSE alone is fine with default knobs", {
@@ -250,37 +241,42 @@ test_that("scenario: ci = c(FALSE, TRUE) retains bootstrap knobs", {
 # ---- argument validation ---------------------------------------------------
 
 test_that("scenario: invalid seed errors", {
-  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = c(1L, 2L)))
-  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = 1.5))
-  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = NULL))
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(ssddata::ccme_boron, seed = c(1L, 2L))
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(ssddata::ccme_boron, seed = 1.5)
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(ssddata::ccme_boron, seed = NULL)
+  })
 })
 
 test_that("scenario: out-of-range nrow errors", {
-  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 4L))
-  expect_error(ssd_define_scenario(
-    ssddata::ccme_boron,
-    seed = 1L,
-    nrow = 1001L
-  ))
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 4L)
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 1001L)
+  })
 })
 
 # ---- print method ----------------------------------------------------------
 
 test_that("scenario: print is stable for a single dataset", {
-  expect_snapshot({
-    s <- ssd_define_scenario(
+  expect_snapshot(
+    ssd_define_scenario(
       ssddata::ccme_boron,
       nsim = 100L,
       nrow = c(5L, 10L),
       seed = 42L
     )
-    print(s)
-  })
+  )
 })
 
 test_that("scenario: print is stable for multiple datasets and vector knobs", {
-  expect_snapshot({
-    s <- ssd_define_scenario(
+  expect_snapshot(
+    ssd_define_scenario(
       list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
       nsim = 50L,
       nrow = c(5L, 6L, 10L),
@@ -296,6 +292,5 @@ test_that("scenario: print is stable for multiple datasets and vector knobs", {
       ci_method = c("weighted_samples", "MACL"),
       parametric = c(TRUE, FALSE)
     )
-    print(s)
-  })
+  )
 })

@@ -385,8 +385,8 @@ scenario_min_pmix_names <- function(min_pmix, min_pmix_expr) {
 print.ssdsims_scenario <- function(x, ...) {
   cat("<ssdsims_scenario>\n")
   cat("  seed:     ", x$seed, "\n", sep = "")
-  cat("  datasets: ", paste(x$datasets, collapse = ", "), "\n", sep = "")
   cat("  nsim:     ", x$nsim, "\n", sep = "")
+  cat("  datasets: ", paste(x$datasets, collapse = ", "), "\n", sep = "")
   cat("  nrow:     ", paste(x$nrow, collapse = ", "), "\n", sep = "")
   cat("  fit grid:\n")
   print_grid(x$fit)
