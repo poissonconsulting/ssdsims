@@ -135,8 +135,12 @@ The package uses two RNG paths:
 2.  **dqrng + hash** (new targets-based path) —
     `dqrng::dqset.seed(seed, stream)` with task-derived primers. The
     `pcg64` backend is scenario-scoped via
-    [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md);
-    see `R/dqrng-backend.R` and `openspec/changes/dqrng-init/design.md`.
+    [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md),
+    which is **reentrant**: a nested call is a no-op (detected via
+    `RNGkind()[1] == "user-supplied"`), so only the outermost scope
+    activates and resets the backend and the RNG stream is identical
+    with or without nesting. See `R/dqrng-backend.R` and
+    `openspec/changes/dqrng-init/design.md`.
 
 When touching RNG-consuming code: - Do **not** assume a fixed global
 `.Random.seed` across function calls. - Use

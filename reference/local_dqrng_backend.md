@@ -32,7 +32,9 @@ local_dqrng_backend(.local_envir = parent.frame())
 
 ## Value
 
-Invisibly returns `NULL`.
+Invisibly returns `TRUE` if this call activated the backend (the
+outermost scope) or `FALSE` if the backend was already active and the
+call was a no-op.
 
 ## Details
 
@@ -42,6 +44,18 @@ withr convention (compare
 [`withr::local_seed()`](https://withr.r-lib.org/reference/with_seed.html)):
 it pairs activation with deferred reset so the backend is always
 restored, including on error.
+
+The helper is reentrant.
+[`dqrng::register_methods()`](https://daqana.github.io/dqrng/reference/user-supplied-rng.html)
+/
+[`dqrng::restore_methods()`](https://daqana.github.io/dqrng/reference/user-supplied-rng.html)
+keep a single global save-slot, so a nested reset would tear the backend
+down for the still-open outer scope. To avoid this, a
+`local_dqrng_backend()` call made while the backend is already active is
+a no-op: it does not re-activate the backend and schedules no further
+reset. Only the outermost call activates the backend on entry and resets
+it on exit, so the RNG stream is identical whether or not a nested call
+occurs.
 
 ## See also
 

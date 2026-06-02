@@ -73,7 +73,9 @@ default (<code>Xoroshiro128++</code>) does not.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly returns <code>NULL</code>.</p>
+    <p>Invisibly returns <code>TRUE</code> if this call activated the backend (the
+outermost scope) or <code>FALSE</code> if the backend was already active and the call
+was a no-op.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -81,6 +83,14 @@ default (<code>Xoroshiro128++</code>) does not.</p>
 base R's <code>.Random.seed</code>. <code>local_dqrng_backend()</code> follows the withr
 convention (compare <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::local_seed()</a></code>): it pairs activation with
 deferred reset so the backend is always restored, including on error.</p>
+<p>The helper is reentrant. <code><a href="https://daqana.github.io/dqrng/reference/user-supplied-rng.html" class="external-link">dqrng::register_methods()</a></code> /
+<code><a href="https://daqana.github.io/dqrng/reference/user-supplied-rng.html" class="external-link">dqrng::restore_methods()</a></code> keep a single global save-slot, so a nested
+reset would tear the backend down for the still-open outer scope. To avoid
+this, a <code>local_dqrng_backend()</code> call made while the backend is already
+active is a no-op: it does not re-activate the backend and schedules no
+further reset. Only the outermost call activates the backend on entry and
+resets it on exit, so the RNG stream is identical whether or not a nested
+call occurs.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
