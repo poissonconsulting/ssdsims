@@ -70,6 +70,8 @@
 <li>
 <strong>Validation</strong>: Use <code>chk</code> for all input validation; keep error messages informative and actionable.</li>
 <li>
+<strong>Error origin</strong>: Raise errors in the context of the <em>user-facing</em> function. Thread the public function’s frame down to validators (<code>chk::abort_chk(..., call = call)</code> with <code>call = environment()</code> captured in the exported function) and avoid leaking internal frames like <code><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">purrr::map()</a></code> / <code><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply()</a></code> / private helpers into the <code>Error in ...:</code> header (loop instead of <code><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">purrr::walk</a></code>/<code>chk_all</code> where they would surface). A package-wide pass to enforce this is tracked as the <code>error-call-origin</code> roadmap item (TARGETS-DESIGN.md §12).</li>
+<li>
 <strong>Minimal diffs</strong>: touch only the lines your change requires; don’t reformat unrelated lines or let editors rewrite whitespace. Leave <code>DESCRIPTION</code> formatting to <code>usethis</code>/<code>desc</code> (e.g. keep the trailing space after field names like <code>Imports:</code>).</li>
 <li>
 <strong>Orthography</strong>: UK/AU (Commonwealth) English — prefer <code>-ise</code>/<code>-isation</code> (<code>initialise</code>, <code>serialisable</code>) over <code>-ize</code>, and <code>-our</code> (<code>behaviour</code>, <code>colour</code>) over <code>-or</code>. This matches the package’s R source and OpenSpec artifacts and the authors’ Australian/Canadian convention. Exceptions: code identifiers and base R/API names keep their canonical spelling (e.g. <code>color</code>, <code>center</code>, <code>RNGkind</code>), as do proper nouns (e.g. “Apache License”).</li>
@@ -134,15 +136,8 @@
 </div>
 <div class="section level3">
 <h3 id="testing">Testing<a class="anchor" aria-label="anchor" href="#testing"></a></h3>
-<ul><li>Tests for <code>R/{name}.R</code> go in <code>tests/testthat/test-{name}.R</code>; place new tests next to similar existing ones.</li>
-<li>All new code should have an accompanying test. Keep tests minimal with few comments.</li>
-<li>Never put code in a <code>test-{name}.R</code> file outside a <code>test_that()</code> block; use <code>tests/testthat/helper.R</code> (or <code>helper-{name}.R</code>) instead.</li>
-<li>Write snapshot tests for any output that should be stable (use <code><a href="https://testthat.r-lib.org/reference/expect_snapshot.html" class="external-link">testthat::expect_snapshot()</a></code>); update with <code><a href="https://testthat.r-lib.org/reference/snapshot_accept.html" class="external-link">testthat::snapshot_review()</a></code>.</li>
-<li>Prefer specific expectations over <code>expect_true()</code> / <code>expect_false()</code> — they give better failure messages.</li>
-<li>When testing errors and warnings, do <strong>not</strong> use <code>expect_error()</code> / <code>expect_warning()</code>. Use <code>expect_snapshot(error = TRUE)</code> for errors and <code>expect_snapshot()</code> for warnings so the full text is reviewable.</li>
-<li>Avoid the <code>.package</code> argument to <code>local_mocked_bindings()</code> (it mutates another package’s namespace); create a mockable wrapper in this package instead.</li>
-<li>RNG-touching tests must pin the seed explicitly (<code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code> or <code><a href="reference/local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code>).</li>
-</ul></div>
+<p>Test-suite conventions live in <strong><code>tests/testthat/CLAUDE.md</code></strong> — file/naming rules, error/warning and snapshot style, and RNG seeding. Read that before writing tests.</p>
+</div>
 <div class="section level3">
 <h3 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a></h3>
 <ul><li>Functions are documented inline with roxygen comments (<code>#' @param</code>, <code>#' @return</code>, etc.); wrap roxygen comments at 80 characters.</li>
@@ -211,11 +206,8 @@
 </ol></div>
 <div class="section level3">
 <h3 id="add-a-new-test-file">Add a new test file<a class="anchor" aria-label="anchor" href="#add-a-new-test-file"></a></h3>
-<ul><li>Create <code>tests/testthat/test-&lt;feature&gt;.R</code>.</li>
-<li>Prefix all tests with the feature name: <code>test_that("feature: description", { ... })</code>.</li>
-<li>Use <code>testthat::expect_*()</code> for assertions.</li>
-<li>RNG-sensitive tests: pin the seed with <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code> or <code><a href="reference/local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code>.</li>
-</ul></div>
+<p>See <strong><code>tests/testthat/CLAUDE.md</code></strong> for the full test-suite conventions (file/naming, expectations, snapshots, RNG seeding).</p>
+</div>
 <div class="section level3">
 <h3 id="update-package-version-and-news">Update package version and news<a class="anchor" aria-label="anchor" href="#update-package-version-and-news"></a></h3>
 <p><code>NEWS.md</code> and the dev version are managed by <a href="https://fledge.cynkra.com" class="external-link">fledge</a> — <strong>do not hand-edit <code>NEWS.md</code></strong> (its header says as much). Entries are generated from commit messages and grouped by Conventional Commit type (Features, Bug fixes, Chore, Refactoring), so the way to shape a changelog entry is to write a clear, conventionally-typed commit message (see Pull Requests below).</p>
@@ -246,7 +238,7 @@
 <h3 id="the-targets-redesign">The targets redesign<a class="anchor" aria-label="anchor" href="#the-targets-redesign"></a></h3>
 <p>The package is transitioning from immediate <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> execution to a cluster-based targets pipeline. Key shifts:</p>
 <ul><li>
-<strong>Scenario object</strong> (<code>ssd_define_scenario()</code>) — Declarative, construction-time, contains only <code>seed</code>, knobs, dataset names, and arg grids.</li>
+<strong>Scenario object</strong> (<code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>) — Declarative, construction-time, contains only <code>seed</code>, knobs, dataset names, and arg grids.</li>
 <li>
 <strong>Per-task RNG</strong> — Each task gets a primer derived from <code>rlang::hash(task_params)</code>, seeded via <code>dqrng::dqset.seed(seed, stream = primer)</code>.</li>
 <li>

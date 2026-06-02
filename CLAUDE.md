@@ -38,6 +38,17 @@ Read these before major implementation work.
   runtime validation in function bodies.
 - **Validation**: Use `chk` for all input validation; keep error
   messages informative and actionable.
+- **Error origin**: Raise errors in the context of the *user-facing*
+  function. Thread the public function’s frame down to validators
+  (`chk::abort_chk(..., call = call)` with `call = environment()`
+  captured in the exported function) and avoid leaking internal frames
+  like [`purrr::map()`](https://purrr.tidyverse.org/reference/map.html)
+  / [`lapply()`](https://rdrr.io/r/base/lapply.html) / private helpers
+  into the `Error in ...:` header (loop instead of
+  [`purrr::walk`](https://purrr.tidyverse.org/reference/map.html)/`chk_all`
+  where they would surface). A package-wide pass to enforce this is
+  tracked as the `error-call-origin` roadmap item (TARGETS-DESIGN.md
+  §12).
 - **Minimal diffs**: touch only the lines your change requires; don’t
   reformat unrelated lines or let editors rewrite whitespace. Leave
   `DESCRIPTION` formatting to `usethis`/`desc` (e.g. keep the trailing
@@ -143,28 +154,9 @@ helpers). - Test for `.Random.seed` being unchanged before and after
 
 ### Testing
 
-- Tests for `R/{name}.R` go in `tests/testthat/test-{name}.R`; place new
-  tests next to similar existing ones.
-- All new code should have an accompanying test. Keep tests minimal with
-  few comments.
-- Never put code in a `test-{name}.R` file outside a `test_that()`
-  block; use `tests/testthat/helper.R` (or `helper-{name}.R`) instead.
-- Write snapshot tests for any output that should be stable (use
-  [`testthat::expect_snapshot()`](https://testthat.r-lib.org/reference/expect_snapshot.html));
-  update with
-  [`testthat::snapshot_review()`](https://testthat.r-lib.org/reference/snapshot_accept.html).
-- Prefer specific expectations over `expect_true()` / `expect_false()` —
-  they give better failure messages.
-- When testing errors and warnings, do **not** use `expect_error()` /
-  `expect_warning()`. Use `expect_snapshot(error = TRUE)` for errors and
-  `expect_snapshot()` for warnings so the full text is reviewable.
-- Avoid the `.package` argument to `local_mocked_bindings()` (it mutates
-  another package’s namespace); create a mockable wrapper in this
-  package instead.
-- RNG-touching tests must pin the seed explicitly
-  ([`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html)
-  or
-  [`local_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)).
+Test-suite conventions live in **`tests/testthat/CLAUDE.md`** —
+file/naming rules, error/warning and snapshot style, and RNG seeding.
+Read that before writing tests.
 
 ### Documentation
 
@@ -251,14 +243,8 @@ See `DESCRIPTION` for versions and imports.
 
 ### Add a new test file
 
-- Create `tests/testthat/test-<feature>.R`.
-- Prefix all tests with the feature name:
-  `test_that("feature: description", { ... })`.
-- Use `testthat::expect_*()` for assertions.
-- RNG-sensitive tests: pin the seed with
-  [`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html)
-  or
-  [`local_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md).
+See **`tests/testthat/CLAUDE.md`** for the full test-suite conventions
+(file/naming, expectations, snapshots, RNG seeding).
 
 ### Update package version and news
 
@@ -312,9 +298,10 @@ The package is transitioning from immediate
 [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
 execution to a cluster-based targets pipeline. Key shifts:
 
-- **Scenario object** (`ssd_define_scenario()`) — Declarative,
-  construction-time, contains only `seed`, knobs, dataset names, and arg
-  grids.
+- **Scenario object**
+  ([`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md))
+  — Declarative, construction-time, contains only `seed`, knobs, dataset
+  names, and arg grids.
 - **Per-task RNG** — Each task gets a primer derived from
   `rlang::hash(task_params)`, seeded via
   `dqrng::dqset.seed(seed, stream = primer)`.

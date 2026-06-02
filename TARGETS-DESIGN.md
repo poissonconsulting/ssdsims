@@ -1588,10 +1588,28 @@ branches open and close.
   (S3); replaces the PoC’s `data2`-prefixed names. Signature along the
   lines of
   `ssd_define_scenario(data, ..., nsim, nrow, rescale, est_method, nboot, ci, ...)`,
-  forwarding the input data through `ssd_data()` (a tiny normaliser that
-  validates the `Conc` column and tibble shape). Stores only declarative
-  fields (seed, knobs, dataset names — the data registry is *implicit*,
-  see the registry steps below). No RNG, no tasks, no targets yet.
+  forwarding the input data through
+  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
+  (a tiny normaliser that validates the `Conc` column and tibble shape).
+  Stores only declarative fields (seed, knobs, dataset names — the data
+  registry is *implicit*, see the registry steps below). No RNG, no
+  tasks, no targets yet. **Scoped to data-frame input only** (single or
+  list); the other generator inputs are `scenario-input-types`, below.
+- **`scenario-input-types`** — Extend
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
+  to accept the remaining input types
+  [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
+  handles today — `fitdists`, `tmbfit`, a generator function, and a
+  function-name string — not just data frames / lists of data frames.
+  Each non-data-frame input is a data *generator*: the constructor
+  derives a dataset name (by symbol capture, as for data frames) and
+  records the generator by name, storing no function bodies; the data
+  itself is materialised by `dataset-registry` (synthetic datasets are
+  realised at registration time, §1.1), keeping the scenario
+  declarative. Until this lands,
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
+  is data-frame-only — a documented gap
+  vs. [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md).
 - **`task-list-loop-baseline`** — Derive three task lists (data, fit, hc
   rows; one column per cross-join axis; no RNG, no shards, no targets)
   from a scenario, and a runner that is just three
@@ -1632,7 +1650,8 @@ branches open and close.
   described in the §1.2 example grid.
 - **`dataset-registry`** — **Targets-only**: an implicit registry of
   named datasets, implemented as a `tar_target` that writes Parquet to
-  `results/datasets/<name>.parquet` from the `ssd_define_scenario()`
+  `results/datasets/<name>.parquet` from the
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   input. Synthetic datasets are realised here at registration time.
   Function-name edits don’t enter task hashes because the scenario
   already refers to datasets by name.
@@ -1691,6 +1710,13 @@ branches open and close.
 - **`cleanup-lecuyer`** — Remove the L’Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes a
   historical reference.
+- **`error-call-origin`** — *Cosmetic, independent of the rest.* Audit
+  every user-facing function so its validation errors report the
+  **calling function** as the origin
+  (`Error in \`ssd\_*()\`:`), never an internal frame (`purrr::map()`,`lapply()`, a private helper). Thread the public frame into validators (`chk::abort_chk(…,
+  call = call)`with`call =
+  environment()`), and prefer plain loops over`purrr::walk`/`chk::chk_all`where those wrappers would surface in the error header. May need upstream`chk`changes (e.g. a`call`/`error_call`argument on`chk\_*()`so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the`ssd-define-scenario`work already follows the convention (see the repo`CLAUDE.md\`
+  “Error origin” note).
 
 ### Dependency DAG (parallel streams)
 
@@ -1699,6 +1725,7 @@ Mermaid (renders inline on GitHub):
 ``` mermaid
 flowchart TD
     define[ssd-define-scenario]
+    inputs[scenario-input-types]
     baseline[task-list-loop-baseline]
     dqinit[dqrng-init]
     dqstate[local-dqrng-state]
@@ -1730,6 +1757,8 @@ flowchart TD
 
     define --> baseline
     define --> partby
+    define --> inputs
+    inputs --> dsreg
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims

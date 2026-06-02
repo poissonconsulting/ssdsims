@@ -990,7 +990,9 @@
 <h2 id="id_12-roadmap">12. Roadmap<a class="anchor" aria-label="anchor" href="#id_12-roadmap"></a></h2>
 <p>In-place, step-by-step implementation. Each bullet is identified by a kebab-case slug and lands as a coherent working state. ssdsims has no downstream dependencies, so breaking-change steps are fine. <strong>Parallel work streams are preferred</strong> — the dependency DAG below shows where branches open and close.</p>
 <ul><li>
-<strong><code>ssd-define-scenario</code></strong> — Public constructor for the scenario object (S3); replaces the PoC’s <code>data2</code>-prefixed names. Signature along the lines of <code>ssd_define_scenario(data, ..., nsim, nrow, rescale, est_method, nboot, ci, ...)</code>, forwarding the input data through <code>ssd_data()</code> (a tiny normaliser that validates the <code>Conc</code> column and tibble shape). Stores only declarative fields (seed, knobs, dataset names — the data registry is <em>implicit</em>, see the registry steps below). No RNG, no tasks, no targets yet.</li>
+<strong><code>ssd-define-scenario</code></strong> — Public constructor for the scenario object (S3); replaces the PoC’s <code>data2</code>-prefixed names. Signature along the lines of <code>ssd_define_scenario(data, ..., nsim, nrow, rescale, est_method, nboot, ci, ...)</code>, forwarding the input data through <code><a href="reference/ssd_data.html">ssd_data()</a></code> (a tiny normaliser that validates the <code>Conc</code> column and tibble shape). Stores only declarative fields (seed, knobs, dataset names — the data registry is <em>implicit</em>, see the registry steps below). No RNG, no tasks, no targets yet. <strong>Scoped to data-frame input only</strong> (single or list); the other generator inputs are <code>scenario-input-types</code>, below.</li>
+<li>
+<strong><code>scenario-input-types</code></strong> — Extend <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> to accept the remaining input types <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> handles today — <code>fitdists</code>, <code>tmbfit</code>, a generator function, and a function-name string — not just data frames / lists of data frames. Each non-data-frame input is a data <em>generator</em>: the constructor derives a dataset name (by symbol capture, as for data frames) and records the generator by name, storing no function bodies; the data itself is materialised by <code>dataset-registry</code> (synthetic datasets are realised at registration time, §1.1), keeping the scenario declarative. Until this lands, <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> is data-frame-only — a documented gap vs. <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code>.</li>
 <li>
 <strong><code>task-list-loop-baseline</code></strong> — Derive three task lists (data, fit, hc rows; one column per cross-join axis; no RNG, no shards, no targets) from a scenario, and a runner that is just three <code><a href="https://purrr.tidyverse.org/reference/pmap.html" class="external-link">purrr::pmap()</a></code> loops. Establishes the data shape and a working baseline that subsequent steps swap pieces of, one at a time.</li>
 <li>
@@ -1011,7 +1013,7 @@
 <li>
 <strong><code>ci-false-collapse</code></strong> — Implement the §1.2 collapse in the hc task table. Test: <code>ci = c(FALSE, TRUE)</code> produces the reduced fan-out described in the §1.2 example grid.</li>
 <li>
-<strong><code>dataset-registry</code></strong> — <strong>Targets-only</strong>: an implicit registry of named datasets, implemented as a <code>tar_target</code> that writes Parquet to <code>results/datasets/&lt;name&gt;.parquet</code> from the <code>ssd_define_scenario()</code> input. Synthetic datasets are realised here at registration time. Function-name edits don’t enter task hashes because the scenario already refers to datasets by name.</li>
+<strong><code>dataset-registry</code></strong> — <strong>Targets-only</strong>: an implicit registry of named datasets, implemented as a <code>tar_target</code> that writes Parquet to <code>results/datasets/&lt;name&gt;.parquet</code> from the <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> input. Synthetic datasets are realised here at registration time. Function-name edits don’t enter task hashes because the scenario already refers to datasets by name.</li>
 <li>
 <strong><code>min-pmix-registry</code></strong> — <strong>Targets-only</strong>: same shape as <code>dataset-registry</code> but for <code>min_pmix</code> functions. The scenario refers to them by name; the targets project pins the function values per-run. Regression test: a body edit to a registered function does not move the hash of any cached fit branch.</li>
 <li>
@@ -1036,11 +1038,14 @@
 <strong><code>mixed-code-lockin</code></strong> — §8.3 — <code>tar_cue(depend = FALSE)</code> on the step targets to pin shards against a code change (in-project, no child project); <code>tar_invalidate()</code> / <code><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink()</a></code> for forced re-runs of the chosen shards (§8.4). Both recipes have tests.</li>
 <li>
 <strong><code>cleanup-lecuyer</code></strong> — Remove the L’Ecuyer-CMRG helpers and the <code>_seed</code> shims; <code>scripts/experiment-substream-restart.R</code> becomes a historical reference.</li>
+<li>
+<strong><code>error-call-origin</code></strong> — <em>Cosmetic, independent of the rest.</em> Audit every user-facing function so its validation errors report the <strong>calling function</strong> as the origin (<code>Error in \</code>ssd_<em>()`:<code>), never an internal frame (</code>purrr::map()<code>,</code>lapply()<code>, a private helper). Thread the public frame into validators (</code>chk::abort_chk(…, call = call)<code>with</code>call = environment()<code>), and prefer plain loops over</code>purrr::walk<code>/</code>chk::chk_all<code>where those wrappers would surface in the error header. May need upstream</code>chk<code>changes (e.g. a</code>call<code>/</code>error_call<code>argument on</code>chk_</em>()<code>so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the</code>ssd-define-scenario<code>work already follows the convention (see the repo</code>CLAUDE.md` “Error origin” note).</li>
 </ul><div class="section level3">
 <h3 id="dependency-dag-parallel-streams">Dependency DAG (parallel streams)<a class="anchor" aria-label="anchor" href="#dependency-dag-parallel-streams"></a></h3>
 <p>Mermaid (renders inline on GitHub):</p>
 <pre class="mermaid"><code>flowchart TD
     define[ssd-define-scenario]
+    inputs[scenario-input-types]
     baseline[task-list-loop-baseline]
     dqinit[dqrng-init]
     dqstate[local-dqrng-state]
@@ -1072,6 +1077,8 @@
 
     define --&gt; baseline
     define --&gt; partby
+    define --&gt; inputs
+    inputs --&gt; dsreg
     dqinit --&gt; dqstate
     dqstate --&gt; primer
     baseline --&gt; prims
