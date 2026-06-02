@@ -17,3 +17,8 @@ docs
 
 /.quarto/
 .ccache/
+
+# Quarto vignette build artifacts
+vignettes/.quarto/
+vignettes/*_files/
+vignettes/*_cache/

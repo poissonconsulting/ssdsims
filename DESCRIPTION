@@ -25,9 +25,12 @@ Imports:
     tidyr,
     withr
 Suggests: 
+    knitr,
+    quarto,
     readr,
     ssddata,
     testthat (>= 3.0.0)
+VignetteBuilder: quarto
 Remotes:
     poissonconsulting/ssdtools@dev
 Config/testthat/edition: 3
