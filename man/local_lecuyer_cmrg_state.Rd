@@ -2,31 +2,42 @@
 % Please edit documentation in R/lecuyer-cmrg-seed.R
 \name{local_lecuyer_cmrg_state}
 \alias{local_lecuyer_cmrg_state}
-\title{Local L'Ecuyer-CMRG State}
+\alias{with_lecuyer_cmrg_state}
+\title{Local/With L'Ecuyer-CMRG State}
 \usage{
 local_lecuyer_cmrg_state(state, .local_envir = parent.frame())
+
+with_lecuyer_cmrg_state(state, code)
 }
 \arguments{
 \item{state}{\verb{[integer(7)]}\cr A L'Ecuyer-CMRG \code{.Random.seed} vector.}
 
 \item{.local_envir}{\verb{[environment]}\cr The environment to use for scoping.}
+
+\item{code}{\code{[any]}\cr Code to execute in the temporary environment}
 }
 \value{
-Invisibly returns \code{state}.
+\code{local_lecuyer_cmrg_state()} invisibly returns \code{state};
+\code{with_lecuyer_cmrg_state()} returns the value of \code{code}.
 }
 \description{
-Sets the L'Ecuyer-CMRG RNG state to a \code{.Random.seed}-style integer
-vector (length 7) by assigning to \code{.Random.seed} directly, restoring the
-previous state when \code{.local_envir} exits. A \emph{state} is the full internal
+\code{local_lecuyer_cmrg_state()} sets the L'Ecuyer-CMRG RNG state to a
+\code{.Random.seed}-style integer vector (length 7) by assigning to
+\code{.Random.seed} directly, restoring the previous state when \code{.local_envir}
+exits. \code{with_lecuyer_cmrg_state()} evaluates \code{code} with that state in
+effect, then restores the previous state. A \emph{state} is the full internal
 RNG state (as returned by \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}} or
 \code{get_lecuyer_cmrg_stream_state()}); contrast with \code{\link[base:set.seed]{base::set.seed()}}
-which takes a scalar \emph{seed} (see \code{\link[=local_lecuyer_cmrg_seed]{local_lecuyer_cmrg_seed()}}).
+which takes a scalar \emph{seed} (see \code{\link[=local_lecuyer_cmrg_seed]{local_lecuyer_cmrg_seed()}} /
+\code{\link[=with_lecuyer_cmrg_seed]{with_lecuyer_cmrg_seed()}}).
 }
 \examples{
 
 state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
 local_lecuyer_cmrg_state(state)
 runif(3)
+
+with_lecuyer_cmrg_state(state, runif(3))
 }
 \seealso{
 \code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}, \code{\link[=local_lecuyer_cmrg_seed]{local_lecuyer_cmrg_seed()}}.

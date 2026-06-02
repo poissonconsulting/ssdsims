@@ -6,10 +6,11 @@
 # the prior state on frame exit. See
 # `openspec/changes/local-dqrng-state/design.md`.
 
-# Capture the active dqrng generator state. dqrng (>= 0.4.0) exposes
-# `dqrng_get_state()` (the generator kind plus its state words, as a character
-# vector) and `dqrng_set_state()`; the pair round-trips a draw sequence
-# byte-for-byte (verified against 0.4.1). Because `register_methods()` routes
+# Capture the active dqrng generator state. dqrng (>= 0.4.1, the version pinned
+# in DESCRIPTION) exposes `dqrng_get_state()` (the generator kind plus its state
+# words, as a character vector) and `dqrng_set_state()`; the pair round-trips a
+# draw sequence byte-for-byte (verified against 0.4.1). Because
+# `register_methods()` routes
 # base R RNG through dqrng, this is the state that governs base R draws too.
 get_dqrng_state <- function() {
   dqrng::dqrng_get_state()
@@ -21,22 +22,23 @@ set_dqrng_state <- function(state) {
   invisible(NULL)
 }
 
-#' Local dqrng State
+#' Local/With dqrng State
 #'
-#' Installs a per-task `(seed, state)` starting point as the running dqrng RNG
-#' state via [dqrng::dqset.seed()], restoring the previous state when
-#' `.local_envir` exits. The `state` argument carries the per-task *primer*
-#' (the value handed to dqrng's `stream` argument, per `TARGETS-DESIGN.md` §2
-#' and the GLOSSARY); the `_state` suffix marks that the wrapper installs that
-#' primer as the running RNG state.
+#' `local_dqrng_state()` installs a per-task `(seed, state)` starting point as
+#' the running dqrng RNG state via [dqrng::dqset.seed()], restoring the previous
+#' state when `.local_envir` exits. `with_dqrng_state()` evaluates `code` with
+#' that state installed, then restores the previous state. The `state` argument
+#' carries the per-task *primer* (the value handed to dqrng's `stream` argument,
+#' per `TARGETS-DESIGN.md` §2 and the GLOSSARY); the `_state` suffix marks that
+#' the wrapper installs that primer as the running RNG state.
 #'
-#' This is the dqrng-path analogue of [local_lecuyer_cmrg_state()]. Like that
-#' helper it snapshots the RNG state on entry (via `dqrng::dqrng_get_state()`)
-#' and `withr::defer()`s a restore (via `dqrng::dqrng_set_state()`) to
-#' `.local_envir` exit, so a call leaves the surrounding RNG stream undisturbed,
-#' including on error.
+#' These are the dqrng-path analogues of [local_lecuyer_cmrg_state()] /
+#' [with_lecuyer_cmrg_state()]. Like those helpers they snapshot the RNG state
+#' on entry (via `dqrng::dqrng_get_state()`) and `withr::defer()` a restore (via
+#' `dqrng::dqrng_set_state()`), so a call leaves the surrounding RNG stream
+#' undisturbed, including on error.
 #'
-#' `local_dqrng_state()` requires an active dqrng backend: it aborts unless a
+#' Both require an active dqrng backend: they abort unless a
 #' [local_dqrng_backend()] scope is open. This fails fast rather than silently
 #' seeding base R's Mersenne-Twister.
 #'
@@ -46,7 +48,9 @@ set_dqrng_state <- function(state) {
 #'   `stream` argument of [dqrng::dqset.seed()]. `NA_integer_` is permitted (the
 #'   reserved INT_MIN encoding of `TARGETS-DESIGN.md` §2).
 #' @inheritParams withr::local_seed
-#' @return Invisibly returns `state`.
+#' @inheritParams withr::with_seed
+#' @return `local_dqrng_state()` invisibly returns `state`; `with_dqrng_state()`
+#'   returns the value of `code`.
 #' @seealso [withr::local_seed()], [local_dqrng_backend()],
 #'   [local_lecuyer_cmrg_state()].
 #' @export
@@ -55,6 +59,8 @@ set_dqrng_state <- function(state) {
 #' local_dqrng_backend()
 #' local_dqrng_state(42, c(1L, 2L))
 #' runif(3)
+#'
+#' with_dqrng_state(42, c(1L, 2L), runif(3))
 local_dqrng_state <- function(seed, state, .local_envir = parent.frame()) {
   chk::chk_whole_number(seed)
   chk::chk_integer(state)
@@ -74,23 +80,8 @@ local_dqrng_state <- function(seed, state, .local_envir = parent.frame()) {
   invisible(state)
 }
 
-#' With dqrng State
-#'
-#' Evaluates `code` with the dqrng RNG state temporarily set to the `(seed,
-#' state)` starting point, then restores the previous state. Delegates to
-#' [local_dqrng_state()]; see there for the backend requirement and the primer
-#' semantics of `state`.
-#'
-#' @inheritParams local_dqrng_state
-#' @inheritParams withr::with_seed
-#' @return The value of `code`.
-#' @seealso [withr::with_seed()], [local_dqrng_state()],
-#'   [with_lecuyer_cmrg_state()].
+#' @rdname local_dqrng_state
 #' @export
-#' @examples
-#'
-#' local_dqrng_backend()
-#' with_dqrng_state(42, c(1L, 2L), runif(3))
 with_dqrng_state <- function(seed, state, code) {
   force(seed)
   force(state)

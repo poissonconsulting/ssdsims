@@ -2,9 +2,12 @@
 % Please edit documentation in R/dqrng-state.R
 \name{local_dqrng_state}
 \alias{local_dqrng_state}
-\title{Local dqrng State}
+\alias{with_dqrng_state}
+\title{Local/With dqrng State}
 \usage{
 local_dqrng_state(seed, state, .local_envir = parent.frame())
+
+with_dqrng_state(seed, state, code)
 }
 \arguments{
 \item{seed}{\verb{[whole number]}\cr A scalar seed passed to
@@ -15,26 +18,30 @@ local_dqrng_state(seed, state, .local_envir = parent.frame())
 reserved INT_MIN encoding of \code{TARGETS-DESIGN.md} §2).}
 
 \item{.local_envir}{\verb{[environment]}\cr The environment to use for scoping.}
+
+\item{code}{\code{[any]}\cr Code to execute in the temporary environment}
 }
 \value{
-Invisibly returns \code{state}.
+\code{local_dqrng_state()} invisibly returns \code{state}; \code{with_dqrng_state()}
+returns the value of \code{code}.
 }
 \description{
-Installs a per-task \verb{(seed, state)} starting point as the running dqrng RNG
-state via \code{\link[dqrng:dqset.seed]{dqrng::dqset.seed()}}, restoring the previous state when
-\code{.local_envir} exits. The \code{state} argument carries the per-task \emph{primer}
-(the value handed to dqrng's \code{stream} argument, per \code{TARGETS-DESIGN.md} §2
-and the GLOSSARY); the \verb{_state} suffix marks that the wrapper installs that
-primer as the running RNG state.
+\code{local_dqrng_state()} installs a per-task \verb{(seed, state)} starting point as
+the running dqrng RNG state via \code{\link[dqrng:dqset.seed]{dqrng::dqset.seed()}}, restoring the previous
+state when \code{.local_envir} exits. \code{with_dqrng_state()} evaluates \code{code} with
+that state installed, then restores the previous state. The \code{state} argument
+carries the per-task \emph{primer} (the value handed to dqrng's \code{stream} argument,
+per \code{TARGETS-DESIGN.md} §2 and the GLOSSARY); the \verb{_state} suffix marks that
+the wrapper installs that primer as the running RNG state.
 }
 \details{
-This is the dqrng-path analogue of \code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}}. Like that
-helper it snapshots the RNG state on entry (via \code{dqrng::dqrng_get_state()})
-and \code{withr::defer()}s a restore (via \code{dqrng::dqrng_set_state()}) to
-\code{.local_envir} exit, so a call leaves the surrounding RNG stream undisturbed,
-including on error.
+These are the dqrng-path analogues of \code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}} /
+\code{\link[=with_lecuyer_cmrg_state]{with_lecuyer_cmrg_state()}}. Like those helpers they snapshot the RNG state
+on entry (via \code{dqrng::dqrng_get_state()}) and \code{withr::defer()} a restore (via
+\code{dqrng::dqrng_set_state()}), so a call leaves the surrounding RNG stream
+undisturbed, including on error.
 
-\code{local_dqrng_state()} requires an active dqrng backend: it aborts unless a
+Both require an active dqrng backend: they abort unless a
 \code{\link[=local_dqrng_backend]{local_dqrng_backend()}} scope is open. This fails fast rather than silently
 seeding base R's Mersenne-Twister.
 }
@@ -43,6 +50,8 @@ seeding base R's Mersenne-Twister.
 local_dqrng_backend()
 local_dqrng_state(42, c(1L, 2L))
 runif(3)
+
+with_dqrng_state(42, c(1L, 2L), runif(3))
 }
 \seealso{
 \code{\link[withr:local_seed]{withr::local_seed()}}, \code{\link[=local_dqrng_backend]{local_dqrng_backend()}},
