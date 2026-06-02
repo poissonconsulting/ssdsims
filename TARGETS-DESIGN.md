@@ -1770,6 +1770,21 @@ shows where branches open and close.
   `ssd-define-scenario` work already follows the convention (see the
   repo `CLAUDE.md` "Error origin" note).
 
+### Cleanup
+
+Independent tidy-ups with no dependants — each can land at any time and
+is **not** on the dependency DAG. Grown as review turns up small
+public-API or ergonomics gaps.
+
+- **`cleanup-as-ssd-data`** — Add a public `as_ssd_data()` that coerces
+  the already-named input forms (an `ssd_data()` collection passthrough, a
+  named list, or a single data frame with an explicit `name=`) into a
+  validated `ssd_data()` collection. The scenario's internal
+  `scenario_datasets()` does this coercion today, but it cannot simply
+  delegate to a public `as_ssd_data()` because the bare-data-frame and
+  unnamed-list forms derive names by **symbol capture**, which must happen
+  in the `ssd_define_scenario()` frame. Surfaced in PR #80.
+
 ### Dependency DAG (parallel streams)
 
 Mermaid (renders inline on GitHub):
