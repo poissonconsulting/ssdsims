@@ -66,14 +66,7 @@ local_dqrng_state <- function(seed, state, .local_envir = parent.frame()) {
   chk::chk_integer(state)
   chk::chk_length(state, length = 2L)
   chk::chk_environment(.local_envir)
-  if (!dqrng_backend_active()) {
-    chk::abort_chk(
-      "The dqrng backend is not active. ",
-      "Open a `local_dqrng_backend()` scope before calling ",
-      "`local_dqrng_state()`.",
-      call = rlang::current_call()
-    )
-  }
+  chk_dqrng_backend_active()
   old <- get_dqrng_state()
   withr::defer(set_dqrng_state(old), envir = .local_envir)
   dqrng::dqset.seed(seed, stream = state)
@@ -83,8 +76,6 @@ local_dqrng_state <- function(seed, state, .local_envir = parent.frame()) {
 #' @rdname local_dqrng_state
 #' @export
 with_dqrng_state <- function(seed, state, code) {
-  force(seed)
-  force(state)
   local_dqrng_state(seed, state)
   code
 }

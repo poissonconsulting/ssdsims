@@ -58,6 +58,22 @@ dqrng_backend_active <- function() {
   identical(RNGkind()[1L], "user-supplied")
 }
 
+# Assert the dqrng backend is active, aborting otherwise. A `chk`-style guard
+# (returns invisibly on success) for dqrng-path helpers such as
+# `local_dqrng_state()` that are only meaningful while a `local_dqrng_backend()`
+# scope is open. `call` defaults to the calling frame so the error is reported
+# in the context of the user-facing function (CLAUDE.md error-call-origin rule).
+chk_dqrng_backend_active <- function(call = rlang::caller_call()) {
+  if (!dqrng_backend_active()) {
+    chk::abort_chk(
+      "The dqrng backend is not active. ",
+      "Open a `local_dqrng_backend()` scope first.",
+      call = call
+    )
+  }
+  invisible(NULL)
+}
+
 #' Local dqrng pcg64 Backend
 #'
 #' Activates the dqrng `pcg64` RNG backend for the duration of the calling

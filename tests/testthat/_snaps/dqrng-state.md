@@ -4,7 +4,7 @@
       local_dqrng_state(42L, c(1L, 2L))
     Condition
       Error in `local_dqrng_state()`:
-      ! The dqrng backend is not active. Open a `local_dqrng_backend()` scope before calling `local_dqrng_state()`.
+      ! The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.
 
 # parallel-safe-seeding: local_dqrng_state validation
 
