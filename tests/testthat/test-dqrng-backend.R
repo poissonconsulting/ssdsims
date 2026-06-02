@@ -57,6 +57,41 @@ test_that("dqrng-backend: reproducible draws for fixed (seed, stream)", {
   expect_false(identical(seq_1, seq_4))
 })
 
+test_that("dqrng-backend: nested local_dqrng_backend() is a no-op leaving the stream unchanged", {
+  withr::defer(reset_dqrng_backend())
+
+  # Draw a seeded sequence with an intervening nested local_dqrng_backend()
+  # call inside its own scope.
+  with_nested <- local({
+    local_dqrng_backend()
+    dqrng::dqset.seed(7L, stream = c(3L, 4L))
+    first <- runif(2)
+    rest <- local({
+      # Nested call: the backend is already active, so this is a no-op and
+      # returns FALSE (it did not activate the backend).
+      expect_false(local_dqrng_backend())
+      # The backend stays active inside the nested scope.
+      expect_true(dqrng_backend_active())
+      runif(2)
+    })
+    c(first, rest)
+  })
+
+  # The same seeded sequence with no nested call.
+  without_nested <- local({
+    local_dqrng_backend()
+    dqrng::dqset.seed(7L, stream = c(3L, 4L))
+    c(runif(2), runif(2))
+  })
+
+  # The RNG stream is identical with or without the nested call.
+  expect_identical(with_nested, without_nested)
+
+  # The outermost scope owns the lifetime: once both scopes have exited the
+  # backend is reset.
+  expect_false(dqrng_backend_active())
+})
+
 test_that("dqrng-backend: scenario execution leaves base R RNG unchanged", {
   # The backend is scoped to scenario execution: after a scenario completes,
   # base R RNG functions are no longer routed through dqrng.

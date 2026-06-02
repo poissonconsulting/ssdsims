@@ -32,6 +32,32 @@ reset_dqrng_backend <- function() {
   invisible(NULL)
 }
 
+# Is base R's RNG currently routed through a user-supplied backend (dqrng)?
+#
+# `dqrng::register_methods()` installs base R's RNG functions as
+# "user-supplied" (it calls `RNGkind("user", "user")`), so
+# `RNGkind()[1] == "user-supplied"` is the observable signal that the backend
+# is in effect. dqrng (0.4.1) exposes no getter for the active generator
+# (`dqRNGkind()` is a setter only), so this stateless probe is what
+# `local_dqrng_backend()` uses to detect an already-active backend.
+#
+# Why a probe and not ssdsims-private state: re-asserting `RNGkind("user",
+# "user")` *reseeds* the dqrng generator (verified against dqrng 0.4.1), so the
+# invariant we must protect is "do not re-register while base R RNG is already
+# served by a user-supplied generator" -- which is exactly what this probe
+# detects, whether the active backend was installed by ssdsims, by an enclosing
+# scope, or externally by the caller. Tracking only ssdsims' own activation
+# would miss the externally-active case and reseed (corrupt) a live stream.
+#
+# Caveat (accepted): a *foreign* non-dqrng user-supplied RNG would also satisfy
+# this probe, so `local_dqrng_backend()` would conservatively no-op rather than
+# activate dqrng. In practice dqrng is the only user-supplied backend in this
+# stack, and no-op (preserve the active stream) is the safer failure mode than
+# re-registering (reseed) it.
+dqrng_backend_active <- function() {
+  identical(RNGkind()[1L], "user-supplied")
+}
+
 #' Local dqrng pcg64 Backend
 #'
 #' Activates the dqrng `pcg64` RNG backend for the duration of the calling
@@ -47,8 +73,19 @@ reset_dqrng_backend <- function() {
 #' base R's `.Random.seed`. `local_dqrng_backend()` follows the withr
 #' convention (compare [withr::local_seed()]): it pairs activation with
 #' deferred reset so the backend is always restored, including on error.
+#'
+#' The helper is reentrant. `dqrng::register_methods()` /
+#' `dqrng::restore_methods()` keep a single global save-slot, so a nested
+#' reset would tear the backend down for the still-open outer scope. To avoid
+#' this, a `local_dqrng_backend()` call made while the backend is already
+#' active is a no-op: it does not re-activate the backend and schedules no
+#' further reset. Only the outermost call activates the backend on entry and
+#' resets it on exit, so the RNG stream is identical whether or not a nested
+#' call occurs.
 #' @inheritParams withr::local_seed
-#' @return Invisibly returns `NULL`.
+#' @return Invisibly returns `TRUE` if this call activated the backend (the
+#'   outermost scope) or `FALSE` if the backend was already active and the call
+#'   was a no-op.
 #' @seealso [withr::local_seed()], [dqrng::dqset.seed()].
 #' @export
 #' @examples
@@ -58,7 +95,13 @@ reset_dqrng_backend <- function() {
 #' runif(3)
 local_dqrng_backend <- function(.local_envir = parent.frame()) {
   chk::chk_environment(.local_envir)
+  # Reentrant: if a backend scope is already open, do nothing -- neither
+  # re-activate nor schedule a reset -- so nesting leaves the RNG stream
+  # untouched and only the outermost scope owns the backend lifetime.
+  if (dqrng_backend_active()) {
+    return(invisible(FALSE))
+  }
   set_dqrng_backend()
   withr::defer(reset_dqrng_backend(), envir = .local_envir)
-  invisible(NULL)
+  invisible(TRUE)
 }
