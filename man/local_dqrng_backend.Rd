@@ -10,7 +10,9 @@ local_dqrng_backend(.local_envir = parent.frame())
 \item{.local_envir}{\verb{[environment]}\cr The environment to use for scoping.}
 }
 \value{
-Invisibly returns \code{NULL}.
+Invisibly returns \code{TRUE} if this call activated the backend (the
+outermost scope) or \code{FALSE} if the backend was already active and the call
+was a no-op.
 }
 \description{
 Activates the dqrng \code{pcg64} RNG backend for the duration of the calling
@@ -27,6 +29,15 @@ Registering the backend is a process-global side effect that also advances
 base R's \code{.Random.seed}. \code{local_dqrng_backend()} follows the withr
 convention (compare \code{\link[withr:local_seed]{withr::local_seed()}}): it pairs activation with
 deferred reset so the backend is always restored, including on error.
+
+The helper is reentrant. \code{dqrng::register_methods()} /
+\code{dqrng::restore_methods()} keep a single global save-slot, so a nested
+reset would tear the backend down for the still-open outer scope. To avoid
+this, a \code{local_dqrng_backend()} call made while the backend is already
+active is a no-op: it does not re-activate the backend and schedules no
+further reset. Only the outermost call activates the backend on entry and
+resets it on exit, so the RNG stream is identical whether or not a nested
+call occurs.
 }
 \examples{
 
