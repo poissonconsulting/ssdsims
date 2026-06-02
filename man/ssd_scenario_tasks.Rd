@@ -2,7 +2,7 @@
 % Please edit documentation in R/task-lists.R
 \name{ssd_scenario_tasks}
 \alias{ssd_scenario_tasks}
-\title{Expand a Scenario into all Three Task Tables}
+\title{Expand a Scenario into all Four Task Tables}
 \usage{
 ssd_scenario_tasks(scenario)
 }
@@ -10,16 +10,16 @@ ssd_scenario_tasks(scenario)
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 }
 \value{
-An \code{ssdsims_task_set} object: a list with \code{sample}, \code{fit}, and
+An \code{ssdsims_task_set} object: a list with \code{sample}, \code{data}, \code{fit}, and
 \code{hc} elements, each an \code{ssdsims_tasks} table.
 }
 \description{
 The canonical expansion entry point (\code{TARGETS-DESIGN.md} section 1/section 2): derives the
-\code{sample}, \code{fit}, and \code{hc} task tables from a scenario in one call and
+\code{sample}, \code{data}, \code{fit}, and \code{hc} task tables from a scenario in one call and
 bundles them into an \code{ssdsims_task_set}. The per-step derivations
-(\code{\link[=ssd_scenario_sample_tasks]{ssd_scenario_sample_tasks()}}, \code{\link[=ssd_scenario_fit_tasks]{ssd_scenario_fit_tasks()}},
-\code{\link[=ssd_scenario_hc_tasks]{ssd_scenario_hc_tasks()}}) remain available for callers that need a single
-table.
+(\code{\link[=ssd_scenario_sample_tasks]{ssd_scenario_sample_tasks()}}, \code{\link[=ssd_scenario_data_tasks]{ssd_scenario_data_tasks()}},
+\code{\link[=ssd_scenario_fit_tasks]{ssd_scenario_fit_tasks()}}, \code{\link[=ssd_scenario_hc_tasks]{ssd_scenario_hc_tasks()}}) remain available for
+callers that need a single table.
 }
 \examples{
 scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)

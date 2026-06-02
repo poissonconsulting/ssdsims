@@ -16,21 +16,34 @@
 ---
 
     Code
+      ssd_scenario_data_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 1L,
+      nrow = c(5L, 10L), seed = 42L))
+    Output
+      <ssdsims_tasks: data>
+        axes:  dataset, sim, replace, nrow
+        tasks: 2
+      # A tibble: 2 x 6
+        dataset      sim replace  nrow data_id                               sample_id
+        <chr>      <int> <lgl>   <int> <chr>                                 <chr>    
+      1 ccme_boron     1 FALSE       5 dataset=ccme_boron/sim=1/replace=FAL~ dataset=~
+      2 ccme_boron     1 FALSE      10 dataset=ccme_boron/sim=1/replace=FAL~ dataset=~
+
+---
+
+    Code
       ssd_scenario_fit_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 1L,
-      nrow = c(5L, 10L), seed = 42L, rescale = c(FALSE, TRUE)))
+      seed = 42L, rescale = c(FALSE, TRUE)))
     Output
       <ssdsims_tasks: fit>
         axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-        tasks: 4
-      # A tibble: 4 x 12
+        tasks: 2
+      # A tibble: 2 x 12
         dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
         <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-      1 ccme_boron     1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-      2 ccme_boron     1 FALSE       5 TRUE    FALSE      TRUE           ssd_min_pmix
-      3 ccme_boron     1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-      4 ccme_boron     1 FALSE      10 TRUE    FALSE      TRUE           ssd_min_pmix
+      1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
+      2 ccme_boron     1 FALSE       6 TRUE    FALSE      TRUE           ssd_min_pmix
       # i 4 more variables: range_shape1 <list>, range_shape2 <list>, fit_id <chr>,
-      #   sample_id <chr>
+      #   data_id <chr>
 
 ---
 
@@ -60,6 +73,7 @@
     Output
       <ssdsims_task_set>
         sample tasks: 2
+        data   tasks: 4
         fit    tasks: 8
         hc     tasks: 24
 
@@ -70,11 +84,15 @@
     Output
       [1] "dataset"   "sim"       "replace"   "n_max"     "sample_id"
     Code
+      names(ssd_scenario_data_tasks(scenario))
+    Output
+      [1] "dataset"   "sim"       "replace"   "nrow"      "data_id"   "sample_id"
+    Code
       names(ssd_scenario_fit_tasks(scenario))
     Output
        [1] "dataset"        "sim"            "replace"        "nrow"          
        [5] "rescale"        "computable"     "at_boundary_ok" "min_pmix"      
-       [9] "range_shape1"   "range_shape2"   "fit_id"         "sample_id"     
+       [9] "range_shape1"   "range_shape2"   "fit_id"         "data_id"       
     Code
       names(ssd_scenario_hc_tasks(scenario))
     Output

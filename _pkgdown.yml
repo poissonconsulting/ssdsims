@@ -6,13 +6,14 @@ reference:
 - title: Scenarios and task expansion
   desc: >
     Define a declarative simulation scenario and expand it into the per-step
-    task tables (`sample`, `fit`, `hc`) that the targets-based pipeline
+    task tables (`sample`, `data`, `fit`, `hc`) that the targets-based pipeline
     builds on, with a baseline loop runner.
   contents:
   - ssd_data
   - ssd_define_scenario
   - ssd_scenario_tasks
   - ssd_scenario_sample_tasks
+  - ssd_scenario_data_tasks
   - ssd_scenario_fit_tasks
   - ssd_scenario_hc_tasks
   - ssd_run_scenario_baseline
