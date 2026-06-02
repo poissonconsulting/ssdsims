@@ -224,7 +224,7 @@ children by the foreign-key id. It runs **in-process**, with no `targets`, no
 shard grouping, and no Parquet I/O.
 
 It is also **not reproducible on its own** --- no per-task RNG seeding happens
-yet (that arrives with the `state-primitives` roadmap step). The runner draws
+yet (that arrives with the `primer-primitives` roadmap step). The runner draws
 from the *ambient* RNG, so pin it for a deterministic local run:
 
 ```{r}
