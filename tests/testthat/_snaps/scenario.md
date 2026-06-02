@@ -33,7 +33,8 @@
 # scenario-definition: min_pmix rejects non-function list elements
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(1))
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, min_pmix = list(
+        1))
     Condition
       Error in `ssd_define_scenario()`:
       ! Each `min_pmix` function must take a single argument (the number of rows).
@@ -41,8 +42,8 @@
 # scenario-definition: min_pmix rejects multi-argument functions
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = function(a, b)
-        0.05)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, min_pmix = function(
+        a, b) 0.05)
     Condition
       Error in `ssd_define_scenario()`:
       ! Each `min_pmix` function must take a single argument (the number of rows).
@@ -50,8 +51,8 @@
 # scenario-definition: min_pmix rejects duplicate names
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(a = ssdtools::ssd_min_pmix,
-      a = ssdtools::ssd_min_pmix))
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, min_pmix = list(
+        a = ssdtools::ssd_min_pmix, a = ssdtools::ssd_min_pmix))
     Condition
       Error in `ssd_define_scenario()`:
       ! `min_pmix` names must be unique.
@@ -59,7 +60,8 @@
 # scenario-definition: ssd_data() collection plus name= is an error
 
     Code
-      ssd_define_scenario(ssd_data(boron = ssddata::ccme_boron), name = "x", seed = 1L)
+      ssd_define_scenario(ssd_data(boron = ssddata::ccme_boron), nsim = 2L, name = "x",
+      seed = 1L)
     Condition
       Error in `ssd_define_scenario()`:
       ! `name` must not be supplied when `data` is an `ssd_data()` collection.
@@ -68,7 +70,7 @@
 
     Code
       ssd_define_scenario(list(x = ssddata::ccme_boron, x = ssddata::ccme_cadmium),
-      seed = 1L)
+      nsim = 2L, seed = 1L)
     Condition
       Error in `ssd_define_scenario()`:
       ! Dataset names must be unique.
@@ -76,7 +78,8 @@
 # scenario-definition: named list plus name= is an error
 
     Code
-      ssd_define_scenario(list(boron = ssddata::ccme_boron), name = "x", seed = 1L)
+      ssd_define_scenario(list(boron = ssddata::ccme_boron), nsim = 2L, name = "x",
+      seed = 1L)
     Condition
       Error in `ssd_define_scenario()`:
       ! `name` must not be supplied with a named list of datasets.
@@ -84,7 +87,7 @@
 # scenario-definition: data frame literal with no derivable name errors
 
     Code
-      ssd_define_scenario(data.frame(Conc = 1:5), seed = 1L)
+      ssd_define_scenario(data.frame(Conc = 1:5), nsim = 2L, seed = 1L)
     Condition
       Error in `ssd_define_scenario()`:
       ! Unable to derive a dataset name from the data argument; supply an explicit `name=` or use `ssd_data()`.
@@ -92,7 +95,8 @@
 # scenario-definition: bad data in a list aborts via ssd_data
 
     Code
-      ssd_define_scenario(list(good = ssddata::ccme_boron, bad = 1:5), seed = 1L)
+      ssd_define_scenario(list(good = ssddata::ccme_boron, bad = 1:5), nsim = 2L,
+      seed = 1L)
     Condition
       Error in `ssd_define_scenario()`:
       ! Dataset `bad` must be a data frame.
@@ -100,7 +104,8 @@
 # scenario-definition: ci = FALSE rejects an explicit nboot
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, nboot = 500)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = FALSE,
+      nboot = 500)
     Condition
       Error in `ssd_define_scenario()`:
       ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
@@ -108,7 +113,8 @@
 # scenario-definition: ci = FALSE rejects ci_method and parametric
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, ci_method = "MACL")
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = FALSE,
+      ci_method = "MACL")
     Condition
       Error in `ssd_define_scenario()`:
       ! Bootstrap-only knob ('ci_method') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
@@ -116,7 +122,8 @@
 ---
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, parametric = FALSE)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = FALSE,
+      parametric = FALSE)
     Condition
       Error in `ssd_define_scenario()`:
       ! Bootstrap-only knob ('parametric') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
@@ -124,15 +131,23 @@
 # scenario-definition: seed is required
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L)
     Condition
       Error in `ssd_define_scenario()`:
       ! `seed` must be supplied (a scalar whole number); it is the scenario's RNG root.
 
+# scenario-definition: nsim is required
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nsim` must be supplied (a count of the number of simulations).
+
 # scenario-definition: invalid seed errors
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = c(1L, 2L))
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = c(1L, 2L))
     Condition
       Error in `ssd_define_scenario()`:
       ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
@@ -140,7 +155,7 @@
 ---
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1.5)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1.5)
     Condition
       Error in `ssd_define_scenario()`:
       ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
@@ -148,7 +163,7 @@
 ---
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = NULL)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = NULL)
     Condition
       Error in `ssd_define_scenario()`:
       ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
@@ -156,7 +171,7 @@
 # scenario-definition: out-of-range nrow errors
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 4L)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 4L)
     Condition
       Error in `ssd_define_scenario()`:
       ! `nrow` must be between 5 and 1000, not 4.
@@ -164,7 +179,7 @@
 ---
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 1001L)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 1001L)
     Condition
       Error in `ssd_define_scenario()`:
       ! `nrow` must be between 5 and 1000, not 1001.

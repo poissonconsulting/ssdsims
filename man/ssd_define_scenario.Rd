@@ -6,11 +6,11 @@
 \usage{
 ssd_define_scenario(
   data,
+  nsim,
+  seed,
   ...,
   name = NULL,
-  nsim = 100L,
   nrow = 6L,
-  seed,
   dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
@@ -33,18 +33,18 @@ ssd_define_scenario(
 a single data frame or a (named or unnamed) list of data frames. Bare
 inputs are validated via the same \code{Conc} contract as \code{\link[=ssd_data]{ssd_data()}}.}
 
+\item{nsim}{A count of the number of data sets to generate.}
+
+\item{seed}{A scalar whole number; the scenario's RNG root. Required -
+changing it fully re-roots the scenario's random-number draws.}
+
 \item{...}{Unused; must be empty.}
 
 \item{name}{An optional dataset name for the single-data-frame form,
 overriding the derived name. Must not be combined with a named list or an
 \code{\link[=ssd_data]{ssd_data()}} collection.}
 
-\item{nsim}{A count of the number of data sets to generate.}
-
 \item{nrow}{A positive whole number of the minimum number of non-missing rows.}
-
-\item{seed}{A scalar whole number; the scenario's RNG root. Required -
-changing it fully re-roots the scenario's random-number draws.}
 
 \item{dists}{A character vector of the distribution names.}
 

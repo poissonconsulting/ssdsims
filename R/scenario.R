@@ -70,11 +70,11 @@
 #' ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 42L)
 ssd_define_scenario <- function(
   data,
+  nsim,
+  seed,
   ...,
   name = NULL,
-  nsim = 100L,
   nrow = 6L,
-  seed,
   dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
@@ -106,6 +106,12 @@ ssd_define_scenario <- function(
   }
   chk::chk_whole_number(seed)
 
+  if (missing(nsim)) {
+    chk::abort_chk(
+      "`nsim` must be supplied (a count of the number of simulations).",
+      call = call
+    )
+  }
   chk::chk_whole_number(nsim)
   chk::chk_gt(nsim)
 
@@ -215,9 +221,7 @@ ssd_define_scenario <- function(
   # --- min_pmix names (no function bodies stored) ------------------------
   min_pmix <- scenario_min_pmix_names(min_pmix, min_pmix_expr, call = call)
 
-  if (is.null(partition_by)) {
-    partition_by <- scenario_default_partition_by()
-  }
+  partition_by <- partition_by %||% scenario_default_partition_by()
 
   structure(
     list(
@@ -370,10 +374,7 @@ list_expr_names <- function(
   elems <- rlang::call_args(list_expr)
   nms <- vapply(
     elems,
-    function(e) {
-      nm <- expr_to_name(e)
-      if (is.null(nm)) NA_character_ else nm
-    },
+    function(e) expr_to_name(e) %||% NA_character_,
     character(1),
     USE.NAMES = FALSE
   )
