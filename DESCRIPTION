@@ -19,7 +19,7 @@ Imports:
     parallel,
     purrr,
     rlang,
-    ssdtools (>= 2.6.0),
+    ssdtools (>= 2.6.0.9002),
     tidyr,
     withr
 Suggests: 
@@ -27,7 +27,9 @@ Suggests:
     ssddata,
     testthat (>= 3.0.0)
 Remotes:
-    poissonconsulting/ssdtools@dev
+    ssdtools=url::https://poissonconsulting.r-universe.dev/src/contrib/ssdtools_2.6.0.9002.tar.gz
+Additional_repositories:
+    https://poissonconsulting.r-universe.dev
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
