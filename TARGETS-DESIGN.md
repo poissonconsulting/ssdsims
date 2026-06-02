@@ -1612,7 +1612,19 @@ shows where branches open and close.
   through `ssd_data()` (a tiny normaliser that validates the `Conc`
   column and tibble shape). Stores only declarative fields (seed,
   knobs, dataset names — the data registry is *implicit*, see the
-  registry steps below). No RNG, no tasks, no targets yet.
+  registry steps below). No RNG, no tasks, no targets yet. **Scoped to
+  data-frame input only** (single or list); the other generator inputs
+  are `scenario-input-types`, below.
+- **`scenario-input-types`** — Extend `ssd_define_scenario()` to accept
+  the remaining input types `ssd_run_scenario()` handles today —
+  `fitdists`, `tmbfit`, a generator function, and a function-name string —
+  not just data frames / lists of data frames. Each non-data-frame input
+  is a data *generator*: the constructor derives a dataset name (by symbol
+  capture, as for data frames) and records the generator by name, storing
+  no function bodies; the data itself is materialised by `dataset-registry`
+  (synthetic datasets are realised at registration time, §1.1), keeping the
+  scenario declarative. Until this lands, `ssd_define_scenario()` is
+  data-frame-only — a documented gap vs. `ssd_run_scenario()`.
 - **`task-list-loop-baseline`** — Derive three task lists (data,
   fit, hc rows; one column per cross-join axis; no RNG, no shards,
   no targets) from a scenario, and a runner that is just three
@@ -1720,6 +1732,7 @@ Mermaid (renders inline on GitHub):
 ```mermaid
 flowchart TD
     define[ssd-define-scenario]
+    inputs[scenario-input-types]
     baseline[task-list-loop-baseline]
     dqinit[dqrng-init]
     dqstate[local-dqrng-state]
@@ -1751,6 +1764,8 @@ flowchart TD
 
     define --> baseline
     define --> partby
+    define --> inputs
+    inputs --> dsreg
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims

@@ -20,6 +20,7 @@ Constraints:
 - RNG/primer derivation — roadmap entries `dqrng-init`, `task-primer`.
 - The dataset / `min_pmix` *registries* — i.e. the persisted name→value lookup that materialises datasets to Parquet and pins `min_pmix` functions. Those are targets-only steps (`dataset-registry`, `min-pmix-registry`). **The name *reference* itself is in scope here** for both datasets and `min_pmix`; only the registry that resolves a name to a value is deferred.
 - Wiring the object into `ssd_run_scenario()` — roadmap entry `migrate-public-api`.
+- Accepting the non-data-frame input types `ssd_run_scenario()` handles today (`fitdists`, `tmbfit`, a generator function, a function-name string) — this change is **data-frame-only** (single or list). Those generator inputs are deferred to the new roadmap entry `scenario-input-types` (TARGETS-DESIGN.md §12), which derives a dataset name and defers materialisation to `dataset-registry`.
 
 ## Decisions
 
