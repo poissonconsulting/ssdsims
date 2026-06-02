@@ -118,14 +118,9 @@ When touching RNG-consuming code:
 
 ### Testing
 
-- Tests for `R/{name}.R` go in `tests/testthat/test-{name}.R`; place new tests next to similar existing ones.
-- All new code should have an accompanying test. Keep tests minimal with few comments.
-- Never put code in a `test-{name}.R` file outside a `test_that()` block; use `tests/testthat/helper.R` (or `helper-{name}.R`) instead.
-- Write snapshot tests for any output that should be stable (use `testthat::expect_snapshot()`); update with `testthat::snapshot_review()`.
-- Prefer specific expectations over `expect_true()` / `expect_false()` — they give better failure messages.
-- When testing errors and warnings, do **not** use `expect_error()` / `expect_warning()`. Use `expect_snapshot(error = TRUE)` for errors and `expect_snapshot()` for warnings so the full text is reviewable.
-- Avoid the `.package` argument to `local_mocked_bindings()` (it mutates another package's namespace); create a mockable wrapper in this package instead.
-- RNG-touching tests must pin the seed explicitly (`withr::with_seed()` or `local_lecuyer_cmrg_seed()`).
+Test-suite conventions live in **`tests/testthat/CLAUDE.md`** — file/naming
+rules, error/warning and snapshot style, and RNG seeding. Read that before
+writing tests.
 
 ### Documentation
 
@@ -195,10 +190,8 @@ See `DESCRIPTION` for versions and imports.
 
 ### Add a new test file
 
-- Create `tests/testthat/test-<feature>.R`.
-- Prefix all tests with the feature name: `test_that("feature: description", { ... })`.
-- Use `testthat::expect_*()` for assertions.
-- RNG-sensitive tests: pin the seed with `withr::with_seed()` or `local_lecuyer_cmrg_seed()`.
+See **`tests/testthat/CLAUDE.md`** for the full test-suite conventions
+(file/naming, expectations, snapshots, RNG seeding).
 
 ### Update package version and news
 
