@@ -397,8 +397,9 @@ resolve_min_pmix <- function(name, call = rlang::caller_env()) {
     chk::abort_chk(
       "Unable to resolve `min_pmix` name ",
       encodeString(name, quote = "\""),
-      " to a function (no min_pmix registry yet; see TARGETS-DESIGN.md s1.1).",
+      " to a function (no min_pmix registry yet; see TARGETS-DESIGN.md §1.1).",
       call = call
+    )
     )
   }
   out
