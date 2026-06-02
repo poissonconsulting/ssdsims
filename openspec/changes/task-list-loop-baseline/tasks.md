@@ -43,6 +43,12 @@
 - [x] 7.2 Thread each step's output to the next by looking up the parent result via the parent's id foreign key; reuse the per-step ops (sample/truncate/fit/hc) without RNG seeding; no `targets`, no shard grouping, no `partition_by`, no Parquet I/O
 - [x] 7.3 Return the collected per-step results; roxygen docs + `@export`
 
+## 7b. Scenario extensions (reviewer-driven, #80)
+
+- [x] 7b.1 Add a validated `replace` knob to `ssd_define_scenario()`; the `sample` axis reads `scenario$replace`
+- [x] 7b.2 Retain the validated `ssd_data()` collection on the scenario (`$data`); `ssd_run_scenario_baseline(scenario)` reads it and drops its `data` argument
+- [x] 7b.3 Prefer purrr/rlang over base (recorded in CLAUDE.md); build the task tibble with `tibble::new_tibble()`; define "axis" in GLOSSARY.md
+
 ## 8. Tests and docs
 
 - [x] 8.1 `tests/testthat/test-task-lists.R`: sample table has `D * nsim * R` rows; `dataset`/`sim`/`replace` populated; `n_max` carried and `nrow` does not multiply the draw
