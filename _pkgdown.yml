@@ -2,3 +2,45 @@ url: https://poissonconsulting.github.io/ssdsims/
 template:
   bootstrap: 5
 
+reference:
+- title: Scenarios and task expansion
+  desc: >
+    Define a declarative simulation scenario and expand it into the per-step
+    task tables (`sample`, `data`, `fit`, `hc`) that the targets-based pipeline
+    builds on, with a baseline loop runner.
+  contents:
+  - ssd_data
+  - ssd_define_scenario
+  - ssd_scenario_tasks
+  - ssd_scenario_sample_tasks
+  - ssd_scenario_data_tasks
+  - ssd_scenario_fit_tasks
+  - ssd_scenario_hc_tasks
+  - ssd_run_scenario_baseline
+
+- title: Simulation pipeline
+  desc: >
+    The immediate (non-targets) pipeline: simulate data, fit distributions, and
+    estimate hazard concentrations across simulations, end to end.
+  contents:
+  - ssd_sim_data
+  - ssd_fit_dists_sims
+  - ssd_hc_sims
+  - ssd_run_scenario
+
+- title: Reproducible RNG
+  desc: >
+    Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash
+    backend (targets path) and L'Ecuyer-CMRG sub-streams (legacy path).
+  contents:
+  - local_dqrng_backend
+  - local_dqrng_state
+  - with_dqrng_state
+  - local_lecuyer_cmrg_seed
+  - with_lecuyer_cmrg_seed
+  - local_lecuyer_cmrg_state
+  - with_lecuyer_cmrg_state
+
+- title: Package
+  contents:
+  - ssdsims-package
