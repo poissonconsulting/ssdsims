@@ -37,6 +37,17 @@ The package SHALL derive an `hc` task table by crossing each fit-task identity w
 - **WHEN** the hc grid contains `ci = FALSE` together with multiple `nboot` / `ci_method` / `parametric` values
 - **THEN** the `ci = FALSE` portion of the expansion SHALL collapse to a single row over those bootstrap-only knobs, matching the §1.2 reduced fan-out, rather than the full cross-join
 
+### Requirement: Task tables are a printable S3 class
+Each derived task table SHALL be an `ssdsims_tasks` S3 object: a classed tibble that records its step (`data`, `fit`, or `hc`) and behaves as an ordinary tibble for data operations. The package SHALL provide a `print.ssdsims_tasks()` method that renders the step name, the cross-join axes, the number of tasks (rows), and a compact preview of the rows.
+
+#### Scenario: A derived task table carries the ssdsims_tasks class
+- **WHEN** any of the data, fit, or hc task tables is derived from a scenario
+- **THEN** the returned object SHALL inherit from `ssdsims_tasks`, SHALL record its step, and SHALL still support ordinary tibble/data-frame operations
+
+#### Scenario: Printing a task table is informative
+- **WHEN** an `ssdsims_tasks` object is printed
+- **THEN** the output SHALL identify the step, list the cross-join axes, report the task (row) count, and show a compact preview of the rows
+
 ### Requirement: Baseline runner executes the three task tables in order
 The package SHALL provide a baseline runner that executes the three task tables in dependency order — data, then fit, then hc — using `purrr::pmap()` loops, threading each step's output into the next, and returning the collected results. The runner SHALL operate in-process with no `targets` dependency, no shard grouping, and no Parquet I/O.
 

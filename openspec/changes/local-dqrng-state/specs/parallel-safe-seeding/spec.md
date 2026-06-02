@@ -15,6 +15,17 @@ The package SHALL provide `local_dqrng_state(seed, state, .local_envir = parent.
 - **WHEN** code takes RNG draws, calls `local_dqrng_state(seed, state)` in a nested scope that itself takes draws, and then continues
 - **THEN** after the nested scope exits the outer RNG stream SHALL continue as if the nested `local_dqrng_state()` scope had not consumed any RNG
 
+### Requirement: Abort when the dqrng backend is not active
+`local_dqrng_state()` (and `with_dqrng_state()` if provided) SHALL verify that the dqrng backend is active before seeding, by checking that the current RNG kind matches the dqrng-registered methods (`RNGkind()[1] == "user-supplied"`). If the backend is not active, the function SHALL abort with an informative error directing the caller to open a `local_dqrng_backend()` scope first, rather than seeding the wrong generator.
+
+#### Scenario: Abort outside an active backend scope
+- **WHEN** `local_dqrng_state(seed, state)` is called while the dqrng backend is not active (`RNGkind()[1] != "user-supplied"`)
+- **THEN** the call SHALL abort with an informative error instructing the caller to activate the backend via `local_dqrng_backend()`
+
+#### Scenario: Proceed inside an active backend scope
+- **WHEN** `local_dqrng_state(seed, state)` is called within an active `local_dqrng_backend()` scope
+- **THEN** the RNG-kind check SHALL pass and the function SHALL install the `(seed, state)` starting point
+
 ### Requirement: dqrng state argument validation
 `local_dqrng_state()` (and `with_dqrng_state()` if provided) SHALL validate its arguments: `seed` SHALL be a whole number, `state` SHALL be a length-2 integer vector (the §2 primer encoding, with `NA_integer_` permitted as the reserved INT_MIN value), and `.local_envir` SHALL be an environment. Invalid input SHALL abort with an informative `chk`-style message.
 

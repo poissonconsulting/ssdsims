@@ -17,18 +17,25 @@
 - [ ] 3.2 Honour the scenario's recorded `ci = FALSE` collapse (§1.2): collapse the `ci = FALSE` portion over `nboot`/`ci_method`/`parametric` to a single row instead of the full cross-join
 - [ ] 3.3 Roxygen docs + `@export`
 
-## 4. Baseline runner
+## 4. Printable task class
 
-- [ ] 4.1 Add a runner that executes the three tables in order via `purrr::pmap()` loops: data → fit → hc, threading each step's output into the next
-- [ ] 4.2 Reuse the existing per-step operations (sim/fit/hc) without RNG seeding; no `targets`, no shard grouping, no `partition_by`, no Parquet I/O
-- [ ] 4.3 Return the collected per-step results; roxygen docs + `@export`
+- [ ] 4.1 Add an `ssdsims_tasks` S3 constructor wrapping a tibble and recording the step (`data`/`fit`/`hc`) as an attribute; have the three derivation functions return it
+- [ ] 4.2 Add `print.ssdsims_tasks()` rendering step name, cross-join axes, task (row) count, and a compact row preview (parallel `print.ssdsims_scenario()`)
+- [ ] 4.3 Verify dplyr/tidyr verbs still operate on the object; register the S3 method + roxygen docs
 
-## 5. Tests and docs
+## 5. Baseline runner
 
-- [ ] 5.1 `tests/testthat/test-task-lists.R`: data table has `D * nsim * R` rows; `dataset`/`sim`/`replace` populated; `nrow` present but does not multiply rows
-- [ ] 5.2 Assert the data derivation is RNG-free (`.Random.seed` unchanged) and has no `seed`/`primer`/`stream` columns
-- [ ] 5.3 Fit table has `M * F` rows with parent identity + fit-grid columns; `min_pmix` stored by name
-- [ ] 5.4 Hc table has `K * H` rows; assert the `ci = c(FALSE, TRUE)` example produces the §1.2 reduced fan-out (collapse verified by row count)
-- [ ] 5.5 Runner test: outputs thread data → fit → hc and collect; assert no `targets` load and no Parquet files written (structure/threading, not draw values)
-- [ ] 5.6 Snapshot test pinning the three task-table column contracts (so later `task-tables` changes show as diffs)
-- [ ] 5.7 Run `devtools::document()`, `air format`, and `devtools::check()`; update `NAMESPACE`/`man/`
+- [ ] 5.1 Add a runner that executes the three tables in order via `purrr::pmap()` loops: data → fit → hc, threading each step's output into the next
+- [ ] 5.2 Reuse the existing per-step operations (sim/fit/hc) without RNG seeding; no `targets`, no shard grouping, no `partition_by`, no Parquet I/O
+- [ ] 5.3 Return the collected per-step results; roxygen docs + `@export`
+
+## 6. Tests and docs
+
+- [ ] 6.1 `tests/testthat/test-task-lists.R`: data table has `D * nsim * R` rows; `dataset`/`sim`/`replace` populated; `nrow` present but does not multiply rows
+- [ ] 6.2 Assert the data derivation is RNG-free (`.Random.seed` unchanged) and has no `seed`/`primer`/`stream` columns
+- [ ] 6.3 Fit table has `M * F` rows with parent identity + fit-grid columns; `min_pmix` stored by name
+- [ ] 6.4 Hc table has `K * H` rows; assert the `ci = c(FALSE, TRUE)` example produces the §1.2 reduced fan-out (collapse verified by row count)
+- [ ] 6.5 Class tests: derived tables inherit from `ssdsims_tasks`, record their step, and survive dplyr/tidyr verbs; snapshot test for `print.ssdsims_tasks()` on each step
+- [ ] 6.6 Runner test: outputs thread data → fit → hc and collect; assert no `targets` load and no Parquet files written (structure/threading, not draw values)
+- [ ] 6.7 Snapshot test pinning the three task-table column contracts (so later `task-tables` changes show as diffs)
+- [ ] 6.8 Run `devtools::document()`, `air format`, and `devtools::check()`; update `NAMESPACE`/`man/`
