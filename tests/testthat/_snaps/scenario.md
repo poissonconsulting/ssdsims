@@ -1,4 +1,4 @@
-# scenario: ssd_data requires a Conc column
+# scenario-definition: ssd_data requires a Conc column
 
     Code
       ssd_data(data.frame(x = 1:5))
@@ -6,7 +6,7 @@
       Error:
       ! `data` must have a column named `Conc`.
 
-# scenario: ssd_data rejects a non-numeric Conc column
+# scenario-definition: ssd_data rejects a non-numeric Conc column
 
     Code
       ssd_data(data.frame(Conc = c("a", "b")))
@@ -14,7 +14,7 @@
       Error in `ssd_data()`:
       ! Column `Conc` must be numeric.
 
-# scenario: min_pmix rejects non-function list elements
+# scenario-definition: min_pmix rejects non-function list elements
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(1))
@@ -22,7 +22,7 @@
       Error in `lapply()`:
       ! All elements of `min_pmix` must be a function.
 
-# scenario: named list plus name= is an error
+# scenario-definition: named list plus name= is an error
 
     Code
       ssd_define_scenario(list(boron = ssddata::ccme_boron), name = "x", seed = 1L)
@@ -30,7 +30,7 @@
       Error in `ssd_define_scenario()`:
       ! `name` must not be supplied with a named list of datasets.
 
-# scenario: data frame literal with no derivable name errors
+# scenario-definition: data frame literal with no derivable name errors
 
     Code
       ssd_define_scenario(data.frame(Conc = 1:5), seed = 1L)
@@ -38,7 +38,7 @@
       Error in `ssd_define_scenario()`:
       ! Unable to derive a dataset name from the data argument; supply an explicit `name=`.
 
-# scenario: bad data in a list aborts via ssd_data
+# scenario-definition: bad data in a list aborts via ssd_data
 
     Code
       ssd_define_scenario(list(good = ssddata::ccme_boron, bad = 1:5), seed = 1L)
@@ -49,7 +49,7 @@
       Caused by error in `.f()`:
       ! `data` must be a data.frame.
 
-# scenario: ci = FALSE rejects an explicit nboot
+# scenario-definition: ci = FALSE rejects an explicit nboot
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, nboot = 500)
@@ -57,7 +57,7 @@
       Error:
       ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
 
-# scenario: ci = FALSE rejects ci_method and parametric
+# scenario-definition: ci = FALSE rejects ci_method and parametric
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE, ci_method = "MACL")
@@ -73,7 +73,7 @@
       Error:
       ! Bootstrap-only knob ('parametric') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
 
-# scenario: invalid seed errors
+# scenario-definition: invalid seed errors
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, seed = c(1L, 2L))
@@ -97,7 +97,7 @@
       Error in `ssd_define_scenario()`:
       ! `seed` must be a whole number (non-missing integer scalar or double equivalent).
 
-# scenario: out-of-range nrow errors
+# scenario-definition: out-of-range nrow errors
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 4L)
@@ -113,7 +113,7 @@
       Error in `ssd_define_scenario()`:
       ! `nrow` must be between 5 and 1000, not 1001.
 
-# scenario: print is stable for a single dataset
+# scenario-definition: print is stable for a single dataset
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 42L)
@@ -139,7 +139,7 @@
           ci_method: weighted_samples
           parametric: TRUE
 
-# scenario: print is stable for multiple datasets and vector knobs
+# scenario-definition: print is stable for multiple datasets and vector knobs
 
     Code
       ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),

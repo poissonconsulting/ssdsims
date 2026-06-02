@@ -62,7 +62,11 @@ repo-root `CLAUDE.md`.
 
 ## General
 
-- Prefix every test description with the feature name: `test_that("scenario: ...")`.
+- **Prefix every test description with the OpenSpec capability name** it
+  exercises, e.g. `test_that("scenario-definition: ...")` for the
+  `scenario-definition` capability (see `openspec/specs/`). This ties each test
+  back to the capability it covers. (Older tests pre-dating OpenSpec use the
+  function name as the prefix; prefer the capability name for new work.)
 - Pin the seed for any RNG-touching test (`withr::with_seed()` /
   `local_lecuyer_cmrg_seed()`); assert `.Random.seed` is unchanged where a
   function is meant to be free of RNG side effects.
