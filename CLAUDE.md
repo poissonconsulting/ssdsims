@@ -50,25 +50,56 @@ chk::chk_range(nrow, c(5, 1000))
 chk::chk_character(dataset_names)
 ```
 
+### Coding rules
+
+- Always run `air format .` after generating or editing code.
+- Use the base pipe operator (`|>`), not the magrittr pipe (`%>%`).
+- Use `\() ...` for single-line anonymous functions. For all other cases, use `function() {...}`.
+- Permissions for the common tooling (`air`, `R`, `Rscript`, read-only `git`/`gh`,
+  `quarto`, `Skill`) are pre-approved in `.claude/settings.json`, so these run
+  without a prompt.
+
 ## Development Workflow
 
 ### Setup
 
-```bash
+```r
 # Install development dependencies
 devtools::install_dev_deps()
 
 # Load the package for interactive use
 devtools::load_all()
 
-# Run tests
+# Run all tests
 devtools::test()
 
-# Build documentation
+# Run all tests for files starting with {name}
+devtools::test(filter = "^{name}")
+
+# Run all tests for R/{name}.R
+devtools::test_active_file("R/{name}.R")
+
+# Run a single test "blah" for R/{name}.R
+devtools::test_active_file("R/{name}.R", desc = "blah")
+
+# (Re)build documentation
 devtools::document()
+
+# Check that all topics are in the reference index
+pkgdown::check_pkgdown()
 
 # Full check
 devtools::check()
+```
+
+> When invoking R from the shell, use `Rscript --no-environ -e "..."`. Without
+> `--no-environ` the sandbox blocks reads of `~/.Renviron` and R fails to create
+> its `tempdir()`.
+
+Format code from the shell:
+
+```bash
+air format .
 ```
 
 ### RNG Discipline
@@ -86,15 +117,21 @@ When touching RNG-consuming code:
 
 ### Testing
 
-- Write snapshot tests for any output that should be stable (use `testthat::expect_snapshot()`).
-- Tests live in `tests/testthat/test-*.R`; run with `devtools::test()`.
-- Snapshots update with `testthat::snapshot_review()`.
-- RNG-touching tests must pin the seed explicitly.
+- Tests for `R/{name}.R` go in `tests/testthat/test-{name}.R`; place new tests next to similar existing ones.
+- All new code should have an accompanying test. Keep tests minimal with few comments.
+- Never put code in a `test-{name}.R` file outside a `test_that()` block; use `tests/testthat/helper.R` (or `helper-{name}.R`) instead.
+- Write snapshot tests for any output that should be stable (use `testthat::expect_snapshot()`); update with `testthat::snapshot_review()`.
+- Prefer specific expectations over `expect_true()` / `expect_false()` — they give better failure messages.
+- When testing errors and warnings, do **not** use `expect_error()` / `expect_warning()`. Use `expect_snapshot(error = TRUE)` for errors and `expect_snapshot()` for warnings so the full text is reviewable.
+- Avoid the `.package` argument to `local_mocked_bindings()` (it mutates another package's namespace); create a mockable wrapper in this package instead.
+- RNG-touching tests must pin the seed explicitly (`withr::with_seed()` or `local_lecuyer_cmrg_seed()`).
 
 ### Documentation
 
-- Functions are documented inline with roxygen comments (`#' @param`, `#' @return`, etc.).
-- Run `devtools::document()` to generate `man/` pages and update `NAMESPACE`.
+- Functions are documented inline with roxygen comments (`#' @param`, `#' @return`, etc.); wrap roxygen comments at 80 characters.
+- Every user-facing function should be exported and documented; internal functions should not have roxygen documentation.
+- Run `devtools::document()` to generate `man/` pages and update `NAMESPACE` — always re-document after changing a roxygen comment, and never edit `man/` or `NAMESPACE` by hand.
+- Whenever you add a new (non-internal) topic, add it to `_pkgdown.yml` and confirm with `pkgdown::check_pkgdown()`.
 - Examples in `@examples` are part of the spec — keep them small and runnable.
 
 ## OpenSpec Workflow
@@ -164,9 +201,12 @@ See `DESCRIPTION` for versions and imports.
 
 ### Update package version and news
 
-- Edit `DESCRIPTION` version field (e.g., `0.0.0.9010` → `0.0.0.9011`).
-- Add a note to `NEWS.md` (or use fledge: `fledge::bump_version()` to automate).
-- Commit with a note referencing the change.
+`NEWS.md` and the dev version are managed by [fledge](https://fledge.cynkra.com) — **do not hand-edit `NEWS.md`** (its header says as much). Entries are generated from commit messages and grouped by Conventional Commit type (Features, Bug fixes, Chore, Refactoring), so the way to shape a changelog entry is to write a clear, conventionally-typed commit message (see Pull Requests below).
+
+- `fledge::bump_version()` bumps the `DESCRIPTION` version and assembles `NEWS.md` from the commits since the last bump; a scheduled GitHub Action (`.github/workflows/fledge.yaml`) also runs this on `main`.
+- Reference the related issue in the commit message (e.g. `(#64)`) so it carries through to the changelog.
+
+> **Deviation from tidyverse/r-lib**: those packages have contributors hand-add a `NEWS.md` bullet (and order bullets alphabetically by function). This package does **not** — fledge derives the changelog from commits, so skip the manual bullet entirely and put the effort into the commit message instead.
 
 ## Pull Requests
 
