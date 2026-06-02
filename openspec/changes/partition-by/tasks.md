@@ -1,7 +1,7 @@
 ## 1. Axis vocabulary (reuse #80)
 
 - [ ] 1.1 Reuse #80's internal `task_axes(step)` (in `R/task-lists.R`) as the per-step vocabulary for `sample`/`data`/`fit`/`hc`; do not add a second constant. Ensure it is reachable from `R/scenario.R` (same package namespace)
-- [ ] 1.2 Update `scenario_default_partition_by()` to the four-step defaults: `sample`/`data` = `c("dataset", "sim", "replace")`, `fit` = `c("dataset", "sim", "rescale")`, `hc` = `c("dataset", "sim")` (`nrow` inner by default)
+- [ ] 1.2 Update `scenario_default_partition_by()` to the four-step defaults: `sample` = `c("dataset", "sim", "replace")`, `data` = `c("dataset", "sim", "replace", "nrow")`, `fit` = `c("dataset", "sim", "rescale")`, `hc` = `c("dataset", "sim")` (`nrow` in the `data` path — high-res first level)
 
 ## 2. Validation
 

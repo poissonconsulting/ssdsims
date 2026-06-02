@@ -5,7 +5,7 @@
 
 #### Scenario: Defaults populated when absent
 - **WHEN** `ssd_define_scenario()` is called without `partition_by`
-- **THEN** the object's `partition_by` SHALL be the documented defaults: `sample = c("dataset", "sim", "replace")`, `data = c("dataset", "sim", "replace")`, `fit = c("dataset", "sim", "rescale")`, `hc = c("dataset", "sim")`
+- **THEN** the object's `partition_by` SHALL be the documented defaults: `sample = c("dataset", "sim", "replace")`, `data = c("dataset", "sim", "replace", "nrow")`, `fit = c("dataset", "sim", "rescale")`, `hc = c("dataset", "sim")`
 
 #### Scenario: Valid override accepted
 - **WHEN** `ssd_define_scenario(..., partition_by = list(sample = c("dataset", "sim", "replace"), data = c("dataset", "sim", "replace", "nrow"), fit = c("dataset", "sim"), hc = c("dataset", "sim", "rescale")))` is called

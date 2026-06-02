@@ -43,16 +43,16 @@ If a user supplies `partition_by` at all, they supply the full `sample`/`data`/`
 
 ### Decision: four-step defaults map §5 onto the sample/data split
 
-The §5 default table predates #80's `sample`/`data` split, so the defaults are restated for four steps. The old "data" default (the draw shard) becomes the **`sample`** default; the new **`data`** step groups all `nrow` truncations alongside their shared draw (so `nrow` defaults to an *inner* column, not a path level):
+The §5 default table predates #80's `sample`/`data` split, so the defaults are restated for four steps. The old "data" default (the draw shard) becomes the **`sample`** default; the new **`data`** step shards by `nrow` too, so each truncation size is its own shard:
 
 ```r
 sample = c("dataset", "sim", "replace")
-data   = c("dataset", "sim", "replace")   # nrow inner: one shard per draw
+data   = c("dataset", "sim", "replace", "nrow")   # one shard per truncation size
 fit    = c("dataset", "sim", "rescale")
 hc     = c("dataset", "sim")
 ```
 
-*Why `nrow` inner by default?* The truncations of one draw are cheap and naturally co-located; sharding by `nrow` would scatter them. A user who wants per-`nrow` shards adds `"nrow"` to the `data` (and onward) path. This default is the main new judgement #80 forces and is the most likely thing the maintainer may want to tune.
+*Why `nrow` in the `data` path by default?* High-resolution sharding at the first (`data`) level is fine — finer shards cost little here and keep each truncation independently addressable, which suits selective re-runs and per-`nrow` queries. The shared draw is already de-duplicated upstream at the `sample` step, so per-`nrow` `data` shards do not re-draw. A user who wants coarser `data` shards drops `"nrow"` from the path (making it an inner column). Downstream steps (`fit`/`hc`) keep `nrow` inner by default, since they shard on their own argument axes.
 
 ### Decision: inner axes are the lazy complement, exposed via an accessor
 
