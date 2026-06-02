@@ -16,7 +16,7 @@
 ^[^/]*\.html$
 ^air\.toml$
 ^\.ccache$
-^CLAUDE\.md$
+^AGENTS\.md$
 ^GLOSSARY\.md$
 ^openspec$
 ^\.claude$

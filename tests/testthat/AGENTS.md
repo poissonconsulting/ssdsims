@@ -1,6 +1,6 @@
 # Test conventions (tests/testthat)
 
-The home for all test-suite conventions. The repo-root `CLAUDE.md` points
+The home for all test-suite conventions. The repo-root `AGENTS.md` points
 here; keep test guidance in this file rather than there.
 
 ## Files & structure

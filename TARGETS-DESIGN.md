@@ -1583,7 +1583,7 @@ Each scenario execution (via `ssd_run_scenario()` or a cluster step)
 installs dqrng as the base R RNG backend at entry and restores on exit
 via `on.exit(restore_methods())`. Tests and helper scripts that touch
 the methods mid-session (not inside a scenario runner) use the same
-`on.exit()` discipline — documented in CLAUDE.md (§RNG discipline).
+`on.exit()` discipline — documented in AGENTS.md (§RNG discipline).
 
 ---
 
@@ -1796,7 +1796,7 @@ shows where branches open and close.
   argument on `chk_*()` so the origin can be set without hand-rolling each
   check). Not on the dependency DAG — it can land at any time; the
   `ssd-define-scenario` work already follows the convention (see the
-  repo `CLAUDE.md` "Error origin" note).
+  repo `AGENTS.md` "Error origin" note).
 
 ### Cleanup
 
