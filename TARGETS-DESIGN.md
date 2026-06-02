@@ -455,7 +455,7 @@ that `tar_map` fans out over (§6).
                      ssd_scenario_tasks(scenario)
                               │
                               ▼
-                     four task tables (sample, data, fit, hc tasks; see §5),
+                     three task tables (sample, fit, hc tasks; see §5),
                      each row = one task carrying its (seed, state) pair (§2)
                               │
             ┌─────────────────┴─────────────────┐
