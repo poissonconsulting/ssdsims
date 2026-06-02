@@ -64,16 +64,22 @@ The `ssdsims_scenario` object SHALL store `seed` (a scalar integer), `nsim`, `nr
 - **WHEN** both a named list and an explicit `name=` are supplied
 - **THEN** the scenario SHALL use the list element names and ignore the `name=` parameter; provide a warning or error to signal the conflict
 
-### Requirement: Input data normalisation
-The package SHALL expose `ssd_data()` that normalises input data to a validated tibble, and `ssd_define_scenario()` SHALL forward all input data through it. `ssd_data()` SHALL require a `Conc` column and a valid tibble shape.
+### Requirement: Input data assembly and normalisation
+The package SHALL expose `ssd_data()` as the single entry point that assembles one or more datasets into a validated, named collection — an `ssdsims_data` object (a named list of tibbles). `ssd_define_scenario()` SHALL accept either an `ssd_data()` collection or, for convenience, bare data frame input routed through the same per-dataset validation. Each dataset SHALL be required to have a numeric `Conc` column; additional columns SHALL be preserved. Dataset names SHALL be taken from argument names where supplied, otherwise derived by symbol capture, and SHALL be unique.
+
+`ssd_data()` is the extensible input point: a later change (`scenario-input-types`, TARGETS-DESIGN.md §12) MAY extend each input to also be a data generator (`fitdists` / `tmbfit` / a function / a function-name string) that `ssd_run_scenario()` accepts; this change is data-frame-only.
 
 #### Scenario: Conc column required
-- **WHEN** `ssd_data()` (or `ssd_define_scenario()`) is given a data frame lacking a `Conc` column
+- **WHEN** `ssd_data()` (or `ssd_define_scenario()`) is given a dataset lacking a `Conc` column
 - **THEN** the function SHALL abort with an informative error
 
-#### Scenario: Valid data passes through
-- **WHEN** `ssd_data()` is given a data frame with a numeric `Conc` column
-- **THEN** the function SHALL return a tibble preserving the `Conc` column and any additional columns
+#### Scenario: Valid data passes through as a collection
+- **WHEN** `ssd_data()` is given one or more data frames with a numeric `Conc` column
+- **THEN** the function SHALL return an `ssdsims_data` collection whose elements are tibbles preserving the `Conc` column and any additional columns
+
+#### Scenario: Names derived and unique
+- **WHEN** `ssd_data(boron = df1, df2)` is called
+- **THEN** names SHALL be taken from the argument name (`"boron"`) or by symbol capture for the unnamed argument, and duplicate names SHALL abort with an informative error
 
 ### Requirement: ci = FALSE rejects bootstrap-only knobs
 When `ci = FALSE` is the only confidence-interval setting, `ssd_define_scenario()` SHALL abort with an error if any bootstrap-only knobs (`nboot`, `ci_method`, or `parametric`) are passed, enforcing that the user either omit those knobs or explicitly set `ci = c(FALSE, TRUE)` to enable bootstrap.

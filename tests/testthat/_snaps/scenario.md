@@ -1,18 +1,40 @@
 # scenario-definition: ssd_data requires a Conc column
 
     Code
-      ssd_data(data.frame(x = 1:5))
+      ssd_data(d = data.frame(x = 1:5))
     Condition
-      Error:
-      ! `data` must have a column named `Conc`.
+      Error in `purrr::map()`:
+      i In index: 1.
+      i With name: d.
+      Caused by error in `map_()`:
+      ! Each dataset must have a column named `Conc`.
 
 # scenario-definition: ssd_data rejects a non-numeric Conc column
 
     Code
-      ssd_data(data.frame(Conc = c("a", "b")))
+      ssd_data(d = data.frame(Conc = c("a", "b")))
+    Condition
+      Error in `purrr::map()`:
+      i In index: 1.
+      i With name: d.
+      Caused by error in `.f()`:
+      ! Column `Conc` must be numeric.
+
+# scenario-definition: ssd_data needs a derivable or explicit name
+
+    Code
+      ssd_data(data.frame(Conc = 1:5))
     Condition
       Error in `ssd_data()`:
-      ! Column `Conc` must be numeric.
+      ! Unable to derive a name for dataset 1; supply a name (e.g. `ssd_data(boron = ...)`).
+
+# scenario-definition: ssd_data rejects duplicate names
+
+    Code
+      ssd_data(x = ssddata::ccme_boron, x = ssddata::ccme_cadmium)
+    Condition
+      Error in `ssd_data_names()`:
+      ! Dataset names must be unique.
 
 # scenario-definition: min_pmix rejects non-function list elements
 
@@ -21,6 +43,14 @@
     Condition
       Error in `lapply()`:
       ! All elements of `min_pmix` must be a function.
+
+# scenario-definition: ssd_data() collection plus name= is an error
+
+    Code
+      ssd_define_scenario(ssd_data(boron = ssddata::ccme_boron), name = "x", seed = 1L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `name` must not be supplied when `data` is an `ssd_data()` collection.
 
 # scenario-definition: named list plus name= is an error
 
@@ -36,7 +66,7 @@
       ssd_define_scenario(data.frame(Conc = 1:5), seed = 1L)
     Condition
       Error in `ssd_define_scenario()`:
-      ! Unable to derive a dataset name from the data argument; supply an explicit `name=`.
+      ! Unable to derive a dataset name from the data argument; supply an explicit `name=` or use `ssd_data()`.
 
 # scenario-definition: bad data in a list aborts via ssd_data
 

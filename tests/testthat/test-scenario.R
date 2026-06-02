@@ -2,21 +2,47 @@
 
 test_that("scenario-definition: ssd_data requires a Conc column", {
   expect_snapshot(error = TRUE, {
-    ssd_data(data.frame(x = 1:5))
+    ssd_data(d = data.frame(x = 1:5))
   })
-})
-
-test_that("scenario-definition: ssd_data passes valid data through, preserving columns", {
-  input <- data.frame(Conc = c(1, 2, 3), Species = c("a", "b", "c"))
-  out <- ssd_data(input)
-  expect_s3_class(out, "tbl_df")
-  expect_identical(out$Conc, c(1, 2, 3))
-  expect_identical(names(out), c("Conc", "Species"))
 })
 
 test_that("scenario-definition: ssd_data rejects a non-numeric Conc column", {
   expect_snapshot(error = TRUE, {
-    ssd_data(data.frame(Conc = c("a", "b")))
+    ssd_data(d = data.frame(Conc = c("a", "b")))
+  })
+})
+
+test_that("scenario-definition: ssd_data returns a named collection of tibbles", {
+  out <- ssd_data(
+    boron = data.frame(Conc = c(1, 2, 3), Species = c("a", "b", "c"))
+  )
+  expect_s3_class(out, "ssdsims_data")
+  expect_named(out, "boron")
+  expect_s3_class(out[["boron"]], "tbl_df")
+  expect_identical(out[["boron"]]$Conc, c(1, 2, 3))
+  expect_identical(names(out[["boron"]]), c("Conc", "Species"))
+})
+
+test_that("scenario-definition: ssd_data names via args and symbol capture", {
+  expect_named(
+    ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    c("boron", "cadmium")
+  )
+  expect_named(
+    ssd_data(ssddata::ccme_boron, ssddata::ccme_cadmium),
+    c("ccme_boron", "ccme_cadmium")
+  )
+})
+
+test_that("scenario-definition: ssd_data needs a derivable or explicit name", {
+  expect_snapshot(error = TRUE, {
+    ssd_data(data.frame(Conc = 1:5))
+  })
+})
+
+test_that("scenario-definition: ssd_data rejects duplicate names", {
+  expect_snapshot(error = TRUE, {
+    ssd_data(x = ssddata::ccme_boron, x = ssddata::ccme_cadmium)
   })
 })
 
@@ -138,6 +164,24 @@ test_that("scenario-definition: construction leaves .Random.seed unchanged", {
 })
 
 # ---- dataset input API -----------------------------------------------------
+
+test_that("scenario-definition: accepts an ssd_data() collection", {
+  s <- ssd_define_scenario(
+    ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    seed = 1L
+  )
+  expect_identical(s$datasets, c("boron", "cadmium"))
+})
+
+test_that("scenario-definition: ssd_data() collection plus name= is an error", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssd_data(boron = ssddata::ccme_boron),
+      name = "x",
+      seed = 1L
+    )
+  })
+})
 
 test_that("scenario-definition: single data frame derives an implicit name", {
   s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)

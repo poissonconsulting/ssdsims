@@ -36,10 +36,12 @@
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
-#' @param data A data frame, or a (named or unnamed) list of data frames. Each
-#'   is forwarded through [ssd_data()] for validation.
+#' @param data An [ssd_data()] collection (preferred), or - for convenience -
+#'   a single data frame or a (named or unnamed) list of data frames. Bare
+#'   inputs are validated via the same `Conc` contract as [ssd_data()].
 #' @param name An optional dataset name for the single-data-frame form,
-#'   overriding the derived name. Must not be combined with a named list.
+#'   overriding the derived name. Must not be combined with a named list or an
+#'   [ssd_data()] collection.
 #' @param min_pmix The `min_pmix` function(s), referenced **by name**. Supply
 #'   either a character vector of names, or a function (or list of functions)
 #'   with a single argument that inputs the number of rows of data and returns
@@ -241,14 +243,25 @@ scenario_default_partition_by <- function() {
   )
 }
 
-#' Derive dataset names from input data, validating each via `ssd_data()`.
+#' Derive dataset names from the constructor's `data` argument.
 #'
-#' Stores nothing - returns only the character vector of names. The data is
-#' forwarded through `ssd_data()` purely for its validation side effect.
+#' Accepts an `ssd_data()` collection (names already validated), a single data
+#' frame, or a list of data frames. Stores nothing - returns only the character
+#' vector of names; bare inputs are forwarded through `ssd_data_validate()`
+#' purely for the validation side effect.
 #' @noRd
 scenario_dataset_names <- function(data, name, data_expr) {
+  if (inherits(data, "ssdsims_data")) {
+    if (!is.null(name)) {
+      chk::abort_chk(
+        "`name` must not be supplied when `data` is an `ssd_data()` collection."
+      )
+    }
+    return(names(data))
+  }
+
   if (is.data.frame(data)) {
-    ssd_data(data)
+    ssd_data_validate(data)
     if (!is.null(name)) {
       return(name)
     }
@@ -256,7 +269,7 @@ scenario_dataset_names <- function(data, name, data_expr) {
     if (is.null(nm)) {
       chk::abort_chk(
         "Unable to derive a dataset name from the data argument; ",
-        "supply an explicit `name=`."
+        "supply an explicit `name=` or use `ssd_data()`."
       )
     }
     return(nm)
@@ -276,17 +289,18 @@ scenario_dataset_names <- function(data, name, data_expr) {
       if (!is.null(name)) {
         chk::abort_chk(
           "`name` applies only to a single data frame; ",
-          "use a named list for multiple datasets."
+          "use a named list or `ssd_data()` for multiple datasets."
         )
       }
       nms <- list_expr_names(data_expr, label = "dataset")
     }
-    purrr::walk(data, ssd_data)
+    purrr::walk(data, ssd_data_validate)
     return(nms)
   }
 
   chk::abort_chk(
-    "`data` must be a data frame or a list of data frames."
+    "`data` must be an `ssd_data()` collection, a data frame, ",
+    "or a list of data frames."
   )
 }
 

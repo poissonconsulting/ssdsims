@@ -29,13 +29,15 @@ ssd_define_scenario(
 )
 }
 \arguments{
-\item{data}{A data frame, or a (named or unnamed) list of data frames. Each
-is forwarded through \code{\link[=ssd_data]{ssd_data()}} for validation.}
+\item{data}{An \code{\link[=ssd_data]{ssd_data()}} collection (preferred), or - for convenience -
+a single data frame or a (named or unnamed) list of data frames. Bare
+inputs are validated via the same \code{Conc} contract as \code{\link[=ssd_data]{ssd_data()}}.}
 
 \item{...}{Unused; must be empty.}
 
 \item{name}{An optional dataset name for the single-data-frame form,
-overriding the derived name. Must not be combined with a named list.}
+overriding the derived name. Must not be combined with a named list or an
+\code{\link[=ssd_data]{ssd_data()}} collection.}
 
 \item{nsim}{A count of the number of data sets to generate.}
 

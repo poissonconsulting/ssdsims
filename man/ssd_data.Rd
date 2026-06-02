@@ -2,27 +2,37 @@
 % Please edit documentation in R/data.R
 \name{ssd_data}
 \alias{ssd_data}
-\title{Normalise Input Data for a Simulation Scenario}
+\title{Assemble and Validate Datasets for a Simulation Scenario}
 \usage{
-ssd_data(data)
+ssd_data(...)
 }
 \arguments{
-\item{data}{A data frame (or object coercible to one) with a numeric
-\code{Conc} column.}
+\item{...}{One or more data frames, optionally named. Each is validated for
+a numeric \code{Conc} column.}
 }
 \value{
-A tibble with a validated numeric \code{Conc} column and any
-additional columns preserved.
+An \code{ssdsims_data} object: a named list of validated tibbles.
 }
 \description{
-Coerces input to a tibble and validates the species sensitivity
-distribution data contract: a numeric \code{Conc} column must be present.
-This is the single entry point through which \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}
-forwards input data, so every later step inherits one validation path.
+Collects one or more datasets into a validated, named collection - the
+single entry point through which \code{\link[=ssd_define_scenario]{ssd_define_scenario()}} takes dataset
+input. Each dataset must carry a numeric \code{Conc} column (the species
+sensitivity distribution convention); additional columns are preserved.
 }
 \details{
-Additional columns are preserved unchanged.
+Names are taken from the argument names where supplied, otherwise derived
+from the argument expression by symbol capture (e.g. \code{ssddata::ccme_boron}
+becomes \code{"ccme_boron"}). A literal with no derivable name (e.g. a bare
+\code{data.frame(...)} call) must be given an explicit name.
+
+\code{ssd_data()} is intended to grow: the planned \code{scenario-input-types} change
+(see \code{TARGETS-DESIGN.md} §12) will let each input also be one of the data
+\emph{generators} \code{ssd_run_scenario()} accepts today - a \code{fitdists} or \code{tmbfit}
+object, a generator function, or a function-name string - with the data
+materialised by the dataset registry. For now each input must be a data
+frame.
 }
 \examples{
 ssd_data(ssddata::ccme_boron)
+ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium)
 }
