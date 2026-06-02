@@ -56,6 +56,15 @@ chk::chk_character(dataset_names)
 - Always run `air format .` after generating or editing code.
 - Use the base pipe operator (`|>`), not the magrittr pipe (`%>%`).
 - Use `\() ...` for single-line anonymous functions. For all other cases, use `function() {...}`.
+- Prefer `purrr` functionals (`map()`, `map_chr()`, `map_int()`, `map2()`,
+  `pmap()`, …) over the base `*apply`/`Map`/`mapply` family. (Exception: where
+  the error-call-origin rule needs a plain `for` loop to keep `purrr` frames out
+  of an error header — see Error origin above.)
+- Prefer `rlang` helpers over their base equivalents: `rlang::set_names()` over
+  `stats::setNames()`, `rlang::exec()` over `do.call()`, `rlang::env_get()` /
+  `rlang::is_function()` over `get()` / `getExportedValue()` / `is.function()`.
+- Reserve the `with_`/`local_` prefixes for RAII (withr-style) scope helpers; do
+  not use them for ordinary transforms (e.g. name a column-adder `add_*()`).
 - Permissions for the common tooling (`air`, `R`, `Rscript`, read-only `git`/`gh`,
   `quarto`, `Skill`) are pre-approved in `.claude/settings.json`, so these run
   without a prompt.

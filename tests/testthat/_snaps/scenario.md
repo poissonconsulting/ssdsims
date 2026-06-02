@@ -194,6 +194,7 @@
         nsim:     100
         datasets: ccme_boron
         nrow:     5, 10
+        replace:  FALSE
         fit grid:
           dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
           rescale: FALSE
@@ -225,6 +226,7 @@
         nsim:     50
         datasets: boron, cadmium
         nrow:     5, 6, 10
+        replace:  FALSE
         fit grid:
           dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
           rescale: FALSE, TRUE

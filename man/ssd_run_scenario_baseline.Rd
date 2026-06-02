@@ -4,14 +4,10 @@
 \alias{ssd_run_scenario_baseline}
 \title{Run a Scenario with the Baseline Loop Runner}
 \usage{
-ssd_run_scenario_baseline(scenario, data)
+ssd_run_scenario_baseline(scenario)
 }
 \arguments{
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
-
-\item{data}{An \code{\link[=ssd_data]{ssd_data()}} collection, a named list of data frames, or - for
-a single-dataset scenario - one data frame, supplying the data referenced by
-the scenario's dataset names.}
 }
 \value{
 A named list with \code{sample}, \code{data}, \code{fit}, and \code{hc} elements: each the
@@ -32,10 +28,9 @@ It is also \strong{not} reproducible - no per-task RNG seeding happens here (tha
 arrives with the \code{state-primitives} roadmap step); pin the ambient RNG (e.g.
 \code{\link[withr:with_seed]{withr::with_seed()}}) for deterministic draws.
 
-Because the scenario stores only dataset \emph{names}, the actual data frames are
-supplied via \code{data} (an \code{\link[=ssd_data]{ssd_data()}} collection or named list) and looked up
-by name. \code{min_pmix} names are resolved against \code{ssdtools} until the registry
-roadmap step lands.
+The scenario retains the data frames it was built from, so the runner reads
+them directly - no separate \code{data} argument. \code{min_pmix} names are resolved
+against \code{ssdtools} until the registry roadmap step lands.
 }
 \examples{
 scenario <- ssd_define_scenario(
@@ -46,7 +41,7 @@ scenario <- ssd_define_scenario(
   dists = "lnorm"
 )
 withr::with_seed(42L, {
-  out <- ssd_run_scenario_baseline(scenario, ssddata::ccme_boron)
+  out <- ssd_run_scenario_baseline(scenario)
 })
 out$hc
 }

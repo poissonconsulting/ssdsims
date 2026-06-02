@@ -77,14 +77,6 @@
         fit    tasks: 8
         hc     tasks: 24
 
-# task-lists: runner errors on missing dataset
-
-    Code
-      ssd_run_scenario_baseline(scenario, ssd_data(boron = ssddata::ccme_boron))
-    Condition
-      Error in `ssd_run_scenario_baseline()`:
-      ! `data` is missing dataset: 'cadmium'.
-
 # task-lists: task-table column contracts are pinned
 
     Code

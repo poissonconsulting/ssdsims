@@ -11,6 +11,7 @@ ssd_define_scenario(
   ...,
   name = NULL,
   nrow = 6L,
+  replace = FALSE,
   dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
@@ -45,6 +46,8 @@ overriding the derived name. Must not be combined with a named list or an
 \code{\link[=ssd_data]{ssd_data()}} collection.}
 
 \item{nrow}{A positive whole number of the minimum number of non-missing rows.}
+
+\item{replace}{A logical vector specifying whether to sample with replacement.}
 
 \item{dists}{A character vector of the distribution names.}
 
@@ -123,8 +126,10 @@ and has \strong{no} dependency on \code{targets}.
 }
 \details{
 Input data is forwarded through \code{\link[=ssd_data]{ssd_data()}} for validation (a numeric
-\code{Conc} column is required) but the data frames themselves are \emph{not} stored;
-only their names are kept, so the scenario serialises to a compact manifest.
+\code{Conc} column is required) and retained on the scenario (as \verb{$data}) so a
+local run (\code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}}) can sample it directly. The dataset
+\emph{names} (\verb{$datasets}) are what the targets/cluster path hashes and resolves
+through the registry, so that path need not carry the data frames.
 }
 \section{Dataset input}{
 The preferred form is an \code{\link[=ssd_data]{ssd_data()}} collection, which owns validation and

@@ -8,8 +8,10 @@
 #' and has **no** dependency on `targets`.
 #'
 #' Input data is forwarded through [ssd_data()] for validation (a numeric
-#' `Conc` column is required) but the data frames themselves are *not* stored;
-#' only their names are kept, so the scenario serialises to a compact manifest.
+#' `Conc` column is required) and retained on the scenario (as `$data`) so a
+#' local run ([ssd_run_scenario_baseline()]) can sample it directly. The dataset
+#' *names* (`$datasets`) are what the targets/cluster path hashes and resolves
+#' through the registry, so that path need not carry the data frames.
 #'
 #' # Dataset input
 #'
@@ -75,6 +77,7 @@ ssd_define_scenario <- function(
   ...,
   name = NULL,
   nrow = 6L,
+  replace = FALSE,
   dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
@@ -120,6 +123,11 @@ ssd_define_scenario <- function(
   chk::chk_unique(nrow)
   chk::chk_range(nrow, c(5, 1000))
   chk::chk_length(nrow, upper = Inf)
+
+  chk::chk_logical(replace)
+  chk::chk_not_any_na(replace)
+  chk::chk_unique(replace)
+  chk::chk_length(replace, upper = 2L)
 
   chk::chk_null_or(name, vld = chk::vld_string)
   chk::chk_null_or(partition_by, vld = chk::vld_list)
@@ -215,8 +223,8 @@ ssd_define_scenario <- function(
     }
   }
 
-  # --- dataset names + validation (no data stored) -----------------------
-  datasets <- scenario_dataset_names(data, name, data_expr, call = call)
+  # --- datasets: validated and retained as an ssd_data() collection ------
+  datasets <- scenario_datasets(data, name, data_expr, call = call)
 
   # --- min_pmix names (no function bodies stored) ------------------------
   min_pmix <- scenario_min_pmix_names(min_pmix, min_pmix_expr, call = call)
@@ -227,8 +235,10 @@ ssd_define_scenario <- function(
     list(
       seed = as.integer(seed),
       nsim = as.integer(nsim),
-      datasets = datasets,
+      datasets = names(datasets),
+      data = datasets,
       nrow = as.integer(nrow),
+      replace = replace,
       fit = list(
         dists = dists,
         rescale = rescale,
@@ -263,14 +273,14 @@ scenario_default_partition_by <- function() {
   )
 }
 
-#' Derive dataset names from the constructor's `data` argument.
+#' Validate and retain the constructor's `data` argument.
 #'
-#' Accepts an `ssd_data()` collection (names already validated), a single data
-#' frame, or a list of data frames. Stores nothing - returns only the character
-#' vector of names; bare inputs are forwarded through `ssd_data_validate()`
-#' purely for the validation side effect.
+#' Accepts an `ssd_data()` collection (returned as-is), a single data frame, or
+#' a list of data frames, and returns a validated, named `ssd_data()` collection
+#' (an `ssdsims_data` object). The scenario retains this for local runs; the
+#' targets/cluster path uses only `names()` of it.
 #' @noRd
-scenario_dataset_names <- function(
+scenario_datasets <- function(
   data,
   name,
   data_expr,
@@ -283,24 +293,25 @@ scenario_dataset_names <- function(
         call = call
       )
     }
-    return(names(data))
+    return(data)
   }
 
   if (is.data.frame(data)) {
-    if (!is.null(name)) {
-      ssd_data_validate(data, name = name, call = call)
-      return(name)
+    if (is.null(name)) {
+      name <- expr_to_name(data_expr)
+      if (is.null(name)) {
+        chk::abort_chk(
+          "Unable to derive a dataset name from the data argument; ",
+          "supply an explicit `name=` or use `ssd_data()`.",
+          call = call
+        )
+      }
     }
-    nm <- expr_to_name(data_expr)
-    if (is.null(nm)) {
-      chk::abort_chk(
-        "Unable to derive a dataset name from the data argument; ",
-        "supply an explicit `name=` or use `ssd_data()`.",
-        call = call
-      )
-    }
-    ssd_data_validate(data, name = nm, call = call)
-    return(nm)
+    tibble <- ssd_data_validate(data, name = name, call = call)
+    return(structure(
+      rlang::set_names(list(tibble), name),
+      class = "ssdsims_data"
+    ))
   }
 
   if (is.list(data)) {
@@ -327,10 +338,13 @@ scenario_dataset_names <- function(
     if (anyDuplicated(nms)) {
       chk::abort_chk("Dataset names must be unique.", call = call)
     }
+    # Loop (not `purrr::map2`) so a validation error surfaces as
+    # `ssd_define_scenario()`, not a `purrr` frame (error-call-origin rule).
+    tibbles <- vector("list", length(data))
     for (i in seq_along(data)) {
-      ssd_data_validate(data[[i]], name = nms[[i]], call = call)
+      tibbles[[i]] <- ssd_data_validate(data[[i]], name = nms[[i]], call = call)
     }
-    return(nms)
+    return(structure(rlang::set_names(tibbles, nms), class = "ssdsims_data"))
   }
 
   chk::abort_chk(
@@ -469,6 +483,7 @@ print.ssdsims_scenario <- function(x, ...) {
   cat("  nsim:     ", x$nsim, "\n", sep = "")
   cat("  datasets: ", paste(x$datasets, collapse = ", "), "\n", sep = "")
   cat("  nrow:     ", paste(x$nrow, collapse = ", "), "\n", sep = "")
+  cat("  replace:  ", paste(x$replace, collapse = ", "), "\n", sep = "")
   cat("  fit grid:\n")
   print_grid(x$fit)
   cat("  hc grid:\n")

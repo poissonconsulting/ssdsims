@@ -176,15 +176,11 @@ ssd_scenario_tasks <- function(scenario) {
 #' arrives with the `state-primitives` roadmap step); pin the ambient RNG (e.g.
 #' [withr::with_seed()]) for deterministic draws.
 #'
-#' Because the scenario stores only dataset *names*, the actual data frames are
-#' supplied via `data` (an [ssd_data()] collection or named list) and looked up
-#' by name. `min_pmix` names are resolved against `ssdtools` until the registry
-#' roadmap step lands.
+#' The scenario retains the data frames it was built from, so the runner reads
+#' them directly - no separate `data` argument. `min_pmix` names are resolved
+#' against `ssdtools` until the registry roadmap step lands.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
-#' @param data An [ssd_data()] collection, a named list of data frames, or - for
-#'   a single-dataset scenario - one data frame, supplying the data referenced by
-#'   the scenario's dataset names.
 #' @return A named list with `sample`, `data`, `fit`, and `hc` elements: each the
 #'   corresponding task table augmented with a list column of per-task results
 #'   (`sample` draws, `data` truncations, `fits` objects, and `hc` tibbles).
@@ -198,13 +194,12 @@ ssd_scenario_tasks <- function(scenario) {
 #'   dists = "lnorm"
 #' )
 #' withr::with_seed(42L, {
-#'   out <- ssd_run_scenario_baseline(scenario, ssddata::ccme_boron)
+#'   out <- ssd_run_scenario_baseline(scenario)
 #' })
 #' out$hc
-ssd_run_scenario_baseline <- function(scenario, data) {
-  call <- environment()
+ssd_run_scenario_baseline <- function(scenario) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
-  data <- resolve_scenario_data(data, scenario, call = call)
+  data <- scenario$data
 
   tasks <- ssd_scenario_tasks(scenario)
 
@@ -216,7 +211,7 @@ ssd_run_scenario_baseline <- function(scenario, data) {
       dplyr::slice_sample(data[[dataset]], n = n_max, replace = replace)
     }
   )
-  sample_out <- stats::setNames(sample_tbl$sample, sample_tbl$sample_id)
+  sample_out <- rlang::set_names(sample_tbl$sample, sample_tbl$sample_id)
 
   # --- data step: truncate each sample to its nrow (RNG-free) ------------
   data_tbl <- tasks$data
@@ -225,7 +220,7 @@ ssd_run_scenario_baseline <- function(scenario, data) {
     data_tbl$nrow,
     \(sample_id, nrow) utils::head(sample_out[[sample_id]], nrow)
   )
-  data_out <- stats::setNames(data_tbl$data, data_tbl$data_id)
+  data_out <- rlang::set_names(data_tbl$data, data_tbl$data_id)
 
   # --- fit step: fit each data truncation against its fit-grid row -------
   # The fit-grid column names match `fit_data_task()`'s formals, so `pmap()`
@@ -245,7 +240,7 @@ ssd_run_scenario_baseline <- function(scenario, data) {
     fit_data_task,
     dists = scenario$fit$dists
   )
-  fit_out <- stats::setNames(fit_tbl$fits, fit_tbl$fit_id)
+  fit_out <- rlang::set_names(fit_tbl$fits, fit_tbl$fit_id)
 
   # --- hc step: estimate hc for each fit against its hc-grid row ----------
   hc_tbl <- tasks$hc
@@ -262,17 +257,11 @@ ssd_run_scenario_baseline <- function(scenario, data) {
 
 # ---- internal grid helpers -------------------------------------------------
 
-# `replace` is not (yet) a scenario field; default to FALSE and read it
-# forward-compatibly so a later scenario `replace` knob flows through unchanged.
-scenario_replace <- function(scenario) {
-  scenario$replace %||% FALSE
-}
-
 sample_task_grid <- function(scenario) {
   grid <- tidyr::expand_grid(
     dataset = scenario$datasets,
     sim = seq_len(scenario$nsim),
-    replace = scenario_replace(scenario)
+    replace = scenario$replace
   )
   # The single draw is `n_max = max(nrow)` rows; every `nrow` value is a
   # sub-truncation of it (TARGETS-DESIGN.md §5), so `n_max` is carried data, not
@@ -287,7 +276,7 @@ data_task_grid <- function(scenario) {
   tidyr::expand_grid(
     dataset = scenario$datasets,
     sim = seq_len(scenario$nsim),
-    replace = scenario_replace(scenario),
+    replace = scenario$replace,
     nrow = scenario$nrow
   )
 }
@@ -332,7 +321,7 @@ hc_grid_tbl <- function(scenario) {
       parametric = hc$parametric
     )
   }
-  dplyr::bind_rows(parts$false, parts$true)
+  dplyr::bind_rows(parts)
 }
 
 # ---- task identity (cross-join axes, ids, foreign keys) --------------------
@@ -369,25 +358,21 @@ task_parent <- function(step) {
 # (the Hive partition path, TARGETS-DESIGN.md §5/§6); list columns are rendered
 # element-wise so the key is stable.
 path_key <- function(tbl, cols) {
-  parts <- lapply(cols, function(col) {
+  parts <- purrr::map(cols, function(col) {
     v <- tbl[[col]]
     rendered <- if (is.list(v)) {
-      vapply(
-        v,
-        function(e) paste0(as.character(e), collapse = ","),
-        character(1)
-      )
+      purrr::map_chr(v, \(e) paste0(as.character(e), collapse = ","))
     } else {
       as.character(v)
     }
     paste0(col, "=", rendered)
   })
-  do.call(paste, c(parts, sep = "/"))
+  rlang::exec(paste, !!!parts, sep = "/")
 }
 
 # Append the `<step>_id` primary key and (for non-root steps) the parent's
 # `<parent>_id` as a foreign key. They go last so the cross-join axes lead.
-with_task_ids <- function(tbl, step) {
+add_task_ids <- function(tbl, step) {
   tbl[[paste0(step, "_id")]] <- path_key(tbl, task_axes(step))
   parent <- task_parent(step)
   if (!is.na(parent)) {
@@ -399,11 +384,16 @@ with_task_ids <- function(tbl, step) {
 # ---- internal per-task operations (no RNG seeding) -------------------------
 
 resolve_min_pmix <- function(name, call = rlang::caller_env()) {
-  out <- tryCatch(getExportedValue("ssdtools", name), error = function(e) NULL)
-  if (is.null(out)) {
-    out <- tryCatch(get(name, mode = "function"), error = function(e) NULL)
+  out <- rlang::env_get(rlang::ns_env("ssdtools"), name, default = NULL)
+  if (!rlang::is_function(out)) {
+    out <- rlang::env_get(
+      rlang::global_env(),
+      name,
+      default = NULL,
+      inherit = TRUE
+    )
   }
-  if (!is.function(out)) {
+  if (!rlang::is_function(out)) {
     chk::abort_chk(
       "Unable to resolve `min_pmix` name ",
       encodeString(name, quote = "\""),
@@ -470,51 +460,17 @@ hc_data_task <- function(
   }
 }
 
-resolve_scenario_data <- function(data, scenario, call = rlang::caller_env()) {
-  if (inherits(data, "ssdsims_data")) {
-    data <- unclass(data)
-  }
-  if (is.data.frame(data)) {
-    if (length(scenario$datasets) != 1L) {
-      chk::abort_chk(
-        "A single data frame can only supply a one-dataset scenario; ",
-        "supply a named list or an `ssd_data()` collection.",
-        call = call
-      )
-    }
-    data <- stats::setNames(list(data), scenario$datasets)
-  }
-  if (!is.list(data) || is.null(names(data)) || !all(nzchar(names(data)))) {
-    chk::abort_chk(
-      "`data` must be an `ssd_data()` collection or a named list of data frames.",
-      call = call
-    )
-  }
-  missing <- setdiff(scenario$datasets, names(data))
-  if (length(missing)) {
-    chk::abort_chk(
-      "`data` is missing dataset",
-      if (length(missing) > 1L) "s" else "",
-      ": ",
-      chk::cc(missing),
-      ".",
-      call = call
-    )
-  }
-  data
-}
-
 # ---- ssdsims_tasks S3 class ------------------------------------------------
 
 new_ssdsims_tasks <- function(tbl, step) {
-  tbl <- with_task_ids(tbl, step)
-  # Set attributes individually rather than via `structure()`: a bulk
-  # `attributes<-` normalises the tibble's compact row names to explicit
-  # `1:n`, which tibble then flags with a `*` on print.
-  attr(tbl, "step") <- step
-  attr(tbl, "axes") <- task_axes(step)
-  class(tbl) <- c("ssdsims_tasks", class(tbl))
-  tbl
+  tbl <- add_task_ids(tbl, step)
+  tibble::new_tibble(
+    tbl,
+    step = step,
+    axes = task_axes(step),
+    nrow = nrow(tbl),
+    class = "ssdsims_tasks"
+  )
 }
 
 #' @export

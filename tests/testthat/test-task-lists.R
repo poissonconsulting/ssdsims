@@ -15,6 +15,19 @@ test_that("task-lists: sample table has D * nsim * R rows with axes populated", 
   expect_identical(unique(tasks$replace), FALSE)
 })
 
+test_that("task-lists: the scenario replace knob is a sample axis", {
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 42L,
+    replace = c(FALSE, TRUE)
+  )
+  tasks <- ssd_scenario_sample_tasks(scenario)
+  # D = 1, nsim = 2, R = 2 distinct replace values
+  expect_identical(nrow(tasks), 4L)
+  expect_setequal(tasks$replace, c(FALSE, TRUE))
+})
+
 test_that("task-lists: nrow does not multiply the sample draw; n_max is carried", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
@@ -268,10 +281,7 @@ test_that("task-lists: baseline runner threads sample -> data -> fit -> hc", {
   )
   tmp <- withr::local_tempdir()
   withr::local_dir(tmp)
-  out <- withr::with_seed(
-    42L,
-    ssd_run_scenario_baseline(scenario, ssddata::ccme_boron)
-  )
+  out <- withr::with_seed(42L, ssd_run_scenario_baseline(scenario))
   expect_named(out, c("sample", "data", "fit", "hc"))
   expect_s3_class(out$sample$sample[[1L]], "data.frame")
   expect_s3_class(out$fit$fits[[1L]], "fitdists")
@@ -279,24 +289,12 @@ test_that("task-lists: baseline runner threads sample -> data -> fit -> hc", {
   # the data truncation is head(sample, nrow) of the shared draw
   expect_identical(nrow(out$sample$sample[[1L]]), 6L)
   expect_identical(
-    vapply(out$data$data, nrow, integer(1)),
+    purrr::map_int(out$data$data, nrow),
     c(5L, 6L)
   )
   # No targets machinery and no Parquet I/O at this step.
   expect_false("targets" %in% loadedNamespaces())
   expect_length(list.files(tmp, pattern = "\\.parquet$", recursive = TRUE), 0L)
-})
-
-test_that("task-lists: runner errors on missing dataset", {
-  scenario <- ssd_define_scenario(
-    ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
-    nsim = 1L,
-    seed = 42L,
-    dists = "lnorm"
-  )
-  expect_snapshot(error = TRUE, {
-    ssd_run_scenario_baseline(scenario, ssd_data(boron = ssddata::ccme_boron))
-  })
 })
 
 # ---- column contract -------------------------------------------------------

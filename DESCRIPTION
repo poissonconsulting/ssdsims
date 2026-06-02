@@ -21,6 +21,7 @@ Imports:
     purrr,
     rlang,
     ssdtools (>= 2.6.0),
+    tibble,
     tidyr,
     withr
 Suggests: 
