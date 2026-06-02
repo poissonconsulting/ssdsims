@@ -400,7 +400,6 @@ resolve_min_pmix <- function(name, call = rlang::caller_env()) {
       " to a function (no min_pmix registry yet; see TARGETS-DESIGN.md §1.1).",
       call = call
     )
-    )
   }
   out
 }
