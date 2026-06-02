@@ -1724,6 +1724,18 @@ shows where branches open and close.
 - **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
   a historical reference.
+- **`error-call-origin`** — *Cosmetic, independent of the rest.*
+  Audit every user-facing function so its validation errors report the
+  **calling function** as the origin (`Error in \`ssd_*()\`:`), never an
+  internal frame (`purrr::map()`, `lapply()`, a private helper). Thread
+  the public frame into validators (`chk::abort_chk(..., call = call)`
+  with `call = environment()`), and prefer plain loops over
+  `purrr::walk` / `chk::chk_all` where those wrappers would surface in the
+  error header. May need upstream `chk` changes (e.g. a `call`/`error_call`
+  argument on `chk_*()` so the origin can be set without hand-rolling each
+  check). Not on the dependency DAG — it can land at any time; the
+  `ssd-define-scenario` work already follows the convention (see the
+  repo `CLAUDE.md` "Error origin" note).
 
 ### Dependency DAG (parallel streams)
 

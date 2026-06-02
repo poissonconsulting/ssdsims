@@ -126,7 +126,9 @@ Input data is forwarded through \code{\link[=ssd_data]{ssd_data()}} for validati
 only their names are kept, so the scenario serialises to a compact manifest.
 }
 \section{Dataset input}{
-Datasets may be supplied in four forms:
+The preferred form is an \code{\link[=ssd_data]{ssd_data()}} collection, which owns validation and
+naming: \code{ssd_define_scenario(ssd_data(boron = ccme_boron, cadmium = ccme_cadmium), ...)}. For convenience, bare data frame input is also
+accepted in four forms (routed through the same \code{Conc} validation):
 \enumerate{
 \item A single data frame, name derived from the argument expression:
 \code{ssd_define_scenario(ssddata::ccme_boron, ...)} gives \code{"ccme_boron"}.

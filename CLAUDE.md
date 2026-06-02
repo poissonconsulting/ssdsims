@@ -32,6 +32,7 @@ Read these before major implementation work.
 - **Linting**: Run `air format` to apply formatters.
 - **Type checks**: No explicit type hints; rely on `chk::*()` for runtime validation in function bodies.
 - **Validation**: Use `chk` for all input validation; keep error messages informative and actionable.
+- **Error origin**: Raise errors in the context of the *user-facing* function. Thread the public function's frame down to validators (`chk::abort_chk(..., call = call)` with `call = environment()` captured in the exported function) and avoid leaking internal frames like `purrr::map()` / `lapply()` / private helpers into the `Error in ...:` header (loop instead of `purrr::walk`/`chk_all` where they would surface). A package-wide pass to enforce this is tracked as the `error-call-origin` roadmap item (TARGETS-DESIGN.md §12).
 
 Example:
 ```r

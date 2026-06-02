@@ -13,7 +13,10 @@
 #'
 #' # Dataset input
 #'
-#' Datasets may be supplied in four forms:
+#' The preferred form is an [ssd_data()] collection, which owns validation and
+#' naming: `ssd_define_scenario(ssd_data(boron = ccme_boron, cadmium =
+#' ccme_cadmium), ...)`. For convenience, bare data frame input is also
+#' accepted in four forms (routed through the same `Conc` validation):
 #'
 #' 1. A single data frame, name derived from the argument expression:
 #'    `ssd_define_scenario(ssddata::ccme_boron, ...)` gives `"ccme_boron"`.
@@ -88,6 +91,7 @@ ssd_define_scenario <- function(
 ) {
   data_expr <- rlang::enexpr(data)
   min_pmix_expr <- rlang::enexpr(min_pmix)
+  call <- environment()
   chk::chk_unused(...)
 
   # --- scalar / vector knob validation ----------------------------------
@@ -190,16 +194,17 @@ ssd_define_scenario <- function(
         ") cannot be set when `ci = FALSE`. ",
         "Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob",
         if (length(passed) > 1L) "s" else "",
-        "."
+        ".",
+        call = call
       )
     }
   }
 
   # --- dataset names + validation (no data stored) -----------------------
-  datasets <- scenario_dataset_names(data, name, data_expr)
+  datasets <- scenario_dataset_names(data, name, data_expr, call = call)
 
   # --- min_pmix names (no function bodies stored) ------------------------
-  min_pmix <- scenario_min_pmix_names(min_pmix, min_pmix_expr)
+  min_pmix <- scenario_min_pmix_names(min_pmix, min_pmix_expr, call = call)
 
   partition_by <- partition_by %||% scenario_default_partition_by()
 
@@ -250,28 +255,36 @@ scenario_default_partition_by <- function() {
 #' vector of names; bare inputs are forwarded through `ssd_data_validate()`
 #' purely for the validation side effect.
 #' @noRd
-scenario_dataset_names <- function(data, name, data_expr) {
+scenario_dataset_names <- function(
+  data,
+  name,
+  data_expr,
+  call = rlang::caller_env()
+) {
   if (inherits(data, "ssdsims_data")) {
     if (!is.null(name)) {
       chk::abort_chk(
-        "`name` must not be supplied when `data` is an `ssd_data()` collection."
+        "`name` must not be supplied when `data` is an `ssd_data()` collection.",
+        call = call
       )
     }
     return(names(data))
   }
 
   if (is.data.frame(data)) {
-    ssd_data_validate(data)
     if (!is.null(name)) {
+      ssd_data_validate(data, name = name, call = call)
       return(name)
     }
     nm <- expr_to_name(data_expr)
     if (is.null(nm)) {
       chk::abort_chk(
         "Unable to derive a dataset name from the data argument; ",
-        "supply an explicit `name=` or use `ssd_data()`."
+        "supply an explicit `name=` or use `ssd_data()`.",
+        call = call
       )
     }
+    ssd_data_validate(data, name = nm, call = call)
     return(nm)
   }
 
@@ -281,7 +294,8 @@ scenario_dataset_names <- function(data, name, data_expr) {
     if (is_named) {
       if (!is.null(name)) {
         chk::abort_chk(
-          "`name` must not be supplied with a named list of datasets."
+          "`name` must not be supplied with a named list of datasets.",
+          call = call
         )
       }
       nms <- list_names
@@ -289,18 +303,22 @@ scenario_dataset_names <- function(data, name, data_expr) {
       if (!is.null(name)) {
         chk::abort_chk(
           "`name` applies only to a single data frame; ",
-          "use a named list or `ssd_data()` for multiple datasets."
+          "use a named list or `ssd_data()` for multiple datasets.",
+          call = call
         )
       }
-      nms <- list_expr_names(data_expr, label = "dataset")
+      nms <- list_expr_names(data_expr, label = "dataset", call = call)
     }
-    purrr::walk(data, ssd_data_validate)
+    for (i in seq_along(data)) {
+      ssd_data_validate(data[[i]], name = nms[[i]], call = call)
+    }
     return(nms)
   }
 
   chk::abort_chk(
     "`data` must be an `ssd_data()` collection, a data frame, ",
-    "or a list of data frames."
+    "or a list of data frames.",
+    call = call
   )
 }
 
@@ -321,13 +339,18 @@ expr_to_name <- function(expr) {
 
 #' Derive per-element names from a captured `list(...)` expression.
 #' @noRd
-list_expr_names <- function(list_expr, label = "dataset") {
+list_expr_names <- function(
+  list_expr,
+  label = "dataset",
+  call = rlang::caller_env()
+) {
   if (!rlang::is_call(list_expr, "list")) {
     chk::abort_chk(
       "Unable to derive ",
       label,
       " names from the list argument; ",
-      "supply a named list (e.g. `list(boron = ...)`)."
+      "supply a named list (e.g. `list(boron = ...)`).",
+      call = call
     )
   }
   elems <- rlang::call_args(list_expr)
@@ -342,7 +365,8 @@ list_expr_names <- function(list_expr, label = "dataset") {
       "Unable to derive a name for every ",
       label,
       " in the list; ",
-      "supply a named list (e.g. `list(boron = ...)`)."
+      "supply a named list (e.g. `list(boron = ...)`).",
+      call = call
     )
   }
   nms
@@ -355,39 +379,63 @@ list_expr_names <- function(list_expr, label = "dataset") {
 #' Provided functions are validated; only the names are returned - no function
 #' bodies are stored.
 #' @noRd
-scenario_min_pmix_names <- function(min_pmix, min_pmix_expr) {
+scenario_min_pmix_names <- function(
+  min_pmix,
+  min_pmix_expr,
+  call = rlang::caller_env()
+) {
   if (is.character(min_pmix)) {
-    chk::chk_not_any_na(min_pmix, x_name = "`min_pmix`")
-    chk::chk_unique(min_pmix, x_name = "`min_pmix`")
+    if (anyNA(min_pmix)) {
+      chk::abort_chk("`min_pmix` names must not be missing.", call = call)
+    }
+    if (anyDuplicated(min_pmix)) {
+      chk::abort_chk("`min_pmix` names must be unique.", call = call)
+    }
     return(min_pmix)
   }
 
   if (is.function(min_pmix)) {
-    chk::chk_function(min_pmix, formals = 1L)
+    check_min_pmix_function(min_pmix, call = call)
     nm <- expr_to_name(min_pmix_expr)
     if (is.null(nm)) {
       chk::abort_chk(
         "Unable to derive a name for `min_pmix`; ",
-        "supply it by name (a character vector)."
+        "supply it by name (a character vector).",
+        call = call
       )
     }
     return(nm)
   }
 
   if (is.list(min_pmix)) {
-    chk::chk_length(min_pmix, upper = Inf)
-    chk::chk_all(min_pmix, chk::chk_function, formals = 1L)
+    for (entry in min_pmix) {
+      check_min_pmix_function(entry, call = call)
+    }
     list_names <- names(min_pmix)
     if (!is.null(list_names) && all(nzchar(list_names))) {
       return(list_names)
     }
-    return(list_expr_names(min_pmix_expr, label = "min_pmix"))
+    return(list_expr_names(min_pmix_expr, label = "min_pmix", call = call))
   }
 
   chk::abort_chk(
     "`min_pmix` must be a character vector of names, ",
-    "or a function or list of functions."
+    "or a function or list of functions.",
+    call = call
   )
+}
+
+#' Assert a `min_pmix` entry is a single-argument function (in the context of
+#' `call`).
+#' @noRd
+check_min_pmix_function <- function(f, call = rlang::caller_env()) {
+  if (!is.function(f) || length(formals(f)) < 1L) {
+    chk::abort_chk(
+      "Each `min_pmix` function must take a single argument ",
+      "(the number of rows).",
+      call = call
+    )
+  }
 }
 
 #' @export

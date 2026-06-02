@@ -28,34 +28,44 @@
 ssd_data <- function(...) {
   inputs <- rlang::list2(...)
   exprs <- rlang::enexprs(...)
+  call <- environment()
   if (length(inputs) == 0L) {
-    chk::abort_chk("`ssd_data()` requires at least one dataset.")
+    chk::abort_chk("`ssd_data()` requires at least one dataset.", call = call)
   }
-  names(inputs) <- ssd_data_names(inputs, exprs)
-  inputs <- purrr::map(inputs, ssd_data_validate)
+  nms <- ssd_data_names(inputs, exprs, call = call)
+  for (i in seq_along(inputs)) {
+    inputs[[i]] <- ssd_data_validate(inputs[[i]], name = nms[[i]], call = call)
+  }
+  names(inputs) <- nms
   structure(inputs, class = "ssdsims_data")
 }
 
 #' Validate a single dataset against the `Conc` contract.
 #'
-#' Returns the input coerced to a tibble; aborts if it is not a data frame or
-#' lacks a numeric `Conc` column.
+#' Returns the input coerced to a tibble; aborts (in the context of `call`, the
+#' user-facing function) if it is not a data frame or lacks a numeric `Conc`
+#' column. `name`, when supplied, is woven into the message.
 #' @noRd
-ssd_data_validate <- function(data) {
-  chk::chk_data(data)
-  if (!"Conc" %in% names(data)) {
-    chk::abort_chk("Each dataset must have a column named `Conc`.")
+ssd_data_validate <- function(data, name = NULL, call = rlang::caller_env()) {
+  what <- if (is.null(name)) "Each dataset" else paste0("Dataset `", name, "`")
+  if (!is.data.frame(data)) {
+    chk::abort_chk(what, " must be a data frame.", call = call)
   }
-  chk::chk_numeric(data$Conc, x_name = "Column `Conc`")
+  if (!"Conc" %in% names(data)) {
+    chk::abort_chk(what, " must have a column named `Conc`.", call = call)
+  }
+  if (!is.numeric(data$Conc)) {
+    chk::abort_chk(what, " must have a numeric `Conc` column.", call = call)
+  }
   dplyr::as_tibble(data)
 }
 
 #' Derive a unique name vector from `...` values and captured expressions.
 #'
-#' Uses the argument name where supplied, otherwise symbol capture; aborts when
-#' a name cannot be derived or when names collide.
+#' Uses the argument name where supplied, otherwise symbol capture; aborts (in
+#' the context of `call`) when a name cannot be derived or when names collide.
 #' @noRd
-ssd_data_names <- function(inputs, exprs) {
+ssd_data_names <- function(inputs, exprs, call = rlang::caller_env()) {
   nms <- names(inputs)
   if (is.null(nms)) {
     nms <- rep("", length(inputs))
@@ -67,12 +77,15 @@ ssd_data_names <- function(inputs, exprs) {
         chk::abort_chk(
           "Unable to derive a name for dataset ",
           i,
-          "; supply a name (e.g. `ssd_data(boron = ...)`)."
+          "; supply a name (e.g. `ssd_data(boron = ...)`).",
+          call = call
         )
       }
       nms[[i]] <- derived
     }
   }
-  chk::chk_unique(nms, x_name = "Dataset names")
+  if (anyDuplicated(nms)) {
+    chk::abort_chk("Dataset names must be unique.", call = call)
+  }
   nms
 }
