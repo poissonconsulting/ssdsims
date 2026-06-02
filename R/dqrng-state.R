@@ -10,8 +10,8 @@
 # in DESCRIPTION) exposes `dqrng_get_state()` (the generator kind plus its state
 # words, as a character vector) and `dqrng_set_state()`; the pair round-trips a
 # draw sequence byte-for-byte (verified against 0.4.1). Because
-# `register_methods()` routes
-# base R RNG through dqrng, this is the state that governs base R draws too.
+# `register_methods()` routes base R RNG through dqrng, this is the state that
+# governs base R draws too.
 get_dqrng_state <- function() {
   dqrng::dqrng_get_state()
 }
