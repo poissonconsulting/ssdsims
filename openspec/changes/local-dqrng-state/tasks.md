@@ -5,7 +5,7 @@
 ## 2. local_dqrng_state()
 
 - [ ] 2.1 Add `local_dqrng_state(seed, state, .local_envir = parent.frame())` wrapping `dqrng::dqset.seed(seed, stream = state)`
-- [ ] 2.2 Backend guard: abort with an actionable message (point to `local_dqrng_backend()`) unless `RNGkind()[1] == "user-supplied"`
+- [ ] 2.2 Backend guard: abort with an actionable message (point to `local_dqrng_backend()`) unless `dqrng_backend_active()` (the helper from `dqrng-init`)
 - [ ] 2.3 Capture state via `dqrng_get_state()` on entry, install the new `(seed, state)`, and `withr::defer(dqrng_set_state(old), envir = .local_envir)` to restore on frame exit (mirror `local_lecuyer_cmrg_state()`)
 - [ ] 2.4 Validate inputs with `chk`: whole-number `seed`; length-2 integer `state` allowing `NA_integer_` (the §2 INT_MIN encoding); `.local_envir` an environment
 - [ ] 2.5 Roxygen docs + `@export`; `@seealso` `withr::local_seed()`, `local_dqrng_backend()`, and `local_lecuyer_cmrg_state()`
