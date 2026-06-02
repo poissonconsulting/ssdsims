@@ -16,6 +16,10 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -32,9 +36,111 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="scenarios-and-task-expansion">Scenarios and task expansion<a class="anchor" aria-label="anchor" href="#scenarios-and-task-expansion"></a></h2>
+
+      <div class="section-desc"><p>Define a declarative simulation scenario and expand it into the per-step task tables (<code>sample</code>, <code>data</code>, <code>fit</code>, <code>hc</code>) that the targets-based pipeline builds on, with a baseline loop runner.</p></div>
+
+      <dl></dl></div><div class="section level2">
 
 
+
+
+      <dl><dt>
+
+          <code><a href="ssd_data.html">ssd_data()</a></code>
+
+        </dt>
+        <dd>Assemble and Validate Datasets for a Simulation Scenario</dd>
+
+        <dt>
+
+          <code><a href="ssd_define_scenario.html">ssd_define_scenario()</a></code>
+
+        </dt>
+        <dd>Define a Simulation Scenario</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_tasks.html">ssd_scenario_tasks()</a></code>
+
+        </dt>
+        <dd>Expand a Scenario into all Four Task Tables</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_sample_tasks.html">ssd_scenario_sample_tasks()</a></code>
+
+        </dt>
+        <dd>Derive the sample Task Table from a Scenario</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_data_tasks.html">ssd_scenario_data_tasks()</a></code>
+
+        </dt>
+        <dd>Derive the data Task Table from a Scenario</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_fit_tasks.html">ssd_scenario_fit_tasks()</a></code>
+
+        </dt>
+        <dd>Derive the fit Task Table from a Scenario</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_hc_tasks.html">ssd_scenario_hc_tasks()</a></code>
+
+        </dt>
+        <dd>Derive the hc Task Table from a Scenario</dd>
+
+        <dt>
+
+          <code><a href="ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code>
+
+        </dt>
+        <dd>Run a Scenario with the Baseline Loop Runner</dd>
+      </dl></div><div class="section level2">
+      <h2 id="simulation-pipeline">Simulation pipeline<a class="anchor" aria-label="anchor" href="#simulation-pipeline"></a></h2>
+
+      <div class="section-desc"><p>The immediate (non-targets) pipeline: simulate data, fit distributions, and estimate hazard concentrations across simulations, end to end.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ssd_sim_data.html">ssd_sim_data()</a></code>
+
+        </dt>
+        <dd>Generate Data for Simulations</dd>
+
+        <dt>
+
+          <code><a href="ssd_fit_dists_sims.html">ssd_fit_dists_sims()</a></code>
+
+        </dt>
+        <dd>Fit SSD Distributions to Simulated Data</dd>
+
+        <dt>
+
+          <code><a href="ssd_hc_sims.html">ssd_hc_sims()</a></code>
+
+        </dt>
+        <dd>Estimate hazard concentrations for multiple simulations using bootstrapping</dd>
+
+        <dt>
+
+          <code><a href="ssd_run_scenario.html">ssd_run_scenario()</a></code>
+
+        </dt>
+        <dd>Run Scenario</dd>
+      </dl></div><div class="section level2">
+      <h2 id="reproducible-rng">Reproducible RNG<a class="anchor" aria-label="anchor" href="#reproducible-rng"></a></h2>
+
+      <div class="section-desc"><p>Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash backend (targets path) and L’Ecuyer-CMRG sub-streams (legacy path).</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -68,92 +174,25 @@
 
         </dt>
         <dd>Local/With L'Ecuyer-CMRG State</dd>
+      </dl></div><div class="section level2">
+      <h2 id="package">Package<a class="anchor" aria-label="anchor" href="#package"></a></h2>
 
-        <dt>
 
-          <code><a href="ssd_data.html">ssd_data()</a></code>
 
-        </dt>
-        <dd>Assemble and Validate Datasets for a Simulation Scenario</dd>
+      <dl></dl></div><div class="section level2">
 
-        <dt>
 
-          <code><a href="ssd_define_scenario.html">ssd_define_scenario()</a></code>
 
-        </dt>
-        <dd>Define a Simulation Scenario</dd>
 
-        <dt>
+      <dl><dt>
 
-          <code><a href="ssd_fit_dists_sims.html">ssd_fit_dists_sims()</a></code>
+          <code><a href="ssdsims-package.html">ssdsims</a></code> <code><a href="ssdsims-package.html">ssdsims-package</a></code>
 
         </dt>
-        <dd>Fit SSD Distributions to Simulated Data</dd>
-
-        <dt>
-
-          <code><a href="ssd_hc_sims.html">ssd_hc_sims()</a></code>
-
-        </dt>
-        <dd>Estimate hazard concentrations for multiple simulations using bootstrapping</dd>
-
-        <dt>
-
-          <code><a href="ssd_run_scenario.html">ssd_run_scenario()</a></code>
-
-        </dt>
-        <dd>Run Scenario</dd>
-
-        <dt>
-
-          <code><a href="ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code>
-
-        </dt>
-        <dd>Run a Scenario with the Baseline Loop Runner</dd>
-
-        <dt>
-
-          <code><a href="ssd_scenario_data_tasks.html">ssd_scenario_data_tasks()</a></code>
-
-        </dt>
-        <dd>Derive the data Task Table from a Scenario</dd>
-
-        <dt>
-
-          <code><a href="ssd_scenario_fit_tasks.html">ssd_scenario_fit_tasks()</a></code>
-
-        </dt>
-        <dd>Derive the fit Task Table from a Scenario</dd>
-
-        <dt>
-
-          <code><a href="ssd_scenario_hc_tasks.html">ssd_scenario_hc_tasks()</a></code>
-
-        </dt>
-        <dd>Derive the hc Task Table from a Scenario</dd>
-
-        <dt>
-
-          <code><a href="ssd_scenario_sample_tasks.html">ssd_scenario_sample_tasks()</a></code>
-
-        </dt>
-        <dd>Derive the sample Task Table from a Scenario</dd>
-
-        <dt>
-
-          <code><a href="ssd_scenario_tasks.html">ssd_scenario_tasks()</a></code>
-
-        </dt>
-        <dd>Expand a Scenario into all Four Task Tables</dd>
-
-        <dt>
-
-          <code><a href="ssd_sim_data.html">ssd_sim_data()</a></code>
-
-        </dt>
-        <dd>Generate Data for Simulations</dd>
+        <dd>ssdsims: What the Package Does (One Line, Title Case)</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
