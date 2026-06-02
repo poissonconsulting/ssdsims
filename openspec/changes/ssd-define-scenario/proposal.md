@@ -6,15 +6,16 @@ The targets-based redesign (`TARGETS-DESIGN.md` §1) requires a purely **declara
 
 - Add a public S3 constructor `ssd_define_scenario(data, ..., nsim, nrow, rescale, est_method, nboot, ci, seed, ...)` returning an `ssdsims_scenario` object.
 - The object stores **only declarative fields**: `seed` (scalar integer), `nsim`, `nrow`, dataset **names**, the `fit` and `hc` argument-vector grids, `partition_by`, and an optional `upload` spec. It performs **no** RNG seeding, **no** task expansion, and has **no** dependency on `targets`.
-- Add a tiny `ssd_data()` normaliser that validates the `Conc` column and tibble shape and is the single entry point through which input data is forwarded.
-- Apply the `ci = FALSE` collapse rule at construction time (TARGETS-DESIGN.md §1.2): when `ci = FALSE`, bootstrap-only knobs (`nboot`, `ci_method`, `parametric`) are recorded as ignored, surfaced via a one-line message and the object's `print()`.
-- Add an S3 `print.ssdsims_scenario()` method that renders the declarative fields and any ignored-knob notice.
+- Store `min_pmix` **by name** in the `fit` grid (not as a function value), symmetric with datasets: a character vector of names, or a function / list of functions whose name is derived by symbol capture. The registry that resolves a name back to a function is a later step (`min-pmix-registry`); only the name reference lives here.
+- Add `ssd_data()` as the rich, single entry point for dataset input: a variadic `ssd_data(...)` that assembles one or more (optionally named) data frames into a validated, named `ssdsims_data` collection (each validated for a numeric `Conc` column). It is designed to be **extended** by the planned `scenario-input-types` change to also accept the data generators `ssd_run_scenario()` handles (`fitdists`/`tmbfit`/function/function-name). The constructor accepts an `ssd_data()` collection or bare data frame(s) routed through the same validation.
+- Apply the `ci = FALSE` rule at construction time: when `ci = FALSE` is the only confidence-interval value, passing any bootstrap-only knob (`nboot`, `ci_method`, `parametric`) is **rejected with an error**, forcing the user to omit them or set `ci = c(FALSE, TRUE)`.
+- Add an S3 `print.ssdsims_scenario()` method that renders the declarative fields.
 - This is **additive**: `ssd_run_scenario()` and the existing pipeline functions are untouched by this step.
 
 ## Capabilities
 
 ### New Capabilities
-- `scenario-definition`: The declarative `ssdsims_scenario` object — its constructor `ssd_define_scenario()`, the `ssd_data()` input normaliser, field validation, the construction-time `ci = FALSE` collapse, and the `print()` method.
+- `scenario-definition`: The declarative `ssdsims_scenario` object — its constructor `ssd_define_scenario()`, the `ssd_data()` input normaliser, dataset and `min_pmix` name references, field validation, the construction-time `ci = FALSE` rejection rule, and the `print()` method.
 
 ### Modified Capabilities
 <!-- None. This step is additive; existing simulate-data / fit-distributions /
