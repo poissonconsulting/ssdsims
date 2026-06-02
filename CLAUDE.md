@@ -88,9 +88,6 @@ devtools::document()
 # Check that all topics are in the reference index
 pkgdown::check_pkgdown()
 
-# Format code
-air format .
-
 # Full check
 devtools::check()
 ```
@@ -98,6 +95,12 @@ devtools::check()
 > When invoking R from the shell, use `Rscript --no-environ -e "..."`. Without
 > `--no-environ` the sandbox blocks reads of `~/.Renviron` and R fails to create
 > its `tempdir()`.
+
+Format code from the shell:
+
+```bash
+air format .
+```
 
 ### RNG Discipline
 
