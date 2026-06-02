@@ -1,6 +1,6 @@
 ## 1. State capture/restore internals
 
-- [x] 1.1 Use `dqrng::dqrng_get_state()` to capture and `dqrng::dqrng_set_state()` to reinstate the active dqrng generator state (≥ 0.4.0); confirmed faithful on 0.4.1
+- [x] 1.1 Use `dqrng::dqrng_get_state()` to capture and `dqrng::dqrng_set_state()` to reinstate the active dqrng generator state (pinned at `dqrng (>= 0.4.1)`); confirmed faithful on 0.4.1
 
 ## 2. local_dqrng_state()
 
