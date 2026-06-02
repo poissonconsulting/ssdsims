@@ -1,5 +1,17 @@
 # Changelog
 
+## ssdsims 0.0.0.9010
+
+### Chore
+
+- Use function instead of string in
+  [`do.call()`](https://rdrr.io/r/base/do.call.html).
+
+### Refactoring
+
+- Extract `fit_dists_state()` and `hc_state()` from `*_seed()` helpers
+  ([\#68](https://github.com/poissonconsulting/ssdsims/issues/68)).
+
 ## ssdsims 0.0.0.9009
 
 ### Bug fixes
