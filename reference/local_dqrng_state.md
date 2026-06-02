@@ -1,21 +1,21 @@
 # Local/With dqrng State
 
-`local_dqrng_state()` installs a per-task `(seed, state)` starting point
-as the running dqrng RNG state via
+`local_dqrng_state()` installs a per-task `(seed, primer)` starting
+point as the running dqrng RNG state via
 [`dqrng::dqset.seed()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html),
 restoring the previous state when `.local_envir` exits.
 `with_dqrng_state()` evaluates `code` with that state installed, then
-restores the previous state. The `state` argument carries the per-task
-*primer* (the value handed to dqrng's `stream` argument, per
+restores the previous state. The `primer` argument is the per-task
+primer (the value handed to dqrng's `stream` argument, per
 `TARGETS-DESIGN.md` §2 and the GLOSSARY); the `_state` suffix marks that
 the wrapper installs that primer as the running RNG state.
 
 ## Usage
 
 ``` r
-local_dqrng_state(seed, state, .local_envir = parent.frame())
+local_dqrng_state(seed, primer, .local_envir = parent.frame())
 
-with_dqrng_state(seed, state, code)
+with_dqrng_state(seed, primer, code)
 ```
 
 ## Arguments
@@ -26,7 +26,7 @@ with_dqrng_state(seed, state, code)
   A scalar seed passed to
   [`dqrng::dqset.seed()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html).
 
-- state:
+- primer:
 
   `[integer(2)]`  
   A length-2 integer primer passed as the `stream` argument of
@@ -46,7 +46,7 @@ with_dqrng_state(seed, state, code)
 
 ## Value
 
-`local_dqrng_state()` invisibly returns `state`; `with_dqrng_state()`
+`local_dqrng_state()` invisibly returns `primer`; `with_dqrng_state()`
 returns the value of `code`.
 
 ## Details
@@ -85,5 +85,5 @@ runif(3)
 #> [1] 0.2926078 0.8011529 0.1608404
 
 with_dqrng_state(42, c(1L, 2L), runif(3))
-#> Error in local_dqrng_state(seed, state): The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.
+#> Error in local_dqrng_state(seed, primer): The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.
 ```
