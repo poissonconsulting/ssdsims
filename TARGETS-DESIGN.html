@@ -202,16 +202,17 @@
 <span><span class="op">}</span></span></code></pre></div>
 <p><strong>64 bits effective.</strong> dqrng’s docs document that <code>stream</code> accepts a length-2 integer vector representing a 64-bit value (<code>?dqrng::dqRNGkind</code>). In R each integer is signed int32 and the bit pattern <code>0x80000000</code> (INT_MIN) is reserved as <code>NA_integer_</code>. dqrng accepts <code>NA_integer_</code> in <code>stream</code> and treats it as INT_MIN, so we encode the full 64 bits by mapping the one INT_MIN bit pattern to <code>NA_integer_</code> in the task primer. Validated in <code>scripts/experiment-dqrng-hash.R</code> (4): 0 empirical collisions at 100 k tasks; theoretical 50% collision around <code>sqrt(2^64) ≈ 4.3 billion</code> tasks. Vastly safe for ssdsims’ 10²–10⁴-task scenarios.</p>
 <p><strong>Which RNG.</strong> dqrng exposes pcg64, Xoroshiro128++/Xoshiro256++, and Threefry. Empirically (<code>scripts/experiment-dqrng-hash.R</code>) only pcg64 and Threefry handle a length-2 <code>stream</code> argument without hanging — Xoroshiro/Xoshiro hang. We pick <strong>pcg64</strong>: well tested, fast, supports stream by construction (each stream is a distinct LCG increment ⇒ statistically independent sequences). <code>dqRNGkind("pcg64")</code> is set explicitly at pipeline init; the package’s <code>dqRNGkind</code> default (Xoroshiro128++) is overridden.</p>
-<p><code>dqrng::register_methods()</code> is called once at pipeline init so that base R’s <code><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif()</a></code>, <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm()</a></code>, <code><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom()</a></code>, <code><a href="https://rdrr.io/r/stats/Exponential.html" class="external-link">rexp()</a></code>, <code><a href="https://rdrr.io/r/stats/GammaDist.html" class="external-link">rgamma()</a></code>, <code><a href="https://rdrr.io/r/stats/Poisson.html" class="external-link">rpois()</a></code>, <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int()</a></code>, <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample()</a></code> (and therefore <code><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">dplyr::slice_sample()</a></code> and <code>ssdtools::ssd_r*()</code>) all consume RNG via dqrng’s pcg64 with the configured (seed, state). The experiment script verifies this end-to-end.</p>
+<p>Per scenario execution, <code>dqRNGkind("pcg64")</code> is set and <code>dqrng::register_methods()</code> is called at the start (wrapping the step runner with <code>on.exit(restore_methods())</code>). This routes base R’s <code><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif()</a></code>, <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm()</a></code>, <code><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom()</a></code>, <code><a href="https://rdrr.io/r/stats/Exponential.html" class="external-link">rexp()</a></code>, <code><a href="https://rdrr.io/r/stats/GammaDist.html" class="external-link">rgamma()</a></code>, <code><a href="https://rdrr.io/r/stats/Poisson.html" class="external-link">rpois()</a></code>, <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int()</a></code>, <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample()</a></code> (and therefore <code><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">dplyr::slice_sample()</a></code> and <code>ssdtools::ssd_r*()</code>) through dqrng’s pcg64 with the configured (seed, primer). The experiment script verifies this end-to-end.</p>
 <pre><code>   ┌────────────────────────────────────────────────────────────┐
-   │  task replay primitive                                     │
-   │  ─────────────────────                                     │
+   │  task execution within a scenario step                     │
+   │  ────────────────────────────────────────                  │
    │  dqRNGkind("pcg64")                                         │
    │  dqrng::register_methods()                                  │
-   │  dqset.seed(seed   = scenario$seed,                         │
-   │             stream = task$state)   # dqrng's stream arg     │
-   │  …                          # run the step body            │
-   │  dqrng::restore_methods()   # process-global restore on exit│
+   │  on.exit(dqrng::restore_methods())   # cleanup guarantee    │
+   │  for each task:                                             │
+   │    dqset.seed(seed   = scenario$seed,                       │
+   │               stream = task$primer)   # dqrng's stream arg  │
+   │    …                          # run the task body          │
    └────────────────────────────────────────────────────────────┘</code></pre>
 <div class="section level3">
 <h3 id="why-this-replaces-the-lecuyer-cmrg-sub-stream-lattice">Why this replaces the L’Ecuyer-CMRG sub-stream lattice<a class="anchor" aria-label="anchor" href="#why-this-replaces-the-lecuyer-cmrg-sub-stream-lattice"></a></h3>
@@ -923,9 +924,9 @@
 <p>§5’s “<code>nrow</code> is never an axis” property — <code>slice_sample_state</code> returns a prefix of itself for smaller <code>n</code>, for both <code>replace</code> values — holds only as long as <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">base::sample.int()</a></code> is byte-stable across R versions. Validated for the current R by <code>scripts/experiment-subset-property.R</code>; pin the R version (and <code>dqrng</code>, <code>ssdtools</code>) in the manifest (§8.5) to guard against future behavior changes.</p>
 </div>
 <div class="section level3">
-<h3 id="dqrngregister_methods-is-process-global">
-<code>dqrng::register_methods()</code> is process-global<a class="anchor" aria-label="anchor" href="#dqrngregister_methods-is-process-global"></a></h3>
-<p>The pipeline installs dqrng as the base R RNG backend at start-up and must restore on exit. Tests and helper scripts that run inside the same R session need the same discipline (<code>on.exit(restore_methods())</code> in any function that touches the methods).</p>
+<h3 id="dqrngregister_methods-is-scoped-per-scenario-execution">
+<code>dqrng::register_methods()</code> is scoped per scenario execution<a class="anchor" aria-label="anchor" href="#dqrngregister_methods-is-scoped-per-scenario-execution"></a></h3>
+<p>Each scenario execution (via <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> or a cluster step) installs dqrng as the base R RNG backend at entry and restores on exit via <code>on.exit(restore_methods())</code>. Tests and helper scripts that touch the methods mid-session (not inside a scenario runner) use the same <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code> discipline — documented in CLAUDE.md (§RNG discipline).</p>
 <hr></div>
 </div>
 <div class="section level2">
@@ -968,7 +969,7 @@
 <td>§6.1 — <code>scenario$upload</code> adds a per-shard <code>upload_&lt;step&gt;</code> target (content-hashed, dry-run offline) to a configurable object store (e.g. Azure Blob).</td>
 </tr><tr><td>Phantom local repros (regenerated upstream ≠ cluster’s actual)</td>
 <td>§7 — manifest’s per-shard sha256 lets the lightweight recipe verify the local upstream before running the failing task.</td>
-</tr></tbody></table><p>The RNGkind side-effect bug and the independent data/fit/hc substream issues from the original L’Ecuyer design no longer apply: dqrng with explicit <code>(seed, state)</code> per call has no side effects on global RNG state of other tasks (<code>register_methods()</code> switches the backend once per process and is restored on exit).</p>
+</tr></tbody></table><p>The RNGkind side-effect bug and the independent data/fit/hc substream issues from the original L’Ecuyer design no longer apply: dqrng with explicit <code>(seed, state)</code> per task has no side effects on global RNG state of other tasks (the backend is switched per scenario execution and restored on exit, not process-global).</p>
 <hr></div>
 <div class="section level2">
 <h2 id="id_11-open-questions-for-review">11. Open questions for review<a class="anchor" aria-label="anchor" href="#id_11-open-questions-for-review"></a></h2>
