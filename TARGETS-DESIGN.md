@@ -341,12 +341,13 @@ task_primer <- function(p) {
 
 **64 bits effective.** dqrng’s docs document that `stream` accepts a
 length-2 integer vector representing a 64-bit value
-(`?dqrng::dqRNGkind`). In R each integer is signed int32 and the bit
-pattern `0x80000000` (INT_MIN) is reserved as `NA_integer_`. dqrng
-accepts `NA_integer_` in `stream` and treats it as INT_MIN, so we encode
-the full 64 bits by mapping the one INT_MIN bit pattern to `NA_integer_`
-in the task primer. Validated in `scripts/experiment-dqrng-hash.R` (4):
-0 empirical collisions at 100 k tasks; theoretical 50% collision around
+([`?dqrng::dqRNGkind`](https://daqana.github.io/dqrng/reference/dqrng-functions.html)).
+In R each integer is signed int32 and the bit pattern `0x80000000`
+(INT_MIN) is reserved as `NA_integer_`. dqrng accepts `NA_integer_` in
+`stream` and treats it as INT_MIN, so we encode the full 64 bits by
+mapping the one INT_MIN bit pattern to `NA_integer_` in the task primer.
+Validated in `scripts/experiment-dqrng-hash.R` (4): 0 empirical
+collisions at 100 k tasks; theoretical 50% collision around
 `sqrt(2^64) ≈ 4.3 billion` tasks. Vastly safe for ssdsims’ 10²–10⁴-task
 scenarios.
 
@@ -360,8 +361,9 @@ explicitly at pipeline init; the package’s `dqRNGkind` default
 (Xoroshiro128++) is overridden.
 
 Per scenario execution, `dqRNGkind("pcg64")` is set and
-`dqrng::register_methods()` is called at the start (wrapping the step
-runner with `on.exit(restore_methods())`). This routes base R’s
+[`dqrng::register_methods()`](https://daqana.github.io/dqrng/reference/user-supplied-rng.html)
+is called at the start (wrapping the step runner with
+`on.exit(restore_methods())`). This routes base R’s
 [`runif()`](https://rdrr.io/r/stats/Uniform.html),
 [`rnorm()`](https://rdrr.io/r/stats/Normal.html),
 [`rbinom()`](https://rdrr.io/r/stats/Binomial.html),

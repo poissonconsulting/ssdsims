@@ -38,6 +38,17 @@ Read these before major implementation work.
   runtime validation in function bodies.
 - **Validation**: Use `chk` for all input validation; keep error
   messages informative and actionable.
+- **Minimal diffs**: touch only the lines your change requires; don’t
+  reformat unrelated lines or let editors rewrite whitespace. Leave
+  `DESCRIPTION` formatting to `usethis`/`desc` (e.g. keep the trailing
+  space after field names like `Imports:`).
+- **Orthography**: UK/AU (Commonwealth) English — prefer
+  `-ise`/`-isation` (`initialise`, `serialisable`) over `-ize`, and
+  `-our` (`behaviour`, `colour`) over `-or`. This matches the package’s
+  R source and OpenSpec artifacts and the authors’ Australian/Canadian
+  convention. Exceptions: code identifiers and base R/API names keep
+  their canonical spelling (e.g. `color`, `center`, `RNGkind`), as do
+  proper nouns (e.g. “Apache License”).
 
 Example:
 
@@ -77,13 +88,18 @@ The package uses two RNG paths:
     [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/with_lecuyer_cmrg_seed.md),
     [`local_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md).
 2.  **dqrng + hash** (new targets-based path) —
-    `dqrng::dqset.seed(seed, stream)` with task-derived primers.
+    `dqrng::dqset.seed(seed, stream)` with task-derived primers. The
+    `pcg64` backend is scenario-scoped via
+    [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md);
+    see `R/dqrng-backend.R` and `openspec/changes/dqrng-init/design.md`.
 
 When touching RNG-consuming code: - Do **not** assume a fixed global
 `.Random.seed` across function calls. - Use
 [`local_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
 /
 [`local_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md)
+/
+[`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md)
 /
 [`withr::local_seed()`](https://withr.r-lib.org/reference/with_seed.html)
 to scope RNG changes. - On exit, RNG state **must** be restored (use
@@ -194,6 +210,20 @@ See `DESCRIPTION` for versions and imports.
 - Add a note to `NEWS.md` (or use fledge: `fledge::bump_version()` to
   automate).
 - Commit with a note referencing the change.
+
+## Pull Requests
+
+- **Titles follow Conventional Commits**: `<type>: <summary>`, where
+  `type` is one of `feat`, `fix`, `docs`, `refactor`, `test`, `chore`,
+  etc. (e.g. `feat: add scenario-scoped dqrng pcg64 RNG backend`). Use
+  the imperative mood and keep the summary concise.
+- **Escape function, object, and file names in backticks** in PR titles
+  and descriptions
+  (e.g. [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md),
+  `run_scenario()`, `DESCRIPTION`).
+- Keep the PR title and description in sync with the change as it
+  evolves; the description should capture the *current* state, not a
+  revision log.
 
 ## Continuous Integration
 

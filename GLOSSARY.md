@@ -6,19 +6,20 @@ Terminology used throughout `ssdsims`.
 
 - **seed**: A scalar integer passed to
   [`base::set.seed()`](https://rdrr.io/r/base/Random.html) (or the
-  `seed` argument of `dqrng::dqset.seed()`). Both base R and dqrng
-  accept a single integer as the seed.
+  `seed` argument of
+  [`dqrng::dqset.seed()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html)).
+  Both base R and dqrng accept a single integer as the seed.
 - **state**: The full internal state of an RNG. For L’Ecuyer-CMRG, the
   state is a length-7 integer vector assignable to `.Random.seed` (it
   cannot be passed to
   [`set.seed()`](https://rdrr.io/r/base/Random.html)). For dqrng, the
   state is opaque to user code but accessible via
-  `dqrng::dqrng_get_state()` / `dqrng_set_state()`. ssdsims function
-  names ending in `_state` (e.g. `with_lecuyer_cmrg_state`,
-  `slice_sample_state`, `fit_dists_state`, `hc_state`) take a `state`
-  argument that, in the new design, holds a **primer** (see below) — the
-  function installs it as the running RNG state before executing its
-  body.
+  [`dqrng::dqrng_get_state()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html)
+  / `dqrng_set_state()`. ssdsims function names ending in `_state`
+  (e.g. `with_lecuyer_cmrg_state`, `slice_sample_state`,
+  `fit_dists_state`, `hc_state`) take a `state` argument that, in the
+  new design, holds a **primer** (see below) — the function installs it
+  as the running RNG state before executing its body.
 - **stream**: An independent sequence of pseudo-random numbers within an
   RNG family. For L’Ecuyer-CMRG, streams are advanced via
   [`parallel::nextRNGStream()`](https://rdrr.io/r/parallel/RngStream.html)
@@ -39,7 +40,8 @@ Terminology used throughout `ssdsims`.
   family:
   - **dqrng PCG64**: a 64-bit integer packed as a length-2 integer
     vector (hi32, lo32). The primer is the value passed to the `stream`
-    argument of `dqrng::dqset.seed()`.
+    argument of
+    [`dqrng::dqset.seed()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html).
   - **L’Ecuyer-CMRG**: a length-7 integer state vector assignable to
     `.Random.seed`. In TARGETS-DESIGN.md, the per-task primer is the
     64-bit

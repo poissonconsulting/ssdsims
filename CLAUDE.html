@@ -69,6 +69,10 @@
 <strong>Type checks</strong>: No explicit type hints; rely on <code>chk::*()</code> for runtime validation in function bodies.</li>
 <li>
 <strong>Validation</strong>: Use <code>chk</code> for all input validation; keep error messages informative and actionable.</li>
+<li>
+<strong>Minimal diffs</strong>: touch only the lines your change requires; don’t reformat unrelated lines or let editors rewrite whitespace. Leave <code>DESCRIPTION</code> formatting to <code>usethis</code>/<code>desc</code> (e.g. keep the trailing space after field names like <code>Imports:</code>).</li>
+<li>
+<strong>Orthography</strong>: UK/AU (Commonwealth) English — prefer <code>-ise</code>/<code>-isation</code> (<code>initialise</code>, <code>serialisable</code>) over <code>-ize</code>, and <code>-our</code> (<code>behaviour</code>, <code>colour</code>) over <code>-or</code>. This matches the package’s R source and OpenSpec artifacts and the authors’ Australian/Canadian convention. Exceptions: code identifiers and base R/API names keep their canonical spelling (e.g. <code>color</code>, <code>center</code>, <code>RNGkind</code>), as do proper nouns (e.g. “Apache License”).</li>
 </ul><p>Example:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">chk</span><span class="fu">::</span><span class="fu"><a href="https://poissonconsulting.github.io/chk/reference/chk_whole_number.html" class="external-link">chk_whole_number</a></span><span class="op">(</span><span class="va">seed</span><span class="op">)</span></span>
@@ -100,8 +104,8 @@
 <ol style="list-style-type: decimal"><li>
 <strong>L’Ecuyer-CMRG</strong> (legacy, will be removed) — <code><a href="reference/with_lecuyer_cmrg_seed.html">with_lecuyer_cmrg_seed()</a></code>, <code><a href="reference/local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code>.</li>
 <li>
-<strong>dqrng + hash</strong> (new targets-based path) — <code>dqrng::dqset.seed(seed, stream)</code> with task-derived primers.</li>
-</ol><p>When touching RNG-consuming code: - Do <strong>not</strong> assume a fixed global <code>.Random.seed</code> across function calls. - Use <code><a href="reference/local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code> / <code><a href="reference/local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code> / <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::local_seed()</a></code> to scope RNG changes. - On exit, RNG state <strong>must</strong> be restored (use <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code> or withr scoping helpers). - Test for <code>.Random.seed</code> being unchanged before and after (see <code>tests/testthat/test-lecuyer-cmrg-seed.R</code> for examples).</p>
+<strong>dqrng + hash</strong> (new targets-based path) — <code>dqrng::dqset.seed(seed, stream)</code> with task-derived primers. The <code>pcg64</code> backend is scenario-scoped via <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code>; see <code>R/dqrng-backend.R</code> and <code>openspec/changes/dqrng-init/design.md</code>.</li>
+</ol><p>When touching RNG-consuming code: - Do <strong>not</strong> assume a fixed global <code>.Random.seed</code> across function calls. - Use <code><a href="reference/local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code> / <code><a href="reference/local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code> / <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> / <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::local_seed()</a></code> to scope RNG changes. - On exit, RNG state <strong>must</strong> be restored (use <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code> or withr scoping helpers). - Test for <code>.Random.seed</code> being unchanged before and after (see <code>tests/testthat/test-lecuyer-cmrg-seed.R</code> for examples).</p>
 </div>
 <div class="section level3">
 <h3 id="testing">Testing<a class="anchor" aria-label="anchor" href="#testing"></a></h3>
@@ -188,6 +192,14 @@
 <li>Commit with a note referencing the change.</li>
 </ul></div>
 </div>
+<div class="section level2">
+<h2 id="pull-requests">Pull Requests<a class="anchor" aria-label="anchor" href="#pull-requests"></a></h2>
+<ul><li>
+<strong>Titles follow Conventional Commits</strong>: <code>&lt;type&gt;: &lt;summary&gt;</code>, where <code>type</code> is one of <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>refactor</code>, <code>test</code>, <code>chore</code>, etc. (e.g. <code>feat: add scenario-scoped dqrng pcg64 RNG backend</code>). Use the imperative mood and keep the summary concise.</li>
+<li>
+<strong>Escape function, object, and file names in backticks</strong> in PR titles and descriptions (e.g. <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code>, <code>run_scenario()</code>, <code>DESCRIPTION</code>).</li>
+<li>Keep the PR title and description in sync with the change as it evolves; the description should capture the <em>current</em> state, not a revision log.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="continuous-integration">Continuous Integration<a class="anchor" aria-label="anchor" href="#continuous-integration"></a></h2>
 <p>GitHub Actions runs on each push: - <strong>R-CMD-check</strong> — <code>devtools::check()</code> on multiple R versions. - <strong>Snapshot updates</strong> — Auto-PR for snapshot diffs. - <strong>Coverage</strong> — Code coverage tracking (optional).</p>
