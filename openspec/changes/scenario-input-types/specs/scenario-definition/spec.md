@@ -46,7 +46,7 @@
 ### Requirement: Input data assembly and normalisation
 The package SHALL expose `ssd_data()` as the single entry point that assembles one or more inputs into a validated, named collection — an `ssdsims_data` object. Each element SHALL be either an inline data-frame dataset (a tibble) or a declarative generator descriptor (name + kind + captured reference). `ssd_define_scenario()` SHALL accept either an `ssd_data()` collection or, for convenience, bare input(s) routed through the same per-element handling. A data-frame element SHALL be required to have a numeric `Conc` column, with additional columns preserved; a generator element SHALL be validated structurally without being executed. Names SHALL be taken from argument names where supplied, otherwise derived by symbol capture, and SHALL be unique across the collection.
 
-A generator element SHALL store no function body and no `fitdists`/`tmbfit` payload; the actual data is materialised later by the targets-only `dataset-registry` change (`TARGETS-DESIGN.md` §1.1).
+A generator element SHALL store no function body and no `fitdists`/`tmbfit` payload; the actual data is materialised later by the targets-only `registry` change (`TARGETS-DESIGN.md` §1.1).
 
 #### Scenario: Conc column required for data frames
 - **WHEN** `ssd_data()` (or `ssd_define_scenario()`) is given a data-frame input lacking a numeric `Conc` column

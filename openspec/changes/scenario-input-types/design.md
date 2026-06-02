@@ -1,6 +1,6 @@
 ## Context
 
-`ssd-define-scenario` landed a declarative `ssdsims_scenario` and an `ssd_data()` collector that are **data-frame-only**. `ssd_run_scenario()`, by contrast, dispatches over five `ssd_sim_data()` S3 methods — `data.frame`, `fitdists`, `tmbfit`, `function`, and `character` (a function-name string) — where the last four are *data generators*: they produce data at run time rather than carrying it. The targets redesign (`TARGETS-DESIGN.md` §1.1) keeps the scenario serialisable to a tiny manifest by storing **names**, not values, and materialising generated data once per project in a `dataset-registry` target. This change widens the scenario's input contract to those four generator types while preserving the name-only, declarative discipline. `ssd_run_scenario()` is untouched.
+`ssd-define-scenario` landed a declarative `ssdsims_scenario` and an `ssd_data()` collector that are **data-frame-only**. `ssd_run_scenario()`, by contrast, dispatches over five `ssd_sim_data()` S3 methods — `data.frame`, `fitdists`, `tmbfit`, `function`, and `character` (a function-name string) — where the last four are *data generators*: they produce data at run time rather than carrying it. The targets redesign (`TARGETS-DESIGN.md` §1.1) keeps the scenario serialisable to a tiny manifest by storing **names**, not values, and materialising generated data once per project in a `registry` target. This change widens the scenario's input contract to those four generator types while preserving the name-only, declarative discipline. `ssd_run_scenario()` is untouched.
 
 ## Goals / Non-Goals
 
@@ -13,7 +13,7 @@
 
 **Non-Goals:**
 
-- **Materialising** generator data — running the generator to produce a tibble. That is the targets-only `dataset-registry` change (§1.1); descriptors are inert here.
+- **Materialising** generator data — running the generator to produce a tibble. That is the targets-only `registry` change (§1.1); descriptors are inert here.
 - Carrying a `seed`/`stream` for a generator (the per-task RNG mechanism, §2). The scenario already owns the root `seed`; generator materialisation seeds are a registry concern.
 - Changing the `fit`/`hc` grids, `partition_by`, the `ci = FALSE` rule, or any non-dataset field.
 - Touching the legacy `ssd_run_scenario()` / `ssd_sim_data()` dispatch.
@@ -32,9 +32,9 @@ structure(
 ```
 
 - `kind` ∈ `{"fitdists", "tmbfit", "function"}` — the dispatch target the registry will use.
-- `ref` is the resolvable reference: the function name (for `function`/`character` inputs) or `NA`/the dataset name for object inputs whose payload the registry pins separately. We store **no** function body and **no** `fitdists`/`tmbfit` object — only what `dataset-registry` needs to look the generator up later.
+- `ref` is the resolvable reference: the function name (for `function`/`character` inputs) or `NA`/the dataset name for object inputs whose payload the registry pins separately. We store **no** function body and **no** `fitdists`/`tmbfit` object — only what `registry` needs to look the generator up later.
 
-*Why a classed descriptor rather than just a name string?* The kind must survive into the scenario so `dataset-registry` knows which `ssd_sim_data()` method to dispatch without re-inspecting a (no-longer-present) object. A classed record also lets `print()` render `<fitdists>` / `<fn>` distinctly and gives downstream code a clean `inherits()` check. *Alternative considered:* a parallel `kinds` vector alongside `datasets`; rejected as it splits one fact across two fields and complicates the list/mixed-input case.
+*Why a classed descriptor rather than just a name string?* The kind must survive into the scenario so `registry` knows which `ssd_sim_data()` method to dispatch without re-inspecting a (no-longer-present) object. A classed record also lets `print()` render `<fitdists>` / `<fn>` distinctly and gives downstream code a clean `inherits()` check. *Alternative considered:* a parallel `kinds` vector alongside `datasets`; rejected as it splits one fact across two fields and complicates the list/mixed-input case.
 
 ### Decision: route on input type in one place, reuse name derivation
 
@@ -58,7 +58,7 @@ No input is executed and no RNG is drawn — asserted by an unchanged-`.Random.s
 
 ### Decision: guard #80's baseline runner against unmaterialised generators
 
-`task-list-loop-baseline` (#80) landed `ssd_run_scenario_baseline()`, whose `sample` step reads each inline dataset by name — `dplyr::slice_sample(data[[dataset]], …)` from `scenario$data`. A generator-backed dataset has no inline data frame, so the runner cannot draw from it until `dataset-registry` materialises it. We add a guard that aborts (user-facing frame) with an actionable message pointing at `dataset-registry` when the runner encounters a `dataset` whose scenario entry is an `ssdsims_generator`. *Why a guard rather than silently materialising?* Materialisation has its own seeding and registration semantics (§1.1) that belong to `dataset-registry`; failing fast keeps the baseline runner honest about what it supports. The task *tables* still derive fine — the `dataset` axis is just a name — so only execution is gated, not expansion.
+`task-list-loop-baseline` (#80) landed `ssd_run_scenario_baseline()`, whose `sample` step reads each inline dataset by name — `dplyr::slice_sample(data[[dataset]], …)` from `scenario$data`. A generator-backed dataset has no inline data frame, so the runner cannot draw from it until `registry` materialises it. We add a guard that aborts (user-facing frame) with an actionable message pointing at `registry` when the runner encounters a `dataset` whose scenario entry is an `ssdsims_generator`. *Why a guard rather than silently materialising?* Materialisation has its own seeding and registration semantics (§1.1) that belong to `registry`; failing fast keeps the baseline runner honest about what it supports. The task *tables* still derive fine — the `dataset` axis is just a name — so only execution is gated, not expansion.
 
 ## Risks / Trade-offs
 
@@ -69,9 +69,9 @@ No input is executed and no RNG is drawn — asserted by an unchanged-`.Random.s
 
 ## Migration Plan
 
-Additive and backward-compatible: existing data-frame calls behave identically (a tibble element is unchanged). No deprecations. `dataset-registry` (a later change) will consume the new descriptors; until it lands, generator descriptors are carried but never materialised, which is a coherent working state (the scenario is declarative by design).
+Additive and backward-compatible: existing data-frame calls behave identically (a tibble element is unchanged). No deprecations. `registry` (a later change) will consume the new descriptors; until it lands, generator descriptors are carried but never materialised, which is a coherent working state (the scenario is declarative by design).
 
 ## Open Questions
 
-- Should a generator descriptor capture generator **arguments** (e.g. the `args` list `ssd_sim_data.function()` accepts) now, or defer that to `dataset-registry`? Leaning defer — the scenario's `nrow`/`nsim` already parametrise generation, and extra generator args are a registry-time concern. Resolve when `dataset-registry` is designed.
-- Where exactly does `dataset-registry` get the `fitdists`/`tmbfit` *payload* it must pin, given the scenario stores only a name? Likely the registration call supplies it directly (as in the §1.1 `ssd_register_dataset()` sketch), independent of the scenario. Out of scope here, but the descriptor's `ref` field is shaped to leave room for it.
+- Should a generator descriptor capture generator **arguments** (e.g. the `args` list `ssd_sim_data.function()` accepts) now, or defer that to `registry`? Leaning defer — the scenario's `nrow`/`nsim` already parametrise generation, and extra generator args are a registry-time concern. Resolve when `registry` is designed.
+- Where exactly does `registry` get the `fitdists`/`tmbfit` *payload* it must pin, given the scenario stores only a name? Likely the registration call supplies it directly (as in the §1.1 `ssd_register_dataset()` sketch), independent of the scenario. Out of scope here, but the descriptor's `ref` field is shaped to leave room for it.
