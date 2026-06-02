@@ -201,15 +201,12 @@ See `DESCRIPTION` for versions and imports.
 
 ### Update package version and news
 
-- Edit `DESCRIPTION` version field (e.g., `0.0.0.9010` → `0.0.0.9011`).
-- Add a note to `NEWS.md` (or use fledge: `fledge::bump_version()` to automate).
-- Commit with a note referencing the change.
+`NEWS.md` and the dev version are managed by [fledge](https://fledge.cynkra.com) — **do not hand-edit `NEWS.md`** (its header says as much). Entries are generated from commit messages and grouped by Conventional Commit type (Features, Bug fixes, Chore, Refactoring), so the way to shape a changelog entry is to write a clear, conventionally-typed commit message (see Pull Requests below).
 
-`NEWS.md` bullet conventions:
-- Every user-facing change gets a bullet. Skip small documentation tweaks, internal refactorings, and fixes to bugs introduced in the current dev version.
-- A bullet briefly describes the change to the end user and references the related issue in parentheses. It may span multiple sentences but must **not** contain new lines (do not line-wrap).
-- If the change relates to a function, put the function name early in the bullet.
-- Order bullets alphabetically by function name; bullets that don't mention a function go first.
+- `fledge::bump_version()` bumps the `DESCRIPTION` version and assembles `NEWS.md` from the commits since the last bump; a scheduled GitHub Action (`.github/workflows/fledge.yaml`) also runs this on `main`.
+- Reference the related issue in the commit message (e.g. `(#64)`) so it carries through to the changelog.
+
+> **Deviation from tidyverse/r-lib**: those packages have contributors hand-add a `NEWS.md` bullet (and order bullets alphabetically by function). This package does **not** — fledge derives the changelog from commits, so skip the manual bullet entirely and put the effort into the commit message instead.
 
 ## Pull Requests
 
