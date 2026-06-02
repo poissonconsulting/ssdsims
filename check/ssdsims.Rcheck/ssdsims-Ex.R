@@ -2,15 +2,24 @@ pkgname <- "ssdsims"
 source(file.path(R.home("share"), "R", "examples-header.R"))
 options(warn = 1)
 base::assign(".ExTimings", "ssdsims-Ex.timings", pos = 'CheckExEnv')
-base::cat("name\tuser\tsystem\telapsed\n", file=base::get(".ExTimings", pos = 'CheckExEnv'))
-base::assign(".format_ptime",
-function(x) {
-  if(!is.na(x[4L])) x[1L] <- x[1L] + x[4L]
-  if(!is.na(x[5L])) x[2L] <- x[2L] + x[5L]
-  options(OutDec = '.')
-  format(x[1L:3L], digits = 7L)
-},
-pos = 'CheckExEnv')
+base::cat(
+  "name\tuser\tsystem\telapsed\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv')
+)
+base::assign(
+  ".format_ptime",
+  function(x) {
+    if (!is.na(x[4L])) {
+      x[1L] <- x[1L] + x[4L]
+    }
+    if (!is.na(x[5L])) {
+      x[2L] <- x[2L] + x[5L]
+    }
+    options(OutDec = '.')
+    format(x[1L:3L], digits = 7L)
+  },
+  pos = 'CheckExEnv'
+)
 
 ### * </HEADER>
 library('ssdsims')
@@ -21,7 +30,8 @@ cleanEx()
 nameEx("local_dqrng_backend")
 ### * local_dqrng_backend
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: local_dqrng_backend
@@ -30,20 +40,33 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 
 ### ** Examples
 
-
 local_dqrng_backend()
 dqrng::dqset.seed(42, stream = c(1L, 2L))
 runif(3)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("local_dqrng_backend", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "local_dqrng_backend",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("local_lecuyer_cmrg_seed")
 ### * local_lecuyer_cmrg_seed
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: local_lecuyer_cmrg_seed
@@ -52,19 +75,32 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 
 ### ** Examples
 
-
 local_lecuyer_cmrg_seed(42)
 runif(3)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("local_lecuyer_cmrg_seed", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "local_lecuyer_cmrg_seed",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("local_lecuyer_cmrg_state")
 ### * local_lecuyer_cmrg_state
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: local_lecuyer_cmrg_state
@@ -73,20 +109,33 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 
 ### ** Examples
 
-
 state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
 local_lecuyer_cmrg_state(state)
 runif(3)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("local_lecuyer_cmrg_state", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "local_lecuyer_cmrg_state",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_data")
 ### * ssd_data
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_data
@@ -99,14 +148,28 @@ ssd_data(ssddata::ccme_boron)
 ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_data", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_data",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_define_scenario")
 ### * ssd_define_scenario
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_define_scenario
@@ -115,17 +178,36 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 
 ### ** Examples
 
-ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 42L)
+ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 100L,
+  nrow = c(5L, 10L),
+  seed = 42L
+)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_define_scenario", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_define_scenario",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_run_scenario")
 ### * ssd_run_scenario
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_run_scenario
@@ -149,15 +231,28 @@ ssd_run_scenario("rlnorm", nsim = 3)
 ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 
 
-
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_run_scenario", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_run_scenario",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_run_scenario_baseline")
 ### * ssd_run_scenario_baseline
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_run_scenario_baseline
@@ -179,14 +274,28 @@ withr::with_seed(42L, {
 out$hc
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_run_scenario_baseline", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_run_scenario_baseline",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_scenario_data_tasks")
 ### * ssd_scenario_data_tasks
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_scenario_data_tasks
@@ -204,14 +313,28 @@ scenario <- ssd_define_scenario(
 ssd_scenario_data_tasks(scenario)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_scenario_data_tasks", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_scenario_data_tasks",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_scenario_fit_tasks")
 ### * ssd_scenario_fit_tasks
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_scenario_fit_tasks
@@ -229,14 +352,28 @@ scenario <- ssd_define_scenario(
 ssd_scenario_fit_tasks(scenario)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_scenario_fit_tasks", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_scenario_fit_tasks",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_scenario_hc_tasks")
 ### * ssd_scenario_hc_tasks
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_scenario_hc_tasks
@@ -255,14 +392,28 @@ scenario <- ssd_define_scenario(
 ssd_scenario_hc_tasks(scenario)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_scenario_hc_tasks", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_scenario_hc_tasks",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_scenario_sample_tasks")
 ### * ssd_scenario_sample_tasks
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_scenario_sample_tasks
@@ -275,14 +426,28 @@ scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
 ssd_scenario_sample_tasks(scenario)
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_scenario_sample_tasks", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_scenario_sample_tasks",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_scenario_tasks")
 ### * ssd_scenario_tasks
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_scenario_tasks
@@ -297,14 +462,28 @@ tasks
 tasks$hc
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_scenario_tasks", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_scenario_tasks",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("ssd_sim_data")
 ### * ssd_sim_data
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: ssd_sim_data
@@ -327,15 +506,28 @@ ssd_sim_data("rnorm", nrow = 5, nsim = 3)
 ssd_sim_data(ssdtools::ssd_rlnorm, nrow = 5, nsim = 3)
 
 
-
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("ssd_sim_data", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "ssd_sim_data",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("with_lecuyer_cmrg_seed")
 ### * with_lecuyer_cmrg_seed
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: with_lecuyer_cmrg_seed
@@ -344,20 +536,33 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 
 ### ** Examples
 
-
 with_lecuyer_cmrg_seed(42, {
   runif(3)
 })
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("with_lecuyer_cmrg_seed", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "with_lecuyer_cmrg_seed",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 cleanEx()
 nameEx("with_lecuyer_cmrg_state")
 ### * with_lecuyer_cmrg_state
 
-flush(stderr()); flush(stdout())
+flush(stderr())
+flush(stdout())
 
 base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 ### Name: with_lecuyer_cmrg_state
@@ -366,19 +571,35 @@ base::assign(".ptime", proc.time(), pos = "CheckExEnv")
 
 ### ** Examples
 
-
 state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
 with_lecuyer_cmrg_state(state, runif(3))
 
 
-
-base::assign(".dptime", (proc.time() - get(".ptime", pos = "CheckExEnv")), pos = "CheckExEnv")
-base::cat("with_lecuyer_cmrg_state", base::get(".format_ptime", pos = 'CheckExEnv')(get(".dptime", pos = "CheckExEnv")), "\n", file=base::get(".ExTimings", pos = 'CheckExEnv'), append=TRUE, sep="\t")
+base::assign(
+  ".dptime",
+  (proc.time() - get(".ptime", pos = "CheckExEnv")),
+  pos = "CheckExEnv"
+)
+base::cat(
+  "with_lecuyer_cmrg_state",
+  base::get(".format_ptime", pos = 'CheckExEnv')(get(
+    ".dptime",
+    pos = "CheckExEnv"
+  )),
+  "\n",
+  file = base::get(".ExTimings", pos = 'CheckExEnv'),
+  append = TRUE,
+  sep = "\t"
+)
 ### * <FOOTER>
 ###
 cleanEx()
 options(digits = 7L)
-base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
+base::cat(
+  "Time elapsed: ",
+  proc.time() - base::get("ptime", pos = 'CheckExEnv'),
+  "\n"
+)
 grDevices::dev.off()
 ###
 ### Local variables: ***
