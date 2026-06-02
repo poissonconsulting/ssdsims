@@ -52,9 +52,13 @@ overriding the derived name. Must not be combined with a named list.}
 \item{at_boundary_ok}{A flag specifying whether a model with one or more
 parameters at the boundary should be considered to have converged (default = TRUE).}
 
-\item{min_pmix}{A list of one or more functions with a single argument that
-inputs the number of rows of data and returns a proportion between 0 and
-0.5.}
+\item{min_pmix}{The \code{min_pmix} function(s), referenced \strong{by name}. Supply
+either a character vector of names, or a function (or list of functions)
+with a single argument that inputs the number of rows of data and returns
+a proportion between 0 and 0.5 - in which case the name is derived from the
+argument expression (e.g. \code{ssdtools::ssd_min_pmix} gives \code{"ssd_min_pmix"}),
+mirroring dataset name derivation. Only the name is stored; the function is
+resolved later via the \code{min_pmix} registry (a future roadmap step).}
 
 \item{range_shape1}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape1 parameter.}

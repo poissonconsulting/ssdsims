@@ -26,6 +26,21 @@ The `ssdsims_scenario` object SHALL store `seed` (a scalar integer), `nsim`, `nr
 - **WHEN** `ssd_define_scenario()` is called without an `upload` argument
 - **THEN** the object's `upload` field SHALL be `NULL`
 
+### Requirement: min_pmix referenced by name
+`ssd_define_scenario()` SHALL store `min_pmix` in the `fit` grid as one or more names (a character vector), and SHALL NOT store the function value. The constructor SHALL accept `min_pmix` as a character vector of names, or as a function or list of functions whose name is derived by symbol capture (mirroring dataset name derivation). The registry that resolves a name back to a function is out of scope for this change.
+
+#### Scenario: min_pmix function is stored by name
+- **WHEN** `ssd_define_scenario(..., min_pmix = ssdtools::ssd_min_pmix)` (or the default) is called
+- **THEN** the object's `fit$min_pmix` SHALL be the derived name (e.g. `"ssd_min_pmix"`) as a character vector, and no function value SHALL be stored
+
+#### Scenario: min_pmix names accepted directly
+- **WHEN** `ssd_define_scenario(..., min_pmix = c("default", "strict"))` is called
+- **THEN** the object SHALL store those names verbatim as `fit$min_pmix`
+
+#### Scenario: min_pmix list of functions derives names
+- **WHEN** `ssd_define_scenario(..., min_pmix = list(ssdtools::ssd_min_pmix))` (unnamed) or `list(strict = ssdtools::ssd_min_pmix)` (named) is called
+- **THEN** the object SHALL store the derived element name(s) (e.g. `"ssd_min_pmix"`) or the list names (e.g. `"strict"`) respectively; provided functions SHALL be validated before their name is taken
+
 ### Requirement: Dataset input (single or list)
 `ssd_define_scenario()` SHALL accept datasets as either a single data frame or a list of data frames, and SHALL derive or accept dataset names for each.
 

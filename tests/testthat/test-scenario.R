@@ -62,6 +62,60 @@ test_that("scenario: stores dataset names, not data frames", {
   expect_false(any(vapply(s$fit, is.data.frame, logical(1))))
 })
 
+test_that("scenario: stores min_pmix by name, not as a function", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
+  expect_type(s$fit$min_pmix, "character")
+  expect_identical(s$fit$min_pmix, "ssd_min_pmix")
+  # no function bodies stored anywhere in the fit grid
+  expect_false(any(vapply(s$fit, is.function, logical(1))))
+})
+
+test_that("scenario: min_pmix accepts names, functions, and lists", {
+  # character names used as-is
+  expect_identical(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      min_pmix = c("default", "strict")
+    )$fit$min_pmix,
+    c("default", "strict")
+  )
+  # bare function -> derived name
+  expect_identical(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      min_pmix = ssdtools::ssd_min_pmix
+    )$fit$min_pmix,
+    "ssd_min_pmix"
+  )
+  # named list of functions -> list names
+  expect_identical(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      min_pmix = list(strict = ssdtools::ssd_min_pmix)
+    )$fit$min_pmix,
+    "strict"
+  )
+  # unnamed list of functions -> derived names
+  expect_identical(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      min_pmix = list(ssdtools::ssd_min_pmix)
+    )$fit$min_pmix,
+    "ssd_min_pmix"
+  )
+})
+
+test_that("scenario: min_pmix rejects non-function list elements", {
+  expect_error(
+    ssd_define_scenario(ssddata::ccme_boron, seed = 1L, min_pmix = list(1)),
+    "function"
+  )
+})
+
 test_that("scenario: partition_by defaults are populated", {
   s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
   expect_identical(
@@ -213,31 +267,35 @@ test_that("scenario: out-of-range nrow errors", {
 # ---- print method ----------------------------------------------------------
 
 test_that("scenario: print is stable for a single dataset", {
-  s <- ssd_define_scenario(
-    ssddata::ccme_boron,
-    nsim = 100L,
-    nrow = c(5L, 10L),
-    seed = 42L
-  )
-  expect_snapshot(print(s))
+  expect_snapshot({
+    s <- ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 100L,
+      nrow = c(5L, 10L),
+      seed = 42L
+    )
+    print(s)
+  })
 })
 
 test_that("scenario: print is stable for multiple datasets and vector knobs", {
-  s <- ssd_define_scenario(
-    list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
-    nsim = 50L,
-    nrow = c(5L, 6L, 10L),
-    seed = 1L,
-    rescale = c(FALSE, TRUE),
-    computable = c(FALSE, TRUE),
-    at_boundary_ok = c(TRUE, FALSE),
-    range_shape1 = list(c(0.05, 20), c(0.1, 10)),
-    proportion = c(0.05, 0.1),
-    ci = c(FALSE, TRUE),
-    nboot = c(100, 1000),
-    est_method = c("multi", "geometric"),
-    ci_method = c("weighted_samples", "MACL"),
-    parametric = c(TRUE, FALSE)
-  )
-  expect_snapshot(print(s))
+  expect_snapshot({
+    s <- ssd_define_scenario(
+      list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+      nsim = 50L,
+      nrow = c(5L, 6L, 10L),
+      seed = 1L,
+      rescale = c(FALSE, TRUE),
+      computable = c(FALSE, TRUE),
+      at_boundary_ok = c(TRUE, FALSE),
+      range_shape1 = list(c(0.05, 20), c(0.1, 10)),
+      proportion = c(0.05, 0.1),
+      ci = c(FALSE, TRUE),
+      nboot = c(100, 1000),
+      est_method = c("multi", "geometric"),
+      ci_method = c("weighted_samples", "MACL"),
+      parametric = c(TRUE, FALSE)
+    )
+    print(s)
+  })
 })

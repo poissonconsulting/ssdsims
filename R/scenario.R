@@ -40,9 +40,13 @@
 #'   is forwarded through [ssd_data()] for validation.
 #' @param name An optional dataset name for the single-data-frame form,
 #'   overriding the derived name. Must not be combined with a named list.
-#' @param min_pmix A list of one or more functions with a single argument that
-#'   inputs the number of rows of data and returns a proportion between 0 and
-#'   0.5.
+#' @param min_pmix The `min_pmix` function(s), referenced **by name**. Supply
+#'   either a character vector of names, or a function (or list of functions)
+#'   with a single argument that inputs the number of rows of data and returns
+#'   a proportion between 0 and 0.5 - in which case the name is derived from the
+#'   argument expression (e.g. `ssdtools::ssd_min_pmix` gives `"ssd_min_pmix"`),
+#'   mirroring dataset name derivation. Only the name is stored; the function is
+#'   resolved later via the `min_pmix` registry (a future roadmap step).
 #' @param range_shape1 A list of numeric vectors of length two of the lower and
 #'   upper bounds for the shape1 parameter.
 #' @param range_shape2 A list of numeric vectors of length two of the lower and
@@ -81,6 +85,7 @@ ssd_define_scenario <- function(
   upload = NULL
 ) {
   data_expr <- rlang::enexpr(data)
+  min_pmix_expr <- rlang::enexpr(min_pmix)
   chk::chk_unused(...)
 
   # --- scalar / vector knob validation ----------------------------------
@@ -119,10 +124,7 @@ ssd_define_scenario <- function(
   chk::chk_unique(at_boundary_ok)
   chk::chk_length(at_boundary_ok, upper = 2L)
 
-  chk::chk_list(min_pmix)
-  chk::chk_length(min_pmix, upper = Inf)
-  chk::chk_all(min_pmix, chk::chk_function, formals = 1L)
-  chk::chk_unique(min_pmix)
+  # `min_pmix` is stored by name (derived below); validated in the helper.
 
   chk::chk_list(range_shape1)
   chk::chk_length(range_shape1, upper = Inf)
@@ -193,6 +195,9 @@ ssd_define_scenario <- function(
 
   # --- dataset names + validation (no data stored) -----------------------
   datasets <- scenario_dataset_names(data, name, data_expr)
+
+  # --- min_pmix names (no function bodies stored) ------------------------
+  min_pmix <- scenario_min_pmix_names(min_pmix, min_pmix_expr)
 
   partition_by <- partition_by %||% scenario_default_partition_by()
 
@@ -274,7 +279,7 @@ scenario_dataset_names <- function(data, name, data_expr) {
           "use a named list for multiple datasets."
         )
       }
-      nms <- list_expr_names(data_expr, length(data))
+      nms <- list_expr_names(data_expr, label = "dataset")
     }
     purrr::walk(data, ssd_data)
     return(nms)
@@ -302,14 +307,16 @@ expr_to_name <- function(expr) {
 
 #' Derive per-element names from a captured `list(...)` expression.
 #' @noRd
-list_expr_names <- function(data_expr, n) {
-  if (!rlang::is_call(data_expr, "list")) {
+list_expr_names <- function(list_expr, label = "dataset") {
+  if (!rlang::is_call(list_expr, "list")) {
     chk::abort_chk(
-      "Unable to derive dataset names from the list argument; ",
+      "Unable to derive ",
+      label,
+      " names from the list argument; ",
       "supply a named list (e.g. `list(boron = ...)`)."
     )
   }
-  elems <- rlang::call_args(data_expr)
+  elems <- rlang::call_args(list_expr)
   nms <- vapply(
     elems,
     function(e) expr_to_name(e) %||% NA_character_,
@@ -318,11 +325,55 @@ list_expr_names <- function(data_expr, n) {
   )
   if (anyNA(nms)) {
     chk::abort_chk(
-      "Unable to derive a name for every dataset in the list; ",
+      "Unable to derive a name for every ",
+      label,
+      " in the list; ",
       "supply a named list (e.g. `list(boron = ...)`)."
     )
   }
   nms
+}
+
+#' Derive `min_pmix` names from the value and captured argument expression.
+#'
+#' Accepts a character vector of names (used as-is), or a function / list of
+#' functions whose names are derived by symbol capture (mirroring datasets).
+#' Provided functions are validated; only the names are returned - no function
+#' bodies are stored.
+#' @noRd
+scenario_min_pmix_names <- function(min_pmix, min_pmix_expr) {
+  if (is.character(min_pmix)) {
+    chk::chk_not_any_na(min_pmix, x_name = "`min_pmix`")
+    chk::chk_unique(min_pmix, x_name = "`min_pmix`")
+    return(min_pmix)
+  }
+
+  if (is.function(min_pmix)) {
+    chk::chk_function(min_pmix, formals = 1L)
+    nm <- expr_to_name(min_pmix_expr)
+    if (is.null(nm)) {
+      chk::abort_chk(
+        "Unable to derive a name for `min_pmix`; ",
+        "supply it by name (a character vector)."
+      )
+    }
+    return(nm)
+  }
+
+  if (is.list(min_pmix)) {
+    chk::chk_length(min_pmix, upper = Inf)
+    chk::chk_all(min_pmix, chk::chk_function, formals = 1L)
+    list_names <- names(min_pmix)
+    if (!is.null(list_names) && all(nzchar(list_names))) {
+      return(list_names)
+    }
+    return(list_expr_names(min_pmix_expr, label = "min_pmix"))
+  }
+
+  chk::abort_chk(
+    "`min_pmix` must be a character vector of names, ",
+    "or a function or list of functions."
+  )
 }
 
 #' Print a Simulation Scenario
