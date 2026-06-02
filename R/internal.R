@@ -186,6 +186,10 @@ run_scenario <- function(
   parametric,
   .progress = .progress
 ) {
+  # Activate the dqrng pcg64 backend for the duration of scenario execution;
+  # it is reset on exit, including on error.
+  local_dqrng_backend()
+
   .args <- list(...)
 
   fit_dists_formals <- methods::formalArgs(ssdtools::ssd_fit_dists)
