@@ -732,6 +732,10 @@ column on the draw. `partition_by` is correspondingly three-step
 (`sample`/`fit`/`hc`); by default `nrow` shards at the `fit` level
 (`dataset, sim, nrow, rescale`).
 
+This fold is **provisional**: whether to reinstate an explicit `data`
+step (as a buffering checkpoint) is a deferred decision tied to the
+caching/invalidation model — see the note in §8.
+
 Dependencies between tasks are **explicit**: each row carries a
 path-style `<step>_id` primary key — the Hive partition path itself,
 e.g. `dataset=boron/sim=1/replace=FALSE` — plus its parent step's id
@@ -1367,6 +1371,32 @@ column values. Extension is the answer to one question per
 extension type: *does the new scenario change the set of shards,
 or the contents of an existing shard?*
 
+> **Deferred decision — explicit `data` step vs. inline `head()` in `fit`.**
+> The §8 examples below are written for the four-step model and still
+> reference a materialised `data` shard. The implemented baseline currently
+> *folds* that RNG-free `head(sample, nrow)` truncation into `fit`
+> (`task-list-loop-baseline-fold`), so there is no `data` shard today.
+> Whether to reinstate an explicit `data` step is **left open until the
+> invalidation model here is finalised** (`task-tables` / `hive-partitioning`),
+> because the answer depends entirely on that model:
+> - Under **cache-by-existence** (this section's model), a `fit` shard is keyed
+>   by `fit_id`, which includes `nrow`. Extending `nrow` only mints new `fit`
+>   shards and leaves existing ones cached — the fold is sufficient and a
+>   `data` shard would be redundant.
+> - Under **content-hash invalidation** (targets' native default), `fit`
+>   depends on the `sample` *value*; growing `n_max` (e.g. extending `nrow`
+>   upward) changes that value and cascades a rerun into every `fit` branch —
+>   even those whose `head(sample, nrow)` is byte-identical. A materialised
+>   `data` step is then a *buffering checkpoint*: `data_n = head(sample, n)`
+>   recomputes byte-identically, so targets prunes the expensive `fit` rerun.
+>   It is also the natural place to handle the dual hazard that, under
+>   cache-by-existence, growing `n_max` does **not** invalidate the
+>   `sample` shard (keyed `dataset, sim, replace`), risking a stale short draw.
+>
+> When `task-tables`/`hive-partitioning` pin the invalidation model, revisit
+> this and either keep the fold or restore the `data` step — and reconcile the
+> four-step examples below at the same time.
+
 ### 8.1 Path-axis growth — new shards, existing shards untouched
 
 Adding a value to an axis that is **in `partition_by`** for a step
@@ -1722,7 +1752,8 @@ shows where branches open and close.
 - **`hive-partitioning`** — Write each per-task shard under a
   Hive-partitioned path (§6 layout). Smoke: duckplyr predicate
   pushdown returns the right subset without opening unrelated
-  shards.
+  shards. Pins the invalidation model, so it also settles the
+  deferred `data`-step-vs-fold decision recorded in §8.
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
   `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
   on a real (or sandboxed) Slurm queue.
