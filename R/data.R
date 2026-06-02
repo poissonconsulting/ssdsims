@@ -21,7 +21,6 @@ ssd_data <- function(data) {
       "`data` must have a column named `Conc`."
     )
   }
-  data <- dplyr::as_tibble(data)
   chk::chk_numeric(data$Conc, x_name = "Column `Conc`")
-  data
+  dplyr::as_tibble(data)
 }
