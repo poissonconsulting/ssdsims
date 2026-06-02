@@ -53,13 +53,13 @@ The package SHALL expose `task_primer(params)` returning a length-2 integer vect
 - **WHEN** `task_primer()` is applied to the distinct task-parameter sets in `scripts/experiment-dqrng-hash.R`
 - **THEN** distinct task parameters SHALL yield distinct primers (no empirical collisions over the validated example set)
 
-### Requirement: Canonical name-keyed hash input
-`task_primer()` SHALL hash a canonical, name-keyed representation of the task's parameters. Function-valued parameters (e.g. `min_pmix`) SHALL be referenced **by name**, not by function value, so that a recompile or JIT does not change a task's primer. `nrow` SHALL NOT contribute to a data task's hash, because every `nrow` value is sub-truncation of the same `n_max`-row sample (§5).
+### Requirement: Canonical name-keyed hash input is a caller contract
+`task_primer()` normalises **structure** (attributes, list-column wrapping) but **not meaning** — it hashes whatever `params` it is given. The canonical, name-keyed representation SHALL therefore be assembled by the caller that builds `params` (the `task-tables` construction, `TARGETS-DESIGN.md` §1.2/§5), not enforced inside `task_primer()`: function-valued parameters (e.g. `min_pmix`) SHALL be referenced **by name**, not by function value, so a recompile or JIT does not change a task's primer; and `nrow` SHALL be omitted from a data task's `params`, because every `nrow` value is sub-truncation of the same `n_max`-row sample (§5). These scenarios SHALL be verified where `params` is built.
 
 #### Scenario: min_pmix referenced by name
-- **WHEN** two fit-task parameter sets differ only in the function *value* bound to a `min_pmix` name (e.g. a recompiled copy) but share the same name
-- **THEN** their primers SHALL be identical
+- **WHEN** a caller builds `params` referencing `min_pmix` by its name (a string) for two fit tasks whose underlying function *values* differ but whose names match
+- **THEN** the resulting primers SHALL be identical
 
-#### Scenario: nrow excluded from the data-task hash
-- **WHEN** two data-task parameter sets share `(dataset, sim, replace)` but differ in `nrow`
-- **THEN** their primers SHALL be identical
+#### Scenario: nrow excluded from the data-task params
+- **WHEN** a caller builds two data-task `params` sharing `(dataset, sim, replace)` and omitting `nrow`
+- **THEN** the resulting primers SHALL be identical

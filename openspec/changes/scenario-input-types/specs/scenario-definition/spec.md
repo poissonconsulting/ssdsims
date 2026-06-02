@@ -19,9 +19,9 @@
 - **WHEN** `ssd_define_scenario(list(ssddata::ccme_boron, ssddata::ccme_cadmium), ...)` is called with an unnamed list
 - **THEN** the scenario SHALL derive names from the data frame arguments (e.g., `c("ccme_boron", "ccme_cadmium")`)
 
-#### Scenario: Named list overrides explicit name parameter
+#### Scenario: Named list with an explicit name is rejected
 - **WHEN** both a named list and an explicit `name=` are supplied
-- **THEN** the scenario SHALL use the list element names and ignore the `name=` parameter; provide a warning or error to signal the conflict
+- **THEN** the constructor SHALL abort with an informative error signalling the conflict (matching the current `scenario_dataset_names()` behaviour)
 
 #### Scenario: fitdists object as a generator
 - **WHEN** `ssd_define_scenario(fit, ...)` is called where `fit` is a `fitdists` object

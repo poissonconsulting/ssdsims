@@ -38,7 +38,7 @@ structure(
 
 ### Decision: route on input type in one place, reuse name derivation
 
-`ssd_data()` and `scenario_dataset_names()` already branch on `is.data.frame()` / `is.list()`. We add the generator branches at the same junction and funnel every element through a single `classify_input(value, expr, name, call)` helper that returns either a validated tibble or an `ssdsims_generator`. Name derivation is unchanged: argument name → `expr_to_name()` (symbol / `::` call) → explicit `name=`/list name. For a function-name **string**, the *string value itself* is the name (and the resolution target), mirroring `ssd_sim_data.character()` which does `eval(parse(text = x))`.
+`ssd_data()` and `scenario_dataset_names()` already branch on `is.data.frame()` / `is.list()`. We add the generator branches at the same junction and funnel every element through a single `classify_input(value, expr, name, call)` helper that returns either a validated tibble or an `ssdsims_generator`. Name derivation is unchanged: argument name → `expr_to_name()` (symbol / `::` call) → explicit `name=`/list name. For a function-name **string**, the *string value itself* is the name (and the resolution target). Unlike `ssd_sim_data.character()`, which does `eval(parse(text = x))`, resolution here is **restricted to a bare name** looked up with `get0()`/`match.fun()` (see the validation decision below); arbitrary expressions are not evaluated, matching the declarative intent.
 
 *Why funnel through one helper?* The single-input, named-list, and unnamed-list paths in both `ssd_data()` and the constructor must treat generators identically; one classifier keeps the three call sites in sync and keeps mixed lists (data frame + generator) correct.
 
