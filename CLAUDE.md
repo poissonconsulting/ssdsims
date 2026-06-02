@@ -76,7 +76,7 @@ devtools::check()
 The package uses two RNG paths:
 
 1. **L'Ecuyer-CMRG** (legacy, will be removed) — `with_lecuyer_cmrg_seed()`, `local_lecuyer_cmrg_state()`.
-2. **dqrng + hash** (new targets-based path) — `dqrng::dqset.seed(seed, stream)` with task-derived primers. The `pcg64` backend is scenario-scoped via `local_dqrng_backend()`, which is **reentrant**: a nested call is a no-op (tracked by ssdsims' own activation state, not a `RNGkind()` probe), so only the outermost scope activates and resets the backend and the RNG stream is identical with or without nesting. See `R/dqrng-backend.R` and `openspec/changes/dqrng-init/design.md`.
+2. **dqrng + hash** (new targets-based path) — `dqrng::dqset.seed(seed, stream)` with task-derived primers. The `pcg64` backend is scenario-scoped via `local_dqrng_backend()`, which is **reentrant**: a nested call is a no-op (detected via `RNGkind()[1] == "user-supplied"`), so only the outermost scope activates and resets the backend and the RNG stream is identical with or without nesting. See `R/dqrng-backend.R` and `openspec/changes/dqrng-init/design.md`.
 
 When touching RNG-consuming code:
 - Do **not** assume a fixed global `.Random.seed` across function calls.

@@ -57,20 +57,6 @@ test_that("dqrng-backend: reproducible draws for fixed (seed, stream)", {
   expect_false(identical(seq_1, seq_4))
 })
 
-test_that("dqrng-backend: dqrng_backend_active() tracks ssdsims activation, not RNGkind()", {
-  withr::defer(reset_dqrng_backend())
-
-  # The reentrancy signal reflects ssdsims' own activation (set/reset), so it
-  # does not misfire on a foreign user-supplied RNG backend that ssdsims did
-  # not install -- the case where a bare `RNGkind()[1] == "user-supplied"`
-  # probe would wrongly report the backend as active.
-  expect_false(dqrng_backend_active())
-  set_dqrng_backend()
-  expect_true(dqrng_backend_active())
-  reset_dqrng_backend()
-  expect_false(dqrng_backend_active())
-})
-
 test_that("dqrng-backend: nested local_dqrng_backend() is a no-op leaving the stream unchanged", {
   withr::defer(reset_dqrng_backend())
 

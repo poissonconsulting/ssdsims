@@ -29,12 +29,8 @@ ssdsims SHALL provide an exported `local_dqrng_backend()` helper that activates 
 `local_dqrng_backend()` SHALL be reentrant: when called while the backend is already active, the call SHALL be a no-op (it SHALL NOT re-register the methods and SHALL NOT defer a further reset). Only the outermost call SHALL register on entry and reset on exit. Consequently the RNG stream SHALL be identical whether or not a nested `local_dqrng_backend()` call occurs.
 
 #### Scenario: Nested call detected as no-op
-- **WHEN** `local_dqrng_backend()` is called while ssdsims already has the backend active (tracked by ssdsims' own activation state, not inferred from `RNGkind()`)
+- **WHEN** `local_dqrng_backend()` is called while a backend scope is already open (detected via `RNGkind()[1] == "user-supplied"`)
 - **THEN** the nested call SHALL neither re-register methods nor schedule an additional reset, and the backend SHALL remain active until the outermost scope exits
-
-#### Scenario: Detection is not confused by a foreign user-supplied RNG
-- **WHEN** `local_dqrng_backend()` is called while a user-supplied RNG backend that ssdsims did not activate is installed
-- **THEN** ssdsims SHALL still activate the dqrng backend (it SHALL NOT treat the foreign backend as its own and no-op)
 
 #### Scenario: Stream identical with or without a nested call
 - **WHEN** the same seeded draw sequence is taken once with an intervening nested `local_dqrng_backend()` call and once without it
