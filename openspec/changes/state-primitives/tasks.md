@@ -1,29 +1,34 @@
-## 1. dqrng-seeded state primitives
+## 1. State-less ops
 
-- [ ] 1.1 Add `R/state-primitives.R` (separate from the legacy L'Ecuyer primitives in `R/internal.R`)
-- [ ] 1.2 `slice_sample_state(data, n_max, seed, state, replace)`: `local_dqrng_state(seed, state)` once, then `dplyr::slice_sample(data, n = n_max, replace = replace)`
-- [ ] 1.3 `fit_dists_state(data, seed, state, dists, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2)`: seed once, then `ssdtools::ssd_fit_dists(...)` (resolve `min_pmix` by name via the existing helper); no `state`/`stream` on the inner call
-- [ ] 1.4 `hc_state(fits, seed, state, proportion, ci, nboot, est_method, ci_method, parametric)`: seed once, then `ssdtools::ssd_hc(...)`, honouring the `ci = FALSE` branch (no bootstrap args)
-- [ ] 1.5 Confirm each primitive calls `local_dqrng_state()` exactly once and leaves the surrounding RNG unchanged beyond its scope
+- [ ] 1.1 Add `sample_data_task(data, n_max, replace)` — `dplyr::slice_sample(data, n = n_max, replace = replace)` — lifting the runner's inline draw into a named op (symmetry with `fit_data_task`/`hc_data_task`)
+- [ ] 1.2 Confirm `fit_data_task()` / `hc_data_task()` stay state-less (no `seed`/`state`/`stream` argument; `min_pmix` resolved by name; `ci = FALSE` branch preserved)
 
-## 2. Wire into the baseline runner
+## 2. Seed-and-run wrappers
 
-- [ ] 2.1 In `ssd_run_scenario_baseline()` (`R/task-lists.R`), open one `local_dqrng_backend()` scope for the run
-- [ ] 2.2 `sample` step: per task, `primer <- task_primer(<dataset, sim, replace>)`; call `slice_sample_state(data[[dataset]], n_max, scenario$seed, primer, replace)`
-- [ ] 2.3 `fit` step: per task, truncate `head(sample, nrow)` then `fit_dists_state(trunc, scenario$seed, task_primer(<fit identity>), <fit grid>)`
-- [ ] 2.4 `hc` step: per task, `hc_state(fits, scenario$seed, task_primer(<hc identity>), <hc grid>)`
-- [ ] 2.5 Assemble each primer from the task's canonical name-keyed identity (`task_axes(step)` columns); replace the unseeded `dplyr::slice_sample`/`fit_data_task`/`hc_data_task` internals (subsume the latter two)
-- [ ] 2.6 Update the runner roxygen: remove the "not reproducible / pin the ambient RNG" caveat; document per-task seeding from `scenario$seed`
+- [ ] 2.1 Add `sample_data_task_state(data, n_max, replace, seed, state)`: `local_dqrng_state(seed, state)` once, then `sample_data_task(...)`
+- [ ] 2.2 Add `fit_data_task_state(data, dists, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, seed, state)`: seed once, then `fit_data_task(...)`
+- [ ] 2.3 Add `hc_data_task_state(fits, proportion, ci, nboot, est_method, ci_method, parametric, seed, state)`: seed once, then `hc_data_task(...)`
+- [ ] 2.4 Wrappers assume an active `local_dqrng_backend()`, take the primer as `state` (caller-computed), and leave the surrounding RNG unchanged beyond the `local_dqrng_state()` scope
+- [ ] 2.5 Do NOT touch the legacy L'Ecuyer `slice_sample_state`/`fit_dists_state`/`hc_state` in `R/internal.R` (distinct names; removed at `cleanup-lecuyer`)
 
-## 3. Tests
+## 3. Wire into the baseline runner
 
-- [ ] 3.1 `tests/testthat/test-state-primitives.R` (under a `local_dqrng_backend()` scope): each primitive seeds once; same `(seed, state)` reproduces, different `state` diverges; surrounding RNG unchanged
-- [ ] 3.2 Sub-truncation under seeding: a seeded `n_max` draw's `head(n1)` is a byte-identical prefix of `head(n2)`, for `replace = FALSE` and `replace = TRUE`
-- [ ] 3.3 Runner reproducibility: two `ssd_run_scenario_baseline()` calls with a fixed `scenario$seed` and **no** external seed give identical `sample`/`fit`/`hc` results; backend reset and base `.Random.seed` unchanged afterwards
-- [ ] 3.4 Order-independence: a task run in isolation matches its result within the full run (same `seed`, same identity)
-- [ ] 3.5 Update `test-task-lists.R` runner tests to the seeded contract; re-pin any value-level snapshots to the dqrng streams
+- [ ] 3.1 In `ssd_run_scenario_baseline()`, open one `local_dqrng_backend()` scope for the run
+- [ ] 3.2 `sample` step: per task `primer <- task_primer(<dataset, sim, replace>)`; call `sample_data_task_state(data[[dataset]], n_max, replace, scenario$seed, primer)`
+- [ ] 3.3 `fit` step: per task truncate `head(sample, nrow)`, then `fit_data_task_state(trunc, <fit grid>, scenario$seed, task_primer(<fit identity>))`
+- [ ] 3.4 `hc` step: per task `hc_data_task_state(fits, <hc grid>, scenario$seed, task_primer(<hc identity>))`
+- [ ] 3.5 Assemble each primer from the task's canonical name-keyed identity (`task_axes(step)` columns); replace the unseeded inline `slice_sample` / direct `fit_data_task` / `hc_data_task` calls
+- [ ] 3.6 Update the runner roxygen: remove the "not reproducible / pin the ambient RNG" caveat; document per-task seeding from `scenario$seed` and that the `*_data_task_state()` wrappers are the per-task entry point targets/replay reuse
 
-## 4. Docs and checks
+## 4. Tests
 
-- [ ] 4.1 Cross-reference the legacy vs dqrng primitives (note dqrng is the path forward; legacy removed in `cleanup-lecuyer`)
-- [ ] 4.2 Run `devtools::document()`, `air format .`, `devtools::test()`, `devtools::check()` (0/0), and `pkgdown::check_pkgdown()`
+- [ ] 4.1 Focused wrapper tests (under a `local_dqrng_backend()` scope): each wrapper seeds once; same `(seed, state)` reproduces, different `state` diverges; surrounding RNG unchanged; the state-less ops take no RNG argument
+- [ ] 4.2 Sub-truncation under seeding: a seeded `n_max` draw's `head(n1)` is a byte-identical prefix of `head(n2)`, for `replace = FALSE` and `replace = TRUE`
+- [ ] 4.3 Runner reproducibility: two `ssd_run_scenario_baseline()` calls with a fixed `scenario$seed` and **no** external seed give identical `sample`/`fit`/`hc` results; backend reset and base `.Random.seed` unchanged afterwards
+- [ ] 4.4 Order-independence: a task run in isolation matches its result within the full run (same `seed`, same identity)
+- [ ] 4.5 Update `test-task-lists.R` runner tests to the seeded contract; re-pin any value-level snapshots to the dqrng streams
+
+## 5. Docs and checks
+
+- [ ] 5.1 Cross-reference the legacy vs dqrng primitives (note dqrng is the path forward; legacy removed in `cleanup-lecuyer`)
+- [ ] 5.2 Run `devtools::document()`, `air format .`, `devtools::test()`, `devtools::check()` (0/0), and `pkgdown::check_pkgdown()`
