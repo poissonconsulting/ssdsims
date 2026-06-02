@@ -1,21 +1,21 @@
 ## ADDED Requirements
 
-### Requirement: dqrng pcg64 backend on load
-On package load, ssdsims SHALL configure `dqrng` to use the `pcg64` generator and register dqrng as the backend for base R's random-number functions, so that `runif()`, `rnorm()`, `rbinom()`, `rexp()`, `rgamma()`, `rpois()`, `sample.int()`, and `sample()` draw from dqrng's pcg64.
+### Requirement: dqrng pcg64 backend at scenario execution start
+At the start of scenario execution, ssdsims SHALL configure `dqrng` to use the `pcg64` generator and register dqrng as the backend for base R's random-number functions, so that `runif()`, `rnorm()`, `rbinom()`, `rexp()`, `rgamma()`, `rpois()`, `sample.int()`, and `sample()` draw from dqrng's pcg64 during the scenario's execution.
 
-#### Scenario: Backend active after load
-- **WHEN** the ssdsims package is loaded
-- **THEN** `dqRNGkind()` SHALL report `pcg64` and base R RNG calls SHALL be served by dqrng's registered methods
+#### Scenario: Backend active during scenario execution
+- **WHEN** a scenario is executed (e.g., via `ssd_run_scenario()` or a dedicated `ssd_execute_scenario()`)
+- **THEN** `dqRNGkind()` SHALL report `pcg64` and base R RNG calls SHALL be served by dqrng's registered methods for the duration of the execution
 
 #### Scenario: pcg64 chosen over the dqrng default
-- **WHEN** the backend is initialised
+- **WHEN** the backend is initialised at scenario start
 - **THEN** ssdsims SHALL explicitly set `pcg64`, overriding dqrng's own default generator (`Xoroshiro128++`)
 
-### Requirement: Restore backend on unload
-On package unload, ssdsims SHALL restore the previous (base R) RNG backend via `dqrng::restore_methods()` so that unloading the package leaves the session's RNG behaviour as it was before loading.
+### Requirement: Restore backend on scenario exit
+On scenario exit, ssdsims SHALL restore the previous (base R) RNG backend via `dqrng::restore_methods()` so that the scenario's execution leaves the session's RNG behaviour as it was before the scenario started.
 
-#### Scenario: Methods restored on unload
-- **WHEN** the ssdsims package is unloaded
+#### Scenario: Methods restored on scenario exit
+- **WHEN** a scenario execution completes (normally or via error)
 - **THEN** `dqrng::restore_methods()` SHALL be called and base R RNG functions SHALL no longer be routed through dqrng
 
 ### Requirement: dqrng is a package dependency

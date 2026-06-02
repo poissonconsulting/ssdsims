@@ -365,23 +365,25 @@ distinct LCG increment ⇒ statistically independent sequences).
 `dqRNGkind("pcg64")` is set explicitly at pipeline init; the
 package's `dqRNGkind` default (Xoroshiro128++) is overridden.
 
-`dqrng::register_methods()` is called once at pipeline init so that
-base R's `runif()`, `rnorm()`, `rbinom()`, `rexp()`, `rgamma()`,
-`rpois()`, `sample.int()`, `sample()` (and therefore
-`dplyr::slice_sample()` and `ssdtools::ssd_r*()`) all consume RNG via
-dqrng's pcg64 with the configured (seed, state). The experiment
-script verifies this end-to-end.
+Per scenario execution, `dqRNGkind("pcg64")` is set and
+`dqrng::register_methods()` is called at the start (wrapping the step
+runner with `on.exit(restore_methods())`). This routes base R's
+`runif()`, `rnorm()`, `rbinom()`, `rexp()`, `rgamma()`, `rpois()`,
+`sample.int()`, `sample()` (and therefore `dplyr::slice_sample()` and
+`ssdtools::ssd_r*()`) through dqrng's pcg64 with the configured (seed,
+primer). The experiment script verifies this end-to-end.
 
 ```
    ┌────────────────────────────────────────────────────────────┐
-   │  task replay primitive                                     │
-   │  ─────────────────────                                     │
+   │  task execution within a scenario step                     │
+   │  ────────────────────────────────────────                  │
    │  dqRNGkind("pcg64")                                         │
    │  dqrng::register_methods()                                  │
-   │  dqset.seed(seed   = scenario$seed,                         │
-   │             stream = task$state)   # dqrng's stream arg     │
-   │  …                          # run the step body            │
-   │  dqrng::restore_methods()   # process-global restore on exit│
+   │  on.exit(dqrng::restore_methods())   # cleanup guarantee    │
+   │  for each task:                                             │
+   │    dqset.seed(seed   = scenario$seed,                       │
+   │               stream = task$primer)   # dqrng's stream arg  │
+   │    …                          # run the task body          │
    └────────────────────────────────────────────────────────────┘
 ```
 
@@ -1514,12 +1516,13 @@ across R versions. Validated for the current R by
 `dqrng`, `ssdtools`) in the manifest (§8.5) to guard against future
 behavior changes.
 
-### `dqrng::register_methods()` is process-global
+### `dqrng::register_methods()` is scoped per scenario execution
 
-The pipeline installs dqrng as the base R RNG backend at start-up
-and must restore on exit. Tests and helper scripts that run inside
-the same R session need the same discipline (`on.exit(restore_methods())`
-in any function that touches the methods).
+Each scenario execution (via `ssd_run_scenario()` or a cluster step)
+installs dqrng as the base R RNG backend at entry and restores on exit
+via `on.exit(restore_methods())`. Tests and helper scripts that touch
+the methods mid-session (not inside a scenario runner) use the same
+`on.exit()` discipline — documented in CLAUDE.md (§RNG discipline).
 
 ---
 
@@ -1546,9 +1549,9 @@ in any function that touches the methods).
 
 The RNGkind side-effect bug and the independent data/fit/hc substream
 issues from the original L'Ecuyer design no longer apply: dqrng with
-explicit `(seed, state)` per call has no side effects on global RNG
-state of other tasks (`register_methods()` switches the backend once
-per process and is restored on exit).
+explicit `(seed, state)` per task has no side effects on global RNG
+state of other tasks (the backend is switched per scenario execution and
+restored on exit, not process-global).
 
 ---
 
