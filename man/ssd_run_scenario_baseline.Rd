@@ -26,7 +26,7 @@ it just threads outputs forward and returns the collected per-step results.
 This is the no-frills baseline: it runs in-process, with \strong{no} \code{targets}
 dependency, \strong{no} shard grouping or \code{partition_by}, and \strong{no} Parquet I/O.
 It is also \strong{not} reproducible - no per-task RNG seeding happens here (that
-arrives with the \code{state-primitives} roadmap step); pin the ambient RNG (e.g.
+arrives with the \code{primer-primitives} roadmap step); pin the ambient RNG (e.g.
 \code{\link[withr:with_seed]{withr::with_seed()}}) for deterministic draws.
 
 The scenario retains the data frames it was built from, so the runner reads

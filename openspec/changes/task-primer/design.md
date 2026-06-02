@@ -13,7 +13,7 @@
 **Non-Goals:**
 
 - Building the `sample`/`fit`/`hc` task tables or deciding which columns exist (`task-list-loop-baseline` #80 + fold, `task-tables`).
-- Calling `dqset.seed()` / installing the primer (`local-dqrng-state`) or wiring it into the per-task operations (`state-primitives`).
+- Calling `dqset.seed()` / installing the primer (`local-dqrng-state`) or wiring it into the per-task operations (`primer-primitives`).
 - Activating the dqrng backend (`dqrng-init`).
 
 ## Decisions

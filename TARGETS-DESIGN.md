@@ -63,7 +63,7 @@ The most consequential design choices, with section refs:
   function-name suffix `_state` reflects the wrapper that installs
   the primer); `stream` is dqrng's API parameter and the
   L'Ecuyer-CMRG abstraction.
-- **Each task initializes the RNG once (§12 `state-primitives`).**
+- **Each task initializes the RNG once (§12 `primer-primitives`).**
   The per-task body calls `local_dqrng_state(seed, primer)`
   exactly once and then runs the (state-less) ssdtools / dplyr ops
   against the ambient RNG. No `state =` argument on the inner ops.
@@ -1676,30 +1676,20 @@ shows where branches open and close.
   NA-as-INT_MIN encoding). Unit tests verify reproducibility and
   collision-resistance on the validated examples from
   `scripts/experiment-dqrng-hash.R`.
-- **`state-primitives`** — Refactor `slice_sample_state`,
+- **`primer-primitives`** — Refactor `slice_sample_state`,
   `fit_dists_state`, `hc_state` around the new contract: **each
   per-task body calls `local_dqrng_state(seed, primer)` exactly
   once**, then invokes the (state-less) operation against the
   ambient RNG. The `_state` suffix marks the wrapper that installs
   the primer; the inner ssdtools / dplyr calls consume RNG from the
-  now-set state. No `state =` argument on the inner ops. **Subsumes
-  `nrow-sub-truncation`** (below): the seeded `n_max` draw is
-  `slice_sample_state`; the `head(sample, nrow)` truncation is the
-  `fit` step's inline, RNG-free step.
+  now-set state. No `state =` argument on the inner ops. (The seeded
+  `n_max` draw lives here as `slice_sample_state`; the
+  `head(sample, nrow)` truncation is the `fit` step's inline, RNG-free
+  step — there is no separate sub-truncation step.)
 - **`migrate-public-api`** — Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
   re-runs with byte-equivalence.
-- **`nrow-sub-truncation`** — *Done* (no separate step needed):
-  `task-list-loop-baseline` (+ `…-fold`) realises §5 structurally —
-  the `sample` step draws `n_max = max(nrow)` once (keyed without
-  `nrow`) and the `fit` step truncates `head(sample, nrow)` inline.
-  The byte-equivalent-prefix property is tested; the seeded draw is
-  folded into `state-primitives`.
-- **`ci-false-collapse`** — *Done*: the §1.2 collapse is implemented
-  in `task-list-loop-baseline`'s hc task table (bootstrap-only knobs
-  stored `NA`, not fanned out) and the construction-time rejection in
-  `ssd-define-scenario`; both tested.
 - **`dataset-registry`** — **Targets-only**: an implicit registry
   of named datasets, implemented as a `tar_target` that writes
   Parquet to `results/datasets/<name>.parquet` from the
@@ -1804,7 +1794,7 @@ flowchart TD
     dqinit[dqrng-init]
     dqstate[local-dqrng-state]
     primer[task-primer]
-    prims[state-primitives]
+    prims[primer-primitives]
     migrate[migrate-public-api]
     partby[partition-by]
 
@@ -1856,6 +1846,6 @@ flowchart TD
     lockin --> cleanup
 ```
 
-Three "wait points" (`state-primitives`, `task-tables`,
+Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not
 chained by an arrow can be worked on in parallel.

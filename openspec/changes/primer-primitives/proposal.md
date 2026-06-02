@@ -28,7 +28,7 @@ The merged three-step baseline runner (`ssd_run_scenario_baseline()`, `task-list
 
 ## Impact
 
-- **New code**: the `*_data_task_primer()` wrappers and `sample_data_task()` (in `R/task-lists.R` alongside the existing ops, or a co-located `R/state-primitives.R`); runner wiring to seed each task via `task_primer()`; tests in `tests/testthat/test-task-lists.R` (runner reproducibility) and a focused primitives test; `GLOSSARY.md` naming update.
+- **New code**: the `*_data_task_primer()` wrappers and `sample_data_task()` (in `R/task-lists.R` alongside the existing ops, or a co-located `R/primer-primitives.R`); runner wiring to seed each task via `task_primer()`; tests in `tests/testthat/test-task-lists.R` (runner reproducibility) and a focused primitives test; `GLOSSARY.md` naming update.
 - **APIs**: internal only (not exported); no public surface change. `ssd_run_scenario_baseline()` keeps its signature but gains per-task seeding (its "not reproducible" caveat is lifted).
 - **Dependencies**: `task-primer` (provides `task_primer()`) **must be applied first**; builds on `local-dqrng-state` (#78) and `task-list-loop-baseline` (+ fold). No new package dependencies.
 - **Downstream**: the `*_data_task_primer()` wrappers are the per-task entry point the `targets` shard body and `replay-helper` (§7) will reuse. Unblocks `migrate-public-api` (migrate `ssd_sim_data.data.frame` / `ssd_fit_dists_sims` / `ssd_hc_sims` to this contract, keep `_seed` shims) and a later rename of the `local_dqrng_state()` argument. Lets `nrow-sub-truncation` and `ci-false-collapse` be struck from §12 as completed.

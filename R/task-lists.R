@@ -151,7 +151,7 @@ ssd_scenario_tasks <- function(scenario) {
 #' This is the no-frills baseline: it runs in-process, with **no** `targets`
 #' dependency, **no** shard grouping or `partition_by`, and **no** Parquet I/O.
 #' It is also **not** reproducible - no per-task RNG seeding happens here (that
-#' arrives with the `state-primitives` roadmap step); pin the ambient RNG (e.g.
+#' arrives with the `primer-primitives` roadmap step); pin the ambient RNG (e.g.
 #' [withr::with_seed()]) for deterministic draws.
 #'
 #' The scenario retains the data frames it was built from, so the runner reads
