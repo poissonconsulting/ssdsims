@@ -228,60 +228,33 @@ ssd_run_scenario_baseline <- function(scenario, data) {
   data_out <- stats::setNames(data_tbl$data, data_tbl$data_id)
 
   # --- fit step: fit each data truncation against its fit-grid row -------
+  # The fit-grid column names match `fit_data_task()`'s formals, so `pmap()`
+  # maps them by name; the resolved parent data is just another column.
   fit_tbl <- tasks$fit
+  fit_args <- fit_tbl[c(
+    "rescale",
+    "computable",
+    "at_boundary_ok",
+    "min_pmix",
+    "range_shape1",
+    "range_shape2"
+  )]
+  fit_args$data <- data_out[fit_tbl$data_id]
   fit_tbl$fits <- purrr::pmap(
-    c(
-      list(data_id = fit_tbl$data_id),
-      fit_tbl[c(
-        "rescale",
-        "computable",
-        "at_boundary_ok",
-        "min_pmix",
-        "range_shape1",
-        "range_shape2"
-      )]
-    ),
-    \(
-      data_id,
-      rescale,
-      computable,
-      at_boundary_ok,
-      min_pmix,
-      range_shape1,
-      range_shape2
-    ) {
-      fit_data_task(
-        data_out[[data_id]],
-        dists = scenario$fit$dists,
-        rescale = rescale,
-        computable = computable,
-        at_boundary_ok = at_boundary_ok,
-        min_pmix = min_pmix,
-        range_shape1 = range_shape1,
-        range_shape2 = range_shape2
-      )
-    }
+    fit_args,
+    fit_data_task,
+    dists = scenario$fit$dists
   )
   fit_out <- stats::setNames(fit_tbl$fits, fit_tbl$fit_id)
 
   # --- hc step: estimate hc for each fit against its hc-grid row ----------
   hc_tbl <- tasks$hc
+  hc_args <- hc_tbl[c("ci", "nboot", "est_method", "ci_method", "parametric")]
+  hc_args$fits <- fit_out[hc_tbl$fit_id]
   hc_tbl$hc <- purrr::pmap(
-    c(
-      list(fit_id = hc_tbl$fit_id),
-      hc_tbl[c("ci", "nboot", "est_method", "ci_method", "parametric")]
-    ),
-    \(fit_id, ci, nboot, est_method, ci_method, parametric) {
-      hc_data_task(
-        fit_out[[fit_id]],
-        proportion = scenario$hc$proportion,
-        ci = ci,
-        nboot = nboot,
-        est_method = est_method,
-        ci_method = ci_method,
-        parametric = parametric
-      )
-    }
+    hc_args,
+    hc_data_task,
+    proportion = scenario$hc$proportion
   )
 
   list(sample = sample_tbl, data = data_tbl, fit = fit_tbl, hc = hc_tbl)
