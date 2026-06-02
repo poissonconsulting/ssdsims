@@ -712,38 +712,44 @@ Parquet per shard so the data, fit, and hc layers are
 independently queryable for analysis without re-running upstream
 steps.
 
-### Implemented refinement: `sample` as a fourth task type (`task-list-loop-baseline`)
+### Implemented refinement: `sample` as a distinct draw step (`task-list-loop-baseline`)
 
-The `task-list-loop-baseline` step materialises the grids above as
-**four** task tables rather than three, splitting the conflated `data`
-step into the *draw* and the *truncation*:
+The `task-list-loop-baseline` step splits the conflated `data` step
+into the *draw* and the *truncation*, materialising the grids above as
+these task tables:
 
-| step     | identity axes                                  | RNG? | note                                                   |
-| -------- | ---------------------------------------------- | ---- | ------------------------------------------------------ |
-| `sample` | `dataset, sim, replace`                        | yes  | one draw of `n_max = max(nrow)` rows (carried column)  |
-| `data`   | `dataset, sim, replace, nrow`                  | no   | `head(sample, nrow)` — `nrow` is a clean axis here     |
-| `fit`    | data axes `× fit grid`                         | —    | as above                                               |
-| `hc`     | fit axes `× hc grid` (§1.2 collapse)           | yes  | as above                                               |
+| step     | identity axes                                  | RNG? | note                                                       |
+| -------- | ---------------------------------------------- | ---- | ---------------------------------------------------------- |
+| `sample` | `dataset, sim, replace`                        | yes  | one draw of `n_max = max(nrow)` rows (carried column)      |
+| `fit`    | `sample` axes, `nrow` `× fit grid`             | yes  | truncates `head(sample, nrow)` inline (RNG-free) then fits |
+| `hc`     | fit axes `× hc grid` (§1.2 collapse)           | yes  | as above                                                   |
+
+> **Expanded by `task-list-loop-baseline-fold`.** The step originally
+> materialised **four** tables, with the RNG-free `head(sample, nrow)`
+> truncation as its own `data` step. That step was folded into `fit`:
+> SSD datasets are tiny, so materialising the truncation buys no I/O
+> amortisation while it duplicates a prefix of the `sample` shard on
+> disk and adds a task/shard layer whose only consumer is `fit`. So
+> `nrow` is now a `fit` cross-join axis and `fit` truncates inline.
 
 This keeps the sub-truncation property **structural**: there is
 exactly one `sample` task per `(dataset, sim, replace)`, so the
 expensive draw is shared across every `nrow`, while `nrow` is an
-ordinary scalar cross-join axis from the (RNG-free) `data` step down —
-no compound/list column on the draw. The original three-step
-`partition_by` table still applies, with the `data` *path* axes being
-the `sample` identity (`dataset, sim, replace`) and `nrow` an inner
-axis of the truncation.
+ordinary scalar cross-join axis at the `fit` step — no compound/list
+column on the draw. `partition_by` is correspondingly three-step
+(`sample`/`fit`/`hc`); by default `nrow` shards at the `fit` level
+(`dataset, sim, nrow, rescale`).
 
 Dependencies between tasks are **explicit**: each row carries a
 path-style `<step>_id` primary key — the Hive partition path itself,
 e.g. `dataset=boron/sim=1/replace=FALSE` — plus its parent step's id
-as a foreign key (`sample_id` on `data`, `data_id` on `fit`, `fit_id`
-on `hc`). These are the `data_id` / `fit_id` "sugar for the path"
-columns referenced above, made concrete: a child references its parent
-by a single joinable column, and the baseline runner threads results
-by that foreign key. The ids are deterministic and stable under
-scenario growth (adding a dataset does not renumber existing rows), so
-they compose with the cache-by-existence story in §8.
+as a foreign key (`sample_id` on `fit`, `fit_id` on `hc`). These are
+the `fit_id` "sugar for the path" columns referenced above, made
+concrete: a child references its parent by a single joinable column,
+and the baseline runner threads results by that foreign key. The ids
+are deterministic and stable under scenario growth (adding a dataset
+does not renumber existing rows), so they compose with the
+cache-by-existence story in §8.
 
 ### Static branching: one named target per shard
 
@@ -1663,6 +1669,11 @@ shows where branches open and close.
   no targets) from a scenario, and a runner that is just three
   `purrr::pmap()` loops. Establishes the data shape and a working
   baseline that subsequent steps swap pieces of, one at a time.
+  *Expanded by `task-list-loop-baseline-fold`* (applied; not a new DAG
+  node): the RNG-free `head(sample, nrow)` truncation is folded into
+  the `fit` step rather than a separate `data` step (datasets are tiny,
+  so materialising it buys nothing — see the §5 refinement note), so
+  the steps are `sample`/`fit`/`hc` and `nrow` is a `fit` axis.
 - **`dqrng-init`** — Add `dqrng` to `Imports`; `dqRNGkind("pcg64")`
   + `register_methods()` on package load, `restore_methods()` on
   unload. Verifies: `scripts/experiment-dqrng-hash.R` still passes.
