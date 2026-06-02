@@ -16,6 +16,7 @@
 ^.*\.html$
 ^air\.toml$
 ^\.ccache$
+^CLAUDE\.md$
 ^GLOSSARY\.md$
 ^openspec$
 ^\.claude$
