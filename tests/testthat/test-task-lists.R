@@ -51,25 +51,9 @@ test_that("task-lists: sample derivation is RNG-free with no seeding columns", {
   expect_false(any(c("seed", "primer", "stream") %in% names(tasks)))
 })
 
-# ---- data task table -------------------------------------------------------
-
-test_that("task-lists: data table crosses sample identity with nrow", {
-  scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
-    nsim = 4L,
-    nrow = c(5L, 10L, 20L),
-    seed = 42L
-  )
-  sample_tasks <- ssd_scenario_sample_tasks(scenario)
-  data_tasks <- ssd_scenario_data_tasks(scenario)
-  # nrow is a genuine axis of the (RNG-free) truncation step
-  expect_identical(nrow(data_tasks), nrow(sample_tasks) * 3L)
-  expect_setequal(data_tasks$nrow, c(5L, 10L, 20L))
-})
-
 # ---- fit task table --------------------------------------------------------
 
-test_that("task-lists: fit table has M * F rows with parent identity + fit grid", {
+test_that("task-lists: fit table crosses sample identity x nrow x fit grid", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 3L,
@@ -77,10 +61,10 @@ test_that("task-lists: fit table has M * F rows with parent identity + fit grid"
     seed = 42L,
     rescale = c(FALSE, TRUE)
   )
-  data_tasks <- ssd_scenario_data_tasks(scenario)
+  sample_tasks <- ssd_scenario_sample_tasks(scenario)
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
-  # M = 6 data tasks (3 sim * 2 nrow), F = 2 (rescale)
-  expect_identical(nrow(fit_tasks), nrow(data_tasks) * 2L)
+  # S = 3 sample tasks * |nrow| = 2 * F = 2 (rescale) = 12
+  expect_identical(nrow(fit_tasks), nrow(sample_tasks) * 2L * 2L)
   expect_true(all(c("dataset", "sim", "replace", "nrow") %in% names(fit_tasks)))
   expect_true(all(
     c(
@@ -158,14 +142,11 @@ test_that("task-lists: each table carries a path-style id and parent foreign key
       "dataset=ccme_boron/sim=2/replace=FALSE"
     )
   )
-  # data id extends its sample foreign key with the nrow axis
-  expect_true(all(
-    startsWith(tasks$data$data_id, tasks$data$sample_id)
-  ))
-  expect_true(all(grepl("/nrow=", tasks$data$data_id)))
+  # fit id extends its sample foreign key with the nrow (and fit-grid) axes
+  expect_true(all(startsWith(tasks$fit$fit_id, tasks$fit$sample_id)))
+  expect_true(all(grepl("/nrow=", tasks$fit$fit_id)))
   # every foreign key resolves to a parent primary key
-  expect_true(all(tasks$data$sample_id %in% tasks$sample$sample_id))
-  expect_true(all(tasks$fit$data_id %in% tasks$data$data_id))
+  expect_true(all(tasks$fit$sample_id %in% tasks$sample$sample_id))
   expect_true(all(tasks$hc$fit_id %in% tasks$fit$fit_id))
   # primary keys are unique
   expect_false(anyDuplicated(tasks$hc$hc_id) > 0L)
@@ -179,11 +160,10 @@ test_that("task-lists: derived tables carry the ssdsims_tasks class and step", {
     attr(ssd_scenario_sample_tasks(scenario), "step"),
     "sample"
   )
-  expect_identical(attr(ssd_scenario_data_tasks(scenario), "step"), "data")
   expect_identical(attr(ssd_scenario_fit_tasks(scenario), "step"), "fit")
   expect_identical(attr(ssd_scenario_hc_tasks(scenario), "step"), "hc")
-  expect_s3_class(ssd_scenario_data_tasks(scenario), "ssdsims_tasks")
-  expect_s3_class(ssd_scenario_data_tasks(scenario), "tbl_df")
+  expect_s3_class(ssd_scenario_fit_tasks(scenario), "ssdsims_tasks")
+  expect_s3_class(ssd_scenario_fit_tasks(scenario), "tbl_df")
 })
 
 test_that("task-lists: task tables survive dplyr/tidyr verbs", {
@@ -201,20 +181,11 @@ test_that("task-lists: printing a task table is informative", {
     )
   )
   expect_snapshot(
-    ssd_scenario_data_tasks(
-      ssd_define_scenario(
-        ssddata::ccme_boron,
-        nsim = 1L,
-        nrow = c(5L, 10L),
-        seed = 42L
-      )
-    )
-  )
-  expect_snapshot(
     ssd_scenario_fit_tasks(
       ssd_define_scenario(
         ssddata::ccme_boron,
         nsim = 1L,
+        nrow = c(5L, 10L),
         seed = 42L,
         rescale = c(FALSE, TRUE)
       )
@@ -235,7 +206,7 @@ test_that("task-lists: printing a task table is informative", {
 
 # ---- compound expansion ----------------------------------------------------
 
-test_that("task-lists: ssd_scenario_tasks bundles the four task tables", {
+test_that("task-lists: ssd_scenario_tasks bundles the three task tables", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
@@ -246,9 +217,8 @@ test_that("task-lists: ssd_scenario_tasks bundles the four task tables", {
   )
   tasks <- ssd_scenario_tasks(scenario)
   expect_s3_class(tasks, "ssdsims_task_set")
-  expect_named(tasks, c("sample", "data", "fit", "hc"))
+  expect_named(tasks, c("sample", "fit", "hc"))
   expect_identical(tasks$sample, ssd_scenario_sample_tasks(scenario))
-  expect_identical(tasks$data, ssd_scenario_data_tasks(scenario))
   expect_identical(tasks$fit, ssd_scenario_fit_tasks(scenario))
   expect_identical(tasks$hc, ssd_scenario_hc_tasks(scenario))
 })
@@ -271,7 +241,7 @@ test_that("task-lists: printing a task set reports per-step counts", {
 
 # ---- baseline runner -------------------------------------------------------
 
-test_that("task-lists: baseline runner threads sample -> data -> fit -> hc", {
+test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
@@ -282,19 +252,36 @@ test_that("task-lists: baseline runner threads sample -> data -> fit -> hc", {
   tmp <- withr::local_tempdir()
   withr::local_dir(tmp)
   out <- withr::with_seed(42L, ssd_run_scenario_baseline(scenario))
-  expect_named(out, c("sample", "data", "fit", "hc"))
+  expect_named(out, c("sample", "fit", "hc"))
   expect_s3_class(out$sample$sample[[1L]], "data.frame")
   expect_s3_class(out$fit$fits[[1L]], "fitdists")
   expect_s3_class(out$hc$hc[[1L]], "data.frame")
-  # the data truncation is head(sample, nrow) of the shared draw
+  # one shared draw of n_max = 6 rows; both nrow fits truncate that same draw
   expect_identical(nrow(out$sample$sample[[1L]]), 6L)
-  expect_identical(
-    purrr::map_int(out$data$data, nrow),
-    c(5L, 6L)
-  )
+  expect_identical(length(unique(out$fit$sample_id)), 1L)
   # No targets machinery and no Parquet I/O at this step.
   expect_false("targets" %in% loadedNamespaces())
   expect_length(list.files(tmp, pattern = "\\.parquet$", recursive = TRUE), 0L)
+})
+
+test_that("task-lists: sub-truncation property holds across nrow", {
+  # The fit step truncates a single shared draw inline; head(draw, 5) is a
+  # byte-identical prefix of head(draw, 10) (TARGETS-DESIGN.md section 5).
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    nrow = c(5L, 10L),
+    seed = 42L,
+    dists = "lnorm"
+  )
+  out <- withr::with_seed(42L, ssd_run_scenario_baseline(scenario))
+  draw <- out$sample$sample[[1L]]
+  expect_identical(
+    utils::head(draw, 5L),
+    utils::head(utils::head(draw, 10L), 5L)
+  )
+  # both fit tasks reference the one sample draw
+  expect_identical(length(unique(out$fit$sample_id)), 1L)
 })
 
 # ---- column contract -------------------------------------------------------
@@ -309,7 +296,6 @@ test_that("task-lists: task-table column contracts are pinned", {
   )
   expect_snapshot({
     names(ssd_scenario_sample_tasks(scenario))
-    names(ssd_scenario_data_tasks(scenario))
     names(ssd_scenario_fit_tasks(scenario))
     names(ssd_scenario_hc_tasks(scenario))
   })

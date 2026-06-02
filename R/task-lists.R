@@ -1,16 +1,17 @@
-# Task-list derivation: expand an `ssdsims_scenario` into the four per-step task
-# tables (`sample`, `data`, `fit`, `hc`) and run them in order with a baseline
-# loop runner. This is the data shape later roadmap steps decorate with
+# Task-list derivation: expand an `ssdsims_scenario` into the three per-step task
+# tables (`sample`, `fit`, `hc`) and run them in order with a baseline loop
+# runner. This is the data shape later roadmap steps decorate with
 # `(seed, primer)` and group into shards (TARGETS-DESIGN.md section 2, section 5, section 12).
 # The derivations are RNG-free and there is no per-task RNG seeding anywhere
 # here (the baseline runner draws from the ambient RNG only); no `targets`, no
 # shards, no Parquet I/O at this step.
 #
 # The expensive random draw is its own `sample` task, keyed only by
-# `(dataset, sim, replace)`; `nrow` then becomes an ordinary cross-join axis of
-# the (RNG-free) `data` truncation step, which is just `head(sample, nrow)`. So
-# the sub-truncation property (TARGETS-DESIGN.md section 5) is preserved structurally -
-# one draw shared across every `nrow` - without `nrow` ever multiplying the draw.
+# `(dataset, sim, replace)`; `nrow` is then a `fit` cross-join axis, and the
+# `fit` step truncates its parent sample inline (`head(sample, nrow)`, RNG-free)
+# before fitting. So the sub-truncation property (TARGETS-DESIGN.md section 5) is
+# preserved structurally - one draw shared across every `nrow` - without `nrow`
+# ever multiplying the draw, and without a separate materialised `data` step.
 #
 # Dependencies between tasks are explicit: each row carries a path-style
 # `<step>_id` primary key (the Hive partition path, section 5/section 6) plus its parent
@@ -43,49 +44,24 @@ ssd_scenario_sample_tasks <- function(scenario) {
   new_ssdsims_tasks(sample_task_grid(scenario), step = "sample")
 }
 
-#' Derive the data Task Table from a Scenario
+#' Derive the fit Task Table from a Scenario
 #'
 #' Crosses each sample-task identity (`dataset`, `sim`, `replace`) with the
-#' scenario's `nrow` values: each `data` task is the `head(sample, nrow)`
-#' truncation of its parent sample. Unlike the draw, this step is RNG-free, so
-#' `nrow` is an ordinary cross-join axis here (one truncation per size) without
-#' duplicating the underlying draw (`TARGETS-DESIGN.md` section 5).
+#' scenario's `nrow` values and each row of the scenario's `fit` argument grid
+#' (`rescale`, `computable`, `at_boundary_ok`, `min_pmix` name, `range_shape1`,
+#' `range_shape2`). `nrow` is a genuine `fit` cross-join axis: the `fit` step
+#' truncates its parent sample inline (`head(sample, nrow)`, RNG-free) before
+#' fitting, so the shared draw is sub-truncated without a separate `data` step
+#' (`TARGETS-DESIGN.md` section 5). Parent-identity columns are preserved
+#' verbatim so the table can be grouped directly downstream. `min_pmix` is
+#' referenced by name, not by function value (`TARGETS-DESIGN.md` section 1.1).
 #'
-#' Each row carries a `data_id` primary key and a `sample_id` foreign key
+#' Each row carries a `fit_id` primary key and a `sample_id` foreign key
 #' referencing its parent sample task.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
-#' @return An `ssdsims_tasks` object recording the `"data"` step, with one row
-#'   per `(dataset, sim, replace, nrow)` cell.
-#' @export
-#' @examples
-#' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
-#'   nsim = 2L,
-#'   nrow = c(5L, 10L),
-#'   seed = 42L
-#' )
-#' ssd_scenario_data_tasks(scenario)
-ssd_scenario_data_tasks <- function(scenario) {
-  chk::chk_s3_class(scenario, "ssdsims_scenario")
-  new_ssdsims_tasks(data_task_grid(scenario), step = "data")
-}
-
-#' Derive the fit Task Table from a Scenario
-#'
-#' Crosses each data-task identity (`dataset`, `sim`, `replace`, `nrow`) with
-#' each row of the scenario's `fit` argument grid (`rescale`, `computable`,
-#' `at_boundary_ok`, `min_pmix` name, `range_shape1`, `range_shape2`).
-#' Parent-identity columns are preserved verbatim so the table can be grouped
-#' directly downstream. `min_pmix` is referenced by name, not by function value
-#' (`TARGETS-DESIGN.md` section 1.1).
-#'
-#' Each row carries a `fit_id` primary key and a `data_id` foreign key
-#' referencing its parent data task.
-#'
-#' @inheritParams ssd_scenario_sample_tasks
 #' @return An `ssdsims_tasks` object recording the `"fit"` step, with one row per
-#'   data-task identity crossed with the fit grid.
+#'   `(dataset, sim, replace, nrow)` identity crossed with the fit grid.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
@@ -133,17 +109,17 @@ ssd_scenario_hc_tasks <- function(scenario) {
   )
 }
 
-#' Expand a Scenario into all Four Task Tables
+#' Expand a Scenario into all Three Task Tables
 #'
 #' The canonical expansion entry point (`TARGETS-DESIGN.md` section 1/section 2): derives the
-#' `sample`, `data`, `fit`, and `hc` task tables from a scenario in one call and
+#' `sample`, `fit`, and `hc` task tables from a scenario in one call and
 #' bundles them into an `ssdsims_task_set`. The per-step derivations
-#' ([ssd_scenario_sample_tasks()], [ssd_scenario_data_tasks()],
-#' [ssd_scenario_fit_tasks()], [ssd_scenario_hc_tasks()]) remain available for
-#' callers that need a single table.
+#' ([ssd_scenario_sample_tasks()], [ssd_scenario_fit_tasks()],
+#' [ssd_scenario_hc_tasks()]) remain available for callers that need a single
+#' table.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
-#' @return An `ssdsims_task_set` object: a list with `sample`, `data`, `fit`, and
+#' @return An `ssdsims_task_set` object: a list with `sample`, `fit`, and
 #'   `hc` elements, each an `ssdsims_tasks` table.
 #' @export
 #' @examples
@@ -156,7 +132,6 @@ ssd_scenario_tasks <- function(scenario) {
   structure(
     list(
       sample = ssd_scenario_sample_tasks(scenario),
-      data = ssd_scenario_data_tasks(scenario),
       fit = ssd_scenario_fit_tasks(scenario),
       hc = ssd_scenario_hc_tasks(scenario)
     ),
@@ -166,11 +141,12 @@ ssd_scenario_tasks <- function(scenario) {
 
 #' Run a Scenario with the Baseline Loop Runner
 #'
-#' Executes the four task tables in dependency order - `sample`, `data`, `fit`,
-#' then `hc` - by looping over each table with `purrr::pmap()` and looking up
-#' each task's parent result by the parent's `<step>_id` foreign key. The runner
-#' does no task expansion of its own (it consumes [ssd_scenario_tasks()]); it
-#' just threads outputs forward and returns the collected per-step results.
+#' Executes the three task tables in dependency order - `sample`, `fit`, then
+#' `hc` - by looping over each table with `purrr::pmap()` and looking up each
+#' task's parent result by the parent's `<step>_id` foreign key. The `fit` step
+#' truncates its parent sample inline (`head(sample, nrow)`) before fitting. The
+#' runner does no task expansion of its own (it consumes [ssd_scenario_tasks()]);
+#' it just threads outputs forward and returns the collected per-step results.
 #'
 #' This is the no-frills baseline: it runs in-process, with **no** `targets`
 #' dependency, **no** shard grouping or `partition_by`, and **no** Parquet I/O.
@@ -183,9 +159,9 @@ ssd_scenario_tasks <- function(scenario) {
 #' against `ssdtools` until the registry roadmap step lands.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
-#' @return A named list with `sample`, `data`, `fit`, and `hc` elements: each the
+#' @return A named list with `sample`, `fit`, and `hc` elements: each the
 #'   corresponding task table augmented with a list column of per-task results
-#'   (`sample` draws, `data` truncations, `fits` objects, and `hc` tibbles).
+#'   (`sample` draws, `fits` objects, and `hc` tibbles).
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
@@ -215,18 +191,10 @@ ssd_run_scenario_baseline <- function(scenario) {
   )
   sample_out <- rlang::set_names(sample_tbl$sample, sample_tbl$sample_id)
 
-  # --- data step: truncate each sample to its nrow (RNG-free) ------------
-  data_tbl <- tasks$data
-  data_tbl$data <- purrr::map2(
-    data_tbl$sample_id,
-    data_tbl$nrow,
-    \(sample_id, nrow) utils::head(sample_out[[sample_id]], nrow)
-  )
-  data_out <- rlang::set_names(data_tbl$data, data_tbl$data_id)
-
-  # --- fit step: fit each data truncation against its fit-grid row -------
-  # The fit-grid column names match `fit_data_task()`'s formals, so `pmap()`
-  # maps them by name; the resolved parent data is just another column.
+  # --- fit step: truncate each parent sample to nrow (head, RNG-free), then
+  # fit against the fit-grid row. The fit-grid column names match
+  # `fit_data_task()`'s formals, so `pmap()` maps them by name; the inline
+  # truncation is just another column.
   fit_tbl <- tasks$fit
   fit_args <- fit_tbl[c(
     "rescale",
@@ -236,7 +204,11 @@ ssd_run_scenario_baseline <- function(scenario) {
     "range_shape1",
     "range_shape2"
   )]
-  fit_args$data <- data_out[fit_tbl$data_id]
+  fit_args$data <- purrr::map2(
+    fit_tbl$sample_id,
+    fit_tbl$nrow,
+    \(sample_id, nrow) utils::head(sample_out[[sample_id]], nrow)
+  )
   fit_tbl$fits <- purrr::pmap(
     fit_args,
     fit_data_task,
@@ -254,7 +226,7 @@ ssd_run_scenario_baseline <- function(scenario) {
     proportion = scenario$hc$proportion
   )
 
-  list(sample = sample_tbl, data = data_tbl, fit = fit_tbl, hc = hc_tbl)
+  list(sample = sample_tbl, fit = fit_tbl, hc = hc_tbl)
 }
 
 # ---- internal grid helpers -------------------------------------------------
@@ -272,17 +244,6 @@ sample_task_grid <- function(scenario) {
   grid
 }
 
-data_task_grid <- function(scenario) {
-  # `nrow` is a genuine cross-join axis of the truncation step (one `head()` per
-  # size); the draw it slices was already shared at the `sample` step.
-  tidyr::expand_grid(
-    dataset = scenario$datasets,
-    sim = seq_len(scenario$nsim),
-    replace = scenario$replace,
-    nrow = scenario$nrow
-  )
-}
-
 fit_grid_tbl <- function(scenario) {
   fit <- scenario$fit
   tidyr::expand_grid(
@@ -296,7 +257,15 @@ fit_grid_tbl <- function(scenario) {
 }
 
 fit_task_table <- function(scenario) {
-  dplyr::cross_join(data_task_grid(scenario), fit_grid_tbl(scenario))
+  # `nrow` is a genuine `fit` cross-join axis (the `fit` step truncates its
+  # parent sample inline); the draw it slices was already shared at `sample`.
+  base <- tidyr::expand_grid(
+    dataset = scenario$datasets,
+    sim = seq_len(scenario$nsim),
+    replace = scenario$replace,
+    nrow = scenario$nrow
+  )
+  dplyr::cross_join(base, fit_grid_tbl(scenario))
 }
 
 hc_grid_tbl <- function(scenario) {
@@ -329,11 +298,13 @@ hc_grid_tbl <- function(scenario) {
 # ---- task identity (cross-join axes, ids, foreign keys) --------------------
 
 # The cumulative cross-join axes per step; each step extends its parent's axes.
+# `nrow` enters at the `fit` step (which truncates its parent sample inline),
+# not at `sample` (the shared draw).
 task_axes <- function(step) {
   sample <- c("dataset", "sim", "replace")
-  data <- c(sample, "nrow")
   fit <- c(
-    data,
+    sample,
+    "nrow",
     "rescale",
     "computable",
     "at_boundary_ok",
@@ -342,7 +313,7 @@ task_axes <- function(step) {
     "range_shape2"
   )
   hc <- c(fit, "ci", "nboot", "est_method", "ci_method", "parametric")
-  switch(step, sample = sample, data = data, fit = fit, hc = hc)
+  switch(step, sample = sample, fit = fit, hc = hc)
 }
 
 # The parent step feeding each step (sample is the root).
@@ -350,8 +321,7 @@ task_parent <- function(step) {
   switch(
     step,
     sample = NA_character_,
-    data = "sample",
-    fit = "data",
+    fit = "sample",
     hc = "fit"
   )
 }
@@ -493,7 +463,7 @@ print.ssdsims_tasks <- function(x, ...) {
 #' @noRd
 print.ssdsims_task_set <- function(x, ...) {
   cat("<ssdsims_task_set>\n")
-  for (step in c("sample", "data", "fit", "hc")) {
+  for (step in c("sample", "fit", "hc")) {
     cat(sprintf("  %-6s tasks: %d\n", step, nrow(x[[step]])))
   }
   invisible(x)
