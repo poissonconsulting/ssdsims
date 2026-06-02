@@ -5,15 +5,15 @@
 \alias{with_dqrng_state}
 \title{Local/With dqrng State}
 \usage{
-local_dqrng_state(seed, state, .local_envir = parent.frame())
+local_dqrng_state(seed, primer, .local_envir = parent.frame())
 
-with_dqrng_state(seed, state, code)
+with_dqrng_state(seed, primer, code)
 }
 \arguments{
 \item{seed}{\verb{[whole number]}\cr A scalar seed passed to
 \code{\link[dqrng:dqset.seed]{dqrng::dqset.seed()}}.}
 
-\item{state}{\verb{[integer(2)]}\cr A length-2 integer primer passed as the
+\item{primer}{\verb{[integer(2)]}\cr A length-2 integer primer passed as the
 \code{stream} argument of \code{\link[dqrng:dqset.seed]{dqrng::dqset.seed()}}. \code{NA_integer_} is permitted (the
 reserved INT_MIN encoding of \code{TARGETS-DESIGN.md} §2).}
 
@@ -22,17 +22,17 @@ reserved INT_MIN encoding of \code{TARGETS-DESIGN.md} §2).}
 \item{code}{\code{[any]}\cr Code to execute in the temporary environment}
 }
 \value{
-\code{local_dqrng_state()} invisibly returns \code{state}; \code{with_dqrng_state()}
+\code{local_dqrng_state()} invisibly returns \code{primer}; \code{with_dqrng_state()}
 returns the value of \code{code}.
 }
 \description{
-\code{local_dqrng_state()} installs a per-task \verb{(seed, state)} starting point as
+\code{local_dqrng_state()} installs a per-task \verb{(seed, primer)} starting point as
 the running dqrng RNG state via \code{\link[dqrng:dqset.seed]{dqrng::dqset.seed()}}, restoring the previous
 state when \code{.local_envir} exits. \code{with_dqrng_state()} evaluates \code{code} with
-that state installed, then restores the previous state. The \code{state} argument
-carries the per-task \emph{primer} (the value handed to dqrng's \code{stream} argument,
-per \code{TARGETS-DESIGN.md} §2 and the GLOSSARY); the \verb{_state} suffix marks that
-the wrapper installs that primer as the running RNG state.
+that state installed, then restores the previous state. The \code{primer} argument
+is the per-task primer (the value handed to dqrng's \code{stream} argument, per
+\code{TARGETS-DESIGN.md} §2 and the GLOSSARY); the \verb{_state} suffix marks that the
+wrapper installs that primer as the running RNG state.
 }
 \details{
 These are the dqrng-path analogues of \code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}} /
