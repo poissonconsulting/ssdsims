@@ -51,13 +51,17 @@ set_state <- function(state) {
   invisible(get_state())
 }
 
-#' Local L'Ecuyer-CMRG Seed
+#' Local/With L'Ecuyer-CMRG Seed
 #'
-#' Seeds the L'Ecuyer-CMRG RNG with a scalar integer via [base::set.seed()].
-#' For a `.Random.seed`-style state vector (e.g. from
-#' `get_lecuyer_cmrg_stream_state()` or [`parallel::nextRNGStream()`]) use
-#' [`local_lecuyer_cmrg_state()`].
+#' `local_lecuyer_cmrg_seed()` seeds the L'Ecuyer-CMRG RNG with a scalar integer
+#' via [base::set.seed()], restoring the previous state when `.local_envir`
+#' exits. `with_lecuyer_cmrg_seed()` evaluates `code` with that seed in effect,
+#' then restores the previous state. For a `.Random.seed`-style state vector
+#' (e.g. from `get_lecuyer_cmrg_stream_state()` or [`parallel::nextRNGStream()`])
+#' use [`local_lecuyer_cmrg_state()`] / [`with_lecuyer_cmrg_state()`].
 #' @inheritParams withr::local_seed
+#' @inheritParams withr::with_seed
+#' @return `with_lecuyer_cmrg_seed()` returns the value of `code`.
 #' @seealso [`withr::local_seed()`], [`local_lecuyer_cmrg_state()`],
 #'   [`parallel::nextRNGStream()`].
 #' @export
@@ -65,6 +69,10 @@ set_state <- function(state) {
 #'
 #' local_lecuyer_cmrg_seed(42)
 #' runif(3)
+#'
+#' with_lecuyer_cmrg_seed(42, {
+#'   runif(3)
+#' })
 local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
   chk::chk_whole_number(seed)
   chk::chk_environment(.local_envir)
@@ -77,38 +85,29 @@ local_lecuyer_cmrg_seed <- function(seed, .local_envir = parent.frame()) {
   )
 }
 
-#' With L'Ecuyer-CMRG Seed
-#'
-#' Evaluates `code` with the L'Ecuyer-CMRG RNG seeded with a scalar integer
-#' via [base::set.seed()], then restores the previous state. For a
-#' `.Random.seed`-style state vector (e.g. from
-#' `get_lecuyer_cmrg_stream_state()` or [`parallel::nextRNGStream()`]) use
-#' [`with_lecuyer_cmrg_state()`].
-#' @inheritParams withr::with_seed
-#' @seealso [`withr::with_seed()`], [`with_lecuyer_cmrg_state()`],
-#'   [`parallel::nextRNGStream()`].
+#' @rdname local_lecuyer_cmrg_seed
 #' @export
-#' @examples
-#'
-#' with_lecuyer_cmrg_seed(42, {
-#'   runif(3)
-#' })
 with_lecuyer_cmrg_seed <- function(seed, code) {
   local_lecuyer_cmrg_seed(seed)
   code
 }
 
-#' Local L'Ecuyer-CMRG State
+#' Local/With L'Ecuyer-CMRG State
 #'
-#' Sets the L'Ecuyer-CMRG RNG state to a `.Random.seed`-style integer
-#' vector (length 7) by assigning to `.Random.seed` directly, restoring the
-#' previous state when `.local_envir` exits. A *state* is the full internal
+#' `local_lecuyer_cmrg_state()` sets the L'Ecuyer-CMRG RNG state to a
+#' `.Random.seed`-style integer vector (length 7) by assigning to
+#' `.Random.seed` directly, restoring the previous state when `.local_envir`
+#' exits. `with_lecuyer_cmrg_state()` evaluates `code` with that state in
+#' effect, then restores the previous state. A *state* is the full internal
 #' RNG state (as returned by [`parallel::nextRNGStream()`] or
 #' `get_lecuyer_cmrg_stream_state()`); contrast with [base::set.seed()]
-#' which takes a scalar *seed* (see [`local_lecuyer_cmrg_seed()`]).
+#' which takes a scalar *seed* (see [`local_lecuyer_cmrg_seed()`] /
+#' [`with_lecuyer_cmrg_seed()`]).
 #' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
 #' @inheritParams withr::local_seed
-#' @return Invisibly returns `state`.
+#' @inheritParams withr::with_seed
+#' @return `local_lecuyer_cmrg_state()` invisibly returns `state`;
+#'   `with_lecuyer_cmrg_state()` returns the value of `code`.
 #' @seealso [`parallel::nextRNGStream()`], [`local_lecuyer_cmrg_seed()`].
 #' @export
 #' @examples
@@ -116,6 +115,8 @@ with_lecuyer_cmrg_seed <- function(seed, code) {
 #' state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
 #' local_lecuyer_cmrg_state(state)
 #' runif(3)
+#'
+#' with_lecuyer_cmrg_state(state, runif(3))
 local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
   chk::chk_integer(state)
   chk::chk_not_any_na(state)
@@ -130,23 +131,8 @@ local_lecuyer_cmrg_state <- function(state, .local_envir = parent.frame()) {
   invisible(state)
 }
 
-#' With L'Ecuyer-CMRG State
-#'
-#' Evaluates `code` with the L'Ecuyer-CMRG RNG state temporarily set to
-#' `state` (a `.Random.seed`-style integer vector of length 7), then
-#' restores the previous state. A *state* is the full internal RNG state
-#' (as returned by [`parallel::nextRNGStream()`] or
-#' `get_lecuyer_cmrg_stream_state()`); contrast with [base::set.seed()]
-#' which takes a scalar *seed* (see [`with_lecuyer_cmrg_seed()`]).
-#' @param state `[integer(7)]`\cr A L'Ecuyer-CMRG `.Random.seed` vector.
-#' @inheritParams withr::with_seed
-#' @return The value of `code`.
-#' @seealso [`parallel::nextRNGStream()`], [`with_lecuyer_cmrg_seed()`].
+#' @rdname local_lecuyer_cmrg_state
 #' @export
-#' @examples
-#'
-#' state <- with_lecuyer_cmrg_seed(42, parallel::nextRNGStream(.Random.seed))
-#' with_lecuyer_cmrg_state(state, runif(3))
 with_lecuyer_cmrg_state <- function(state, code) {
   force(state)
   local_lecuyer_cmrg_state(state)

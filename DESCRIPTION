@@ -15,7 +15,7 @@ Depends:
 Imports: 
     chk,
     dplyr,
-    dqrng,
+    dqrng (>= 0.4.1),
     methods,
     parallel,
     purrr,
