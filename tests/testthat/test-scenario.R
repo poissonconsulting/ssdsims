@@ -1,0 +1,235 @@
+# ---- ssd_data() ------------------------------------------------------------
+
+test_that("scenario: ssd_data requires a Conc column", {
+  expect_error(
+    ssd_data(data.frame(x = 1:5)),
+    "`data` must have a column named `Conc`"
+  )
+})
+
+test_that("scenario: ssd_data passes valid data through, preserving columns", {
+  input <- data.frame(Conc = c(1, 2, 3), Species = c("a", "b", "c"))
+  out <- ssd_data(input)
+  expect_s3_class(out, "tbl_df")
+  expect_identical(out$Conc, c(1, 2, 3))
+  expect_identical(names(out), c("Conc", "Species"))
+})
+
+test_that("scenario: ssd_data rejects a non-numeric Conc column", {
+  expect_error(
+    ssd_data(data.frame(Conc = c("a", "b"))),
+    "Conc"
+  )
+})
+
+# ---- minimal construction & declarative-only fields ------------------------
+
+test_that("scenario: minimal construction stores declarative fields", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 100L,
+    nrow = c(5L, 10L),
+    seed = 42L
+  )
+  expect_s3_class(s, "ssdsims_scenario")
+  expect_identical(s$seed, 42L)
+  expect_identical(s$nsim, 100L)
+  expect_identical(s$nrow, c(5L, 10L))
+  expect_identical(s$datasets, "ccme_boron")
+  expect_named(
+    s$fit,
+    c(
+      "dists",
+      "rescale",
+      "computable",
+      "at_boundary_ok",
+      "min_pmix",
+      "range_shape1",
+      "range_shape2"
+    )
+  )
+  expect_named(
+    s$hc,
+    c("proportion", "ci", "nboot", "est_method", "ci_method", "parametric")
+  )
+})
+
+test_that("scenario: stores dataset names, not data frames", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
+  expect_type(s$datasets, "character")
+  # no element of the object is a data frame
+  expect_false(any(vapply(s, is.data.frame, logical(1))))
+  expect_false(any(vapply(s$fit, is.data.frame, logical(1))))
+})
+
+test_that("scenario: partition_by defaults are populated", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
+  expect_identical(
+    s$partition_by,
+    list(
+      data = c("dataset", "sim", "replace"),
+      fit = c("dataset", "sim", "rescale"),
+      hc = c("dataset", "sim")
+    )
+  )
+})
+
+test_that("scenario: upload defaults to NULL", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
+  expect_null(s$upload)
+})
+
+test_that("scenario: construction leaves .Random.seed unchanged", {
+  set.seed(101)
+  before <- .Random.seed
+  ssd_define_scenario(ssddata::ccme_boron, seed = 7L)
+  expect_identical(before, .Random.seed)
+})
+
+# ---- dataset input API -----------------------------------------------------
+
+test_that("scenario: single data frame derives an implicit name", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, seed = 1L)
+  expect_identical(s$datasets, "ccme_boron")
+})
+
+test_that("scenario: single data frame accepts an explicit name", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, name = "boron_data", seed = 1L)
+  expect_identical(s$datasets, "boron_data")
+})
+
+test_that("scenario: named list uses the list names", {
+  s <- ssd_define_scenario(
+    list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    seed = 1L
+  )
+  expect_identical(s$datasets, c("boron", "cadmium"))
+})
+
+test_that("scenario: unnamed list derives names per element", {
+  s <- ssd_define_scenario(
+    list(ssddata::ccme_boron, ssddata::ccme_cadmium),
+    seed = 1L
+  )
+  expect_identical(s$datasets, c("ccme_boron", "ccme_cadmium"))
+})
+
+test_that("scenario: named list plus name= is an error", {
+  expect_error(
+    ssd_define_scenario(
+      list(boron = ssddata::ccme_boron),
+      name = "x",
+      seed = 1L
+    ),
+    "named list"
+  )
+})
+
+test_that("scenario: data frame literal with no derivable name errors", {
+  expect_error(
+    ssd_define_scenario(data.frame(Conc = 1:5), seed = 1L),
+    "supply an explicit `name=`"
+  )
+})
+
+test_that("scenario: bad data in a list aborts via ssd_data", {
+  expect_error(
+    ssd_define_scenario(list(good = ssddata::ccme_boron, bad = 1:5), seed = 1L),
+    "data"
+  )
+})
+
+# ---- ci = FALSE rejects bootstrap-only knobs -------------------------------
+
+test_that("scenario: ci = FALSE rejects an explicit nboot", {
+  expect_error(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      ci = FALSE,
+      nboot = 500
+    ),
+    "ci = FALSE"
+  )
+})
+
+test_that("scenario: ci = FALSE rejects ci_method and parametric", {
+  expect_error(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      ci = FALSE,
+      ci_method = "MACL"
+    ),
+    "ci = FALSE"
+  )
+  expect_error(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      seed = 1L,
+      ci = FALSE,
+      parametric = FALSE
+    ),
+    "ci = FALSE"
+  )
+})
+
+test_that("scenario: ci = FALSE alone is fine with default knobs", {
+  expect_s3_class(
+    ssd_define_scenario(ssddata::ccme_boron, seed = 1L, ci = FALSE),
+    "ssdsims_scenario"
+  )
+})
+
+test_that("scenario: ci = c(FALSE, TRUE) retains bootstrap knobs", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    seed = 1L,
+    ci = c(FALSE, TRUE),
+    nboot = c(100, 1000),
+    ci_method = "weighted_samples"
+  )
+  expect_identical(s$hc$ci, c(FALSE, TRUE))
+  expect_identical(s$hc$nboot, c(100, 1000))
+})
+
+# ---- argument validation ---------------------------------------------------
+
+test_that("scenario: invalid seed errors", {
+  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = c(1L, 2L)))
+  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = 1.5))
+  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = NULL))
+})
+
+test_that("scenario: out-of-range nrow errors", {
+  expect_error(ssd_define_scenario(ssddata::ccme_boron, seed = 1L, nrow = 4L))
+  expect_error(ssd_define_scenario(
+    ssddata::ccme_boron,
+    seed = 1L,
+    nrow = 1001L
+  ))
+})
+
+# ---- print method ----------------------------------------------------------
+
+test_that("scenario: print is stable for a single dataset", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 100L,
+    nrow = c(5L, 10L),
+    seed = 42L
+  )
+  expect_snapshot(print(s))
+})
+
+test_that("scenario: print is stable for multiple datasets", {
+  s <- ssd_define_scenario(
+    list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    nsim = 50L,
+    nrow = 6L,
+    seed = 1L,
+    ci = c(FALSE, TRUE),
+    nboot = c(100, 1000)
+  )
+  expect_snapshot(print(s))
+})

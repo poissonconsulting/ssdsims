@@ -87,12 +87,8 @@ When `ci = FALSE` is the only confidence-interval setting, `ssd_define_scenario(
 - **THEN** the function SHALL abort with an error
 
 ### Requirement: Scenario print method
-The package SHALL provide a `print.ssdsims_scenario()` method that renders the scenario's declarative fields and any recorded ignored-knob notice.
+The package SHALL provide a `print.ssdsims_scenario()` method that renders the scenario's declarative fields.
 
 #### Scenario: Print shows declarative fields
 - **WHEN** an `ssdsims_scenario` object is printed
 - **THEN** the output SHALL show the seed, dataset names, `nsim`, `nrow`, and the fit/hc argument grids
-
-#### Scenario: Print surfaces ignored knobs
-- **WHEN** a scenario constructed with `ci = FALSE` and explicit bootstrap knobs is printed
-- **THEN** the output SHALL indicate that the bootstrap-only knobs were ignored
