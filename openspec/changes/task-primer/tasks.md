@@ -8,7 +8,7 @@
 ## 2. Docs
 
 - [ ] 2.1 Roxygen for `task_primer()` with `@export`: document the length-2 integer primer, the 64-bit / NA-INT_MIN encoding, and that it pairs with `local_dqrng_state(seed, primer)` / `dqrng::dqset.seed(seed, stream = primer)`
-- [ ] 2.2 Document the canonical name-keyed input contract per step (data `(dataset, sim, replace)`; fit/hc identities + grid rows), `min_pmix` by name, `nrow` excluded — pointing to `task-tables` as where `params` is assembled
+- [ ] 2.2 Document the canonical name-keyed input contract per RNG-consuming step of #80's model (`sample` `(dataset, sim, replace)`; `fit`/`hc` parent identity + grid row, hc incl. `ci`; the `data` truncation is RNG-free, no primer), `min_pmix` by name — pointing to `task-tables` as where `params` is assembled
 - [ ] 2.3 `@seealso` `local_dqrng_state()`, `local_dqrng_backend()`; add to `_pkgdown.yml`
 
 ## 3. Tests and checks
@@ -16,7 +16,7 @@
 - [ ] 3.1 `tests/testthat/test-task-primer.R`: primer is a length-2 integer; deterministic/reproducible for identical `params`; differs for differing `params`
 - [ ] 3.2 Encoding tests: `0x80000000` slice ⇒ `NA_integer_`; other slices ⇒ signed int32; matches the `scripts/experiment-dqrng-hash.R` smoke values (`stream_a`/`stream_b`)
 - [ ] 3.3 dqrng round-trip (under a `local_dqrng_backend()` scope): same `(seed, params)` ⇒ identical draws; different `params` ⇒ different draws
-- [ ] 3.4 Caller-contract demonstration: building `params` with `min_pmix` by name gives stable primers across function-value changes, and omitting `nrow` gives equal primers for differing `nrow` (the contract is enforced/owned by `task-tables`, which builds `params`)
+- [ ] 3.4 Caller-contract demonstration: building `params` with `min_pmix` by name gives stable primers across function-value changes, and a `sample` `params` keyed `(dataset, sim, replace)` is `nrow`-free so the draw's primer is stable (the contract is enforced/owned by `task-tables`, which builds `params`)
 - [ ] 3.5 Stability guard: assert `task_primer()` matches a recorded primer for a fixed `params` (catches an unexpected `rlang::hash()` change)
 - [ ] 3.6 Row-normalisation tests: primer from a single-row tibble equals the primer from the unwrapped plain list; tibble attributes/list-columns do not affect it; a row with both a list-column and a df-column unwraps the former and keeps the latter
 - [ ] 3.7 Guard validation test: a multi-row data frame and a non-list/non-data-frame value each abort with the user-facing error

@@ -8,11 +8,11 @@
 
 - Exported `task_primer(params)` returning a length-2 integer primer, deterministic in `params`, suitable for `dqset.seed(seed, stream = .)`.
 - Internal `hex8_to_int32()` performing the signed-int32 conversion with the `0x80000000` → `NA_integer_` mapping (the §2 64-bit encoding).
-- Document the canonical, name-keyed hash-input contract per step and the `min_pmix`-by-name / `nrow`-excluded rules, so `task-tables` builds the right `params`.
+- Document the canonical, name-keyed hash-input contract per RNG-consuming step of #80's model (`sample`/`fit`/`hc`; the `data` truncation is RNG-free) and the `min_pmix`-by-name rule, so `task-tables` builds the right `params`.
 
 **Non-Goals:**
 
-- Building the `{data,fit,hc}_tasks` tables or deciding which columns exist (`task-list-loop-baseline`, `task-tables`).
+- Building the `sample`/`data`/`fit`/`hc` task tables or deciding which columns exist (`task-list-loop-baseline` #80, `task-tables`).
 - Calling `dqset.seed()` / installing the primer (`local-dqrng-state`) or wiring it into the per-task operations (`state-primitives`).
 - Activating the dqrng backend (`dqrng-init`).
 

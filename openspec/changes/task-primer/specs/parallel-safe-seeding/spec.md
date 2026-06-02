@@ -54,12 +54,13 @@ The package SHALL expose `task_primer(params)` returning a length-2 integer vect
 - **THEN** distinct task parameters SHALL yield distinct primers (no empirical collisions over the validated example set)
 
 ### Requirement: Canonical name-keyed hash input is a caller contract
-`task_primer()` normalises **structure** (attributes, list-column wrapping) but **not meaning** — it hashes whatever `params` it is given. The canonical, name-keyed representation SHALL therefore be assembled by the caller that builds `params` (the `task-tables` construction, `TARGETS-DESIGN.md` §1.2/§5), not enforced inside `task_primer()`: function-valued parameters (e.g. `min_pmix`) SHALL be referenced **by name**, not by function value, so a recompile or JIT does not change a task's primer; and `nrow` SHALL be omitted from a data task's `params`, because every `nrow` value is sub-truncation of the same `n_max`-row sample (§5). These scenarios SHALL be verified where `params` is built.
+`task_primer()` normalises **structure** (attributes, list-column wrapping) but **not meaning** — it hashes whatever `params` it is given. The canonical, name-keyed representation SHALL therefore be assembled by the caller that builds `params` (the `task-tables` construction over #80's task tables, `TARGETS-DESIGN.md` §1.2/§5), not enforced inside `task_primer()`. Per the four-step #80 model the RNG-consuming steps each take a primer over their task identity: the **`sample`** draw is keyed `(dataset, sim, replace)` only; the **`fit`** and **`hc`** tasks extend their parent identity with their argument-grid row (fit: `rescale`, `computable`, `at_boundary_ok`, `min_pmix` name, `range_shape1`, `range_shape2`; hc: `ci`, `nboot`, `est_method`, `ci_method`, `parametric`). The **`data`** truncation step is RNG-free (`head(sample, nrow)`) and SHALL NOT take a primer, so `nrow` never enters an RNG primer. Function-valued parameters (e.g. `min_pmix`) SHALL be referenced **by name**, not by function value, so a recompile or JIT does not change a task's primer. These scenarios SHALL be verified where `params` is built.
 
 #### Scenario: min_pmix referenced by name
 - **WHEN** a caller builds `params` referencing `min_pmix` by its name (a string) for two fit tasks whose underlying function *values* differ but whose names match
 - **THEN** the resulting primers SHALL be identical
 
-#### Scenario: nrow excluded from the data-task params
-- **WHEN** a caller builds two data-task `params` sharing `(dataset, sim, replace)` and omitting `nrow`
+#### Scenario: sample primer keyed by (dataset, sim, replace) only
+- **WHEN** a caller builds two `sample`-task `params` sharing `(dataset, sim, replace)` (the draw carries no `nrow` — the RNG-free `data` step truncates it later)
 - **THEN** the resulting primers SHALL be identical
+

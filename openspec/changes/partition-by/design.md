@@ -1,69 +1,83 @@
 ## Context
 
-`ssd-define-scenario` landed `partition_by` as a stored field with a `scenario_default_partition_by()` fallback, but its only validation is `chk::chk_null_or(partition_by, vld = chk::vld_list)`. Per `TARGETS-DESIGN.md` §5, `partition_by` decides the shard topology: a step's path axes become Hive directory levels (one shard per path cell, so `Π |path axis|` shards), and the remaining axes are inner Parquet columns. `task-tables` and `hive-partitioning` will consume this split. This change gives the knob a real contract before those consumers exist; it depends only on `ssd-define-scenario`.
+`ssd-define-scenario` landed `partition_by` as a stored field with a default fallback, but its only validation is `chk::chk_null_or(partition_by, vld = chk::vld_list)`. `task-list-loop-baseline` (#80) has since landed the four per-step task tables — `sample`, `data`, `fit`, `hc` — together with `task_axes(step)` (the cumulative cross-join axes per step) and `add_task_ids()`/`path_key()`, which mint a path-style `<step>_id` over **all** of a step's axes plus the parent's `<parent>_id` foreign key. Per `TARGETS-DESIGN.md` §5, `partition_by` generalises that fixed path key into a configurable one: a step's chosen path axes become Hive directory levels (one shard per path cell, `Π |path axis|` shards) and the rest are inner Parquet columns. This change gives the knob a real contract; `task-tables`/`hive-partitioning` then make `path_key()` key on the chosen subset.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Validate a supplied `partition_by` as a named list with `data`/`fit`/`hc` entries, each a subset of that step's documented axis vocabulary (§5), unique and non-missing.
-- Encode the per-step axis vocabulary as a single source of truth, and reject `nrow` (a sub-truncation column, never an axis) and unknown names.
-- Define and expose the path-vs-inner split via an internal accessor that `task-tables`/`hive-partitioning` will call.
-- Keep the documented §5 defaults as the `NULL` fallback; render path axes in `print()`.
+- Validate a supplied `partition_by` as a named list with `sample`/`data`/`fit`/`hc` entries (one per #80 step), each a subset of that step's `task_axes()`, unique and non-missing.
+- Reuse #80's `task_axes()` as the vocabulary source of truth (no second constant); reject `nrow` only for the `sample` step, and unknown names everywhere.
+- Validate parent-consistency so the `<parent>_id` foreign key stays well-defined.
+- Define and expose the path-vs-inner split via an internal accessor that `task-tables`/`hive-partitioning` call; supply four-step defaults as the `NULL` fallback; render path axes in `print()`.
 
 **Non-Goals:**
 
-- Building task tables, shards, Hive paths, or Parquet I/O — those are `task-list-loop-baseline`, `task-tables`, and `hive-partitioning`.
+- Changing `task_axes()`, the task tables, or `add_task_ids()`/`path_key()` themselves (those are #80, and the path-key-on-subset rewiring is `task-tables`/`hive-partitioning`).
+- Building shards, Hive paths, or Parquet I/O.
 - The end-to-end acceptance test that *changing* `partition_by` shifts file paths while per-task results stay byte-identical: it needs shards, so it lands with `hive-partitioning`. Here the contract is validated at the scenario level only.
-- Validating against *materialised* task-table columns (those don't exist yet); validation is against the documented axis vocabulary constant.
 
 ## Decisions
 
-### Decision: per-step axis vocabulary as a single internal constant
+### Decision: reuse #80's `task_axes()` as the vocabulary — do not duplicate
 
-Define one internal source of truth, e.g.
+`task-list-loop-baseline` already owns the per-step axis vocabulary as an internal `task_axes(step)` in `R/task-lists.R`:
 
 ```r
-scenario_axis_vocab <- function(step) {
-  data <- c("dataset", "sim", "replace")
-  fit  <- c(data, "rescale", "computable", "at_boundary_ok",
+sample <- c("dataset", "sim", "replace")
+data   <- c(sample, "nrow")
+fit    <- c(data, "rescale", "computable", "at_boundary_ok",
             "min_pmix", "range_shape1", "range_shape2")
-  hc   <- c(fit, "nboot", "est_method", "ci_method", "parametric")
-  switch(step, data = data, fit = fit, hc = hc)
-}
+hc     <- c(fit, "ci", "nboot", "est_method", "ci_method", "parametric")
 ```
 
-mirroring the §5 monotone grid (`data ⊆ fit ⊆ hc`). Both validation and the path/inner split read from it, so the vocabulary is defined once. *Why a constant rather than deriving from the not-yet-built task tables?* `partition-by` is upstream of `task-tables` in the DAG; deriving from task columns would invert the dependency. When `task-tables` lands it can assert its columns match this vocabulary, keeping the two in sync from the downstream side.
+`partition_by` validation and the path/inner split read from this same function, so there is exactly one source of truth and the earlier "duplicated constant could drift" risk is gone. *Why reuse rather than re-declare?* The two must agree by construction — they describe the same task tables — and #80 is the table author. (If `task_axes()` needs to be reachable cleanly, expose it package-internally; it is already defined in the same package.)
 
-### Decision: `partition_by` requires all three step entries when supplied
+### Decision: `nrow` is a real axis now; reject it only for the `sample` step
 
-If a user supplies `partition_by` at all, they supply the full `data`/`fit`/`hc` named list — we do not merge a partial override onto the defaults. *Why:* a partial merge hides which axes are path vs inner for the omitted steps and makes the stored field ambiguous to read back. Explicit-and-complete keeps the scenario self-describing. The all-or-nothing default (`NULL` → documented defaults) covers the common case. *Alternative considered:* per-step merge onto defaults; rejected for the ambiguity above. (If ergonomics demand it later, a `modifyList()`-on-defaults helper can be added without changing the stored contract.)
+#80 reorganises the §5 sub-truncation property *structurally*: the single random draw is the **`sample`** task (keyed `dataset, sim, replace`, carrying `n_max = max(nrow)`), and the **`data`** task is the RNG-free `head(sample, nrow)` truncation, where `nrow` is a genuine cross-join axis. So `nrow` is valid in `data`/`fit`/`hc` path axes and is rejected only under `sample` (which has no `nrow`), with a bespoke message pointing at the shared-draw rationale. This supersedes the draft's blanket "`nrow` is never an axis".
+
+### Decision: `partition_by` requires all four step entries when supplied
+
+If a user supplies `partition_by` at all, they supply the full `sample`/`data`/`fit`/`hc` named list — no partial merge onto defaults. *Why:* a partial merge hides which axes are path vs inner for the omitted steps and makes the stored field ambiguous to read back. Explicit-and-complete keeps the scenario self-describing; `NULL` → documented defaults covers the common case. *Alternative considered:* per-step merge onto defaults — rejected for that ambiguity (a `modifyList()`-on-defaults helper can be added later without changing the stored contract).
+
+### Decision: four-step defaults map §5 onto the sample/data split
+
+The §5 default table predates #80's `sample`/`data` split, so the defaults are restated for four steps. The old "data" default (the draw shard) becomes the **`sample`** default; the new **`data`** step groups all `nrow` truncations alongside their shared draw (so `nrow` defaults to an *inner* column, not a path level):
+
+```r
+sample = c("dataset", "sim", "replace")
+data   = c("dataset", "sim", "replace")   # nrow inner: one shard per draw
+fit    = c("dataset", "sim", "rescale")
+hc     = c("dataset", "sim")
+```
+
+*Why `nrow` inner by default?* The truncations of one draw are cheap and naturally co-located; sharding by `nrow` would scatter them. A user who wants per-`nrow` shards adds `"nrow"` to the `data` (and onward) path. This default is the main new judgement #80 forces and is the most likely thing the maintainer may want to tune.
 
 ### Decision: inner axes are the lazy complement, exposed via an accessor
-
-Rather than store the inner axes (redundant, drift-prone), compute them on demand:
 
 ```r
 scenario_partition_axes <- function(scenario, step) {
   path  <- scenario$partition_by[[step]]
-  inner <- setdiff(scenario_axis_vocab(step), path)
+  inner <- setdiff(task_axes(step), path)
   list(path = path, inner = inner)
 }
 ```
 
-This is the single accessor `task-tables`/`hive-partitioning` call. *Why an accessor over stored inner axes?* The path axes already fully determine the inner set; storing both invites inconsistency and bloats the manifest. Computing keeps `partition_by` the lone source of truth.
+The single accessor `task-tables`/`hive-partitioning` call. Storing only the path axes (and computing the inner complement) keeps `partition_by` the lone source of truth and the manifest compact. The path axes are exactly what a partition-aware `path_key()` will key on.
 
-### Decision: validate in the user-facing frame, axis-by-axis
+### Decision: validate in the user-facing frame, incl. parent-consistency
 
-Thread the constructor's `call` into a `validate_partition_by(partition_by, call)` helper. Loop over `c("data", "fit", "hc")` (a plain loop, not `purrr::walk`, per the error-origin convention) so the `Error in \`ssd_define_scenario()\`:` header is preserved. For each step: require the entry exists, is a character vector, is unique, non-`NA`, and `setdiff(entry, vocab)` is empty; `nrow` gets a bespoke message because it is the most likely mistake (it *looks* like a data axis but is sub-truncation).
+Thread the constructor's `call` into `validate_partition_by(partition_by, call)`. Loop over `c("sample", "data", "fit", "hc")` (a plain loop, not `purrr::walk`, per the error-origin convention). Per step: the entry exists, is a unique, non-`NA` character vector, and `setdiff(entry, task_axes(step))` is empty (`nrow`-under-`sample` gets the bespoke message). Then a **parent-consistency** check: for each non-root step, `intersect(path[[step]], task_axes(parent))` must be a subset of `path[[parent]]`, so a child shard maps to exactly one parent shard via `<parent>_id` (#80's `task_parent()` gives the chain `sample ← data ← fit ← hc`). Without it a child could be partitioned more finely on a shared axis than its parent, breaking the foreign-key join.
 
 ## Risks / Trade-offs
 
-- **Vocabulary duplicated between this constant and the future task tables** → drift if axis names change. Mitigation: `task-tables` asserts its column names are a superset of / match `scenario_axis_vocab()`; the constant is the upstream source and the test is the downstream guard.
-- **All-or-nothing `partition_by` is less ergonomic than a partial override** → users must restate defaults to tweak one step. Mitigation: documented defaults cover the common case; a merge helper can be added later without breaking the stored contract.
-- **Acceptance test deferred to `hive-partitioning`** → the headline "changing `partition_by` shifts shards, results byte-identical" property is not verified here. Mitigation: scope is explicit (knob contract only); the design records the deferral so `hive-partitioning` owns the end-to-end test.
-- **Spec base not yet archived** → `scenario-definition` lives in the sibling `ssd-define-scenario` change. The delta here is purely `ADDED` requirements, so it composes cleanly regardless of archive order.
+- **`task_axes()` is currently internal to #80** → reuse needs it reachable from `R/scenario.R`. Mitigation: same package, so a direct internal call works; if file-load order matters, keep both in the package namespace (no export needed).
+- **Parent-consistency rule adds validation surface** → more to get right and to explain. Mitigation: it is a single `subset` check per non-root step with a targeted error; tested directly (a child finer than its parent on a shared axis aborts).
+- **Restated defaults differ from the §5 table** → readers of §5 may expect three steps. Mitigation: the design and roxygen state the four-step defaults explicitly and note they supersede §5's pre-#80 table.
+- **Acceptance test deferred to `hive-partitioning`** → the headline "changing `partition_by` shifts shards, results byte-identical" property is not verified here. Mitigation: scope is explicit (knob contract only); `hive-partitioning` owns the end-to-end test once `path_key()` keys on the chosen subset.
 
 ## Open Questions
 
-- Should `min_pmix`, `range_shape1`, `range_shape2` be admissible **path** axes at all (they are list-valued / structured), or restricted to inner columns? Defaulting to admissible-as-path for now (a user could shard by `min_pmix` name); `hive-partitioning` may constrain this once it knows how list-valued axes serialise into a path segment. Flagged for that change.
+- **List-valued axes as path levels** (`min_pmix` name, `range_shape1/2`): #80's `path_key()` already renders list columns element-wise (`paste0(..., collapse = ",")`), so they *can* form a path segment — resolving the earlier doubt. Whether sharding by `range_shape1` is *useful* (vs. always inner) is a usage question `hive-partitioning` can revisit; the contract permits it.
+- **`replace` field on the scenario**: #80 reads `scenario$replace` (defaulting to `FALSE`). `replace` is in the `sample` vocabulary regardless; if a future `replace` knob lands on `ssd_define_scenario()` it flows through unchanged.
