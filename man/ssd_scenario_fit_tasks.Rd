@@ -10,16 +10,20 @@ ssd_scenario_fit_tasks(scenario)
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 }
 \value{
-An \code{ssdsims_tasks} object recording the
-\code{"fit"} step, with one row per data-task identity crossed with the fit grid.
+An \code{ssdsims_tasks} object recording the \code{"fit"} step, with one row per
+data-task identity crossed with the fit grid.
 }
 \description{
-Crosses each data-task identity (\code{dataset}, \code{sim}, \code{replace}, plus the carried
-\code{nrow}) with each row of the scenario's \code{fit} argument grid (\code{rescale},
-\code{computable}, \code{at_boundary_ok}, \code{min_pmix} name, \code{range_shape1},
-\code{range_shape2}). Parent-identity columns are preserved verbatim so the table
-can be grouped directly downstream. \code{min_pmix} is referenced by name, not by
-function value (\code{TARGETS-DESIGN.md} §1.1).
+Crosses each data-task identity (\code{dataset}, \code{sim}, \code{replace}, \code{nrow}) with
+each row of the scenario's \code{fit} argument grid (\code{rescale}, \code{computable},
+\code{at_boundary_ok}, \code{min_pmix} name, \code{range_shape1}, \code{range_shape2}).
+Parent-identity columns are preserved verbatim so the table can be grouped
+directly downstream. \code{min_pmix} is referenced by name, not by function value
+(\code{TARGETS-DESIGN.md} §1.1).
+}
+\details{
+Each row carries a \code{fit_id} primary key and a \code{data_id} foreign key
+referencing its parent data task.
 }
 \examples{
 scenario <- ssd_define_scenario(

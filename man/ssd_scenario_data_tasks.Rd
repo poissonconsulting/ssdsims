@@ -10,23 +10,26 @@ ssd_scenario_data_tasks(scenario)
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 }
 \value{
-An \code{ssdsims_tasks} object (a classed
-tibble recording the \code{"data"} step) with one row per \verb{(dataset, sim, replace)} cell and a carried \code{nrow} column.
+An \code{ssdsims_tasks} object recording the \code{"data"} step, with one row
+per \verb{(dataset, sim, replace, nrow)} cell.
 }
 \description{
-Expands an \code{ssdsims_scenario} into the \code{data} task table: one row per cell of
-the cross-join of the scenario's dataset names, replicate index (\code{1:nsim}),
-and \code{replace} values. The derivation performs no random-number generation and
-adds no \code{seed}/\code{primer}/\code{stream} columns (those arrive in later roadmap steps;
-see \code{TARGETS-DESIGN.md} §2).
+Crosses each sample-task identity (\code{dataset}, \code{sim}, \code{replace}) with the
+scenario's \code{nrow} values: each \code{data} task is the \code{head(sample, nrow)}
+truncation of its parent sample. Unlike the draw, this step is RNG-free, so
+\code{nrow} is an ordinary cross-join axis here (one truncation per size) without
+duplicating the underlying draw (\code{TARGETS-DESIGN.md} §5).
 }
 \details{
-\code{nrow} is carried as an ordinary (list) column, \strong{not} a cross-join axis:
-every \code{nrow} value is a sub-truncation of the same \code{n_max}-row draw, so the
-task count is not multiplied by the number of \code{nrow} values (\code{TARGETS-DESIGN.md}
-§5 / the \code{nrow-sub-truncation} roadmap step).
+Each row carries a \code{data_id} primary key and a \code{sample_id} foreign key
+referencing its parent sample task.
 }
 \examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  nrow = c(5L, 10L),
+  seed = 42L
+)
 ssd_scenario_data_tasks(scenario)
 }

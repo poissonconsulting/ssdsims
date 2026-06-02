@@ -10,9 +10,8 @@ ssd_scenario_hc_tasks(scenario)
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 }
 \value{
-An \code{ssdsims_tasks} object recording the
-\code{"hc"} step, with one row per fit-task identity crossed with the (collapsed)
-hc grid.
+An \code{ssdsims_tasks} object recording the \code{"hc"} step, with one row per
+fit-task identity crossed with the (collapsed) hc grid.
 }
 \description{
 Crosses each fit-task identity with each row of the scenario's \code{hc} argument
@@ -21,6 +20,10 @@ the construction-time \code{ci = FALSE} collapse (\code{TARGETS-DESIGN.md} §1.2
 where \code{ci = FALSE} are not multiplied across the bootstrap-only knobs
 (\code{nboot}, \code{ci_method}, \code{parametric}), which are stored as \code{NA}, while
 \code{ci = TRUE} rows fan out across the full grid.
+}
+\details{
+Each row carries an \code{hc_id} primary key and a \code{fit_id} foreign key
+referencing its parent fit task.
 }
 \examples{
 scenario <- ssd_define_scenario(
