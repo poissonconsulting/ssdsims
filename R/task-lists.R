@@ -150,9 +150,17 @@ ssd_scenario_tasks <- function(scenario) {
 #'
 #' This is the no-frills baseline: it runs in-process, with **no** `targets`
 #' dependency, **no** shard grouping or `partition_by`, and **no** Parquet I/O.
-#' It is also **not** reproducible - no per-task RNG seeding happens here (that
-#' arrives with the `primer-primitives` roadmap step); pin the ambient RNG (e.g.
-#' [withr::with_seed()]) for deterministic draws.
+#'
+#' It **is** reproducible without an external seed. The runner opens one
+#' [local_dqrng_backend()] scope and seeds each `sample`/`fit`/`hc` task exactly
+#' once through its `*_data_task_primer()` wrapper, with `seed = scenario$seed`
+#' and a per-task primer derived from the task's canonical identity
+#' ([task_primer()] over the `task_axes(step)` columns). Because each task's
+#' `(seed, primer)` pair fully determines its RNG starting point, two runs of a
+#' scenario with a fixed `seed` yield identical results, and a task's result is
+#' independent of the order in which tasks run. These same
+#' `*_data_task_primer()` wrappers are the per-task entry point a future
+#' `targets` shard body and the replay helper (`TARGETS-DESIGN.md` §7) reuse.
 #'
 #' The scenario retains the data frames it was built from, so the runner reads
 #' them directly - no separate `data` argument. `min_pmix` names are resolved
@@ -171,30 +179,41 @@ ssd_scenario_tasks <- function(scenario) {
 #'   seed = 42L,
 #'   dists = "lnorm"
 #' )
-#' withr::with_seed(42L, {
-#'   out <- ssd_run_scenario_baseline(scenario)
-#' })
+#' out <- ssd_run_scenario_baseline(scenario)
 #' out$hc
 ssd_run_scenario_baseline <- function(scenario) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   data <- scenario$data
+  seed <- scenario$seed
 
   tasks <- ssd_scenario_tasks(scenario)
 
-  # --- sample step: one draw of n_max rows per (dataset, sim, replace) ---
+  # One backend scope for the whole run; each task installs its own
+  # `(seed, primer)` once via its `*_data_task_primer()` wrapper, so results
+  # are reproducible and order-independent for a fixed `scenario$seed`.
+  local_dqrng_backend()
+
+  # --- sample step: one seeded draw of n_max rows per (dataset, sim, replace).
+  # The primer is keyed by the sample identity only (no `nrow`), so every
+  # `nrow` shares the one draw (TARGETS-DESIGN.md section 5).
   sample_tbl <- tasks$sample
   sample_tbl$sample <- purrr::pmap(
-    sample_tbl[c("dataset", "n_max", "replace")],
-    \(dataset, n_max, replace) {
-      dplyr::slice_sample(data[[dataset]], n = n_max, replace = replace)
+    list(
+      data = data[sample_tbl$dataset],
+      n_max = sample_tbl$n_max,
+      replace = sample_tbl$replace,
+      primer = task_primers(sample_tbl, "sample")
+    ),
+    \(data, n_max, replace, primer) {
+      sample_data_task_primer(data, n_max, replace, seed, primer)
     }
   )
   sample_out <- rlang::set_names(sample_tbl$sample, sample_tbl$sample_id)
 
   # --- fit step: truncate each parent sample to nrow (head, RNG-free), then
-  # fit against the fit-grid row. The fit-grid column names match
-  # `fit_data_task()`'s formals, so `pmap()` maps them by name; the inline
-  # truncation is just another column.
+  # seed and fit against the fit-grid row. The fit-grid column names match
+  # `fit_data_task_primer()`'s formals, so `pmap()` maps them by name; the
+  # inline truncation and the per-task primer are just more columns.
   fit_tbl <- tasks$fit
   fit_args <- fit_tbl[c(
     "rescale",
@@ -209,24 +228,41 @@ ssd_run_scenario_baseline <- function(scenario) {
     fit_tbl$nrow,
     \(sample_id, nrow) utils::head(sample_out[[sample_id]], nrow)
   )
+  fit_args$primer <- task_primers(fit_tbl, "fit")
   fit_tbl$fits <- purrr::pmap(
     fit_args,
-    fit_data_task,
-    dists = scenario$fit$dists
+    fit_data_task_primer,
+    dists = scenario$fit$dists,
+    seed = seed
   )
   fit_out <- rlang::set_names(fit_tbl$fits, fit_tbl$fit_id)
 
-  # --- hc step: estimate hc for each fit against its hc-grid row ----------
+  # --- hc step: seed then estimate hc for each fit against its hc-grid row ---
   hc_tbl <- tasks$hc
   hc_args <- hc_tbl[c("ci", "nboot", "est_method", "ci_method", "parametric")]
   hc_args$fits <- fit_out[hc_tbl$fit_id]
+  hc_args$primer <- task_primers(hc_tbl, "hc")
   hc_tbl$hc <- purrr::pmap(
     hc_args,
-    hc_data_task,
-    proportion = scenario$hc$proportion
+    hc_data_task_primer,
+    proportion = scenario$hc$proportion,
+    seed = seed
   )
 
   list(sample = sample_tbl, fit = fit_tbl, hc = hc_tbl)
+}
+
+# Per-task primers for a task table: hash each row's canonical name-keyed
+# identity (the `task_axes(step)` columns) via `task_primer()`. A plain loop
+# (not `purrr::map`) keeps internal frames out of any error header
+# (CLAUDE.md error-call-origin rule).
+task_primers <- function(tbl, step) {
+  axes <- task_axes(step)
+  primers <- vector("list", nrow(tbl))
+  for (i in seq_len(nrow(tbl))) {
+    primers[[i]] <- task_primer(tbl[i, axes])
+  }
+  primers
 }
 
 # ---- internal grid helpers -------------------------------------------------
@@ -353,7 +389,26 @@ add_task_ids <- function(tbl, step) {
   tbl
 }
 
-# ---- internal per-task operations (no RNG seeding) -------------------------
+# ---- internal per-task operations (state-less: no RNG seeding) -------------
+#
+# The dqrng-path per-task primitives come in two layers (primer-primitives,
+# TARGETS-DESIGN.md section 2):
+#
+#   * state-less ops -- `sample_data_task()` / `fit_data_task()` /
+#     `hc_data_task()` -- perform their operation against the *ambient* RNG and
+#     take no `seed`/`primer`/`state`/`stream` argument.
+#   * seed-and-run wrappers -- `*_data_task_primer()` -- install a per-task
+#     `(seed, primer)` once via `local_dqrng_state()` (assuming an active
+#     `local_dqrng_backend()`), then call the matching op.
+#
+# These supersede the legacy L'Ecuyer `slice_sample_state()` /
+# `fit_dists_state()` / `hc_state()` in `R/internal.R`, which keep their names
+# (and back the old `ssd_run_scenario()` path) until `cleanup-lecuyer`. dqrng is
+# the path forward; the legacy `*_state` family is removed in `cleanup-lecuyer`.
+
+sample_data_task <- function(data, n_max, replace) {
+  dplyr::slice_sample(data, n = n_max, replace = replace)
+}
 
 resolve_min_pmix <- function(name, call = rlang::caller_env()) {
   out <- rlang::env_get(rlang::ns_env("ssdtools"), name, default = NULL)
@@ -430,6 +485,70 @@ hc_data_task <- function(
       min_pboot = 0
     )
   }
+}
+
+# ---- seed-and-run wrappers (dqrng + primer) --------------------------------
+#
+# Each wrapper installs the per-task `(seed, primer)` exactly once via
+# `local_dqrng_state()` -- assuming an already-active `local_dqrng_backend()`
+# scope -- then runs the matching state-less op against the now-set ambient
+# RNG, leaving the surrounding RNG unchanged beyond that scope. `primer` is
+# computed by the caller (`task_primer()` over the task's canonical identity);
+# the wrappers are schema-agnostic. `local_dqrng_state()`'s second argument is
+# still named `state` (a leftover, renamed in a separate change); it carries
+# the primer.
+
+sample_data_task_primer <- function(data, n_max, replace, seed, primer) {
+  local_dqrng_state(seed, state = primer)
+  sample_data_task(data, n_max, replace)
+}
+
+fit_data_task_primer <- function(
+  data,
+  dists,
+  rescale,
+  computable,
+  at_boundary_ok,
+  min_pmix,
+  range_shape1,
+  range_shape2,
+  seed,
+  primer
+) {
+  local_dqrng_state(seed, state = primer)
+  fit_data_task(
+    data,
+    dists = dists,
+    rescale = rescale,
+    computable = computable,
+    at_boundary_ok = at_boundary_ok,
+    min_pmix = min_pmix,
+    range_shape1 = range_shape1,
+    range_shape2 = range_shape2
+  )
+}
+
+hc_data_task_primer <- function(
+  fits,
+  proportion,
+  ci,
+  nboot,
+  est_method,
+  ci_method,
+  parametric,
+  seed,
+  primer
+) {
+  local_dqrng_state(seed, state = primer)
+  hc_data_task(
+    fits,
+    proportion = proportion,
+    ci = ci,
+    nboot = nboot,
+    est_method = est_method,
+    ci_method = ci_method,
+    parametric = parametric
+  )
 }
 
 # ---- ssdsims_tasks S3 class ------------------------------------------------
