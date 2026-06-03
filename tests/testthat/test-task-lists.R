@@ -414,8 +414,9 @@ test_that("parallel-safe-seeding: state-less ops take no RNG argument", {
 test_that("parallel-safe-seeding: sub-truncation under seeding (replace FALSE and TRUE)", {
   local_dqrng_backend()
   data <- ssddata::ccme_boron
-  primer <- task_primer(list(dataset = "boron", sim = 1L))
   for (replace in c(FALSE, TRUE)) {
+    # Use the full sample identity (dataset, sim, replace) per the contract.
+    primer <- task_primer(list(dataset = "boron", sim = 1L, replace = replace))
     draw <- sample_data_task_primer(data, 10L, replace, 42L, primer)
     expect_identical(
       utils::head(draw, 3L),

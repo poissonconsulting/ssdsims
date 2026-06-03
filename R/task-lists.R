@@ -499,7 +499,7 @@ hc_data_task <- function(
 # the primer.
 
 sample_data_task_primer <- function(data, n_max, replace, seed, primer) {
-  local_dqrng_state(seed, state = primer)
+  local_dqrng_state(seed, primer = primer)
   sample_data_task(data, n_max, replace)
 }
 
@@ -515,7 +515,7 @@ fit_data_task_primer <- function(
   seed,
   primer
 ) {
-  local_dqrng_state(seed, state = primer)
+  local_dqrng_state(seed, primer = primer)
   fit_data_task(
     data,
     dists = dists,
@@ -539,7 +539,7 @@ hc_data_task_primer <- function(
   seed,
   primer
 ) {
-  local_dqrng_state(seed, state = primer)
+  local_dqrng_state(seed, primer = primer)
   hc_data_task(
     fits,
     proportion = proportion,

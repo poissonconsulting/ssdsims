@@ -37,7 +37,10 @@ canonical plain list -- the inverse of \code{tibble::tibble_row()} -- by droppin
 all attributes, unwrapping length-1 list-style columns to their element, and
 leaving df-style (nested data-frame) columns as data frames, before hashing.
 The primer is therefore identical whether derived from the row or from the
-equivalent plain list.
+equivalent plain list. Note that \code{rlang::hash()} is order-sensitive, so the
+plain list must use the \strong{same name order} as the task-table columns to
+reproduce the row's primer (assembling \code{params} in a canonical column order
+is part of the \code{task-tables} caller contract below).
 
 \code{task_primer()} normalises \strong{structure, not meaning}: it hashes whatever
 \code{params} it is given. The canonical, name-keyed representation is a caller

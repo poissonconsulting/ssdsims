@@ -68,7 +68,10 @@ normalize_task_row <- function(row) {
 #' all attributes, unwrapping length-1 list-style columns to their element, and
 #' leaving df-style (nested data-frame) columns as data frames, before hashing.
 #' The primer is therefore identical whether derived from the row or from the
-#' equivalent plain list.
+#' equivalent plain list. Note that `rlang::hash()` is order-sensitive, so the
+#' plain list must use the **same name order** as the task-table columns to
+#' reproduce the row's primer (assembling `params` in a canonical column order
+#' is part of the `task-tables` caller contract below).
 #'
 #' `task_primer()` normalises **structure, not meaning**: it hashes whatever
 #' `params` it is given. The canonical, name-keyed representation is a caller
