@@ -100,11 +100,15 @@ The most consequential design choices, with section refs:
   target, content-hashing skips re-uploading shards that did not
   change; `ssd_test_upload()` probes the backend at pipeline init,
   and the graph still builds and dry-runs with no credentials.
-- **One bad shard does not abort the run (§6.2).** Step targets
-  carry `error = "null"`: a branch that errors goes `NULL`,
-  `targets` records the error, and the pipeline keeps building so
-  `summary` unions the survivors. Errors are read from `tar_meta()`
-  *after* `tar_make()` returns (a target cannot call it mid-run).
+- **Partial failures survive and stay visible (§6.2).** A shard body
+  writes as many rows as ran successfully, so a bad task yields a
+  *shorter* shard, not an abort; the step target errors (and carries
+  `error = "null"`) only in exceptional cases. A downstream
+  `assert_<step>` target — sibling to `upload_<step>` — compares the
+  shard's row count to the expected count and goes red on any
+  shortfall, making incompleteness a first-class DAG node and the
+  refresh set a `tar_meta()` query (§8.4). Errors are read *after*
+  `tar_make()` returns (a target cannot call `tar_meta()` mid-run).
 - **Debug = task row + one upstream shard (§7).** Any failed branch
   replays locally with `local_dqrng_state(seed, primer)` + the
   immediate-upstream shard, no `targets` needed; the lightweight
@@ -1199,14 +1203,37 @@ mismatch flags a corrupted transfer.
 
 ### 6.2 Surviving a failed shard
 
-A single bad shard must not abort an N-shard cluster run. Every step
-target (and `upload_<step>`) carries `error = "null"`: a branch that
-errors has its value set to `NULL`, `targets` records the error in
-its metadata, and the rest of the pipeline keeps building, so
-`summary` unions the shards that did land instead of `tar_make()`
-halting on the first failure. An errored branch is always out of
-date, so a re-driven `tar_make()` after a fix retries only the failed
-shards (§8.4).
+A single bad shard must not abort an N-shard cluster run, and a single
+bad *task* must not lose the rest of its shard. The design splits those
+into two concerns — a tolerant producer and a separate completeness
+gate:
+
+- **The shard body writes as many rows as ran successfully.** Each
+  shard runs its K bundled tasks, keeps the survivors, and writes them
+  to the one Parquet; a task that fails is simply absent. A partial
+  failure therefore yields a *shorter* shard, not an error, so the step
+  target fails only in *exceptional* circumstances (the upstream shard
+  is unreadable, the worker OOMs, a package won't load). It carries at
+  most a light `error = "null"` for those catastrophic cases — the
+  ordinary partial-failure path no longer depends on it. `summary`
+  unions whatever rows did land.
+- **A downstream assertion target makes the shortfall visible.**
+  Sibling to `upload_<step>` (§6.1), each shard gets an `assert_<step>`
+  target that reads the shard file's row count and compares it to the
+  **expected** count — a pure function of the scenario's task table,
+  known when `_targets.R` is sourced and read from the Parquet *footer*
+  (no scan). It errors (goes red) on any mismatch, so completeness is a
+  first-class, coloured DAG node: green = full shard, red = short
+  shard, queryable via `tar_meta()` and visible in `tar_mermaid()`.
+  `assert_<step>` itself carries `error = "null"` so one red assert
+  does not abort the build. The expected count also catches *silent*
+  shape bugs (a join that drops rows), not just task failures.
+
+So "see partial shard failures clearly" is the assert layer's job;
+"keep going despite them" is the tolerant body's. An errored *shard*
+(the exceptional case) is always out of date, so a re-driven
+`tar_make()` after a fix retries it (§8.4); a short shard is found by
+its red `assert_<step>` (also §8.4).
 
 Two constraints, both confirmed by the targets lab's failure spike:
 
@@ -1228,31 +1255,32 @@ Two constraints, both confirmed by the targets lab's failure spike:
   muffles only that one expected warning rather than relaxing the
   global option.
 
-**The `NULL` must flow cleanly downstream.** A failed shard's value is
-`NULL`, and the targets immediately downstream — the `upload_<step>`
-target (§6.1) and the two manifests — have to tolerate it rather than
-choke. `ssd_upload_shard(NULL, ...)` records the shard as a skip
-instead of erroring, and the compute / upload manifests simply omit
-it; the survivors still upload and `summary` still unions them. A
-combined lab pipeline composed a construction-time-sized fan-out
-(static branching), this `error = "null"` handling, and the per-shard
-upload target, and found this `NULL`-tolerance in the upload and
-manifest helpers was the *only* glue the composition needed — and that
-once the failing branch is fixed under the §8.3 pin, only that one
-shard rebuilds, re-uploads, and is re-queried (a minimal re-run, not a
-full redo).
+**A short or `NULL` shard must flow cleanly downstream.** A shorter
+shard is still a valid Parquet, so `upload_<step>` ships it and the
+manifests record it as normal; only its `assert_<step>` goes red. In
+the exceptional case where the whole shard errors its value is `NULL`,
+and the immediate-downstream targets — `upload_<step>`, `assert_<step>`,
+and the two manifests — must tolerate that rather than choke:
+`ssd_upload_shard(NULL, ...)` records a skip, `assert_<step>` treats a
+missing file as zero rows (red), and the manifests omit it. A combined
+lab pipeline composed a construction-time-sized fan-out (static
+branching), this `error = "null"` handling, and the per-shard upload
+target, and found this tolerance in the upload and manifest helpers was
+the *only* glue the composition needed — and that once the failing
+branch is fixed under the §8.3 pin, only that one shard rebuilds,
+re-uploads, and is re-queried (a minimal re-run, not a full redo).
 
-**Two granularities of survival.** `error = "null"` is the
-*across-shard* guarantee: a whole shard that errors goes `NULL` and
-the others keep building. A two-layer sharding spike adds the
-complementary *within-shard* one: a shard tolerates *partial*
-computation failure — the shard body keeps the survivors and fails
-only if *every* computation in it fails, so one bad computation yields
-a smaller shard, not a failure. A step body that runs many tasks per
-shard should follow
-the same rule — drop the failed tasks, write the survivors, and only
-let the shard target itself error when *every* task in it failed — so
-`error = "null"` is reserved for genuine whole-shard loss.
+**Why split the producer from the assertion.** Folding the row-count
+check into the shard body would make a short shard *error*, which
+under `error = "null"` discards its hard-won survivor rows and, under
+the §8.3 pin, would also force a rebuild on the next `tar_make()`.
+Keeping the check in a separate downstream target lets the survivors
+persist and stay queryable while the red `assert_<step>` flags the gap
+— completeness is *reported*, not *enforced by destruction*. The cost
+is that an errored downstream assert does **not** invalidate its
+upstream shard, so refreshing a short shard is a deliberate step, not
+automatic; §8.4 shows how the runner drives that from the red-assert
+set.
 
 ---
 
@@ -1592,6 +1620,28 @@ Either way the patched code produces different bytes, so the
 rewritten shards' content hashes change and `summary` rebuilds from
 them (value-propagation, §8.2); the shards left alone stay cached.
 
+**Finding the set to refresh — the `assert_<step>` targets.** The hard
+part of this workflow used to be *naming* `failed_branch_names`: a
+short shard from a partial failure (§6.2) looks up to date to
+`targets`, so a code fix under the §8.3 pin will not recompute it on
+its own. The completeness asserts turn that list into a query — the
+short shards are exactly the red `assert_<step>` targets:
+
+```r
+short <- tar_meta(fields = "error") |>
+  dplyr::filter(!is.na(error), startsWith(name, "assert_"))
+tar_invalidate(names = sub("^assert_", "", short$name))  # the shard targets
+tar_make()                                                # only those recompute
+```
+
+The runner closes this loop automatically: `tar_make()`, read the red
+asserts, `tar_invalidate()` their shard targets, `tar_make()` again —
+a two-pass refresh that needs no hand-maintained shard list and works
+through the §8.3 pin (`tar_invalidate()` overrides it). A shard whose
+shortfall is *deterministic* (a task that errors on every run) stays
+red and is the signal to investigate, not to loop on; deciding when to
+stop re-running is the runner's policy, not the pipeline's.
+
 ### 8.5 Manifest contents
 
 Per-scenario manifest (a small JSON sidecar to the results
@@ -1832,12 +1882,27 @@ already ran end to end (see §4, §6). These steps are therefore
   branching**: the scenario is a plain construction-time object and
   `tar_map` mints one named target per shard (§6) — no
   `pattern = map` over a runtime target.
-- **`shard-failure-survival`** — §6.2 — step targets carry
-  `error = "null"` and `summary` unions the survivors; the runner
-  muffles only the expected end-of-pipeline "errored" warning under
-  `options(warn = 2)`. Test: a deterministically-failing shard
-  leaves the others built and the error readable via `tar_meta()`
-  after the run.
+- **`shard-failure-survival`** — §6.2 — the shard body writes as many
+  rows as ran successfully (a bad task yields a shorter shard, not an
+  abort); the step target carries `error = "null"` only for the
+  exceptional whole-shard case, and `summary` unions the survivors; the
+  runner muffles only the expected end-of-pipeline "errored" warning
+  under `options(warn = 2)`. Test: a deterministically-failing task
+  leaves a shorter shard and the other shards built; a deterministically
+  -failing whole shard leaves the others built and the error readable
+  via `tar_meta()` after the run.
+- **`shard-completeness-assert`** — §6.2 / §8.4 — a downstream
+  `assert_<step>` target per shard (sibling to `upload_<step>`) reads
+  the shard's row count from the Parquet footer and compares it to the
+  expected count derived from the task table; errors (red) on any
+  shortfall, itself under `error = "null"` so it does not abort the
+  build. The runner reads the red asserts to drive the §8.4
+  fix-and-refresh loop (`tar_invalidate()` the short shards, re-make).
+  Test: a short shard turns its assert red and a full shard leaves it
+  green; the runner's two-pass loop refreshes exactly the short shards
+  through a §8.3 pin. Depends on `task-tables` (for the expected count);
+  pairs with `cloud-upload` (same sibling-target shape) and `manifest`
+  (records expected-vs-actual per shard).
 - **`hive-partitioning`** — Write each per-task shard under a
   Hive-partitioned path (§6 layout). Smoke: duckplyr predicate
   pushdown returns the right subset without opening unrelated
@@ -1928,6 +1993,7 @@ flowchart TD
     hive[hive-partitioning]
     cluster[cluster-pipeline]
     survive[shard-failure-survival]
+    assert[shard-completeness-assert]
     cloud[cloud-upload]
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
@@ -1953,6 +2019,7 @@ flowchart TD
     tt --> replay
     tt --> rewrite
 
+    survive --> assert
     cluster --> survive
     rewrite --> lockin
     lockin --> cleanup
