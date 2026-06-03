@@ -275,6 +275,17 @@ function-generated dataset must fit in memory at registration; for
 large ones, generate directly to disk and register the resulting
 Parquet path.
 
+> **Current state (resolved in `scenario-input-types`).** Datasets are
+> tiny, so a generator is materialised **eagerly in the constructor**
+> (`ssd_data(..., .seed = NULL)`, seeded independently of the scenario
+> with the dataset *name* as the dqrng stream) and the realised tibble
+> is carried **inline on the scenario** — reproducible by being kept,
+> not by regeneration. The `registry` step then only *persists* what
+> the scenario already holds. The name-only-and-regenerate path
+> described above (hash the name, rebuild from a generator + its seed)
+> is the deferred `dataset-provenance` step (§12), taken only if a
+> dataset ever grows too large to transport inline.
+
 #### `min_pmix` registry
 
 ```r
@@ -1814,12 +1825,16 @@ already ran end to end (see §4, §6). These steps are therefore
   the remaining input types `ssd_run_scenario()` handles today —
   `fitdists`, `tmbfit`, a generator function, and a function-name string —
   not just data frames / lists of data frames. Each non-data-frame input
-  is a data *generator*: the constructor derives a dataset name (by symbol
-  capture, as for data frames) and records the generator by name, storing
-  no function bodies; the data itself is materialised by `registry`
-  (synthetic datasets are realised at registration time, §1.1), keeping the
-  scenario declarative. Until this lands, `ssd_define_scenario()` is
-  data-frame-only — a documented gap vs. `ssd_run_scenario()`.
+  is a data *generator*, **materialised once in the constructor** to an
+  inline tibble (datasets are tiny; the scenario transports the realised
+  bytes). Generation is seeded **independently of the scenario** by a
+  dedicated `ssd_data(..., .seed = NULL)`, with the dataset *name* as the
+  dqrng stream, under a dqrng-only contract enforced by a post-hoc
+  RNG-state check (base R aborts; dqrng needs `.seed`; pure needs none);
+  the scoped run leaves global `.Random.seed` unchanged. **Depends on**
+  `task-primer` / `local-dqrng-state` (for the scoped, name-streamed
+  draw). Name-only regeneration and provenance are the deferred
+  `dataset-provenance` step.
 - **`task-list-loop-baseline`** — Derive three task lists (data,
   fit, hc rows; one column per cross-join axis; no RNG, no shards,
   no targets) from a scenario, and a runner that is just three
@@ -1862,11 +1877,13 @@ already ran end to end (see §4, §6). These steps are therefore
 - **`registry`** — **Targets-only**: an implicit registry of the
   scenario's *named* entries, implemented as `tar_target`s that resolve
   each name once per project — datasets to a Parquet file
-  (`results/datasets/<name>.parquet` from the `ssd_define_scenario()`
-  input; synthetic datasets realised here at registration time), and
-  `min_pmix` functions to a pinned per-run function value. One step,
-  not two, because both are the same name-only indirection (§1.1) and
-  differ only in the resolved payload. Function-name / body edits don't
+  (`results/datasets/<name>.parquet`) and `min_pmix` functions to a
+  pinned per-run function value. One step, not two, because both are the
+  same name-only indirection (§1.1) and differ only in the resolved
+  payload. Note: since `scenario-input-types` materialises generator
+  datasets **in the constructor** (inline on the scenario), the dataset
+  side of `registry` *persists* the tibble the scenario already
+  carries — it does not regenerate. Function-name / body edits don't
   enter task hashes because the scenario refers to both by name.
   Regression test: a body edit to a registered `min_pmix` function does
   not move the hash of any cached fit branch.
@@ -1951,6 +1968,17 @@ already ran end to end (see §4, §6). These steps are therefore
   check). Not on the dependency DAG — it can land at any time; the
   `ssd-define-scenario` work already follows the convention (see the
   repo `CLAUDE.md` "Error origin" note).
+- **`dataset-provenance`** — *Independent, deferred until much later;
+  not on the dependency DAG.* The decoupling `scenario-input-types`
+  defers: stop transporting generated datasets inline and instead store
+  only the name + generator reference + `.seed`, regenerating the tibble
+  in `registry` from that provenance (the name-only path sketched in
+  §1.1). Until a real dataset is large enough to make inline transport
+  heavy, the **generator code is the provenance** and the realised bytes
+  ride on the scenario; this step is the escape hatch, not a near-term
+  need. Tracking the *execution environment* (R / package versions) is
+  explicitly **out of scope** — the §9 manifest's version pins cover the
+  reproducibility contract.
 
 ### Cleanup
 
@@ -2003,6 +2031,7 @@ flowchart TD
     define --> baseline
     define --> partby
     define --> inputs
+    primer --> inputs
     inputs --> reg
     dqinit --> dqstate
     dqstate --> primer
