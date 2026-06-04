@@ -249,6 +249,8 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 
 The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged.
 
+**Keep the roadmap and its Mermaid graph (TARGETS-DESIGN.md §12) up to date as part of each change** — add/rename nodes and edges when a change is proposed, and update each node's status colour as it progresses: **green = archived, yellow = done** (implemented, not yet archived), **red = proposed** (artifacts exist, not implemented), **unfilled = open** (roadmap only). The colours are Mermaid `classDef`s applied via `class` lines at the foot of the graph.
+
 ## Contact & Contribution
 
 - **Issues & PRs**: GitHub (poissonconsulting/ssdsims).

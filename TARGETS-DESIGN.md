@@ -2172,7 +2172,25 @@ flowchart TD
     lockin --> cleanup
 
     prims -.-> migrate
+
+    %% --- node status colouring (keep in sync as each change progresses) ---
+    %% green = archived, yellow = done (implemented, not yet archived),
+    %% red = proposed (artifacts exist, not implemented), unfilled = open (roadmap only)
+    classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
+    classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
+    classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
+    classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
+
+    class define,baseline,dqinit,dqstate,primer,prims archived
+    class acc,partby,tt,shardrun done
+    class inputs,manif proposed
+    class migrate,hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,lockin,cleanup open
 ```
+
+**Node colours track each step's status** — green = archived, yellow = done
+(implemented, not yet archived), red = proposed (artifacts exist, not yet
+implemented), unfilled = open (roadmap only). Keep the colouring in sync as
+changes progress.
 
 `migrate-public-api` hangs off `primer-primitives` with a **dashed,
 non-gating** edge and **no dependants**: trusting the design, it is a
