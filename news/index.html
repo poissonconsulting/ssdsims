@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9010</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9011</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,39 @@
       <small>Source: <a href="https://github.com/poissonconsulting/ssdsims/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9011" id="ssdsims-0009011">ssdsims 0.0.0.9011<a class="anchor" aria-label="anchor" href="#ssdsims-0009011"></a></h2>
+<div class="section level3">
+<h3 id="features-0-0-0-9011">Features<a class="anchor" aria-label="anchor" href="#features-0-0-0-9011"></a></h3>
+<ul><li><p>Fold the <code>data</code> task step into <code>fit</code>; propose partitioning/RNG roadmap changes (<a href="https://github.com/poissonconsulting/ssdsims/issues/79" class="external-link">#79</a>).</p></li>
+<li><p>Task-table derivation, baseline runner, and grouped pkgdown reference (<a href="https://github.com/poissonconsulting/ssdsims/issues/82" class="external-link">#82</a>).</p></li>
+<li><p>Derive task tables and baseline loop runner from a scenario (<a href="https://github.com/poissonconsulting/ssdsims/issues/80" class="external-link">#80</a>).</p></li>
+<li><p>Add <code><a href="../reference/local_dqrng_state.html">local_dqrng_state()</a></code> and <code><a href="../reference/local_dqrng_state.html">with_dqrng_state()</a></code> helpers (<a href="https://github.com/poissonconsulting/ssdsims/issues/78" class="external-link">#78</a>).</p></li>
+<li><p>Reentrant <code><a href="../reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> + propose <code>task-list-loop-baseline</code> and <code>local-dqrng-state</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/74" class="external-link">#74</a>).</p></li>
+<li><p>Add declarative <code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> and <code><a href="../reference/ssd_data.html">ssd_data()</a></code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/71" class="external-link">#71</a>).</p></li>
+<li><p>Add scenario-scoped dqrng <code>pcg64</code> RNG backend (dqrng-init) (<a href="https://github.com/poissonconsulting/ssdsims/issues/72" class="external-link">#72</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="chore-0-0-0-9011">Chore<a class="anchor" aria-label="anchor" href="#chore-0-0-0-9011"></a></h3>
+<ul><li><p>Rename <code>CLAUDE.md</code> to <code>AGENTS.md</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/86" class="external-link">#86</a>).</p></li>
+<li><p>Sync <code>task-lists</code> spec and archive <code>task-list-loop-baseline-fold</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/85" class="external-link">#85</a>).</p></li>
+<li><p>Cleanup.</p></li>
+<li><p>Sync and archive <code>local-dqrng-state</code> change (<a href="https://github.com/poissonconsulting/ssdsims/issues/81" class="external-link">#81</a>).</p></li>
+<li><p>Sync specs and archive <code>ssd-define-scenario</code> and <code>dqrng-init</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/77" class="external-link">#77</a>).</p></li>
+<li><p>Initialize OpenSpec with foundational proposals and developer guide (<a href="https://github.com/poissonconsulting/ssdsims/issues/53" class="external-link">#53</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-0-0-0-9011">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-0-0-9011"></a></h3>
+<ul><li><p>Add scenario-definition example script and Quarto vignette (<a href="https://github.com/poissonconsulting/ssdsims/issues/83" class="external-link">#83</a>).</p></li>
+<li><p>Expand development workflow and coding guidelines (<a href="https://github.com/poissonconsulting/ssdsims/issues/76" class="external-link">#76</a>).</p></li>
+<li><p>Add OpenSpec onboarding and workflow skills (<a href="https://github.com/poissonconsulting/ssdsims/issues/75" class="external-link">#75</a>).</p></li>
+<li><p>Add design for targets-based pipeline (<a href="https://github.com/poissonconsulting/ssdsims/issues/67" class="external-link">#67</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="refactoring-0-0-0-9011">Refactoring<a class="anchor" aria-label="anchor" href="#refactoring-0-0-0-9011"></a></h3>
+<ul><li>Rename <code>state</code> argument to <code>primer</code> in <code><a href="../reference/local_dqrng_state.html">local_dqrng_state()</a></code>/<code><a href="../reference/local_dqrng_state.html">with_dqrng_state()</a></code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/84" class="external-link">#84</a>).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9010" id="ssdsims-0009010">ssdsims 0.0.0.9010<a class="anchor" aria-label="anchor" href="#ssdsims-0009010"></a></h2>
 <div class="section level3">

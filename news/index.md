@@ -1,5 +1,79 @@
 # Changelog
 
+## ssdsims 0.0.0.9011
+
+### Features
+
+- Fold the `data` task step into `fit`; propose partitioning/RNG roadmap
+  changes
+  ([\#79](https://github.com/poissonconsulting/ssdsims/issues/79)).
+
+- Task-table derivation, baseline runner, and grouped pkgdown reference
+  ([\#82](https://github.com/poissonconsulting/ssdsims/issues/82)).
+
+- Derive task tables and baseline loop runner from a scenario
+  ([\#80](https://github.com/poissonconsulting/ssdsims/issues/80)).
+
+- Add
+  [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
+  and
+  [`with_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
+  helpers
+  ([\#78](https://github.com/poissonconsulting/ssdsims/issues/78)).
+
+- Reentrant
+  [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md) +
+  propose `task-list-loop-baseline` and `local-dqrng-state`
+  ([\#74](https://github.com/poissonconsulting/ssdsims/issues/74)).
+
+- Add declarative
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
+  and
+  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
+  ([\#71](https://github.com/poissonconsulting/ssdsims/issues/71)).
+
+- Add scenario-scoped dqrng `pcg64` RNG backend (dqrng-init)
+  ([\#72](https://github.com/poissonconsulting/ssdsims/issues/72)).
+
+### Chore
+
+- Rename `CLAUDE.md` to `AGENTS.md`
+  ([\#86](https://github.com/poissonconsulting/ssdsims/issues/86)).
+
+- Sync `task-lists` spec and archive `task-list-loop-baseline-fold`
+  ([\#85](https://github.com/poissonconsulting/ssdsims/issues/85)).
+
+- Cleanup.
+
+- Sync and archive `local-dqrng-state` change
+  ([\#81](https://github.com/poissonconsulting/ssdsims/issues/81)).
+
+- Sync specs and archive `ssd-define-scenario` and `dqrng-init`
+  ([\#77](https://github.com/poissonconsulting/ssdsims/issues/77)).
+
+- Initialize OpenSpec with foundational proposals and developer guide
+  ([\#53](https://github.com/poissonconsulting/ssdsims/issues/53)).
+
+### Documentation
+
+- Add scenario-definition example script and Quarto vignette
+  ([\#83](https://github.com/poissonconsulting/ssdsims/issues/83)).
+
+- Expand development workflow and coding guidelines
+  ([\#76](https://github.com/poissonconsulting/ssdsims/issues/76)).
+
+- Add OpenSpec onboarding and workflow skills
+  ([\#75](https://github.com/poissonconsulting/ssdsims/issues/75)).
+
+- Add design for targets-based pipeline
+  ([\#67](https://github.com/poissonconsulting/ssdsims/issues/67)).
+
+### Refactoring
+
+- Rename `state` argument to `primer` in
+  [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)/[`with_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
+  ([\#84](https://github.com/poissonconsulting/ssdsims/issues/84)).
+
 ## ssdsims 0.0.0.9010
 
 ### Chore

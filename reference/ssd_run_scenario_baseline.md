@@ -34,11 +34,21 @@ results (`sample` draws, `fits` objects, and `hc` tibbles).
 
 This is the no-frills baseline: it runs in-process, with **no**
 `targets` dependency, **no** shard grouping or `partition_by`, and
-**no** Parquet I/O. It is also **not** reproducible - no per-task RNG
-seeding happens here (that arrives with the `primer-primitives` roadmap
-step); pin the ambient RNG (e.g.
-[`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html))
-for deterministic draws.
+**no** Parquet I/O.
+
+It **is** reproducible without an external seed. The runner opens one
+[`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md)
+scope and seeds each `sample`/`fit`/`hc` task exactly once through its
+`*_data_task_primer()` wrapper, with `seed = scenario$seed` and a
+per-task primer derived from the task's canonical identity
+([`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md)
+over the `task_axes(step)` columns). Because each task's
+`(seed, primer)` pair fully determines its RNG starting point, two runs
+of a scenario with a fixed `seed` yield identical results, and a task's
+result is independent of the order in which tasks run. These same
+`*_data_task_primer()` wrappers are the per-task entry point a future
+`targets` shard body and the replay helper (`TARGETS-DESIGN.md` §7)
+reuse.
 
 The scenario retains the data frames it was built from, so the runner
 reads them directly - no separate `data` argument. `min_pmix` names are
@@ -54,9 +64,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   dists = "lnorm"
 )
-withr::with_seed(42L, {
-  out <- ssd_run_scenario_baseline(scenario)
-})
+out <- ssd_run_scenario_baseline(scenario)
 out$hc
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric

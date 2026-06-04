@@ -17,7 +17,7 @@ it just threads outputs forward and returns the collected per-step results."></h
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9010</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9011</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -78,10 +78,17 @@ corresponding task table augmented with a list column of per-task results
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>This is the no-frills baseline: it runs in-process, with <strong>no</strong> <code>targets</code>
-dependency, <strong>no</strong> shard grouping or <code>partition_by</code>, and <strong>no</strong> Parquet I/O.
-It is also <strong>not</strong> reproducible - no per-task RNG seeding happens here (that
-arrives with the <code>primer-primitives</code> roadmap step); pin the ambient RNG (e.g.
-<code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::with_seed()</a></code>) for deterministic draws.</p>
+dependency, <strong>no</strong> shard grouping or <code>partition_by</code>, and <strong>no</strong> Parquet I/O.</p>
+<p>It <strong>is</strong> reproducible without an external seed. The runner opens one
+<code><a href="local_dqrng_backend.html">local_dqrng_backend()</a></code> scope and seeds each <code>sample</code>/<code>fit</code>/<code>hc</code> task exactly
+once through its <code>*_data_task_primer()</code> wrapper, with <code>seed = scenario$seed</code>
+and a per-task primer derived from the task's canonical identity
+(<code><a href="task_primer.html">task_primer()</a></code> over the <code>task_axes(step)</code> columns). Because each task's
+<code>(seed, primer)</code> pair fully determines its RNG starting point, two runs of a
+scenario with a fixed <code>seed</code> yield identical results, and a task's result is
+independent of the order in which tasks run. These same
+<code>*_data_task_primer()</code> wrappers are the per-task entry point a future
+<code>targets</code> shard body and the replay helper (<code>TARGETS-DESIGN.md</code> §7) reuse.</p>
 <p>The scenario retains the data frames it was built from, so the runner reads
 them directly - no separate <code>data</code> argument. <code>min_pmix</code> names are resolved
 against <code>ssdtools</code> until the registry roadmap step lands.</p>
@@ -96,9 +103,7 @@ against <code>ssdtools</code> until the registry roadmap step lands.</p>
 <span class="r-in"><span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span></span>
 <span class="r-in"><span>  dists <span class="op">=</span> <span class="st">"lnorm"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">withr</span><span class="fu">::</span><span class="fu"><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">with_seed</a></span><span class="op">(</span><span class="fl">42L</span>, <span class="op">{</span></span></span>
-<span class="r-in"><span>  <span class="va">out</span> <span class="op">&lt;-</span> <span class="fu">ssd_run_scenario_baseline</span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu">ssd_run_scenario_baseline</span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ssdsims_tasks: hc&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span>

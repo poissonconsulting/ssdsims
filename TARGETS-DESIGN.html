@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9010</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9011</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -184,7 +184,7 @@
 <td align="right">1000</td>
 <td align="left">weighted_samples</td>
 <td align="left">TRUE</td>
-</tr></tbody></table><p>The hash of an <code>NA</code>-bearing row is well-defined as long as <code>NA</code> is encoded canonically — <code>task_primer()</code> does this via <code><a href="https://rlang.r-lib.org/reference/hash.html" class="external-link">rlang::hash()</a></code> on the named list. The collapse therefore stops phantom streams from being allocated to combinations that don’t exist in practice.</p>
+</tr></tbody></table><p>The hash of an <code>NA</code>-bearing row is well-defined as long as <code>NA</code> is encoded canonically — <code><a href="reference/task_primer.html">task_primer()</a></code> does this via <code><a href="https://rlang.r-lib.org/reference/hash.html" class="external-link">rlang::hash()</a></code> on the named list. The collapse therefore stops phantom streams from being allocated to combinations that don’t exist in practice.</p>
 <hr></div>
 </div>
 <div class="section level2">
@@ -192,7 +192,7 @@
 <p>Validated by <code>scripts/experiment-dqrng-hash.R</code>. Each task (= row of a <code>{data,fit,hc}_tasks</code> table) gets its own <strong>primer</strong>, a length-2 integer derived from the hash of its task parameters. The scenario carries a single integer <code>seed</code>; per-task RNG is configured by passing the primer into dqrng’s <code>stream</code> argument:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">dqrng</span><span class="fu">::</span><span class="fu"><a href="https://daqana.github.io/dqrng/reference/dqrng-functions.html" class="external-link">dqset.seed</a></span><span class="op">(</span>seed   <span class="op">=</span> <span class="va">scenario</span><span class="op">$</span><span class="va">seed</span>,</span>
-<span>                  stream <span class="op">=</span> <span class="fu">task_primer</span><span class="op">(</span><span class="va">task_params</span><span class="op">)</span><span class="op">)</span>   <span class="co"># task's primer</span></span></code></pre></div>
+<span>                  stream <span class="op">=</span> <span class="fu"><a href="reference/task_primer.html">task_primer</a></span><span class="op">(</span><span class="va">task_params</span><span class="op">)</span><span class="op">)</span>   <span class="co"># task's primer</span></span></code></pre></div>
 <p>A <strong>primer</strong> is the value that, together with <code>seed</code>, fully specifies an RNG instance’s starting point — see GLOSSARY.md. For the dqrng path it is a 64-bit integer (length-2 int); for the legacy L’Ecuyer-CMRG path it was the length-7 state vector. The function argument <code>state =</code> of <code>slice_sample_state()</code>, <code>fit_dists_state()</code>, <code>hc_state()</code> carries the primer; the <code>_state</code> suffix reflects that the function <em>installs the primer as the running state</em> before its body executes.</p>
 <p>(The dqrng API parameter happens to be named <code>stream</code> — that name belongs to dqrng, not to ssdsims. In our terminology the value passed there is a primer.)</p>
 <p>where <code>task_primer(p)</code> is a length-2 integer vector packing <strong>64 bits</strong> of <code>rlang::hash(p)</code>:</p>
@@ -959,7 +959,7 @@
 <div class="section level3">
 <h3 id="dqrngregister_methods-is-scoped-per-scenario-execution">
 <code>dqrng::register_methods()</code> is scoped per scenario execution<a class="anchor" aria-label="anchor" href="#dqrngregister_methods-is-scoped-per-scenario-execution"></a></h3>
-<p>Each scenario execution (via <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> or a cluster step) installs dqrng as the base R RNG backend at entry and restores on exit via <code>on.exit(restore_methods())</code>. Tests and helper scripts that touch the methods mid-session (not inside a scenario runner) use the same <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code> discipline — documented in CLAUDE.md (§RNG discipline).</p>
+<p>Each scenario execution (via <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> or a cluster step) installs dqrng as the base R RNG backend at entry and restores on exit via <code>on.exit(restore_methods())</code>. Tests and helper scripts that touch the methods mid-session (not inside a scenario runner) use the same <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code> discipline — documented in AGENTS.md (§RNG discipline).</p>
 <hr></div>
 </div>
 <div class="section level2">
@@ -1068,7 +1068,7 @@
 <li>
 <strong><code>cleanup-lecuyer</code></strong> — Remove the L’Ecuyer-CMRG helpers and the <code>_seed</code> shims; <code>scripts/experiment-substream-restart.R</code> becomes a historical reference.</li>
 <li>
-<strong><code>error-call-origin</code></strong> — <em>Cosmetic, independent of the rest.</em> Audit every user-facing function so its validation errors report the <strong>calling function</strong> as the origin (<code>Error in \</code>ssd_<em>()`:<code>), never an internal frame (</code>purrr::map()<code>,</code>lapply()<code>, a private helper). Thread the public frame into validators (</code>chk::abort_chk(…, call = call)<code>with</code>call = environment()<code>), and prefer plain loops over</code>purrr::walk<code>/</code>chk::chk_all<code>where those wrappers would surface in the error header. May need upstream</code>chk<code>changes (e.g. a</code>call<code>/</code>error_call<code>argument on</code>chk_</em>()<code>so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the</code>ssd-define-scenario<code>work already follows the convention (see the repo</code>CLAUDE.md` “Error origin” note).</li>
+<strong><code>error-call-origin</code></strong> — <em>Cosmetic, independent of the rest.</em> Audit every user-facing function so its validation errors report the <strong>calling function</strong> as the origin (<code>Error in \</code>ssd_<em>()`:<code>), never an internal frame (</code>purrr::map()<code>,</code>lapply()<code>, a private helper). Thread the public frame into validators (</code>chk::abort_chk(…, call = call)<code>with</code>call = environment()<code>), and prefer plain loops over</code>purrr::walk<code>/</code>chk::chk_all<code>where those wrappers would surface in the error header. May need upstream</code>chk<code>changes (e.g. a</code>call<code>/</code>error_call<code>argument on</code>chk_</em>()<code>so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the</code>ssd-define-scenario<code>work already follows the convention (see the repo</code>AGENTS.md` “Error origin” note).</li>
 </ul><div class="section level3">
 <h3 id="cleanup">Cleanup<a class="anchor" aria-label="anchor" href="#cleanup"></a></h3>
 <p>Independent tidy-ups with no dependants — each can land at any time and is <strong>not</strong> on the dependency DAG. Grown as review turns up small public-API or ergonomics gaps.</p>

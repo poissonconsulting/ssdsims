@@ -176,7 +176,7 @@ helpers). - Test for `.Random.seed` being unchanged before and after
 
 ### Testing
 
-Test-suite conventions live in **`tests/testthat/CLAUDE.md`** —
+Test-suite conventions live in **`tests/testthat/AGENTS.md`** —
 file/naming rules, error/warning and snapshot style, and RNG seeding.
 Read that before writing tests.
 
@@ -191,7 +191,7 @@ Read that before writing tests.
   never edit `man/` or `NAMESPACE` by hand.
 - Whenever you add a new (non-internal) topic, add it to `_pkgdown.yml`
   and confirm with
-  [`pkgdown::check_pkgdown()`](https://pkgdown.r-lib.org/reference/check_pkgdown.html).
+  [`pkgdown::check_pkgdown()`](https://rdrr.io/pkg/pkgdown/man/check_pkgdown.html).
 - Examples in `@examples` are part of the spec — keep them small and
   runnable.
 
@@ -265,7 +265,7 @@ See `DESCRIPTION` for versions and imports.
 
 ### Add a new test file
 
-See **`tests/testthat/CLAUDE.md`** for the full test-suite conventions
+See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
 (file/naming, expectations, snapshots, RNG seeding).
 
 ### Update package version and news

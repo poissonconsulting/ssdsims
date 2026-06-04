@@ -41,6 +41,8 @@ and estimate hazard concentrations across simulations, end to end.
 Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash
 backend (targets path) and L’Ecuyer-CMRG sub-streams (legacy path).
 
+- [`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md)
+  : Derive a Per-task Primer from its Parameters
 - [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md)
   : Local dqrng pcg64 Backend
 - [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)

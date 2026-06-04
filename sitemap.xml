@@ -1,6 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://poissonconsulting.github.io/ssdsims/404.html</loc></url>
-<url><loc>https://poissonconsulting.github.io/ssdsims/CLAUDE.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/AGENTS.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/CONTRIBUTING.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/GLOSSARY.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/LICENSE-text.html</loc></url>
@@ -30,5 +30,6 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssdsims-package.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/task_primer.html</loc></url>
 </urlset>
 

@@ -358,16 +358,17 @@ order, threading each task’s result forward to its children by the
 foreign-key id. It runs **in-process**, with no `targets`, no shard
 grouping, and no Parquet I/O.
 
-It is also **not reproducible on its own** — no per-task RNG seeding
-happens yet (that arrives with the `primer-primitives` roadmap step).
-The runner draws from the *ambient* RNG, so pin it for a deterministic
-local run:
+It **is reproducible without an external seed**: the runner opens one
+[`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md)
+scope and seeds each task exactly once from `scenario$seed` plus a
+per-task primer
+([`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md)
+over the task’s identity), so two runs of a scenario with a fixed `seed`
+yield identical results, regardless of the order in which tasks run:
 
 ``` r
 
-withr::with_seed(42L, {
-  out <- ssd_run_scenario_baseline(scenario)
-})
+out <- ssd_run_scenario_baseline(scenario)
 names(out)
 #> [1] "sample" "fit"    "hc"
 ```
@@ -417,16 +418,16 @@ hcs[c("dataset", "sim", "nrow", "ci", "hc_proportion", "hc_est")]
 #> # A tibble: 108 × 6
 #>    dataset   sim  nrow ci    hc_proportion hc_est
 #>    <chr>   <int> <int> <lgl>         <dbl>  <dbl>
-#>  1 boron       1     5 FALSE          0.05   2.05
-#>  2 boron       1     5 FALSE          0.2    6.37
-#>  3 boron       1     5 TRUE           0.05   2.05
-#>  4 boron       1     5 TRUE           0.2    6.37
-#>  5 boron       1     5 TRUE           0.05   2.05
-#>  6 boron       1     5 TRUE           0.2    6.37
-#>  7 boron       1    10 FALSE          0.05   2.80
-#>  8 boron       1    10 FALSE          0.2    8.56
-#>  9 boron       1    10 TRUE           0.05   2.80
-#> 10 boron       1    10 TRUE           0.2    8.56
+#>  1 boron       1     5 FALSE          0.05   2.65
+#>  2 boron       1     5 FALSE          0.2    6.54
+#>  3 boron       1     5 TRUE           0.05   2.65
+#>  4 boron       1     5 TRUE           0.2    6.54
+#>  5 boron       1     5 TRUE           0.05   2.65
+#>  6 boron       1     5 TRUE           0.2    6.54
+#>  7 boron       1    10 FALSE          0.05   1.63
+#>  8 boron       1    10 FALSE          0.2    4.91
+#>  9 boron       1    10 TRUE           0.05   1.63
+#> 10 boron       1    10 TRUE           0.2    4.91
 #> # ℹ 98 more rows
 ```
 

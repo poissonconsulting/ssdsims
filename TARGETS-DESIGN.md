@@ -292,7 +292,9 @@ In the hc task table:
 |   1 |    5 | FALSE   | TRUE  |  1000 | weighted_samples | TRUE       |
 
 The hash of an `NA`-bearing row is well-defined as long as `NA` is
-encoded canonically — `task_primer()` does this via
+encoded canonically —
+[`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md)
+does this via
 [`rlang::hash()`](https://rlang.r-lib.org/reference/hash.html) on the
 named list. The collapse therefore stops phantom streams from being
 allocated to combinations that don’t exist in practice.
@@ -1562,7 +1564,7 @@ or a cluster step) installs dqrng as the base R RNG backend at entry and
 restores on exit via `on.exit(restore_methods())`. Tests and helper
 scripts that touch the methods mid-session (not inside a scenario
 runner) use the same [`on.exit()`](https://rdrr.io/r/base/on.exit.html)
-discipline — documented in CLAUDE.md (§RNG discipline).
+discipline — documented in AGENTS.md (§RNG discipline).
 
 ------------------------------------------------------------------------
 
@@ -1779,7 +1781,7 @@ branches open and close.
   **calling function** as the origin
   (`Error in \`ssd\_*()\`:`), never an internal frame (`purrr::map()`,`lapply()`, a private helper). Thread the public frame into validators (`chk::abort_chk(…,
   call = call)`with`call =
-  environment()`), and prefer plain loops over`purrr::walk`/`chk::chk_all`where those wrappers would surface in the error header. May need upstream`chk`changes (e.g. a`call`/`error_call`argument on`chk\_*()`so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the`ssd-define-scenario`work already follows the convention (see the repo`CLAUDE.md\`
+  environment()`), and prefer plain loops over`purrr::walk`/`chk::chk_all`where those wrappers would surface in the error header. May need upstream`chk`changes (e.g. a`call`/`error_call`argument on`chk\_*()`so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the`ssd-define-scenario`work already follows the convention (see the repo`AGENTS.md\`
   “Error origin” note).
 
 ### Cleanup

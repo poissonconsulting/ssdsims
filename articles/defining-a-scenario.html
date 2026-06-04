@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9010</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9011</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -320,12 +320,10 @@
 </section><section class="level2"><h2 id="stage-4-run-the-baseline-loop">Stage 4: run the baseline loop<a class="anchor" aria-label="anchor" href="#stage-4-run-the-baseline-loop"></a>
 </h2>
 <p><code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> is the no-frills runner. It executes the three task tables in dependency order, threading each task’s result forward to its children by the foreign-key id. It runs <strong>in-process</strong>, with no <code>targets</code>, no shard grouping, and no Parquet I/O.</p>
-<p>It is also <strong>not reproducible on its own</strong> — no per-task RNG seeding happens yet (that arrives with the <code>primer-primitives</code> roadmap step). The runner draws from the <em>ambient</em> RNG, so pin it for a deterministic local run:</p>
+<p>It <strong>is reproducible without an external seed</strong>: the runner opens one <code><a href="../reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> scope and seeds each task exactly once from <code>scenario$seed</code> plus a per-task primer (<code><a href="../reference/task_primer.html">task_primer()</a></code> over the task’s identity), so two runs of a scenario with a fixed <code>seed</code> yield identical results, regardless of the order in which tasks run:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">withr</span><span class="fu">::</span><span class="fu"><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">with_seed</a></span><span class="op">(</span><span class="fl">42L</span>, <span class="op">{</span></span>
-<span>  <span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "sample" "fit"    "hc"</span></span></code></pre></div>
 </div>
@@ -366,16 +364,16 @@
 <span><span class="co">#&gt; # A tibble: 108 × 6</span></span>
 <span><span class="co">#&gt;    dataset   sim  nrow ci    hc_proportion hc_est</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;lgl&gt;         &lt;dbl&gt;  &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 boron       1     5 FALSE          0.05   2.05</span></span>
-<span><span class="co">#&gt;  2 boron       1     5 FALSE          0.2    6.37</span></span>
-<span><span class="co">#&gt;  3 boron       1     5 TRUE           0.05   2.05</span></span>
-<span><span class="co">#&gt;  4 boron       1     5 TRUE           0.2    6.37</span></span>
-<span><span class="co">#&gt;  5 boron       1     5 TRUE           0.05   2.05</span></span>
-<span><span class="co">#&gt;  6 boron       1     5 TRUE           0.2    6.37</span></span>
-<span><span class="co">#&gt;  7 boron       1    10 FALSE          0.05   2.80</span></span>
-<span><span class="co">#&gt;  8 boron       1    10 FALSE          0.2    8.56</span></span>
-<span><span class="co">#&gt;  9 boron       1    10 TRUE           0.05   2.80</span></span>
-<span><span class="co">#&gt; 10 boron       1    10 TRUE           0.2    8.56</span></span>
+<span><span class="co">#&gt;  1 boron       1     5 FALSE          0.05   2.65</span></span>
+<span><span class="co">#&gt;  2 boron       1     5 FALSE          0.2    6.54</span></span>
+<span><span class="co">#&gt;  3 boron       1     5 TRUE           0.05   2.65</span></span>
+<span><span class="co">#&gt;  4 boron       1     5 TRUE           0.2    6.54</span></span>
+<span><span class="co">#&gt;  5 boron       1     5 TRUE           0.05   2.65</span></span>
+<span><span class="co">#&gt;  6 boron       1     5 TRUE           0.2    6.54</span></span>
+<span><span class="co">#&gt;  7 boron       1    10 FALSE          0.05   1.63</span></span>
+<span><span class="co">#&gt;  8 boron       1    10 FALSE          0.2    4.91</span></span>
+<span><span class="co">#&gt;  9 boron       1    10 TRUE           0.05   1.63</span></span>
+<span><span class="co">#&gt; 10 boron       1    10 TRUE           0.2    4.91</span></span>
 <span><span class="co">#&gt; # ℹ 98 more rows</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="what-is-not-here-yet">What is not here yet<a class="anchor" aria-label="anchor" href="#what-is-not-here-yet"></a>

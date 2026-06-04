@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9010</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9011</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,7 +33,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>ssdsims Development Guide</h1>
-      <small class="dont-index">Source: <a href="https://github.com/poissonconsulting/ssdsims/blob/main/CLAUDE.md" class="external-link"><code>CLAUDE.md</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/poissonconsulting/ssdsims/blob/main/AGENTS.md" class="external-link"><code>AGENTS.md</code></a></small>
     </div>
 
 <div id="ssdsims-development-guide" class="section level1">
@@ -122,7 +122,7 @@
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">document</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Check that all topics are in the reference index</span></span>
-<span><span class="fu">pkgdown</span><span class="fu">::</span><span class="fu"><a href="https://pkgdown.r-lib.org/reference/check_pkgdown.html" class="external-link">check_pkgdown</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">pkgdown</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/pkgdown/man/check_pkgdown.html" class="external-link">check_pkgdown</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Full check</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">check</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
@@ -143,14 +143,14 @@
 </div>
 <div class="section level3">
 <h3 id="testing">Testing<a class="anchor" aria-label="anchor" href="#testing"></a></h3>
-<p>Test-suite conventions live in <strong><code>tests/testthat/CLAUDE.md</code></strong> — file/naming rules, error/warning and snapshot style, and RNG seeding. Read that before writing tests.</p>
+<p>Test-suite conventions live in <strong><code>tests/testthat/AGENTS.md</code></strong> — file/naming rules, error/warning and snapshot style, and RNG seeding. Read that before writing tests.</p>
 </div>
 <div class="section level3">
 <h3 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a></h3>
 <ul><li>Functions are documented inline with roxygen comments (<code>#' @param</code>, <code>#' @return</code>, etc.); wrap roxygen comments at 80 characters.</li>
 <li>Every user-facing function should be exported and documented; internal functions should not have roxygen documentation.</li>
 <li>Run <code>devtools::document()</code> to generate <code>man/</code> pages and update <code>NAMESPACE</code> — always re-document after changing a roxygen comment, and never edit <code>man/</code> or <code>NAMESPACE</code> by hand.</li>
-<li>Whenever you add a new (non-internal) topic, add it to <code>_pkgdown.yml</code> and confirm with <code><a href="https://pkgdown.r-lib.org/reference/check_pkgdown.html" class="external-link">pkgdown::check_pkgdown()</a></code>.</li>
+<li>Whenever you add a new (non-internal) topic, add it to <code>_pkgdown.yml</code> and confirm with <code><a href="https://rdrr.io/pkg/pkgdown/man/check_pkgdown.html" class="external-link">pkgdown::check_pkgdown()</a></code>.</li>
 <li>Examples in <code>@examples</code> are part of the spec — keep them small and runnable.</li>
 </ul></div>
 </div>
@@ -213,7 +213,7 @@
 </ol></div>
 <div class="section level3">
 <h3 id="add-a-new-test-file">Add a new test file<a class="anchor" aria-label="anchor" href="#add-a-new-test-file"></a></h3>
-<p>See <strong><code>tests/testthat/CLAUDE.md</code></strong> for the full test-suite conventions (file/naming, expectations, snapshots, RNG seeding).</p>
+<p>See <strong><code>tests/testthat/AGENTS.md</code></strong> for the full test-suite conventions (file/naming, expectations, snapshots, RNG seeding).</p>
 </div>
 <div class="section level3">
 <h3 id="update-package-version-and-news">Update package version and news<a class="anchor" aria-label="anchor" href="#update-package-version-and-news"></a></h3>
