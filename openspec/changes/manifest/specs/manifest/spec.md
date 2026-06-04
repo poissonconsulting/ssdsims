@@ -1,25 +1,25 @@
 ## ADDED Requirements
 
 ### Requirement: Write a per-scenario manifest
-The package SHALL provide `ssd_write_manifest(scenario, dir)` that writes a JSON manifest (`<dir>/manifest.json`) recording the scenario's declarative fields — `seed`, `datasets`, `min_pmix`, `fit`, `hc`, and `partition_by` — together with pinned `r_version`, `dqrng_version`, and `ssdtools_version` captured at write time (`TARGETS-DESIGN.md` §8.5/§9). The manifest SHALL be a small JSON sidecar, not a Parquet file.
+The package SHALL provide `ssd_write_manifest(scenario, dir)` that writes a JSON manifest (`<dir>/manifest.json`) recording the scenario's declarative fields — `seed`, `datasets`, `min_pmix`, `fit`, `hc`, and `partition_by` — together with the complete session info captured at write time (R version, platform, and all attached/loaded package versions, e.g. via `sessioninfo::session_info()`), with `r_version`, `dqrng_version`, and `ssdtools_version` also surfaced as a flat bit-stability-critical subset (`TARGETS-DESIGN.md` §8.5/§9). The manifest SHALL be a small JSON sidecar, not a Parquet file.
 
 #### Scenario: Manifest records the scenario's declarative fields
 - **WHEN** `ssd_write_manifest(scenario, dir)` is called
 - **THEN** `<dir>/manifest.json` SHALL exist and SHALL contain the scenario's `seed`, `datasets`, `min_pmix`, `fit`, `hc`, and `partition_by` values
 
-#### Scenario: Manifest pins the toolchain versions
+#### Scenario: Manifest records complete session info
 - **WHEN** a manifest is written
-- **THEN** it SHALL record `r_version`, `dqrng_version`, and `ssdtools_version` as the versions present at write time
+- **THEN** it SHALL record the complete session info present at write time (R version, platform, and all attached/loaded package versions), and SHALL surface `r_version`, `dqrng_version`, and `ssdtools_version` as a flat convenience subset
 
 ### Requirement: Read a manifest back
-The package SHALL provide `ssd_read_manifest(dir)` that reads `<dir>/manifest.json` into an R list, round-tripping the declarative fields and version pins written by `ssd_write_manifest()` without lossy coercion of integer or logical knobs.
+The package SHALL provide `ssd_read_manifest(dir)` that reads `<dir>/manifest.json` into an R list, round-tripping the declarative fields and session info written by `ssd_write_manifest()` without lossy coercion of integer or logical knobs.
 
 #### Scenario: Round-trip preserves manifest contents
 - **WHEN** a manifest is written for a scenario and then read back
 - **THEN** the read fields SHALL equal the written values, with `seed`/`nboot` preserved as whole numbers and logical knobs preserved as logicals
 
 ### Requirement: Record a completed shard's sha256 alongside its Parquet
-The package SHALL provide `ssd_record_shard(dir, partition_key, sha256, ...)` that, on a shard's successful write, records that shard's sha256 in a per-shard sidecar next to the shard's Parquet rather than mutating a shared manifest, so parallel shard targets do not race (`TARGETS-DESIGN.md` §8.5). When a cloud-copy sha256 is supplied (`upload` set, §6.1) it SHALL be recorded alongside the local sha256.
+The package SHALL provide `ssd_record_shard(dir, partition_key, sha256, ...)` that, on a shard's successful write, records that shard's sha256 in a per-shard sidecar next to the shard's Parquet rather than mutating a shared manifest, so parallel shard targets do not race (`TARGETS-DESIGN.md` §8.5). The shard directory SHALL be supplied by the caller; the manifest SHALL NOT compute Parquet paths itself. When a cloud-copy sha256 is supplied (`upload` set, §6.1) it SHALL be recorded alongside the local sha256.
 
 #### Scenario: A successful shard records its sha256 in a sidecar
 - **WHEN** `ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", sha)` is called after the shard's Parquet is written
