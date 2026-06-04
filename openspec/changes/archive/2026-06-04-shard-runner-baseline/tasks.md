@@ -37,7 +37,7 @@
 
 - [x] 6.1 Roxygen for `ssd_run_scenario_shards()`: storage layout, duckplyr read-back, m:n parent resolution, reproducibility; cross-reference `partition-by` (`scenario_partition_axes()`) and note it de-risks `hive-partitioning`/`task-tables`
 - [x] 6.2 Run `devtools::document()`, `air format .`, `devtools::check()`; update `NAMESPACE`/`man/`
-- [x] 6.3 Add `NEWS.md` entry
+- [x] 6.3 `NEWS.md` entry — generated from the PR title at release time by fledge (`NEWS.md` is fledge-managed and not hand-edited), so no manual entry is added here
 
 ## 7. Output-tree ownership
 

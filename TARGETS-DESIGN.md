@@ -2155,6 +2155,22 @@ public-API or ergonomics gaps.
   delegate to a public `as_ssd_data()` because the bare-data-frame and
   unnamed-list forms derive names by **symbol capture**, which must happen
   in the `ssd_define_scenario()` frame. Surfaced in PR #80.
+- **`blob-storage-format`** — Review how per-task non-tabular results
+  (the `fit` step's `fitdists` objects) are stored in their shard Parquet.
+  `shard-runner-baseline` ships an interim `encode_obj()`/`decode_obj()`
+  pair (`R/targets-runner.R`) that `serialize(ascii = TRUE)`s the object to
+  an **ASCII string** carried in a Parquet `VARCHAR` column, chosen because
+  duckplyr cannot store a raw/list column and an ASCII serialisation
+  round-trips losslessly. ASCII serialisation is ~2× the size of the binary
+  form and is CPU-heavier to encode/decode, so for many or large fits the
+  blob layer dominates shard size. Evaluate alternatives — a binary
+  `serialize(ascii = FALSE)` in a base64/BLOB column, an Arrow-native nested
+  representation, or writing the fit objects to a sidecar store keyed by
+  `fit_id` rather than inline — against the byte-identity oracle, the
+  duckplyr/Parquet column-type constraints, and the §6 summary read path
+  (which already projects the blob column out). Surfaced by the
+  `shard-runner-baseline` / `task-tables` verification. Independent tidy-up
+  with no dependants; not on the dependency DAG.
 
 ### Dependency DAG (parallel streams)
 
@@ -2247,8 +2263,7 @@ flowchart TD
     classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims archived
-    class acc,partby,tt,shardrun done
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun archived
     class inputs,manif proposed
     class migrate,hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open
 ```
