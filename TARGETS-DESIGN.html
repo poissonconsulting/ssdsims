@@ -840,7 +840,7 @@
 </blockquote>
 <div class="section level3">
 <h3 id="id_81-path-axis-growth--new-shards-existing-shards-untouched">8.1 Path-axis growth — new shards, existing shards untouched<a class="anchor" aria-label="anchor" href="#id_81-path-axis-growth--new-shards-existing-shards-untouched"></a></h3>
-<p>Adding a value to an axis that is <strong>in <code>partition_by</code></strong> for a step creates new partition cells and therefore new shards; existing shards’ Parquets stay byte-identical and are reused. No bookkeeping needed beyond <code>targets</code>’ usual branch-level dependency tracking.</p>
+<p>Adding a value to an axis that is <strong>in <code>partition_by</code></strong> for a step creates new partition cells and therefore new shards; existing shards’ Parquets stay byte-identical and are reused. No bookkeeping needed beyond <code>targets</code>’ usual branch-level dependency tracking. This minimal-rebuild-on-growth property is asserted end-to-end by the <code>path-axis-growth</code> step (§12).</p>
 <table class="table"><colgroup><col width="31%"><col width="20%"><col width="49%"></colgroup><thead><tr><th>What you added</th>
 <th>Path axis for…</th>
 <th>Effect</th>
@@ -1056,6 +1056,8 @@
 <li>
 <strong><code>task-tables</code></strong> — <code>ssd_scenario_data_tasks</code> / <code>_fit_tasks</code> / <code>_hc_tasks</code> returning the per-step task tables with <code>(seed, primer)</code> on each row, plus the <code>ssd_scenario_*_shards</code> wrappers that group those rows by <code>partition_by</code> into one row per shard (a <code>tasks</code> list-column) for <code>tar_map</code>’s <code>values</code>. The §6 sketch compiles and <code>tar_make()</code>s a tiny scenario. <strong>Static branching</strong>: the scenario is a plain construction-time object and <code>tar_map</code> mints one named target per shard (§6) — no <code>pattern = map</code> over a runtime target.</li>
 <li>
+<strong><code>path-axis-growth</code></strong> — §8.1 — assert <strong>end-to-end that a minimal scenario change on a path axis rebuilds only the necessary shards</strong>. Appending a dataset (or growing <code>nsim</code>) to a working, already- <code>tar_make()</code>-d scenario mints new shard targets and leaves every existing shard cached — the cheap-extension payoff the extensibility goal leans on, validated in the targets lab’s <code>static-extend</code> axis (§6) and ported here into the package’s own <code>ssd_scenario → ssd_scenario_*_shards → tar_map → tar_make</code> path. Split out of <code>task-tables</code> so that step stays a build-and-compile checkpoint while this one owns the incremental-rebuild contract; it is the path-axis counterpart to <code>shard-atomic-rewrite</code>’s inner-axis test. <strong>Depends on</strong> <code>task-tables</code>. Note: the precise expected-cached set follows the invalidation model pinned by <code>hive-partitioning</code> (the §8 cache-by-existence vs. content-hash fork), so the assertion is finalised once that decision lands. Test: run a tiny scenario to completion; append a dataset (a path axis for all three steps), <code>tar_make()</code> again, and assert only the new dataset’s shards build while the original dataset’s shard targets are skipped (and <code>summary</code> re-runs); repeat for <code>nsim</code> growth.</li>
+<li>
 <strong><code>shard-failure-survival</code></strong> — §6.2 — the shard body writes as many rows as ran successfully (a bad task yields a shorter shard, not an abort); the step target carries <code>error = "null"</code> only for the exceptional whole-shard case, and <code>summary</code> unions the survivors; the runner muffles only the expected end-of-pipeline “errored” warning under <code>options(warn = 2)</code>. Test: a deterministically-failing task leaves a shorter shard and the other shards built; a deterministically -failing whole shard leaves the others built and the error readable via <code>tar_meta()</code> after the run.</li>
 <li>
 <strong><code>shard-completeness-assert</code></strong> — §6.2 / §8.4 — a downstream <code>assert_&lt;step&gt;</code> target per shard (sibling to <code>upload_&lt;step&gt;</code>) reads the shard’s row count from the Parquet footer and compares it to the expected count derived from the task table; errors (red) on any shortfall, itself under <code>error = "null"</code> so it does not abort the build. The runner reads the red asserts to drive the §8.4 fix-and-refresh loop (<code>tar_invalidate()</code> the short shards, re-make). Test: a short shard turns its assert red and a full shard leaves it green; the runner’s two-pass loop refreshes exactly the short shards through a §8.3 pin. Depends on <code>task-tables</code> (for the expected count); pairs with <code>cloud-upload</code> (same sibling-target shape) and <code>manifest</code> (records expected-vs-actual per shard).</li>
@@ -1113,6 +1115,7 @@
     cloud[cloud-upload]
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
+    pathgrow[path-axis-growth]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -1136,6 +1139,7 @@
     tt --&gt; cloud
     tt --&gt; replay
     tt --&gt; rewrite
+    tt --&gt; pathgrow
 
     %% manifest is provenance/verification metadata: it depends on the
     %% scenario (head) and feeds the verification layer; it does NOT gate
