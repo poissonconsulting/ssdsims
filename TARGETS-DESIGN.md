@@ -1977,8 +1977,13 @@ already ran end to end (see §4, §6). These steps are therefore
   of the chosen shards (§8.4). Both recipes have tests.
 - **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
-  a historical reference. Depends on `migrate-public-api` (the public
-  step functions must be off the L'Ecuyer path first).
+  a historical reference. Depends on **`migrate-public-api`** (the public
+  step functions must be off the L'Ecuyer path first) **and on
+  `scenario-input-types`**: the generator inputs (`function` /
+  `character` / `fitdists` / `tmbfit`) still seed through the L'Ecuyer
+  `do_call_seed` shim on the legacy `ssd_sim_data` path, and their
+  declarative replacement lands with `scenario-input-types` — so the last
+  L'Ecuyer use is gone only once both have landed.
 - **`error-call-origin`** — *Cosmetic, independent of the rest.*
   Audit every user-facing function so its validation errors report the
   **calling function** as the origin (`Error in \`ssd_*()\`:`), never an
@@ -2088,6 +2093,7 @@ flowchart TD
 
     prims --> migrate
     migrate --> cleanup
+    inputs --> cleanup
 ```
 
 `migrate-public-api` follows `primer-primitives` (it reuses the

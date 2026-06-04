@@ -246,6 +246,8 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 
 The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged.
 
+**Keep the roadmap DAG honest.** Whenever a change is unblocking for — or depended upon by — another step, record that as an explicit edge in the §12 dependency DAG (and name the dependency in the prose entry), rather than describing a step as standalone. A step that something else waits on is **not** a leaf. When a step is renamed, port the rename through the §12 roadmap (entries + DAG) so the graph stays the source of truth.
+
 ## Contact & Contribution
 
 - **Issues & PRs**: GitHub (poissonconsulting/ssdsims).
