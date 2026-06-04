@@ -68,7 +68,15 @@ The single accessor `task-tables`/`hive-partitioning` call. Storing only the pat
 
 Thread the constructor's `call` into `validate_partition_by(partition_by, call)`. Loop over `c("sample", "fit", "hc")` (a plain loop, not `purrr::walk`, per the error-origin convention). Per step: the entry exists, is a unique, non-`NA` character vector, and `setdiff(entry, task_axes(step))` is empty (`nrow`-under-`sample` gets the bespoke message). Then a **parent-consistency** check: for each non-root step, `intersect(path[[step]], task_axes(parent))` must be a subset of `path[[parent]]`, so a child shard maps to exactly one parent shard via `<parent>_id` (`task_parent()` gives the chain `sample ← fit ← hc`). Without it a child could be partitioned more finely on a shared axis than its parent, breaking the foreign-key join.
 
-## Risks / Trade-offs
+### Decision: `partition_by` is orthogonal to the per-task primer
+
+The per-task RNG primer (`task-primer`, on `claude/gifted-lovelace-VPn0D`) is computed by `task_primers(tbl, step)` over **all** of `tbl[i, task_axes(step)]` — the full canonical identity row — *not* over the path subset. So a task's `(seed, primer)` is **invariant under `partition_by`**: re-declaring an axis as path vs inner moves only its Hive location, never its RNG. This is exactly what makes the deferred acceptance test ("changing `partition_by` shifts file paths while per-task results stay byte-identical", owned by `hive-partitioning`) hold by construction. `partition_by` validation and `scenario_partition_axes()` therefore touch storage layout only and must never feed the primer. *Implication:* the path-vs-inner split is a free re-layout knob; it cannot change results.
+
+### Decision: `shard-completeness-assert` is a third consumer of the split; `task-tables` stores `expected_rows`
+
+Beyond `task-tables` and `hive-partitioning`, the new `shard-completeness-assert` step (`TARGETS-DESIGN.md` §6.2/§8.4) consumes the split: a shard's **expected row count** is a function of its **inner** axes (the tasks bundled into the shard), so it is derived from `scenario_partition_axes(scenario, step)$inner`. The expected count is **stored per shard in `task-tables`** (a pure sourcing-time function) and read by the assert as a constant — `partition_by` supplies the split, not the count. Caveat for `hc`: a task's output is not one row (`proportion` fan-out, and the `ci = FALSE` collapse, §1.2), so `expected_rows ≠ |tasks|` in general; the count is summed over the shard's task rows' output cardinality in `task-tables`, not inferred from inner-axis cardinalities alone. This is a `task-tables` responsibility; `partition-by` only needs to expose the path/inner split (which it already does) and note the assert as a downstream consumer.
+
+
 
 - **`task_axes()` is internal to `task-list-loop-baseline`** → reuse needs it reachable from `R/scenario.R`. Mitigation: same package, so a direct internal call works; if file-load order matters, keep both in the package namespace (no export needed).
 - **Parent-consistency rule adds validation surface** → more to get right and to explain. Mitigation: it is a single `subset` check per non-root step with a targeted error; tested directly (a child finer than its parent on a shared axis aborts).

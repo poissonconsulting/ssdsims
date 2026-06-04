@@ -11,7 +11,7 @@
 - [x] 2.2 Accept datasets as an `ssd_data()` collection (preferred) or, for convenience, a single data frame (implicit/explicit name), named list, or unnamed list; route bare input through the same per-dataset validation and derive/accept dataset names
 - [x] 2.3 Implement symbol-capture name derivation (e.g., `rlang::enexpr()`) for implicit cases; fallback to required `name=` for unnamed literals
 - [x] 2.4 Store declarative fields only: `seed`, `nsim`, `nrow`, dataset names (NOT data frames), `fit` grid, `hc` grid, `partition_by`, `upload`
-- [x] 2.4a Store `min_pmix` in the `fit` grid **by name** (NOT as a function value): accept a character vector of names, or a function / list of functions whose name is derived by symbol capture; validate provided functions before taking the name. Registry resolution is deferred to `min-pmix-registry`.
+- [x] 2.4a Store `min_pmix` in the `fit` grid **by name** (NOT as a function value): accept a character vector of names, or a function / list of functions whose name is derived by symbol capture; validate provided functions before taking the name. Registry resolution is deferred to `registry`.
 - [x] 2.5 Populate documented `partition_by` per-step defaults when not supplied; default `upload` to `NULL`
 - [x] 2.6 Validate arguments with `chk` (scalar whole-number `seed`, `nrow` in `[5, 1000]`, `nsim`, etc.); abort on invalid input; error if both named list and `name=` are supplied
 - [x] 2.7 Ensure the constructor performs no RNG draws and leaves `.Random.seed` untouched

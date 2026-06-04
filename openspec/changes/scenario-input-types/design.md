@@ -1,77 +1,88 @@
 ## Context
 
-`ssd-define-scenario` landed a declarative `ssdsims_scenario` and an `ssd_data()` collector that are **data-frame-only**. `ssd_run_scenario()`, by contrast, dispatches over five `ssd_sim_data()` S3 methods — `data.frame`, `fitdists`, `tmbfit`, `function`, and `character` (a function-name string) — where the last four are *data generators*: they produce data at run time rather than carrying it. The targets redesign (`TARGETS-DESIGN.md` §1.1) keeps the scenario serialisable to a tiny manifest by storing **names**, not values, and materialising generated data once per project in a `dataset-registry` target. This change widens the scenario's input contract to those four generator types while preserving the name-only, declarative discipline. `ssd_run_scenario()` is untouched.
+`ssd-define-scenario` landed a declarative `ssdsims_scenario` and an `ssd_data()` collector that are **data-frame-only**. `ssd_run_scenario()`, by contrast, dispatches over five `ssd_sim_data()` S3 methods — `data.frame`, `fitdists`, `tmbfit`, `function`, and `character` (a function-name string) — where the last four are *data generators*: they produce data rather than carrying it. This change widens `ssd_data()` / `ssd_define_scenario()` to accept those four generator types.
+
+The original plan recorded each generator as an *inert descriptor* and deferred materialisation to a targets-only `registry` step (`TARGETS-DESIGN.md` §1.1). Exploration on this branch **reversed that**: datasets — generated ones included — are tiny, so a generator is **materialised once, eagerly, in the constructor**, and the realised tibble is carried inline on the scenario exactly like a data-frame input. The scenario object is the transport; the name-only `registry` regeneration path is a later decoupling (`dataset-provenance`, §12), taken only if dataset size ever forces it. `ssd_run_scenario()` is untouched.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Accept the same input set as `ssd_run_scenario()` in `ssd_data()` and `ssd_define_scenario()`: data frame, `fitdists`, `tmbfit`, function, function-name string — singly or in a list.
-- Record each non-data-frame input declaratively as a *generator descriptor* (name + kind + a captured reference), with no function body or model payload stored.
-- Reuse the existing name-derivation machinery (`expr_to_name()`, `list_expr_names()`, argument names) unchanged so naming is identical across data frames and generators.
-- Validate generator inputs structurally, in the user-facing frame, without executing them or touching RNG.
+- Accept the same input set as `ssd_run_scenario()` in `ssd_data()` / `ssd_define_scenario()`: data frame, `fitdists`, `tmbfit`, function, function-name string — singly or in a list.
+- **Materialise** each generator once, at construction, to a validated tibble stored inline in `scenario$data`, indistinguishable downstream from a data-frame input.
+- Seed generation reproducibly and **independently of the scenario** via a dedicated `ssd_data(..., .seed = NULL)` argument, with the dataset **name as the dqrng stream**.
+- Enforce a dqrng-only, reproducible generator contract via a post-hoc RNG-state check.
+- Reuse the existing name-derivation machinery (`expr_to_name()`, `list_expr_names()`, argument names) unchanged.
 
 **Non-Goals:**
 
-- **Materialising** generator data — running the generator to produce a tibble. That is the targets-only `dataset-registry` change (§1.1); descriptors are inert here.
-- Carrying a `seed`/`stream` for a generator (the per-task RNG mechanism, §2). The scenario already owns the root `seed`; generator materialisation seeds are a registry concern.
-- Changing the `fit`/`hc` grids, `partition_by`, the `ci = FALSE` rule, or any non-dataset field.
-- Touching the legacy `ssd_run_scenario()` / `ssd_sim_data()` dispatch.
+- Persisting datasets to Parquet, or a name-only registry that *regenerates* them — deferred to the `registry` / `dataset-provenance` steps (§1.1, §12). Here the realised tibble rides on the scenario.
+- Per-task simulation RNG (§2). The scenario's `seed` governs `sample`/`fit`/`hc`; the generation `.seed` is separate and plays **no** part in the task primers.
+- Recording generator provenance (the function, its `.seed`, args) as scenario metadata — a separate, deferred roadmap item (`dataset-provenance`). For now the **generator code is the provenance**; execution-environment capture is out of scope entirely.
+- Changing the `fit`/`hc` grids, `partition_by`, the `ci = FALSE` rule, or the legacy `ssd_run_scenario()` / `ssd_sim_data()` dispatch.
 
 ## Decisions
 
-### Decision: a generator descriptor is a small classed record, datasets become a heterogeneous collection
+### Decision: materialise generators eagerly into the collection (no descriptor, no extra step)
 
-The `ssdsims_data` collection today is a named list of tibbles. We make it a named list whose elements are **either** a tibble (inline data-frame dataset) **or** a generator descriptor. A descriptor is a tiny classed list, e.g.
+`ssd_data()` returns a named list of **tibbles**. A generator input is run through its `ssd_sim_data()` method **at construction** and the resulting tibble is stored under its derived name, so the collection stays homogeneous and every downstream consumer — #80's `ssd_run_scenario_baseline()` reading `scenario$data[[dataset]]`, the task tables, the future `registry` — sees a data frame. There is **no** persistent generator descriptor and **no** separate `generate` step.
+
+*Why eager-and-inline rather than an inert descriptor materialised later?* Datasets are tiny — even generated ones — so transporting the realised bytes on the scenario is cheap and makes a generated dataset reproducible *by being kept*, not by regeneration. This removes the descriptor type, the heterogeneous-collection handling, and the baseline runner's abort guard the earlier draft needed. *Alternative considered:* name-only + a `registry` target that regenerates on demand — deferred (`dataset-provenance`, §12); revisit only if dataset size makes inline transport too heavy.
+
+### Decision: `ssd_data(..., .seed = NULL)` seeds generation; the name is the dqrng stream
+
+Generation is **decoupled from the scenario seed**. `ssd_data()` gains a dot-prefixed `.seed` (default `NULL`); each generator is materialised under a scoped
 
 ```r
-structure(
-  list(name = "ssd_rlnorm", kind = "function", ref = "ssd_rlnorm"),
-  class = "ssdsims_generator"
-)
+local_dqrng_state(.seed, task_primer(list(dataset = "<name>")))
 ```
 
-- `kind` ∈ `{"fitdists", "tmbfit", "function"}` — the dispatch target the registry will use.
-- `ref` is the resolvable reference: the function name (for `function`/`character` inputs) or `NA`/the dataset name for object inputs whose payload the registry pins separately. We store **no** function body and **no** `fitdists`/`tmbfit` object — only what `dataset-registry` needs to look the generator up later.
+so the **dataset name is the dqrng `stream`** and `.seed` is the base seed. A single `.seed` therefore fans out reproducibly across every named generator in the call, each on its own independent stream: `hash({dataset})` differs per name, and differs from the `sample` primer `hash({dataset, sim, replace})`, so generation and the per-sim draws never share a stream.
 
-*Why a classed descriptor rather than just a name string?* The kind must survive into the scenario so `dataset-registry` knows which `ssd_sim_data()` method to dispatch without re-inspecting a (no-longer-present) object. A classed record also lets `print()` render `<fitdists>` / `<fn>` distinctly and gives downstream code a clean `inherits()` check. *Alternative considered:* a parallel `kinds` vector alongside `datasets`; rejected as it splits one fact across two fields and complicates the list/mixed-input case.
+The `.seed` dot-prefix is deliberate. `ssd_data(...)` takes **dataset names as argument names**, so a bare `seed =` would be a dataset named `"seed"`; `.seed` is a formal (never absorbed into `...`), and R will not partial-match `seed=` onto it (the leading dot blocks the prefix match).
+
+*Why reuse `task_primer()` for the stream but not `scenario$seed` for the base?* The seed *source* is what must be decoupled (a generated dataset is a fixture, not part of the experiment's randomness); the primer *hash* is just a convenient, collision-resistant stream allocator, so reusing it keeps stream separation consistent without recoupling to the scenario seed.
+
+- **Q1 (resolved):** supplying `.seed` when the call has **no** generator inputs aborts (user-facing frame) — it is almost always a mistake.
+- **Q2 (resolved):** one `.seed` per `ssd_data()` call; a per-generator `.seed` override is deferred until a real need appears (names-as-streams already separate the draws).
+
+### Decision: dqrng-only generators, enforced by a post-hoc RNG-state check
+
+A generator must be a **pure function** of its `.seed`-via-dqrng, with no side effects. The constructor snapshots both RNG states — base R `.Random.seed` and the dqrng state — around the scoped run and applies:
+
+| generator touches | `.seed = NULL` | `.seed = <int>` |
+| --- | --- | --- |
+| nothing (pure) | ok | ok (`.seed` unused) |
+| dqrng | abort: *"consumes RNG — supply `.seed`"* | ok, reproducible (stream = name) |
+| base R `.Random.seed` | abort: *"use dqrng, not base R"* | abort: *"use dqrng, not base R"* |
+
+Base-R RNG is always rejected — we only seed dqrng, so we could not make a base-R draw reproducible. dqrng usage is allowed but forces a `.seed`. Because the run is scoped, the constructor leaves global RNG state unchanged: the existing unchanged-`.Random.seed` invariant still holds, now by *restoration* rather than by *not drawing*. (Residual blind spot: a generator reaching for a C-level RNG with no R-visible state escapes detection — acceptable under the pure/no-side-effects contract.)
 
 ### Decision: route on input type in one place, reuse name derivation
 
-`ssd_data()` and `scenario_dataset_names()` already branch on `is.data.frame()` / `is.list()`. We add the generator branches at the same junction and funnel every element through a single `classify_input(value, expr, name, call)` helper that returns either a validated tibble or an `ssdsims_generator`. Name derivation is unchanged: argument name → `expr_to_name()` (symbol / `::` call) → explicit `name=`/list name. For a function-name **string**, the *string value itself* is the name (and the resolution target). Unlike `ssd_sim_data.character()`, which does `eval(parse(text = x))`, resolution here is **restricted to a bare name** looked up with `get0()`/`match.fun()` (see the validation decision below); arbitrary expressions are not evaluated, matching the declarative intent.
+`ssd_data()` / `scenario_dataset_names()` branch on input type at a single junction; one `classify_input(value, expr, name, call)` helper validates and **materialises** each element to a tibble. Name derivation is unchanged: argument name → `expr_to_name()` (symbol / `::` call) → explicit `name=` / list name; a function-name string is its own name and the resolution target, resolved with `get0()` / `match.fun()` to a **bare name** only (no `eval(parse())`). Dispatch on the most specific class first (`tmbfit` before `fitdists`), matching the S3 methods.
 
-*Why funnel through one helper?* The single-input, named-list, and unnamed-list paths in both `ssd_data()` and the constructor must treat generators identically; one classifier keeps the three call sites in sync and keeps mixed lists (data frame + generator) correct.
+### Decision: structural validation in the user-facing frame
 
-### Decision: structural validation only, in the user-facing frame
-
-Per the repo error-origin convention, validation aborts with `chk::abort_chk(..., call = call)` where `call` is the exported function's frame. Checks:
-
-- **function**: `is.function(x)` and (where the contract is a single-arg RNG generator) the single-argument shape already checked for `min_pmix`; we reuse `check_min_pmix_function()`'s pattern but as a dataset-generator check (the generator's first argument is `n`, the number of rows).
-- **function-name string**: resolve with `match.fun()` / `get0()` in the caller's environment; abort naming the string if it does not resolve to a function. We do **not** `eval(parse())` arbitrary expressions — only bare names resolve, matching the declarative intent.
-- **fitdists / tmbfit**: `inherits()` check; name must be derivable or supplied. No structural drill-down into the model object (the registry pins it).
-
-No input is executed and no RNG is drawn — asserted by an unchanged-`.Random.seed` test.
-
-### Decision: print path renders kind, not shape
-
-`fmt_grid_value()` already prints `<fn>` for functions. We extend the dataset print path (`print.ssdsims_scenario()` and any `ssd_data()` print) so a generator element shows `name <kind>` (e.g. `ssd_rlnorm <fn>`, `fit <fitdists>`) and a data-frame element keeps its existing rendering. Snapshot tests pin both forms.
-
-### Decision: guard #80's baseline runner against unmaterialised generators
-
-`task-list-loop-baseline` (#80) landed `ssd_run_scenario_baseline()`, whose `sample` step reads each inline dataset by name — `dplyr::slice_sample(data[[dataset]], …)` from `scenario$data`. A generator-backed dataset has no inline data frame, so the runner cannot draw from it until `dataset-registry` materialises it. We add a guard that aborts (user-facing frame) with an actionable message pointing at `dataset-registry` when the runner encounters a `dataset` whose scenario entry is an `ssdsims_generator`. *Why a guard rather than silently materialising?* Materialisation has its own seeding and registration semantics (§1.1) that belong to `dataset-registry`; failing fast keeps the baseline runner honest about what it supports. The task *tables* still derive fine — the `dataset` axis is just a name — so only execution is gated, not expansion.
+Per the error-origin convention, validation aborts with `chk::abort_chk(..., call = call)` where `call` is the exported frame. A function generator is checked for the single-argument (`n`) shape; a function-name string must resolve to a function; `fitdists` / `tmbfit` get an `inherits()` check. The post-hoc RNG check (above) runs immediately after a generator executes, in the same frame.
 
 ## Risks / Trade-offs
 
-- **Heterogeneous collection complicates downstream consumers** → #80's `ssd_run_scenario_baseline()` reads `scenario$data[[dataset]]`, and `task-tables`/the registry must handle both element types. Mitigation: the classed descriptor gives a clean `inherits(x, "ssdsims_generator")` discriminator; the dataset list is keyed by name so task-table derivation (the `dataset` axis) iterates names uniformly. Only *execution* differs, and the baseline runner gates it with the guard above; expansion is unaffected.
-- **Function-name resolution environment is ambiguous** → a string like `"ssd_rlnorm"` must resolve where the user means. Mitigation: resolve in the constructor's caller environment (via `call`/`rlang::caller_env()`), matching how `ssd_sim_data.character()` evaluates today; document that only in-scope bare names are accepted.
-- **`tmbfit` vs `fitdists` ambiguity** → a `fitdists` is a list of `tmbfit`s; passing one element is a distinct generator. Mitigation: dispatch on the most specific class first (`tmbfit` before `fitdists`) exactly as the S3 methods do, and key the descriptor by the matched kind.
-- **Spec base not yet archived** → `scenario-definition` lives in the sibling `ssd-define-scenario` change, not `openspec/specs/`. Mitigation: the delta `MODIFIED` blocks copy the current requirement text verbatim so archiving stays clean once `ssd-define-scenario` is archived.
+- **The constructor now runs user code and draws RNG** → it can be slow or throw for an expensive or buggy generator, where construction used to be inert. Mitigation: datasets are tiny by assumption; the scoped seed restores global RNG; failures abort in the user-facing frame naming the offending dataset.
+- **Two-seed reproducibility story** → `scenario$seed` reproduces the experiment, each `.seed` reproduces a fixture; "one scalar seed reproduces everything" no longer holds. Mitigation: accepted deliberately — the realised bytes are transported, so day-to-day reproduction is by storage, and `.seed` only regenerates a fixture from scratch.
+- **New `dqrng` / `task-primer` dependency at construction** → `scenario-input-types` now depends on `local-dqrng-state` and `task-primer`, edges the original `ssd-define-scenario` deliberately avoided. Mitigation: scoped use only, no global perturbation; reflected in the §12 DAG (`primer → scenario-input-types`).
+- **Inline transport bloats a serialised scenario if datasets grow** → contrary to the tiny-dataset assumption. Mitigation: the name-only / `registry` regeneration path (`dataset-provenance`, §12) is the documented escape hatch.
 
 ## Migration Plan
 
-Additive and backward-compatible: existing data-frame calls behave identically (a tibble element is unchanged). No deprecations. `dataset-registry` (a later change) will consume the new descriptors; until it lands, generator descriptors are carried but never materialised, which is a coherent working state (the scenario is declarative by design).
+Additive and backward-compatible: existing data-frame calls behave identically (a tibble element is unchanged). No deprecations. The `registry` / `dataset-provenance` steps later add Parquet persistence and name-only regeneration; until then a generated dataset rides on the scenario as a realised tibble, which is a coherent working state.
 
 ## Open Questions
 
-- Should a generator descriptor capture generator **arguments** (e.g. the `args` list `ssd_sim_data.function()` accepts) now, or defer that to `dataset-registry`? Leaning defer — the scenario's `nrow`/`nsim` already parametrise generation, and extra generator args are a registry-time concern. Resolve when `dataset-registry` is designed.
-- Where exactly does `dataset-registry` get the `fitdists`/`tmbfit` *payload* it must pin, given the scenario stores only a name? Likely the registration call supplies it directly (as in the §1.1 `ssd_register_dataset()` sketch), independent of the scenario. Out of scope here, but the descriptor's `ref` field is shaped to leave room for it.
+Resolved during exploration:
+
+- *Eager vs. deferred materialisation* → eager and inline (datasets are tiny; transport the bytes).
+- *Generation seed source* → a dedicated `ssd_data(.seed)`, decoupled from `scenario$seed`, with the dataset name as the dqrng stream.
+- *Provenance recording* → deferred to `dataset-provenance` (§12); the generator code is the provenance for now, and execution-environment tracking is out of scope.
+
+No blocking questions remain. Revisit inline transport vs. name-only regeneration only if a real generator produces a dataset large enough to make scenario serialisation heavy.
