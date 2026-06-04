@@ -275,6 +275,7 @@
           est_method: multi
           ci_method: weighted_samples
           parametric: TRUE
+          samples: FALSE
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -315,6 +316,7 @@
           est_method: multi, geometric
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
+          samples: FALSE
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -323,4 +325,13 @@
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
           hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+
+# scenario-definition: samples must be a flag
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L, samples = c(TRUE,
+        FALSE))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `samples` must be a flag (TRUE or FALSE).
 

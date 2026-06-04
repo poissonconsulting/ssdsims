@@ -65,6 +65,13 @@
 #'   upper bounds for the shape1 parameter.
 #' @param range_shape2 A list of numeric vectors of length two of the lower and
 #'   upper bounds for the shape2 parameter.
+#' @param samples A logical scalar (default `FALSE`): retain the bootstrap draws
+#'   in the hc result's `samples` list-column (passed to [ssdtools::ssd_hc()]).
+#'   This is **output retention only** - it does not change the estimates or the
+#'   per-task RNG, so it is not a grid or task axis (a single `TRUE` is a superset
+#'   of `FALSE`). Changing it re-runs the hc step (the discarded draws must be
+#'   re-bootstrapped) but yields byte-identical estimates; retained samples can
+#'   be large (`nboot` draws per dist per task), so it is off by default.
 #' @param partition_by An optional, possibly-partial named list keyed by step
 #'   (`sample`/`fit`/`hc`) of character vectors naming the Hive **path** axes for
 #'   that step (one shard per path cell; the inner complement rides as Parquet
@@ -119,6 +126,7 @@ ssd_define_scenario <- function(
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
   upload = NULL
@@ -231,6 +239,9 @@ ssd_define_scenario <- function(
   chk::chk_unique(parametric)
   chk::chk_length(parametric, upper = 2L)
 
+  # `samples` is output-retention only (scalar, not a grid axis or task axis).
+  chk::chk_flag(samples)
+
   # --- ci = FALSE rejects bootstrap-only knobs ---------------------------
   if (length(ci) == 1L && isFALSE(ci)) {
     passed <- c(
@@ -290,7 +301,8 @@ ssd_define_scenario <- function(
         nboot = nboot,
         est_method = est_method,
         ci_method = ci_method,
-        parametric = parametric
+        parametric = parametric,
+        samples = samples
       ),
       partition_by = partition_by,
       upload = upload

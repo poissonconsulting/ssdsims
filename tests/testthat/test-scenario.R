@@ -74,7 +74,15 @@ test_that("scenario-definition: minimal construction stores declarative fields",
   )
   expect_named(
     s$hc,
-    c("proportion", "ci", "nboot", "est_method", "ci_method", "parametric")
+    c(
+      "proportion",
+      "ci",
+      "nboot",
+      "est_method",
+      "ci_method",
+      "parametric",
+      "samples"
+    )
   )
 })
 
@@ -701,4 +709,31 @@ test_that("scenario-definition: print is stable for multiple datasets and vector
       parametric = c(TRUE, FALSE)
     )
   )
+})
+
+# ---- samples (output-retention scalar) -------------------------------------
+
+test_that("scenario-definition: samples defaults FALSE and is stored on hc", {
+  expect_false(
+    ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)$hc$samples
+  )
+  expect_true(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 1L,
+      seed = 1L,
+      samples = TRUE
+    )$hc$samples
+  )
+})
+
+test_that("scenario-definition: samples must be a flag", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 1L,
+      seed = 1L,
+      samples = c(TRUE, FALSE)
+    )
+  })
 })

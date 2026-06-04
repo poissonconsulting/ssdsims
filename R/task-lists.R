@@ -265,6 +265,7 @@ ssd_run_scenario_baseline <- function(scenario) {
     hc_args,
     hc_data_task_primer,
     proportion = scenario$hc$proportion,
+    samples = scenario$hc$samples,
     seed = seed
   )
 
@@ -470,7 +471,8 @@ hc_data_task <- function(
   nboot,
   est_method,
   ci_method,
-  parametric
+  parametric,
+  samples = FALSE
 ) {
   if (isTRUE(ci)) {
     ssdtools::ssd_hc(
@@ -481,6 +483,7 @@ hc_data_task <- function(
       est_method = est_method,
       ci_method = ci_method,
       parametric = parametric,
+      samples = samples,
       min_pboot = 0
     )
   } else {
@@ -489,6 +492,7 @@ hc_data_task <- function(
       proportion = proportion,
       ci = FALSE,
       est_method = est_method,
+      samples = samples,
       min_pboot = 0
     )
   }
@@ -546,7 +550,8 @@ hc_data_task_primer <- function(
   ci_method,
   parametric,
   seed,
-  primer
+  primer,
+  samples = FALSE
 ) {
   local_dqrng_state(seed, primer = primer)
   hc_data_task(
@@ -556,7 +561,8 @@ hc_data_task_primer <- function(
     nboot = nboot,
     est_method = est_method,
     ci_method = ci_method,
-    parametric = parametric
+    parametric = parametric,
+    samples = samples
   )
 }
 

@@ -25,6 +25,7 @@ ssd_define_scenario(
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
   upload = NULL
@@ -110,6 +111,14 @@ each bootstrap iteration across all the distributions and then
 calculate the confidence limits (and SE) from the single set of samples.}
 
 \item{parametric}{A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.}
+
+\item{samples}{A logical scalar (default \code{FALSE}): retain the bootstrap draws
+in the hc result's \code{samples} list-column (passed to \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}}).
+This is \strong{output retention only} - it does not change the estimates or the
+per-task RNG, so it is not a grid or task axis (a single \code{TRUE} is a superset
+of \code{FALSE}). Changing it re-runs the hc step (the discarded draws must be
+re-bootstrapped) but yields byte-identical estimates; retained samples can
+be large (\code{nboot} draws per dist per task), so it is off by default.}
 
 \item{partition_by}{An optional, possibly-partial named list keyed by step
 (\code{sample}/\code{fit}/\code{hc}) of character vectors naming the Hive \strong{path} axes for

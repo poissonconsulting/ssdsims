@@ -344,3 +344,13 @@ test_that("task-shards: scenario_results_dir keys the root on partition_by", {
   a2 <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 99L)
   expect_identical(scenario_results_dir(a), scenario_results_dir(a2))
 })
+
+# ---- target factory (ssd_scenario_targets) ---------------------------------
+
+test_that("task-shards: ssd_scenario_targets returns a target list", {
+  skip_targets()
+  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+  tg <- ssd_scenario_targets(scenario)
+  expect_type(tg, "list")
+  expect_gt(length(tg), 0L)
+})

@@ -41,6 +41,7 @@ reference:
   - ssd_run_sample_step
   - ssd_run_fit_step
   - ssd_run_hc_step
+  - ssd_scenario_targets
   - ssd_summarize
   - scenario_results_dir
 

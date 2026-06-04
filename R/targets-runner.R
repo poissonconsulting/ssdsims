@@ -308,6 +308,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
       est_method = t$est_method,
       ci_method = t$ci_method,
       parametric = t$parametric,
+      samples = scenario$hc$samples,
       seed = t$seed,
       primer = t$primer[[1L]]
     )
@@ -364,6 +365,136 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' }
 ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
   glob <- file.path(dir_hc, "**", "part.parquet")
-  hc <- ssd_read_parquet(glob)
+  # Project out the `dists`/`samples` list-columns at the DuckDB level (so the
+  # potentially-large retained `samples` draws are never pulled into R): the
+  # summary is the analysis-ready estimate table; the draws stay in the hc shards.
+  hc <- tibble::as_tibble(dplyr::collect(
+    dplyr::select(
+      duckplyr::read_parquet_duckdb(
+        glob,
+        options = list(hive_partitioning = FALSE)
+      ),
+      -dplyr::any_of(c("dists", "samples"))
+    )
+  ))
   ssd_write_parquet(hc, path)
+}
+
+#' Build the Targets Pipeline for a Scenario
+#'
+#' A **target factory**: returns the list of `targets` objects that runs a
+#' scenario as a static-branching Hive-sharded pipeline (TARGETS-DESIGN.md
+#' section 6), so a whole `_targets.R` reduces to *build a scenario and call
+#' this*:
+#'
+#' ```r
+#' library(targets)
+#' library(tarchetypes)
+#' library(ssdsims)
+#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+#' ssd_scenario_targets(scenario)
+#' ```
+#'
+#' For each step it `tarchetypes::tar_map()`s one named, `format = "file"`,
+#' `error = "null"` target per `partition_by` path cell (the `names` are the
+#' step's path axes), wires `sample -> fit -> hc -> summary` ordering with
+#' `tar_combine()` barriers (a step body reads its parents from disk by partition
+#' path, so there is no automatic edge), and writes every shard and the summary
+#' under the per-layout [scenario_results_dir()] root (so a changed
+#' `partition_by`/`bundle` never mixes shard granularities). `scenario` is
+#' referenced as a global, so editing it invalidates the dependent shards.
+#'
+#' To parallelise the shards, set a controller (e.g. a mirai-backed
+#' `crew::crew_controller_local()`) with `targets::tar_option_set()` in
+#' `_targets.R` before calling this - the target set is unchanged.
+#'
+#' @inheritParams scenario_dataset
+#' @param root The results root the shards and summary are written under;
+#'   defaults to the per-layout [scenario_results_dir()].
+#' @return A list of `targets` target objects, for `_targets.R` to return.
+#' @seealso [scenario_results_dir()], [ssd_run_scenario_shards()] (the
+#'   single-core, `targets`-free equivalent).
+#' @export
+#' @examples
+#' \dontrun{
+#' # _targets.R
+#' library(targets)
+#' library(tarchetypes)
+#' library(ssdsims)
+#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+#' ssd_scenario_targets(scenario)
+#' }
+ssd_scenario_targets <- function(
+  scenario,
+  root = scenario_results_dir(scenario)
+) {
+  chk::chk_s3_class(scenario, "ssdsims_scenario")
+  chk::chk_string(root)
+  rlang::check_installed(c("targets", "tarchetypes"))
+
+  sample_dir <- file.path(root, "sample")
+  fit_dir <- file.path(root, "fit")
+  hc_dir <- file.path(root, "hc")
+  summary_path <- file.path(root, "summary.parquet")
+
+  # One `tar_map` per step: a named, format="file", error="null" target per
+  # `partition_by` path cell. `tar_target_raw()` + `bquote()` injects the result
+  # dirs as literals while leaving `scenario`/`tasks`/the step barriers as
+  # symbols (resolved as targets globals / mapped values).
+  step_map <- function(step, command) {
+    shards <- switch(
+      step,
+      sample = ssd_scenario_sample_shards(scenario),
+      fit = ssd_scenario_fit_shards(scenario),
+      hc = ssd_scenario_hc_shards(scenario)
+    )
+    tarchetypes::tar_map(
+      values = shards,
+      names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
+      targets::tar_target_raw(
+        paste0(step, "_step"),
+        command,
+        format = "file",
+        error = "null"
+      )
+    )
+  }
+
+  sample_targets <- step_map(
+    "sample",
+    bquote(ssd_run_sample_step(tasks, scenario, .(sample_dir)))
+  )
+  fit_targets <- step_map(
+    "fit",
+    bquote({
+      sample_done # order after all sample shards (read by partition path)
+      ssd_run_fit_step(tasks, scenario, .(sample_dir), .(fit_dir))
+    })
+  )
+  hc_targets <- step_map(
+    "hc",
+    bquote({
+      fit_done # order after all fit shards (read by partition path)
+      ssd_run_hc_step(tasks, scenario, .(fit_dir), .(hc_dir))
+    })
+  )
+
+  list(
+    sample_targets,
+    tarchetypes::tar_combine(sample_done, sample_targets),
+    fit_targets,
+    tarchetypes::tar_combine(fit_done, fit_targets),
+    hc_targets,
+    tarchetypes::tar_combine(hc_done, hc_targets),
+    # `summary` reads the hc directory (unions whatever landed); `hc_done` orders
+    # it after the hc shards.
+    targets::tar_target_raw(
+      "summary",
+      bquote({
+        hc_done
+        ssd_summarize(.(sample_dir), .(fit_dir), .(hc_dir), .(summary_path))
+      }),
+      format = "file"
+    )
+  )
 }

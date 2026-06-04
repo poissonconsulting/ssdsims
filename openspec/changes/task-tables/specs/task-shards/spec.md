@@ -80,3 +80,10 @@ Because a step's Hive shard path depth/axes are a function of `partition_by`/`bu
 #### Scenario: Same layout yields the same root
 - **WHEN** `scenario_results_dir()` is computed twice for the same `partition_by` (other knobs may differ)
 - **THEN** the root SHALL be identical
+
+### Requirement: A target factory builds the whole pipeline from a scenario
+The package SHALL provide `ssd_scenario_targets(scenario, root)` that returns the complete list of `targets` objects for the static-branching pipeline — one `format = "file"`, `error = "null"` target per `partition_by` path cell per step (named by the step's path axes), the `tar_combine()` step-ordering barriers, and the `summary` — written under `root` (default `scenario_results_dir(scenario)`). A `_targets.R` SHALL therefore reduce to building a scenario and calling the factory; the per-task results SHALL be unchanged.
+
+#### Scenario: A `_targets.R` is just a scenario plus the factory call
+- **WHEN** a `_targets.R` does `source("scenario.R"); ssd_scenario_targets(scenario)` and `targets::tar_make()` runs
+- **THEN** every shard target SHALL build and the per-task results SHALL equal those of `ssd_run_scenario_baseline()` for the same scenario

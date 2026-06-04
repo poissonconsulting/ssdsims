@@ -445,3 +445,26 @@ test_that("task-lists: task-table column contracts are pinned", {
     names(ssd_scenario_hc_tasks(scenario))
   })
 })
+
+# ---- samples retains bootstrap draws without changing estimates ------------
+
+test_that("scenario-definition: samples = TRUE retains hc draws but keeps estimates", {
+  args <- list(
+    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = "lnorm",
+    ci = c(FALSE, TRUE),
+    nboot = 10L
+  )
+  out_no <- ssd_run_scenario_baseline(do.call(ssd_define_scenario, args))
+  out_yes <- ssd_run_scenario_baseline(
+    do.call(ssd_define_scenario, c(args, list(samples = TRUE)))
+  )
+  est <- function(out) do.call(rbind, out$hc$hc)$est
+  expect_equal(est(out_no), est(out_yes)) # estimates unchanged
+  len <- function(out) unlist(lapply(out$hc$hc, function(h) lengths(h$samples)))
+  expect_true(all(len(out_no) == 0L)) # FALSE -> empty samples column
+  expect_true(any(len(out_yes) > 0L)) # TRUE -> bootstrap draws retained
+})
