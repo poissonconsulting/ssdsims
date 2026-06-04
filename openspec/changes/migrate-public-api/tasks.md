@@ -1,7 +1,7 @@
-## 1. Fit seed-and-run path (D1)
+## 1. Name-based `min_pmix` (D1)
 
-- [ ] 1.1 Add an internal function-valued `fit` seed-and-run helper that takes the public fit args (function-valued `min_pmix`) plus `(seed, primer)`, calls `local_dqrng_state(seed, primer)` exactly once, then runs the state-less fit (`ssdtools::ssd_fit_dists(...)` with `min_pmix(nrow(data))`) — the existing `fit_dists_state` body minus the L'Ecuyer wrapper.
-- [ ] 1.2 Confirm `sample` and `hc` can reuse the shipped `sample_data_task_primer()` / `hc_data_task_primer()` directly (signatures already match); add a thin adapter only if argument names differ.
+- [ ] 1.1 Change `ssd_fit_dists_sims(min_pmix=)` from a list of functions to a character vector of function **names** (default `"ssd_min_pmix"`); validate it is a character vector and that each name resolves via `resolve_min_pmix()` (`ssdtools` namespace → global env), aborting informatively otherwise.
+- [ ] 1.2 Confirm all three steps reuse the shipped `sample_data_task_primer()` / `fit_data_task_primer()` / `hc_data_task_primer()` directly (signatures now match — `fit_data_task_primer()` takes the `min_pmix` name); add a thin adapter only if argument names differ.
 
 ## 2. Migrate `ssd_sim_data.data.frame()` (`R/simulate-data.R`)
 
@@ -13,8 +13,8 @@
 ## 3. Migrate `ssd_fit_dists_sims()` (`R/fit-dists-sims.R`)
 
 - [ ] 3.1 Open a reentrant `local_dqrng_backend()` scope; resolve `seed` per D4.
-- [ ] 3.2 Replace the `fit_dists_seed()` call in the `pmap` body with the 1.1 helper, deriving `primer = task_primer()` over the fit task identity `(stream, sim, nrow, rescale, computable, at_boundary_ok, min_pmix name, range_shape1, range_shape2)`.
-- [ ] 3.3 Keep `min_pmix` function-valued in the public surface; key it into the primer by name (stable label fallback for unnamed functions). Preserve the empty-input and validation behavior and the public signature.
+- [ ] 3.2 Replace the `fit_dists_seed()` call in the `pmap` body with `fit_data_task_primer()`, deriving `primer = task_primer()` over the fit task identity `(stream, sim, nrow, rescale, computable, at_boundary_ok, min_pmix name, range_shape1, range_shape2)`.
+- [ ] 3.3 Pass the `min_pmix` **name** through to `fit_data_task_primer()` (resolved by `resolve_min_pmix()`); update the Roxygen `@param min_pmix` from "a list of functions" to "a character vector of function names". Preserve empty-input handling and the rest of the signature.
 
 ## 4. Migrate `ssd_hc_sims()` (`R/hc-sims.R`)
 
@@ -35,7 +35,7 @@
 ## 7. Tests
 
 - [ ] 7.1 `test-simulate-data.R`: same `(seed, stream)` ⇒ identical; different `stream` ⇒ different; `head(., nrow)` is a prefix of the `n_max` draw; standalone vs. in-grid task identical (order-independence); global `.Random.seed`/`RNGkind()` unchanged across a call.
-- [ ] 7.2 `test-fit-dists-sims.R`: deterministic fits for a fixed `seed`; order-independent fits; `min_pmix` keyed by name (two same-named functions with differing bodies give the same primer); empty-input and validation paths preserved.
+- [ ] 7.2 `test-fit-dists-sims.R`: deterministic fits for a fixed `seed`; order-independent fits; `min_pmix` accepted as a name and resolved via `resolve_min_pmix()` (incl. a custom function found in the global env); an unresolvable name aborts informatively; the primer keys on the name; empty-input path preserved.
 - [ ] 7.3 `test-hc-sims.R`: deterministic bootstrap for a fixed `seed` with `ci = TRUE`; order-independence; `min_pboot` guard; `ci = FALSE` collapse preserved.
 - [ ] 7.4 Add a byte-equivalence test mirroring `scripts/example-expanded.R` (migrated public path == loop-free dqrng expansion).
 - [ ] 7.5 Refresh any snapshots tied to the previous L'Ecuyer numeric output.
