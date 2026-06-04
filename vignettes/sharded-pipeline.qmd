@@ -156,16 +156,17 @@ system.file("targets-templates", "local", "_targets.R", package = "ssdsims")
 Copy it to your project root, edit the scenario, then run the pipeline (this
 needs the `targets` and `tarchetypes` Suggests):
 
+The template ships with a companion `run.R` driver (`tar_make()` + read the
+summary). Copy both to your project root and run it:
+
 ```{r}
 #| label: tar-make
 #| eval: false
 # install.packages(c("targets", "tarchetypes"))
-file.copy(
-  system.file("targets-templates", "local", "_targets.R", package = "ssdsims"),
-  "_targets.R"
-)
-targets::tar_make() # builds one target per shard, writing results/<step>/...
-targets::tar_read(summary) # the combined results/summary.parquet path
+dir <- system.file("targets-templates", "local", package = "ssdsims")
+file.copy(file.path(dir, c("_targets.R", "run.R")), ".")
+source("run.R") # tar_make(): one target per shard -> results/<step>/...; then the summary
+# or, from a shell:  Rscript run.R
 ```
 
 The template uses `format = "file"` (targets passes the shard *path*, not its
