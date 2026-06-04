@@ -37,6 +37,21 @@ reference:
   - ssd_hc_sims
   - ssd_run_scenario
 
+- title: Targets pipeline
+  desc: >
+    Group a step's tasks into per-shard tables keyed by `partition_by`, run a
+    shard with the per-task RNG primitives writing one Parquet per shard, and
+    fan in a summary - the building blocks of the static-branching `targets`
+    pipeline (see the `inst/targets-templates/local/_targets.R` template).
+  contents:
+  - ssd_scenario_sample_shards
+  - ssd_scenario_fit_shards
+  - ssd_scenario_hc_shards
+  - ssd_run_sample_step
+  - ssd_run_fit_step
+  - ssd_run_hc_step
+  - ssd_summarize
+
 - title: Reproducible RNG
   desc: >
     Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash

@@ -259,8 +259,9 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   # one shared draw of n_max = 6 rows; both nrow fits truncate that same draw
   expect_identical(nrow(out$sample$sample[[1L]]), 6L)
   expect_identical(length(unique(out$fit$sample_id)), 1L)
-  # No targets machinery and no Parquet I/O at this step.
-  expect_false("targets" %in% loadedNamespaces())
+  # The baseline runner does no Parquet I/O of its own (it threads results in
+  # memory). (`targets` is a package dependency since `task-tables`, so its
+  # presence in `loadedNamespaces()` is not a meaningful signal here.)
   expect_length(list.files(tmp, pattern = "\\.parquet$", recursive = TRUE), 0L)
 })
 
