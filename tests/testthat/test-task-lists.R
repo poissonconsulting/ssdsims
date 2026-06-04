@@ -468,3 +468,26 @@ test_that("scenario-definition: samples = TRUE retains hc draws but keeps estima
   expect_true(all(len(out_no) == 0L)) # FALSE -> empty samples column
   expect_true(any(len(out_yes) > 0L)) # TRUE -> bootstrap draws retained
 })
+
+test_that("scenario-definition: samples = TRUE works with multiple dists and ci = FALSE", {
+  # Regression: `samples = TRUE` retains the *bootstrap* draws, which only exist
+  # for `ci = TRUE`. With multiple dists (model averaging), asking ssdtools to
+  # keep a non-existent `samples` column on the `ci = FALSE` rows errored
+  # ("Can't select columns that don't exist"). The no-CI path must therefore
+  # never request samples, whatever the scenario flag.
+  scenario <- ssd_define_scenario(
+    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = c("lnorm", "gamma"),
+    ci = c(FALSE, TRUE),
+    nboot = 10L,
+    samples = TRUE
+  )
+  expect_no_error(out <- ssd_run_scenario_baseline(scenario))
+  # ci = TRUE rows keep draws; ci = FALSE rows have an empty samples column.
+  lens <- unlist(lapply(out$hc$hc, function(h) lengths(h$samples)))
+  expect_true(any(lens > 0L))
+  expect_true(any(lens == 0L))
+})

@@ -487,12 +487,16 @@ hc_data_task <- function(
       min_pboot = 0
     )
   } else {
+    # `samples` retains the *bootstrap* draws, which only exist when `ci = TRUE`.
+    # Without CI there is nothing to keep, and ssdtools' model-averaging cleanup
+    # errors if asked to retain a non-existent `samples` column, so the no-CI
+    # path never requests them regardless of the scenario's `samples` flag.
     ssdtools::ssd_hc(
       fits,
       proportion = proportion,
       ci = FALSE,
       est_method = est_method,
-      samples = samples,
+      samples = FALSE,
       min_pboot = 0
     )
   }
