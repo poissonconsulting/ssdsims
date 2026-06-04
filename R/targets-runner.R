@@ -318,7 +318,12 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
     rows[[i]] <- hc
   }
   out <- file.path(out_dir, shard_path(tasks, scenario, "hc"), "part.parquet")
-  ssd_write_parquet(dplyr::bind_rows(rows), out)
+
+  # FIXME: Ensure the samples column is unnamed upstream
+  rows <- dplyr::bind_rows(rows)
+  rows$samples <- purrr::map(rows$samples, unname)
+
+  ssd_write_parquet(rows, out)
 }
 
 #' Summarise a Run's hc Estimates Across Shards
