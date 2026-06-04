@@ -223,15 +223,15 @@ task tables in dependency order, threading each task's result forward to its
 children by the foreign-key id. It runs **in-process**, with no `targets`, no
 shard grouping, and no Parquet I/O.
 
-It is also **not reproducible on its own** --- no per-task RNG seeding happens
-yet (that arrives with the `primer-primitives` roadmap step). The runner draws
-from the *ambient* RNG, so pin it for a deterministic local run:
+It **is reproducible without an external seed**: the runner opens one
+`local_dqrng_backend()` scope and seeds each task exactly once from
+`scenario$seed` plus a per-task primer (`task_primer()` over the task's
+identity), so two runs of a scenario with a fixed `seed` yield identical
+results, regardless of the order in which tasks run:
 
 ```{r}
 #| label: run-baseline
-withr::with_seed(42L, {
-  out <- ssd_run_scenario_baseline(scenario)
-})
+out <- ssd_run_scenario_baseline(scenario)
 names(out)
 ```
 

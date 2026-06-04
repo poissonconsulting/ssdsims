@@ -127,7 +127,7 @@ When touching RNG-consuming code:
 
 ### Testing
 
-Test-suite conventions live in **`tests/testthat/CLAUDE.md`** — file/naming
+Test-suite conventions live in **`tests/testthat/AGENTS.md`** — file/naming
 rules, error/warning and snapshot style, and RNG seeding. Read that before
 writing tests.
 
@@ -199,7 +199,7 @@ See `DESCRIPTION` for versions and imports.
 
 ### Add a new test file
 
-See **`tests/testthat/CLAUDE.md`** for the full test-suite conventions
+See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
 (file/naming, expectations, snapshots, RNG seeding).
 
 ### Update package version and news

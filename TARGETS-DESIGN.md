@@ -477,7 +477,7 @@ that `tar_map` fans out over (§6).
                      ssd_scenario_tasks(scenario)
                               │
                               ▼
-                     four task tables (sample, data, fit, hc tasks; see §5),
+                     three task tables (sample, fit, hc tasks; see §5),
                      each row = one task carrying its (seed, state) pair (§2)
                               │
             ┌─────────────────┴─────────────────┐
@@ -1720,7 +1720,7 @@ Each scenario execution (via `ssd_run_scenario()` or a cluster step)
 installs dqrng as the base R RNG backend at entry and restores on exit
 via `on.exit(restore_methods())`. Tests and helper scripts that touch
 the methods mid-session (not inside a scenario runner) use the same
-`on.exit()` discipline — documented in CLAUDE.md (§RNG discipline).
+`on.exit()` discipline — documented in AGENTS.md (§RNG discipline).
 
 ---
 
@@ -1872,8 +1872,9 @@ already ran end to end (see §4, §6). These steps are therefore
   re-runs with byte-equivalence. This is a surface rename over
   `primer-primitives`, which already establishes the contract — so,
   **trusting the design**, none of the targets-only plumbing (`registry`,
-  `manifest`, `task-tables`, …) waits on it. It can land at any time;
-  it is **not** on the dependency DAG.
+  `manifest`, `task-tables`, …) waits on it. It can land at any time; the
+  DAG shows it hanging off `primer-primitives` with a dashed, non-gating
+  edge and no dependants.
 - **`registry`** — **Targets-only**: an implicit registry of the
   scenario's *named* entries, implemented as `tar_target`s that resolve
   each name once per project — datasets to a Parquet file
@@ -1967,7 +1968,7 @@ already ran end to end (see §4, §6). These steps are therefore
   argument on `chk_*()` so the origin can be set without hand-rolling each
   check). Not on the dependency DAG — it can land at any time; the
   `ssd-define-scenario` work already follows the convention (see the
-  repo `CLAUDE.md` "Error origin" note).
+  repo `AGENTS.md` "Error origin" note).
 - **`dataset-provenance`** — *Independent, deferred until much later;
   not on the dependency DAG.* The decoupling `scenario-input-types`
   defers: stop transporting generated datasets inline and instead store
@@ -2008,6 +2009,7 @@ flowchart TD
     dqstate[local-dqrng-state]
     primer[task-primer]
     prims[primer-primitives]
+    migrate[migrate-public-api]
     partby[partition-by]
 
     subgraph targets [targets-only plumbing]
@@ -2052,11 +2054,15 @@ flowchart TD
     cluster --> survive
     rewrite --> lockin
     lockin --> cleanup
+
+    prims -.-> migrate
 ```
 
-`migrate-public-api` is **not** shown: trusting the design, it is a
-cosmetic rename that no targets step depends on, so it can land any
-time (like `error-call-origin` and the Cleanup items).
+`migrate-public-api` hangs off `primer-primitives` with a **dashed,
+non-gating** edge and **no dependants**: trusting the design, it is a
+cosmetic rename that no targets step waits on, so it can land any time
+(like `error-call-origin` and the Cleanup items). The dashed edge marks
+"follows from, but does not block."
 
 Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not

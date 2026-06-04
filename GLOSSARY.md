@@ -41,9 +41,14 @@ Terminology used throughout `ssdsims`.
       assignable to `.Random.seed`.
   In TARGETS-DESIGN.md, the per-task primer is the 64-bit
   `rlang::hash()` of the task's parameters via `task_primer(p)`
-  (§2). The `state =` argument of the `_state` functions *is* the
-  primer for that task. (A historical misnomer, to be fixed in a future iteration:
-  `primer = ` argument of the `_primer` functions.)
+  (§2). The dqrng-path seed-and-run wrappers carry it under the
+  corrected naming — the `primer =` argument of the `_primer`
+  functions `sample_data_task_primer()` / `fit_data_task_primer()`
+  / `hc_data_task_primer()`, which install `(seed, primer)` once
+  via `local_dqrng_state()`. The legacy L'Ecuyer `slice_sample_state()`
+  / `fit_dists_state()` / `hc_state()` keep the older `state =`
+  spelling of the same primer (a historical misnomer) until
+  `cleanup-lecuyer` removes them.
 
 ## Pipeline terms
 

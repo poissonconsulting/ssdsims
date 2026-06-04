@@ -32,6 +32,7 @@ reference:
     Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash
     backend (targets path) and L'Ecuyer-CMRG sub-streams (legacy path).
   contents:
+  - task_primer
   - local_dqrng_backend
   - local_dqrng_state
   - with_dqrng_state
