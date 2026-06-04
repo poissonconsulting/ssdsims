@@ -1,7 +1,7 @@
 ## 1. Dependencies
 
 - [ ] 1.1 Add `targets` and `tarchetypes` to `DESCRIPTION` `Imports` (`duckplyr` — Parquet I/O — arrives with `registry`)
-- [ ] 1.2 Confirm prerequisites are in place: `scenario_partition_axes()` and the three-step `sample`/`fit`/`hc` defaults (`partition-by`), the `registry` resolver, and the `manifest` recorder
+- [ ] 1.2 Confirm prerequisites are in place: `scenario_partition_axes()` and the three-step `sample`/`fit`/`hc` defaults (`partition-by`) and the `registry` resolver (`manifest` is **not** a prerequisite)
 
 ## 2. Shard grouping wrappers
 
@@ -15,7 +15,6 @@
 - [ ] 3.1 Add `ssd_run_sample_step(tasks, scenario, out_dir)`: under one `local_dqrng_backend()`, loop tasks calling `sample_data_task_primer()`, write one Parquet at the shard's partition path
 - [ ] 3.2 Add `ssd_run_fit_step(tasks, scenario, sample_dir, out_dir)`: read the upstream `sample` Parquet by partition path, `head(sample, nrow)` inline (RNG-free), call `fit_data_task_primer()` (resolving `min_pmix`/datasets through the `registry`), write one Parquet
 - [ ] 3.3 Add `ssd_run_hc_step(tasks, scenario, fit_dir, out_dir)`: read the upstream `fit` Parquet(s) by partition path, call `hc_data_task_primer()`, write one Parquet
-- [ ] 3.4 On a successful write, record the shard's sha256 via the `manifest` recorder
 
 ## 4. Summary fan-in
 

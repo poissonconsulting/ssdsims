@@ -33,13 +33,17 @@ The package SHALL provide `ssd_record_shard(dir, partition_key, sha256, ...)` th
 - **WHEN** several shards record their sha256 concurrently
 - **THEN** each SHALL write its own sidecar and no record SHALL overwrite another
 
-### Requirement: Assemble completed_shards into the manifest
-The package SHALL provide a manifest assembler that unions the per-shard sidecars under a results tree into the manifest's `completed_shards` map — partition path to `{ sha256, cloud_sha256? }` — so the manifest reflects the set of shards whose Parquet exists and is trusted (`TARGETS-DESIGN.md` §8.5).
+### Requirement: Assemble completed_shards from the shards on disk
+The package SHALL provide a manifest assembler that builds the manifest's `completed_shards` map — partition path to `{ sha256, cloud_sha256? }` — from the shards present under a results tree, so the manifest reflects the set of shards whose Parquet exists (`TARGETS-DESIGN.md` §8.5). The assembler SHALL use a shard's per-shard sidecar when present (carrying the trusted-as-produced sha256, and `cloud_sha256` when uploaded) and SHALL otherwise hash the shard's Parquet directly, so assembly does NOT require the pipeline runner to have recorded anything.
 
-#### Scenario: Assembly unions the per-shard records
-- **WHEN** several shards have recorded their sidecars and the assembler is run against the results tree
-- **THEN** the manifest's `completed_shards` SHALL contain one entry per recorded shard, keyed by partition path, each carrying that shard's recorded sha256 (and `cloud_sha256` when present)
+#### Scenario: Assembly hashes shards that have no sidecar
+- **WHEN** shard Parquets exist under the results tree with no per-shard sidecars and the assembler is run
+- **THEN** the manifest's `completed_shards` SHALL contain one entry per shard Parquet, keyed by partition path, each carrying the sha256 of that Parquet
 
-#### Scenario: A shard with no record is absent from completed_shards
-- **WHEN** a shard's Parquet was not written (no sidecar) and the assembler runs
+#### Scenario: Assembly prefers a shard's recorded sidecar
+- **WHEN** a shard has a per-shard sidecar (e.g. recorded at write time, with a `cloud_sha256`) and the assembler is run
+- **THEN** that shard's `completed_shards` entry SHALL carry the sidecar's recorded sha256 (and `cloud_sha256` when present) rather than a re-hash
+
+#### Scenario: A shard whose Parquet is absent is absent from completed_shards
+- **WHEN** a shard's Parquet was not written and the assembler runs
 - **THEN** that shard's partition path SHALL NOT appear in `completed_shards`

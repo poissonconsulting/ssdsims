@@ -1889,8 +1889,20 @@ already ran end to end (see §4, §6). These steps are therefore
   Regression test: a body edit to a registered `min_pmix` function does
   not move the hash of any cached fit branch.
 - **`manifest`** — Per-scenario manifest writer/reader with the
-  §8.5 field set; each step target writes each shard's sha256
-  alongside the Parquet on success.
+  §8.5 field set (the head records **complete session info**, not just
+  the three named version pins). **Not on the `task-tables` critical
+  path**: the manifest is provenance/verification metadata *about* the
+  pipeline's outputs, so it depends on the scenario (head) and on the
+  shards' existence (`completed_shards`), never the reverse — the
+  `task-tables` runner reads nothing from it. The `completed_shards`
+  assembler hashes the shards on disk; recording each shard's sha256
+  *at write time* (and the cloud copy's sha256) is the
+  trusted-as-produced enhancement wired in by the consumers that need
+  it (`replay-helper`, `cloud-upload`), not by the happy-path pipeline.
+  Land it before its first consumer (`replay-helper` /
+  `shard-completeness-assert`), and operationally before the first
+  expensive cluster run whose results you intend to trust/reproduce;
+  it does not gate `task-tables`.
 - **`task-tables`** — `ssd_scenario_data_tasks` /
   `_fit_tasks` / `_hc_tasks` returning the per-step task tables
   with `(seed, primer)` on each row, plus the `ssd_scenario_*_shards`
@@ -2014,12 +2026,11 @@ flowchart TD
 
     subgraph targets [targets-only plumbing]
         reg[registry]
-        manif[manifest]
         tt[task-tables]
         reg --> tt
-        manif --> tt
     end
 
+    manif[manifest]
     hive[hive-partitioning]
     cluster[cluster-pipeline]
     survive[shard-failure-survival]
@@ -2049,6 +2060,14 @@ flowchart TD
     tt --> cloud
     tt --> replay
     tt --> rewrite
+
+    %% manifest is provenance/verification metadata: it depends on the
+    %% scenario (head) and feeds the verification layer; it does NOT gate
+    %% task-tables (see the manifest roadmap bullet).
+    define --> manif
+    manif --> replay
+    manif --> assert
+    manif --> cloud
 
     survive --> assert
     cluster --> survive

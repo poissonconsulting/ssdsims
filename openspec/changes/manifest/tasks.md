@@ -15,8 +15,8 @@
 
 ## 4. Assembly
 
-- [ ] 4.1 Add the assembler: scan the results tree for per-shard sidecars and union them into `completed_shards` (`partition path -> { sha256, cloud_sha256? }`); merge into the manifest head
-- [ ] 4.2 Shards without a sidecar SHALL be absent from `completed_shards`
+- [ ] 4.1 Add the assembler: scan the results tree for shard Parquets and build `completed_shards` (`partition path -> { sha256, cloud_sha256? }`) — use a shard's per-shard sidecar when present, else hash the Parquet directly (no dependency on the `task-tables` runner); merge into the manifest head
+- [ ] 4.2 A shard whose Parquet is absent SHALL be absent from `completed_shards`
 
 ## 5. Docs and reference
 
@@ -27,5 +27,5 @@
 
 - [ ] 6.1 `tests/testthat/test-manifest.R`: write/read round-trip preserves declarative fields and the session-info block (incl. the `r`/`dqrng`/`ssdtools` subset), with `seed`/`nboot` whole numbers and logical knobs intact
 - [ ] 6.2 `ssd_record_shard()` writes a per-shard sidecar; cloud sha256 recorded when supplied; concurrent records do not collide (distinct sidecars)
-- [ ] 6.3 Assembler unions sidecars into `completed_shards`; an unrecorded shard is absent
+- [ ] 6.3 Assembler builds `completed_shards` by hashing shards on disk; prefers a sidecar's recorded sha (and `cloud_sha256`) when present; a shard with no Parquet is absent
 - [ ] 6.4 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`

@@ -1,6 +1,6 @@
 ## Context
 
-`TARGETS-DESIGN.md` §8.5 specifies a per-scenario manifest — a small JSON sidecar to the results directory — holding `seed`, `datasets`, `min_pmix`, `fit`, `hc`, `partition_by`, `completed_shards` (shard partition path → sha256, including the cloud copy's sha256 when uploaded), and toolchain versions (§8.5 names `r_version` / `dqrng_version` / `ssdtools_version` as examples). §9 leans on those versions for the bit-stability contract (`ssdtools`' RNG flow and `base::sample.int`'s sub-truncation are stable only within a pinned toolchain); this change records the **complete session info** rather than only the three named packages, so drift caused by any dependency is diagnosable. §7 leans on the per-shard sha256 so a lightweight replay can verify the local upstream against the cluster's actual bytes. Nothing in the package writes or reads such a manifest yet. This change adds it as a standalone capability, ahead of the `task-tables` pipeline that populates it.
+`TARGETS-DESIGN.md` §8.5 specifies a per-scenario manifest — a small JSON sidecar to the results directory — holding `seed`, `datasets`, `min_pmix`, `fit`, `hc`, `partition_by`, `completed_shards` (shard partition path → sha256, including the cloud copy's sha256 when uploaded), and toolchain versions (§8.5 names `r_version` / `dqrng_version` / `ssdtools_version` as examples). §9 leans on those versions for the bit-stability contract (`ssdtools`' RNG flow and `base::sample.int`'s sub-truncation are stable only within a pinned toolchain); this change records the **complete session info** rather than only the three named packages, so drift caused by any dependency is diagnosable. §7 leans on the per-shard sha256 so a lightweight replay can verify the local upstream against the cluster's actual bytes. Nothing in the package writes or reads such a manifest yet. This change adds it as a **standalone, downstream** capability: it depends only on the scenario (for the head) and on the shards' *existence* (to hash them), never the reverse — it does not gate the `task-tables` pipeline. See the dependency decision below.
 
 ## Goals / Non-Goals
 
@@ -8,33 +8,41 @@
 
 - A JSON writer/reader for the §8.5 declarative fields plus complete session info, round-tripping losslessly.
 - A per-shard sha256 recording mechanism that is safe under parallel shard execution.
-- Assembly of the per-shard records into the manifest's `completed_shards` map.
+- Assembly of `completed_shards` from the shards on disk (hashing them directly, or using a per-shard sidecar when present).
 
 **Non-Goals:**
 
-- Computing shard Parquets or the partition layout (that is `task-tables` / `hive-partitioning`); `manifest` only records what a shard write reports.
+- Computing shard Parquets or the partition layout (that is `task-tables` / `hive-partitioning`); `manifest` only describes shards that already exist.
 - Reading `completed_shards` to drive replay or completeness assertions (those are `replay-helper` / `shard-completeness-assert`); `manifest` only provides the data.
 - The cloud upload itself (`cloud-upload`); `manifest` only carries the optional `cloud_sha256` field when a caller supplies it.
 
 ## Decisions
 
+### Decision: dependency direction — `manifest` does not gate `task-tables`
+
+The manifest is provenance/verification metadata, so it must not sit upstream of the pipeline that produces the data it describes. Its **head** (scenario fields + session info) depends only on the scenario; its **`completed_shards`** depends on the shards already existing (they must be hashed), i.e. on `task-tables`' *outputs*. And `task-tables` reads nothing from the manifest. So `manifest → task-tables` would be a dependency inversion; the real edges are `ssd-define-scenario → manifest`, `manifest → replay-helper`, and `manifest → shard-completeness-assert` (with `cloud-upload` recording the cloud sha256). TARGETS-DESIGN.md §12's DAG is updated to match.
+
+**Latest point it is needed.** As a *build* dependency: just before the first consumer (`replay-helper` / `shard-completeness-assert`); it never gates `task-tables`, `hive-partitioning`, or `cluster-pipeline`. *Operationally* (the one that bites): before the first expensive cluster run whose results you intend to trust/reproduce/replay — exact session info and the trusted-as-produced sha cannot be reconstructed after such a run. For local dev and the toy pipeline, never. The change can therefore be implemented at any time; it is sequenced by its consumers, not by `task-tables`.
+
 ### Decision: JSON sidecar, not Parquet
 
 §8.5 calls the manifest "a small JSON sidecar." JSON is human-readable, diffable, and portable, and the manifest is tiny (a few names, numeric knobs, version strings, and one entry per shard). The bulk results stay Parquet; only this metadata is JSON. `jsonlite::write_json(..., auto_unbox = TRUE, pretty = TRUE)` / `read_json(..., simplifyVector = FALSE)` give a stable round-trip. *Alternative considered:* a Parquet/`yaml` manifest — rejected; JSON matches the design and needs no extra heavy dependency beyond `jsonlite`.
 
-### Decision: per-shard sidecars + assembly, not many writers mutating one JSON
+### Decision: the assembler hashes shards on disk; per-shard sidecars are the at-write-time enhancement
 
-§8.5 says "each step target writes each shard's sha256 **alongside the Parquet** on success." Shard targets run in parallel (§6), so having every shard append to one `manifest.json` is a write race. Decision: each shard writes its own small sidecar (e.g. `<shard-dir>/.sha256.json`) next to its Parquet — one writer per file, no contention — and a downstream **assembler** unions those sidecars into the manifest's `completed_shards` map. This is the natural reading of "alongside the Parquet" and mirrors the §6 fan-in that reads result directories rather than pulling shard values back. *Alternative considered:* a lock around a shared manifest — rejected as fragile on a cluster filesystem and unnecessary given the sidecar fan-in.
+The baseline `completed_shards` assembler walks the results tree and hashes each shard's `part.parquet` directly, so it needs **no** hook into the `task-tables` runner — the shards are the truth, and the manifest is built *from* them after a run. This is what keeps `manifest` off `task-tables`' critical path (see the dependency decision below).
+
+§8.5's "each step target writes each shard's sha256 **alongside the Parquet** on success" is an *optimization* for the cluster/replay path: recording at write time avoids re-hashing large files and, crucially, captures the **trusted-as-produced** sha (and, with `cloud-upload`, the cloud copy's sha) — which post-hoc hashing of possibly-touched files cannot. That recording is per-shard sidecars (one writer per file, no race), and the same assembler unions sidecars where present and falls back to hashing for shards without one. The sidecar-writing call is wired in by the consumers that need it (`replay-helper` / `cloud-upload`), not by the happy-path pipeline. *Alternative considered:* a lock around a shared `manifest.json` — rejected as fragile on a cluster filesystem and unnecessary given the per-file fan-in.
 
 ### Decision: `manifest` does not own Parquet paths; the recorder takes a caller-supplied shard directory
 
 Path infrastructure already exists and is *not* duplicated here: `path_key()` (in `R/task-lists.R`, shipped) renders a row's Hive partition path from its axes, and the result-directory roots (`results/{sample,fit,hc}/…` and `results/datasets/…`) are introduced by `task-tables` and `registry`. `manifest` defines no paths of its own. `ssd_record_shard(dir, partition_key, sha256, ...)` is *handed* the shard's directory (the caller composes it from `path_key()` + the step's result root) and writes its sidecar there — so yes, the sha256 sidecar sits side-by-side with the shard's `part.parquet`, but the location is supplied, not computed by `manifest`.
 
-Scope boundary (answering "does it belong in this change?"): `manifest` owns the manifest **document** — the sidecar record format, the reader, and the `completed_shards` assembler. The *invocation* — the "on success, write the sidecar" call inside each step target — lives in `task-tables`, where shard writes and their paths are defined (`task-tables` task 3.4 already calls the recorder). The recorder helper stays in `manifest` because it is the format owner and must agree with the reader/assembler; `task-tables` calls it. *Alternative considered:* move `ssd_record_shard()` wholesale into `task-tables` — rejected as the default because it would split the sidecar format from the reader/assembler that must round-trip with it; cheap to revisit if the boundary feels wrong.
+Scope boundary (answering "does it belong in this change?"): `manifest` owns the manifest **document** — the sidecar record format, the reader, and the `completed_shards` assembler (including the post-hoc hashing path). The at-write-time *invocation* — the "on success, write the sidecar" call — lives with the consumers that need the trusted-as-produced sha (`replay-helper`, `cloud-upload`), not with the happy-path `task-tables` runner. The recorder helper stays in `manifest` because it is the format owner and must agree with the reader/assembler. *Alternative considered:* move `ssd_record_shard()` wholesale into a consumer step — rejected because it would split the sidecar format from the reader/assembler that must round-trip with it.
 
 ### Decision: split the manifest into a stable head and an accreting tail
 
-`ssd_write_manifest(scenario, dir)` writes the declarative head (scenario fields + session info) once at pipeline init — a pure function of the scenario and the toolchain. `completed_shards` is the accreting tail, assembled from the per-shard sidecars after a run (or incrementally). Keeping them separable means a re-run with the same scenario rewrites an identical head, and only the tail moves as shards complete. The reader returns both merged.
+`ssd_write_manifest(scenario, dir)` writes the declarative head (scenario fields + session info) once at pipeline init — a pure function of the scenario and the toolchain. `completed_shards` is the accreting tail, assembled from the shards on disk (hashing them, or reading per-shard sidecars where present) after a run. Keeping them separable means a re-run with the same scenario rewrites an identical head, and only the tail moves as shards complete. The reader returns both merged.
 
 ### Decision: capture complete session info, not just three version strings
 

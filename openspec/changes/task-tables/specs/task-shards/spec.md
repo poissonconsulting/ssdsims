@@ -23,7 +23,7 @@ Each task row in a shard's `tasks` list-column SHALL carry `seed = scenario$seed
 - **THEN** no random numbers SHALL be drawn and `.Random.seed` SHALL be unchanged
 
 ### Requirement: A per-shard step runner writes one Parquet per shard
-The package SHALL provide per-shard step runners `ssd_run_sample_step()`, `ssd_run_fit_step()`, and `ssd_run_hc_step()` that loop a shard's `tasks`, install each task's `(seed, primer)` exactly once via the existing `*_data_task_primer()` wrappers under an active dqrng backend, and write the shard's results to one Parquet file at the shard's partition path. The `fit` and `hc` runners SHALL read their upstream shard's Parquet by partition path (the `fit` runner truncating `head(sample, nrow)` inline, RNG-free), resolve datasets and `min_pmix` through the `registry`, and record the written shard's sha256 through the `manifest`.
+The package SHALL provide per-shard step runners `ssd_run_sample_step()`, `ssd_run_fit_step()`, and `ssd_run_hc_step()` that loop a shard's `tasks`, install each task's `(seed, primer)` exactly once via the existing `*_data_task_primer()` wrappers under an active dqrng backend, and write the shard's results to one Parquet file at the shard's partition path. The `fit` and `hc` runners SHALL read their upstream shard's Parquet by partition path (the `fit` runner truncating `head(sample, nrow)` inline, RNG-free) and resolve datasets and `min_pmix` through the `registry`. The runners SHALL NOT depend on the `manifest`; provenance/verification metadata is recorded by the downstream `manifest` consumers.
 
 #### Scenario: A shard runs its tasks and writes one Parquet
 - **WHEN** a step runner is called on a shard with `K` tasks
@@ -33,9 +33,6 @@ The package SHALL provide per-shard step runners `ssd_run_sample_step()`, `ssd_r
 - **WHEN** a `fit` (or `hc`) shard runner executes
 - **THEN** it SHALL open the matching upstream `sample` (or `fit`) shard's Parquet by partition path and use it as the task input, rather than recomputing the upstream
 
-#### Scenario: A written shard records its sha256
-- **WHEN** a step runner writes a shard's Parquet successfully
-- **THEN** it SHALL record that shard's sha256 via the manifest recorder
 
 ### Requirement: A static-branching targets pipeline runs a scenario
 The package SHALL ship a `targets` pipeline template that builds the scenario as a plain construction-time object (not a `tar_target`) and uses `tarchetypes::tar_map()` to mint one named target per shard for each step (static branching, `TARGETS-DESIGN.md` §6), so the shard set is fixed when `_targets.R` is sourced. The pipeline SHALL `targets::tar_make()` a tiny scenario end-to-end, producing one Parquet per shard across the `sample`, `fit`, and `hc` layers.
