@@ -712,6 +712,26 @@ them (duckplyr predicate pushdown); it does **not** assume a single
 upstream shard. `shard-runner-baseline` (§12) proves this
 read+filter loop single-core; §6 wires it into `targets`.
 
+At the **task** level the linkage is **n:1** — each `fit`/`hc` task has
+exactly one parent task, so each table carries a single `<parent>_id`
+foreign key. That single key is a *special case* that holds only while
+the grids grow monotonically (`task_axes(sample) ⊆ task_axes(fit) ⊆
+task_axes(hc)`), so a child carries its parent's full identity and the
+m:n shard graph is *generated* from the single key (project each task's
+`<parent>_id` onto `path[parent]`, take the distinct set). A future
+**reduce** step — an across-replicate summary that *drops* an axis —
+references **many** parent tasks (a **set-valued** foreign key = a
+shared-axis glob, the same read), and this applies at **all three
+layers**, not just `hc`: one may reduce over any axis a layer carries
+(`sim`/`replace` at all three, `nrow` at `fit`/`hc`, the bootstrap knobs
+at `hc` only). The §6 `summary` is today's monolithic, un-sharded
+instance of that fan-in over all three layers; a sharded version is
+three reduce steps, each with a set-valued key to its own layer. A step
+that consumes more than one upstream step would simply carry more than
+one foreign-key column (a DAG, not a tree); the PK + FK-columns data
+model already expresses both relaxations, and neither is triggered by
+sharding.
+
 ---
 
 ## 6. Target graph (small example)
@@ -1000,13 +1020,15 @@ ssd_run_fit_step <- function(tasks, scenario, data_dir, out_dir) {
 The body loops once per task in the shard, primes the RNG with
 that task's primer, calls the (state-less) `_state` primitive, and
 stacks K result rows into one Parquet at the shard's partition
-path. Each fit shard opens the one upstream data shard via its
-partition path, so a fit shard never depends on the whole data step.
-Under static branching that scoping is natural: a fit shard target can
-name its single upstream data shard target (`data_step_boron_sim1_…`)
-for a precise edge, so adding new data shards mints new targets and
-leaves existing fit shards untouched — no directory-hash indirection
-required to avoid spurious rebuilds.
+path. Each fit shard opens the upstream data shard(s) its tasks
+reference — here a single shard, but in general the **set** of parent
+shards a child spans (§5/§6 Linking), read and filtered via duckplyr —
+so a fit shard never depends on the whole data step. Under static
+branching that scoping is computed at sourcing time: a fit shard target
+names its upstream data shard target(s) (Option 3, §12 `task-tables`)
+for precise per-shard edges, so adding new data shards mints new
+targets and leaves existing fit shards untouched — no directory-hash
+indirection required to avoid spurious rebuilds.
 
 **Dependencies and what re-runs on a knob change** (applied to the
 2/4/2 shard counts above; "1 shard re-runs" = its Parquet is
@@ -1954,7 +1976,12 @@ already ran end to end (see §4, §6). These steps are therefore
   write/read into the `targets` `task-tables` branches as
   `format = "file"` outputs and **pin the invalidation model**
   (`tar_cue` / content-hash, §8), so it also settles the deferred
-  `data`-step-vs-fold decision recorded in §8. Reuses
+  `data`-step-vs-fold decision recorded in §8. Because the
+  child↔parent shard relationship is **m:n**, the invalidation model
+  must propagate over the fan-in: rewriting one parent shard
+  invalidates the **set** of child shards that read it — which rides on
+  `task-tables`' per-child upstream edges (Option 3, computed at
+  sourcing time), not on a single named edge. Reuses
   `shard-runner-baseline`'s path/read helpers — the layout and
   predicate-pushdown read are already proven there, so this step is the
   `targets`-integration + caching half only (its smoke test moves to
