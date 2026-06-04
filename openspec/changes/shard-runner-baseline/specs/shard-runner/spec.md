@@ -51,3 +51,10 @@ For a fixed `scenario$seed`, the sharded runner SHALL be reproducible without an
 #### Scenario: Shard processing order does not affect results
 - **WHEN** the shards within a step are processed in a different order
 - **THEN** the per-task results SHALL be unchanged
+
+### Requirement: The runner owns its output tree (no stale shards across re-runs)
+A shard's Hive path depth and axes are a function of `partition_by`/`bundle`, and the readers glob `<step>/**/part.parquet` (depth-agnostic). `ssd_run_scenario_shards()` SHALL therefore **own** its output tree: it SHALL clear each step's subtree (`<dir>/<sample,fit,hc>`) before writing it, so the on-disk Hive tree always reflects the current scenario's `partition_by`. Re-running a scenario with a changed `partition_by`/`bundle` into the same `dir` SHALL NOT leave shards of a prior, different-granularity layout beside the new ones. Only the three step subtrees are owned; other content under `dir` (e.g. a sibling `summary.parquet`) SHALL be left untouched.
+
+#### Scenario: A changed partition_by leaves only the current layout's shards
+- **WHEN** `ssd_run_scenario_shards()` is run into a `dir`, then run again into the same `dir` with a coarser (or finer) `partition_by`
+- **THEN** each step subtree SHALL contain only the second run's shards (the prior layout's shards are removed), so a glob read unions no stale, different-granularity shards

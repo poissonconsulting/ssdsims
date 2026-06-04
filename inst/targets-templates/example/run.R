@@ -8,8 +8,8 @@
 # the same scenario single core, without targets, and compares the results.)
 #
 # It builds one target per shard (writing
-# `results/<step>/<axis=value>/.../part.parquet`) and the combined
-# `results/summary.parquet`, then reports the summary path and a peek at the
+# `results/layout=<hash>/<step>/<axis=value>/.../part.parquet`) and the combined
+# `results/layout=<hash>/summary.parquet`, then reports the summary path and a peek at the
 # hazard-concentration estimates.
 
 library(targets)

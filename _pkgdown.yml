@@ -42,6 +42,7 @@ reference:
   - ssd_run_fit_step
   - ssd_run_hc_step
   - ssd_summarize
+  - scenario_results_dir
 
 - title: Scenario accessors
   desc: >

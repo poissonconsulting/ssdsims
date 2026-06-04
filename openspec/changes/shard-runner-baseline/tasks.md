@@ -38,3 +38,7 @@
 - [x] 6.1 Roxygen for `ssd_run_scenario_shards()`: storage layout, duckplyr read-back, m:n parent resolution, reproducibility; cross-reference `partition-by` (`scenario_partition_axes()`) and note it de-risks `hive-partitioning`/`task-tables`
 - [x] 6.2 Run `devtools::document()`, `air format .`, `devtools::check()`; update `NAMESPACE`/`man/`
 - [x] 6.3 Add `NEWS.md` entry
+
+## 7. Output-tree ownership
+
+- [x] 7.1 `ssd_run_scenario_shards()` clears each `<dir>/<step>` subtree before writing (Option A), so a re-run with a changed `partition_by`/`bundle` never leaves stale-granularity shards; test that a re-layout into the same `dir` leaves only the current layout's shards

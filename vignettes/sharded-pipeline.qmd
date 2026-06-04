@@ -184,10 +184,18 @@ error and goes `NULL` without aborting the run --- the rest still build and the
 summary unions the survivors). Step ordering is wired with `tar_combine()`
 barriers, because a directory read carries no automatic dependency edge.
 
+Because a shard's Hive-path depth depends on `partition_by`/`bundle`, replaying
+with a *changed* split must not leave stale-granularity shards beside the new
+ones (a `**` glob would union both). The two drivers handle this differently:
+`run.R` (targets) writes each layout under its own root,
+`scenario_results_dir(scenario)` = `results/layout=<hash>/`, so a split change is
+a fresh tree; `run-serial.R` (single core) instead **owns** its `dir` and clears
+each step subtree on every run.
+
 Because both drivers `source("scenario.R")` --- the same study --- and
-`partition_by` is a free re-layout, `run-serial.R` finishes by reading back
-`results-serial/summary.parquet` and `results/summary.parquet` and asserting the
-per-task estimates are byte-identical. Whatever the driver --- baseline,
+`partition_by` is a free re-layout, `run-serial.R` finishes by reading back its
+own `summary.parquet` and the targets `scenario_results_dir(scenario)` summary
+and asserting the per-task estimates are byte-identical. Whatever the driver --- baseline,
 single-core shards, or `targets` --- the results are the same; choose the one
 that fits the run.
 

@@ -30,7 +30,7 @@ cat("Single-core summary:", serial_summary, "\n")
 print(run)
 
 # Compare to the targets run (results/summary.parquet from run.R), if present.
-targets_summary <- "results/summary.parquet"
+targets_summary <- file.path(scenario_results_dir(scenario), "summary.parquet")
 if (file.exists(targets_summary)) {
   read_sorted <- function(path) {
     tbl <- tibble::as_tibble(dplyr::collect(

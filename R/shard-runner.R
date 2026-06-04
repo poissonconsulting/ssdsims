@@ -42,7 +42,11 @@
 #' @param scenario An `ssdsims_scenario` from [ssd_define_scenario()].
 #' @param dir A results root to write the Hive-partitioned shards under; created
 #'   if absent. Defaults to a per-run session temp dir (the shards are left on
-#'   disk for inspection and reuse).
+#'   disk for inspection and reuse). The runner **owns** the `sample`/`fit`/`hc`
+#'   subtrees under `dir` and clears them on each run, so replaying a scenario
+#'   with a changed `partition_by`/`bundle` never leaves stale-granularity shards
+#'   beside the new ones. (The `targets` pipeline instead isolates each layout
+#'   under its own [scenario_results_dir()] root.)
 #' @return An `ssdsims_shard_run` object: a list with `dir` and the written
 #'   `sample`, `fit`, and `hc` shard Parquet paths (one per shard).
 #' @seealso [ssd_run_scenario_baseline()] (the in-memory reference oracle),
@@ -68,6 +72,15 @@ ssd_run_scenario_shards <- function(
   sample_dir <- file.path(dir, "sample")
   fit_dir <- file.path(dir, "fit")
   hc_dir <- file.path(dir, "hc")
+
+  # Own the output tree: clear each step's prior shards before writing. A shard's
+  # Hive-path depth/axes depend on `partition_by`/`bundle`, so without this a
+  # re-run with a changed split would leave stale-granularity shards beside the
+  # new ones and the glob readers would union both. Wiping first guarantees the
+  # tree always matches the current scenario (this runner recomputes every shard
+  # anyway). Only the three step subtrees are removed - the rest of `dir` is left
+  # untouched (e.g. a sibling `summary.parquet`).
+  unlink(c(sample_dir, fit_dir, hc_dir), recursive = TRUE)
 
   # One backend scope for the whole run; each step runner's own
   # `local_dqrng_backend()` is then a reentrant no-op, and each task installs

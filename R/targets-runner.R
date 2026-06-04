@@ -54,6 +54,40 @@ decode_obj <- function(s) {
   unserialize(charToRaw(s))
 }
 
+#' Layout-keyed Results Root for a Scenario
+#'
+#' Returns `<root>/layout=<hash>`, where the hash is derived from the scenario's
+#' `partition_by`. A step's Hive shard path depth and axes are a function of
+#' `partition_by`/`bundle`, so writing two different layouts into one root would
+#' leave shards of *different granularity* side by side - and the depth-agnostic
+#' glob the readers use (`<step>/**/part.parquet`) would then union stale and
+#' current shards, double-counting tasks. Keying the results root on the layout
+#' isolates each `partition_by` into its own subtree: re-running a scenario with
+#' a changed `partition_by`/`bundle` writes to a *fresh* root (never mixing
+#' granularities), while re-running the *same* layout reuses the root
+#' (idempotent and cache-friendly - the same shard paths are simply rewritten).
+#'
+#' The `targets` pipeline writes under this root (see the shipped `_targets.R`
+#' template). The single-core [ssd_run_scenario_shards()] takes the complementary
+#' approach: it *owns* and clears a fixed `dir` on each run.
+#'
+#' @inheritParams scenario_dataset
+#' @param root The results root directory (default `"results"`).
+#' @return The layout-keyed path `file.path(root, paste0("layout=", <hash>))`.
+#' @seealso [ssd_run_scenario_shards()], [ssd_summarize()].
+#' @export
+#' @examples
+#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+#' scenario_results_dir(scenario)
+scenario_results_dir <- function(scenario, root = "results") {
+  chk::chk_s3_class(scenario, "ssdsims_scenario")
+  chk::chk_string(root)
+  file.path(
+    root,
+    paste0("layout=", substr(rlang::hash(scenario$partition_by), 1L, 12L))
+  )
+}
+
 # The shard's Hive partition path, e.g. "dataset=boron/sim=1/replace=FALSE",
 # from its task rows' path-axis values (all rows in a shard share them) via the
 # existing `path_key()` - no duplicated split logic.

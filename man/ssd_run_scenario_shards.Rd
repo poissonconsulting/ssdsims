@@ -11,7 +11,11 @@ ssd_run_scenario_shards(scenario, dir = tempfile("ssdsims-shards-"))
 
 \item{dir}{A results root to write the Hive-partitioned shards under; created
 if absent. Defaults to a per-run session temp dir (the shards are left on
-disk for inspection and reuse).}
+disk for inspection and reuse). The runner \strong{owns} the \code{sample}/\code{fit}/\code{hc}
+subtrees under \code{dir} and clears them on each run, so replaying a scenario
+with a changed \code{partition_by}/\code{bundle} never leaves stale-granularity shards
+beside the new ones. (The \code{targets} pipeline instead isolates each layout
+under its own \code{\link[=scenario_results_dir]{scenario_results_dir()}} root.)}
 }
 \value{
 An \code{ssdsims_shard_run} object: a list with \code{dir} and the written

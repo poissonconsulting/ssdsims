@@ -217,26 +217,28 @@ test_that("task-shards: ssd_summarize unions landed hc shards without recomputat
 test_that("task-shards: the shipped template tar_make()s every shard", {
   skip_targets()
   dir <- withr::local_tempdir()
-  template <- system.file(
-    "targets-templates",
-    "local",
-    "_targets.R",
-    package = "ssdsims"
+  template_dir <- system.file("targets-templates", "local", package = "ssdsims")
+  skip_if(!nzchar(template_dir))
+  # `_targets.R` sources `scenario.R`, so copy both.
+  file.copy(
+    file.path(template_dir, c("_targets.R", "scenario.R")),
+    dir
   )
-  skip_if(!nzchar(template))
-  file.copy(template, file.path(dir, "_targets.R"))
   withr::local_dir(dir)
   suppressWarnings(targets::tar_make(reporter = "silent"))
   meta <- targets::tar_meta(fields = "error")
   steps <- meta[grepl("_step_", meta$name), ]
   expect_gt(nrow(steps), 0L)
   expect_true(all(is.na(steps$error)))
-  # one Parquet per shard, plus the summary
+  # one Parquet per shard, plus the summary, under the per-layout root
   expect_gt(
     length(list.files("results", pattern = "part.parquet", recursive = TRUE)),
     0L
   )
-  expect_true(file.exists("results/summary.parquet"))
+  expect_length(
+    list.files("results", pattern = "summary.parquet", recursive = TRUE),
+    1L
+  )
 })
 
 # ---- byte-identity oracle (task 7.5) ---------------------------------------
@@ -321,4 +323,24 @@ test_that("task-shards: a failing shard goes NULL and the survivors still summar
     )),
     0L
   )
+})
+
+# ---- per-layout results root (Option D) ------------------------------------
+
+test_that("task-shards: scenario_results_dir keys the root on partition_by", {
+  a <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)
+  b <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    seed = 1L,
+    partition_by = list(fit = c("dataset", "sim"))
+  )
+  expect_match(basename(scenario_results_dir(a)), "^layout=")
+  expect_identical(dirname(scenario_results_dir(a, root = "out")), "out")
+  # same layout -> same root (idempotent); different partition_by -> different root
+  expect_identical(scenario_results_dir(a), scenario_results_dir(a))
+  expect_false(scenario_results_dir(a) == scenario_results_dir(b))
+  # a non-layout knob (seed) does not change the layout root
+  a2 <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 99L)
+  expect_identical(scenario_results_dir(a), scenario_results_dir(a2))
 })

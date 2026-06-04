@@ -28,6 +28,16 @@ library(tarchetypes)
 # time (a plain object, not a target).
 source("scenario.R")
 
+# Per-layout results root: keyed by `partition_by`, so re-running with a
+# different `partition_by`/`bundle` writes to a fresh root and never mixes shard
+# granularities (a depth-agnostic glob would otherwise union stale and current
+# shards). Re-running the same layout reuses the root (idempotent).
+results_root <- scenario_results_dir(scenario)
+sample_dir <- file.path(results_root, "sample")
+fit_dir <- file.path(results_root, "fit")
+hc_dir <- file.path(results_root, "hc")
+summary_path <- file.path(results_root, "summary.parquet")
+
 # One row per shard, computed now. Each row carries its partition_by path-axis
 # values (the tar_map target-name suffix and Hive path) plus a `tasks`
 # list-column of the task rows that shard runs.
@@ -50,7 +60,7 @@ sample_targets <- tar_map(
   names = c(dataset, sim, replace),
   tar_target(
     sample_step,
-    ssd_run_sample_step(tasks, scenario, out_dir = "results/sample"),
+    ssd_run_sample_step(tasks, scenario, out_dir = sample_dir),
     format = "file",
     error = "null"
   )
@@ -65,8 +75,8 @@ fit_targets <- tar_map(
       ssd_run_fit_step(
         tasks,
         scenario,
-        sample_dir = "results/sample",
-        out_dir = "results/fit"
+        sample_dir = sample_dir,
+        out_dir = fit_dir
       )
     },
     format = "file",
@@ -83,8 +93,8 @@ hc_targets <- tar_map(
       ssd_run_hc_step(
         tasks,
         scenario,
-        fit_dir = "results/fit",
-        out_dir = "results/hc"
+        fit_dir = fit_dir,
+        out_dir = hc_dir
       )
     },
     format = "file",
@@ -106,10 +116,10 @@ list(
     {
       hc_done
       ssd_summarize(
-        dir_sample = "results/sample",
-        dir_fit = "results/fit",
-        dir_hc = "results/hc",
-        path = "results/summary.parquet"
+        dir_sample = sample_dir,
+        dir_fit = fit_dir,
+        dir_hc = hc_dir,
+        path = summary_path
       )
     },
     format = "file"

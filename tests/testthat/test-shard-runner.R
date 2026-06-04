@@ -184,3 +184,36 @@ test_that("shard-runner: re-running yields identical per-task results", {
   }
   expect_equal(read_hc(run1)$est, read_hc(run2)$est)
 })
+
+# ---- owns its output tree: a re-layout leaves no stale shards ---------------
+
+test_that("shard-runner: re-running with a changed partition_by leaves no stale shards", {
+  dir <- withr::local_tempdir()
+  base_args <- list(
+    ssd_data(d = sr_dataset()),
+    nsim = 1L,
+    nrow = c(5L, 10L),
+    seed = 42L,
+    rescale = c(FALSE, TRUE),
+    dists = "lnorm"
+  )
+  fine <- do.call(ssd_define_scenario, base_args)
+  run_fine <- ssd_run_scenario_shards(fine, dir = dir)
+  expect_gt(length(run_fine$fit), 1L)
+
+  # coarser fit layout (nrow/rescale become inner) -> fewer fit shards
+  coarse <- do.call(
+    ssd_define_scenario,
+    c(base_args, list(partition_by = list(fit = c("dataset", "sim"))))
+  )
+  run_coarse <- ssd_run_scenario_shards(coarse, dir = dir)
+
+  # the fit subtree now holds ONLY the current (coarse) layout's shards
+  on_disk <- length(list.files(
+    file.path(dir, "fit"),
+    pattern = "part.parquet",
+    recursive = TRUE
+  ))
+  expect_identical(on_disk, length(run_coarse$fit))
+  expect_lt(on_disk, length(run_fine$fit))
+})

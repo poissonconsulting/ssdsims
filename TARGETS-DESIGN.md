@@ -1071,6 +1071,27 @@ Three steps as three targets is what makes this matrix possible: a
 single combined branch (data + fit + hc) cannot cache a fit shard
 when only `nboot` changes.
 
+**Layout coherence across re-runs.** A shard's Hive path depth and axes
+are a function of `partition_by`/`bundle`, while the readers glob
+`<step>/**/part.parquet` (depth-agnostic). So changing the split and
+re-running into one fixed `results/` would leave shards of a *different
+granularity* beside the new ones, and the glob would union stale and
+current shards — double-counting, since the `<step>_id` identity is
+`partition_by`-independent (one task lands in both the old coarse and the
+new fine shard). Two complementary fixes, by driver:
+
+- **Single-core (`ssd_run_scenario_shards`) — own the tree.** It clears
+  each `<dir>/<step>` before writing, so the tree always matches the
+  current layout. It has no cache to preserve, so clobbering is the
+  simplest correct fix.
+- **`targets` — per-layout root.** Each layout writes under
+  `scenario_results_dir(scenario)` = `results/layout=<hash(partition_by)>`,
+  so a split change yields a fresh root (never *mixed* with the old) while
+  the same layout reuses its root (cache + `error = "null"` survivors
+  preserved). Non-layout knobs (seed, grids) keep the root and just rewrite
+  shard paths at the same depth (§8.1). Pruning an orphaned layout root and
+  manifest-driven reads are deferred to `manifest`/`shard-atomic-rewrite`.
+
 **Available for analysis:**
 
 After `tar_make()`, the three step layers are queryable independently
