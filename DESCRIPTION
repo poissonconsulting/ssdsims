@@ -12,7 +12,7 @@ URL: https://poissonconsulting.github.io/ssdsims/
 BugReports: https://github.com/poissonconsulting/ssdsims/issues
 Depends: 
     R (>= 4.1)
-Imports:
+Imports: 
     chk,
     dplyr,
     dqrng (>= 0.4.1),
@@ -25,7 +25,7 @@ Imports:
     tibble,
     tidyr,
     withr
-Suggests:
+Suggests: 
     knitr,
     quarto,
     readr,
