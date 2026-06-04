@@ -4,20 +4,33 @@
 
 The `exploration/user-rng-conflict/` reprexes (dqrng vs `randtoolbox`, validated on R 4.5.3 / dqrng 0.4.1 / randtoolbox 2.0.5) establish the threat: base R has one global user-supplied RNG slot keyed on the C symbol `user_unif_rand`, resolved across all loaded DLLs to the most-recently-loaded match. A second user-RNG package can take the slot while `RNGkind()[1]` still reads `"user-supplied"` — so the existing `dqrng_backend_active()` probe is satisfied by a *foreign* RNG (`case6`). The probe answers "is *a* user RNG active", not "is *dqrng* active".
 
+The same findings show a second, upstream consequence: loading a user-RNG package is itself a process-global, potentially destructive act. With `dqrng` in `Imports` today, ssdsims forces dqrng's `user_unif_rand` DLL into every session that loads ssdsims — imposing the collision hazard uninvited. So this change also makes dqrng a Suggested, used-only-when-already-loaded dependency.
+
 ## Goals / Non-Goals
 
 **Goals:**
 
+- Make `dqrng` a Suggested dependency that ssdsims never loads implicitly, using it only when the caller has already loaded it (at `>= 0.4.1`).
 - An internal `chk_dqrng_backend_intact()` that verifies **dqrng specifically** holds the slot, non-destructively, and aborts otherwise.
 - Run it as the exit bookend of every RNG-consuming task body, so the draws a task is judged on are bracketed by an entry guard and an exit guard.
 
 **Non-Goals:**
+
+- A base-RNG fallback path for when dqrng is absent — rejected (see the abort decision); the reproducible path requires the user to load dqrng.
 
 - Replacing `dqrng_backend_active()` / the `RNGkind()` probe — it stays the cheap reentrancy gate for `local_dqrng_backend()` (re-asserting `register_methods()` reseeds, so the gate must stay cheap and side-effect-free).
 - Defending against the *segfault* hijack (`case3`): an uninitialised foreign RNG bound to the slot crashes on the task body's *own* first draw, before any exit check runs — the load-time-inert design and "don't load two user-RNG packages" remain the mitigation there.
 - Detecting corruption *during* a long task body (the check is a boundary postcondition, not a per-draw monitor).
 
 ## Decisions
+
+### Decision: gate on *already-loaded*, never `requireNamespace()` / bare `dqrng::`
+
+"Use dqrng only when it is already loaded" cannot be implemented with the usual `requireNamespace("dqrng")` Suggests idiom, nor with a bare `dqrng::register_methods()`, because **both load dqrng** — the very act we must not trigger. The gate is therefore `dqrng_usable() <- isNamespaceLoaded("dqrng") && getNamespaceVersion("dqrng") >= "0.4.1"`, which is `TRUE` only if the caller already loaded dqrng. Every `dqrng::` touch (backend register/restore, `dqset.seed`, the witness's `dqrng_get_state`/`set_state`) sits behind it — and because backend activation establishes `dqrng_usable()` first, the downstream touches inside an active scope are safe. *Alternative considered:* the standard `requireNamespace()` guard — rejected; it loads the package and so defeats the "don't impose a user-RNG provider" goal.
+
+### Decision: abort (not fall back) when the backend is required but dqrng is unavailable
+
+When a scenario needs the RNG backend and `dqrng_usable()` is `FALSE`, the backend helper aborts with actionable guidance (`library(dqrng)`, `>= 0.4.1`) rather than silently running on base R's ambient RNG. The whole point of the dqrng path is reproducible per-task seeding (`dqset.seed(seed, stream = primer)`); a base-RNG fallback would quietly drop that guarantee — the exact silent-non-reproducibility failure mode this change exists to prevent. Making it an explicit, opt-in load keeps the user in control of when a user-RNG provider enters their session. *Alternative considered:* warn-and-fall-back to base RNG — rejected (silent loss of reproducibility); *alternative considered:* keep dqrng in `Imports` so it is always available — rejected (that is precisely the "impose a user-RNG provider on every session" hazard).
 
 ### Decision: witness via dqrng's own state, not the `RNGkind()` probe
 
@@ -69,10 +82,18 @@ The witness helper and the per-task postcondition are a self-contained robustnes
 - **Cost** → two `dqrng_get_state()` calls, one `runif(1)`, one `dqrng_set_state()` per task. Negligible against a fit/hc, and per-task (not per-draw).
 - **Does not catch the segfault hijack** (`case3`) → accepted and documented; that failure crashes the body's own draw first, and is prevented upstream by not registering at load and not co-loading user-RNG packages.
 - **`getNativeSymbolInfo()` / `getLoadedDLLs()` in the message helpers** → these are **exported, documented base R functions**, used widely on CRAN; they are *not* the C-level non-API entry points (e.g. `R_FindSymbol`) that the `R CMD check` "checking compiled code" NOTE concerns, so they raise no check note. A verification task (3.7) confirms this rather than relying on the assumption.
+- **Degraded default UX** → moving dqrng to `Suggests` and aborting when it is unloaded means a scenario run is no longer reproducible "out of the box"; the caller must `library(dqrng)` first. Accepted: it is the cost of not imposing a user-RNG provider, and the abort is actionable. Documented in the runner's help and the error message.
+- **Suggests + `R CMD check`** → with dqrng in `Suggests`, examples, vignettes, and tests that exercise the backend must guard on availability (`if (requireNamespace(...))` in examples that may load it, or `testthat::skip_if_not_installed("dqrng")` / an explicit `library(dqrng)` in tests). Package *code* must never reach dqrng except behind `dqrng_usable()`. Task 3.7 confirms a clean check under this model.
 
 ## Migration Plan
 
-Additive and internal: one new internal function and a few lines in each existing `*_data_task_primer()` wrapper, plus tests. No public API, no data migration. Removing the function and the wrapper calls fully reverts.
+Mostly internal, but with one dependency move and one behavioural change:
+
+- `DESCRIPTION`: move `dqrng (>= 0.4.1)` from `Imports` to `Suggests`. Update the `dqrng-init`/`local-dqrng-state` archived-change references only as needed; the live contract is this change's spec.
+- Add `dqrng_usable()` and `chk_dqrng_backend_intact()`, and thread the gate through `set_dqrng_backend()` / `local_dqrng_backend()` / `local_dqrng_state()`; add the exit check to the three `*_data_task_primer()` wrappers.
+- **Behavioural change**: callers (and the package's own examples/tests/vignettes) must `library(dqrng)` before running a scenario; otherwise the backend helper aborts. Existing tests that relied on dqrng being auto-loaded via `Imports` must add an explicit `library(dqrng)` / `skip_if_not_installed("dqrng")`.
+
+Reverting means moving dqrng back to `Imports` and removing the new functions and wrapper calls.
 
 ## Open Questions
 

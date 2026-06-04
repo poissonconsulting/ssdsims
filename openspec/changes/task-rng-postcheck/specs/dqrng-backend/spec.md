@@ -1,3 +1,31 @@
+## MODIFIED Requirements
+
+### Requirement: dqrng is a package dependency
+The package SHALL declare `dqrng` (`>= 0.4.1`) in `Suggests`, **not** `Imports`, and SHALL NOT load `dqrng` implicitly. Loading a package that registers a user-supplied RNG is a process-global, potentially destructive act (it places a `user_unif_rand` provider into the session, which can collide with another user-RNG package), so ssdsims SHALL use `dqrng` only when the caller has already loaded it. All `dqrng` usage SHALL be gated on `dqrng` being **already loaded** at the required version — tested via `isNamespaceLoaded("dqrng")` together with `getNamespaceVersion("dqrng") >= "0.4.1"` — and SHALL NOT use `requireNamespace("dqrng")` or a bare `dqrng::` call as the gate, because those would themselves load `dqrng`.
+
+#### Scenario: dqrng is suggested, not imported
+- **WHEN** ssdsims is installed
+- **THEN** `dqrng` SHALL appear in `Suggests` (`>= 0.4.1`) and SHALL NOT appear in `Imports`, so installing or loading ssdsims does not load `dqrng`
+
+#### Scenario: dqrng is not loaded implicitly by ssdsims
+- **WHEN** ssdsims is loaded and no scenario has been run, and the caller has not loaded `dqrng`
+- **THEN** `dqrng` SHALL NOT be among the loaded namespaces (ssdsims SHALL NOT have triggered its load)
+
+### Requirement: Scoped dqrng pcg64 backend activation
+The package SHALL provide `local_dqrng_backend(.local_envir = parent.frame())` that activates the dqrng backend for the duration of the calling frame: it SHALL set `dqRNGkind("pcg64")` and call `dqrng::register_methods()` so that base R's `runif()`, `rnorm()`, `rbinom()`, `rexp()`, `rgamma()`, `rpois()`, `sample.int()`, and `sample()` draw from dqrng's pcg64 while the scope is open. Activation SHALL be conditional on `dqrng` being already loaded at the required version (per *dqrng is a package dependency*): when it is not, the helper SHALL abort with an actionable error instructing the caller to load `dqrng` (`>= 0.4.1`), and SHALL NOT load `dqrng` itself.
+
+#### Scenario: Backend active within the scope
+- **WHEN** `local_dqrng_backend()` is called within a function (with `dqrng` already loaded at `>= 0.4.1`) and that function has not yet returned
+- **THEN** base R RNG calls SHALL be served by dqrng's registered methods, and `RNGkind()` SHALL report the registered (user-supplied) methods, for the duration of the calling frame
+
+#### Scenario: pcg64 chosen over the dqrng default
+- **WHEN** the backend is activated
+- **THEN** the package SHALL explicitly set `pcg64`, overriding dqrng's own default generator (`Xoroshiro128++`)
+
+#### Scenario: Aborts when dqrng is not already loaded
+- **WHEN** backend activation is requested but `dqrng` is not loaded (or its loaded version is `< 0.4.1`)
+- **THEN** the helper SHALL abort with an informative error directing the caller to run `library(dqrng)` (`>= 0.4.1`), SHALL NOT load `dqrng`, and SHALL NOT fall back to base R's RNG
+
 ## ADDED Requirements
 
 ### Requirement: dqrng-specific backend integrity witness

@@ -1,3 +1,10 @@
+## 0. dqrng as a conditionally-used Suggested dependency
+
+- [ ] 0.1 `DESCRIPTION`: move `dqrng (>= 0.4.1)` from `Imports` to `Suggests`
+- [ ] 0.2 Add internal `dqrng_usable()` to `R/dqrng-backend.R`: `isNamespaceLoaded("dqrng") && getNamespaceVersion("dqrng") >= "0.4.1"` — gate on *already-loaded*; do **not** use `requireNamespace("dqrng")` or a bare `dqrng::` call (both would load dqrng, the act to avoid)
+- [ ] 0.3 Gate `set_dqrng_backend()` / `local_dqrng_backend()` on `dqrng_usable()`: when `FALSE`, `chk::abort_chk(..., call = ...)` with actionable guidance (`library(dqrng)`, `>= 0.4.1`); never load dqrng, never fall back to base RNG
+- [ ] 0.4 Audit every `dqrng::` reference in package code (`set_dqrng_backend`, `reset_dqrng_backend`, `local_dqrng_state`, the witness) so each is reached only behind `dqrng_usable()` (true inside an already-activated backend scope); update examples/vignettes/tests to `library(dqrng)` or `skip_if_not_installed("dqrng")`
+
 ## 1. Integrity witness
 
 - [ ] 1.1 Add internal `chk_dqrng_backend_intact(call = rlang::caller_call())` to `R/dqrng-backend.R` (peer to `chk_dqrng_backend_active()`): record `dqrng::dqrng_get_state()`, take one base-R `runif(1)` draw, re-read the state, then restore the recorded state via `dqrng::dqrng_set_state()`; return invisibly iff the state advanced, else `chk::abort_chk(..., call = call)` with an actionable message (dqrng is not the bound user-supplied RNG)
@@ -18,5 +25,7 @@
 - [ ] 3.3a Message-content tests: the foreign-hijack abort names the owning package (`randtoolbox`) and lists the loaded user-RNG providers; assert via a snapshot or `expect_match`
 - [ ] 3.4 Non-destructive test: a seeded draw sequence is byte-identical with and without an intervening `chk_dqrng_backend_intact()` call
 - [ ] 3.5 Primitives test: each `*_data_task_primer()` returns normally on a healthy backend and aborts when the backend is corrupted before the task ends; error origin is the user-facing frame
+- [ ] 3.6a Conditional-dependency tests: with dqrng not loaded, `dqrng_usable()` is `FALSE` and `local_dqrng_backend()` (and a scenario run) abort with the `library(dqrng)` guidance and do **not** load dqrng (assert `!isNamespaceLoaded("dqrng")` after the failed call); with dqrng loaded at `>= 0.4.1`, activation succeeds
+- [ ] 3.6b `DESCRIPTION` test/regression: `dqrng` is in `Suggests`, not `Imports`; loading ssdsims alone does not load dqrng
 - [ ] 3.6 Run `devtools::document()`, `air format .`, and `devtools::check()`
 - [ ] 3.7 Confirm `devtools::check()` is clean for the diagnostic helpers: `getNativeSymbolInfo()` and `getLoadedDLLs()` are exported base R functions (not the C-level non-API entry points the "checking compiled code" NOTE concerns), so no NOTE/WARNING is expected — verify none appears, and that the cross-package `user_unif_rand` lookup does not trip the "checking dependencies"/"foreign function calls" checks

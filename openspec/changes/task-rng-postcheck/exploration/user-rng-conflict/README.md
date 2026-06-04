@@ -70,6 +70,15 @@ load-time-inert design is avoiding: a second user-RNG package in the same
 session can hijack base R's `runif()` or crash it, depending purely on load
 order.
 
+Because these findings make clear that *loading* a user-RNG package is itself
+a potentially destructive act, the parent change goes further: `dqrng` moves to
+**`Suggests`** and ssdsims uses it **only when the caller has already loaded
+it** (gated on `isNamespaceLoaded("dqrng")` + version `>= 0.4.1`, never
+`requireNamespace()`/`dqrng::`, which would load it). When the backend is
+required but dqrng is not loaded, ssdsims **aborts** with guidance to
+`library(dqrng)` rather than loading it or silently falling back. See
+`../../proposal.md` and `../../design.md`.
+
 ## Mitigations
 
 - There is no way for two packages to *both* be base R's user-supplied RNG at

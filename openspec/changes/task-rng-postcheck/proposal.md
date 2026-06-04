@@ -1,15 +1,22 @@
 ## Why
 
-Every RNG-consuming task draws inside a `local_dqrng_backend()` scope, and `local_dqrng_state()` already guards the **entry** with `chk_dqrng_backend_active()`. But that guard only confirms the backend was active when the task *started* — the actual draws (`dplyr::slice_sample()`, `ssdtools::ssd_fit_dists()`, `ssdtools::ssd_hc()`) happen in the task body, so only an **exit** check can certify the numbers the task just produced actually came from dqrng's pcg64.
+The `exploration/user-rng-conflict/` findings (dqrng vs `randtoolbox`) show that **loading a package that registers a user-supplied RNG is a potentially destructive act**: base R has a single process-global user-supplied RNG slot keyed on the C symbol `user_unif_rand`, resolved across *all* loaded DLLs to the most-recently-loaded match. A second such package in the session silently hijacks base `runif()` (case2), can crash on an uninitialised generator (case3), and re-registering can reseed a live stream. Two consequences for ssdsims:
 
-Two failure modes can corrupt a task's draws mid-body with no signal today:
+**(A) ssdsims must not *impose* a user-RNG provider on every session.** Today `dqrng` is in `Imports`, so it loads whenever ssdsims loads — forcing dqrng's `user_unif_rand` DLL into sessions that may also use `randtoolbox` (or any user-RNG package), creating the collision hazard uninvited, even for callers using non-RNG functionality. ssdsims should be a good citizen: use dqrng only when the *user* has already chosen to load it.
 
-1. **Backend torn down** — a dependency or stray call (`RNGkind()`, `dqrng::restore_methods()`) flips base R back to Mersenne-Twister; subsequent draws silently fall back, breaking reproducibility.
-2. **Foreign user-RNG hijack** — a second package that registers a user-supplied RNG (validated in `exploration/user-rng-conflict/`: dqrng vs `randtoolbox`) is loaded in the session. Base R resolves the single global `user_unif_rand` symbol to the most-recently-loaded DLL, so base `runif()` is silently served by the foreign RNG while `RNGkind()[1]` *still reads* `"user-supplied"`. The existing `dqrng_backend_active()` probe is blind to this — its own code documents the caveat (`R/dqrng-backend.R:52`).
+**(B) ssdsims must detect a hijack or teardown at runtime.** Every RNG-consuming task draws inside a `local_dqrng_backend()` scope; `local_dqrng_state()` guards the **entry** with `chk_dqrng_backend_active()`, but that only confirms the backend at task *start*. The draws happen in the body, and the cheap `RNGkind()[1] == "user-supplied"` probe is *fooled* by a foreign hijack (case6) — it answers "is *a* user RNG active", not "is *dqrng* active". So a mid-task teardown (→ silent Mersenne-Twister fallback) or foreign hijack (→ wrong generator) corrupts the draws with no signal. case5 shows the fix: dqrng's **own state** is the witness — a base `runif()` draw *must* advance dqrng's internal state iff dqrng is bound; rolled back via `dqrng_set_state()`, so the check is non-destructive.
 
-The cheap probe catches (1) but not (2). The exploration's `case6` shows the probe being fooled, and `case5` shows the fix: dqrng's **own state** is the witness — a draw through base `runif()` *must* advance dqrng's internal state iff dqrng is the bound generator; a frozen state means a foreign RNG holds the slot. The witness draw is rolled back with `dqrng_set_state()`, so the check is non-destructive. This change adds that witness as a per-task **postcondition**.
+This change addresses both: make dqrng a **conditionally-used Suggested** dependency (A), and add a per-task **postcondition** that verifies dqrng is still intact when each task ends (B).
 
 ## What Changes
+
+**(A) dqrng becomes a conditionally-used Suggested dependency.**
+
+- Move `dqrng` from `Imports` to `Suggests` (still `>= 0.4.1`) in `DESCRIPTION`, so loading ssdsims does not load dqrng.
+- Add an internal `dqrng_usable()` guard: `TRUE` iff `isNamespaceLoaded("dqrng")` **and** `getNamespaceVersion("dqrng") >= "0.4.1"`. Crucially it tests *already-loaded*, not `requireNamespace()` — because `dqrng::foo()` and `requireNamespace()` would themselves *load* dqrng, which is the act we must not trigger. **Every** dqrng touch (the `dqrng::` calls in `set_dqrng_backend()`, `local_dqrng_state()`, the witness) is gated behind this.
+- When the RNG backend is required but `dqrng_usable()` is `FALSE`, **abort** with actionable guidance — `library(dqrng)` (>= 0.4.1) first. ssdsims never loads dqrng itself; the reproducible dqrng path is opt-in by loading dqrng. (Chosen over a silent base-RNG fallback so reproducibility is never quietly lost.)
+
+**(B) Per-task dqrng-integrity postcondition.**
 
 - Add an internal `chk_dqrng_backend_intact(call = ...)` (peer to `chk_dqrng_backend_active()`, in `R/dqrng-backend.R`) that:
   - records `dqrng::dqrng_get_state()`, takes one base-R `runif(1)` draw, re-reads the state, then restores the recorded state via `dqrng::dqrng_set_state()` (non-destructive);
@@ -24,13 +31,15 @@ The cheap probe catches (1) but not (2). The exploration's `case6` shows the pro
 <!-- None: extends existing capabilities. -->
 
 ### Modified Capabilities
-- `dqrng-backend`: add the dqrng-specific backend **integrity witness** (`chk_dqrng_backend_intact()`) — a non-destructive state-advance check that verifies dqrng (not merely *some* user-supplied RNG) holds base R's `user_unif_rand` slot, aborting otherwise.
+- `dqrng-backend`:
+  - make dqrng a **Suggested, conditionally-used** dependency — declared in `Suggests` (`>= 0.4.1`), never loaded by ssdsims, used only when already loaded (gated on `isNamespaceLoaded("dqrng")` + version); the backend helpers abort with actionable guidance when it is required but unavailable.
+  - add the dqrng-specific backend **integrity witness** (`chk_dqrng_backend_intact()`) — a non-destructive state-advance check that verifies dqrng (not merely *some* user-supplied RNG) holds base R's `user_unif_rand` slot, aborting otherwise.
 - `parallel-safe-seeding`: add the per-task **postcondition** — each RNG-consuming task verifies the dqrng backend is intact when the task ends, so a mid-task teardown or foreign-RNG hijack aborts the task instead of silently producing non-dqrng draws.
 
 ## Impact
 
-- **New code**: `chk_dqrng_backend_intact()` in `R/dqrng-backend.R`; exit-check wiring in the `*_data_task_primer()` wrappers (`R/primer-primitives.R` / `R/task-lists.R`); tests in `tests/testthat/test-dqrng-backend.R` and the primitives test.
-- **APIs**: internal only — no public surface change.
-- **Dependencies**: none added. Uses dqrng's already-exported `dqrng_get_state()` / `dqrng_set_state()`. Builds on `primer-primitives` (**landed**, archived `2026-06-04-primer-primitives`), which defines the per-task wrappers this hooks into; orthogonal to `task-primer` (also landed). The dependency is satisfied, so this change is ready to implement.
-- **Downstream**: the postcondition rides inside the `*_data_task_primer()` primitives, so it carries into the `targets` shard body and the §7 `replay-helper` for free — each shard self-verifies its RNG backend in its own process, where an independently-loaded foreign package is exactly the risk.
+- **New code**: `dqrng_usable()` and `chk_dqrng_backend_intact()` in `R/dqrng-backend.R`; the `dqrng_usable()` gate threaded through `set_dqrng_backend()` / `local_dqrng_backend()` / `local_dqrng_state()`; exit-check wiring in the `*_data_task_primer()` wrappers (`R/task-lists.R`); tests in `tests/testthat/test-dqrng-backend.R` and the primitives test.
+- **APIs**: internal only — no public surface change. Behavioural change: a scenario run now requires the caller to have `library(dqrng)` loaded (>= 0.4.1), else an actionable abort.
+- **Dependencies**: `dqrng` moves `Imports` → `Suggests` (`>= 0.4.1`). Uses dqrng's already-exported `dqrng_get_state()` / `dqrng_set_state()`. Builds on `primer-primitives` (**landed**, archived `2026-06-04-primer-primitives`); orthogonal to `task-primer` (also landed).
+- **Downstream**: the postcondition rides inside the `*_data_task_primer()` primitives, so it carries into the `targets` shard body and the §7 `replay-helper` for free — each shard self-verifies its RNG backend in its own process, where an independently-loaded foreign package is exactly the risk. The Suggests move means the targets project / scenario callers must load dqrng explicitly.
 - **Exploration**: `exploration/user-rng-conflict/` (the dqrng-vs-randtoolbox reprexes that motivated and validated this) lives in this change.
