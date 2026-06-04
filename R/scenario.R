@@ -602,7 +602,13 @@ scenario_min_pmix_materialise <- function(
     if (anyDuplicated(min_pmix)) {
       chk::abort_chk("`min_pmix` names must be unique.", call = call)
     }
-    fns <- lapply(min_pmix, resolve_min_pmix_name, env = env, call = call)
+    # Plain loop (not `lapply`/`purrr::map`) so an unresolvable-name abort
+    # surfaces from `ssd_define_scenario()`, not an internal map frame
+    # (error-call-origin rule).
+    fns <- vector("list", length(min_pmix))
+    for (i in seq_along(min_pmix)) {
+      fns[[i]] <- resolve_min_pmix_name(min_pmix[[i]], env = env, call = call)
+    }
     return(list(names = min_pmix, fns = rlang::set_names(fns, min_pmix)))
   }
 
