@@ -231,9 +231,13 @@
 <div class="section level2">
 <h2 id="pull-requests">Pull Requests<a class="anchor" aria-label="anchor" href="#pull-requests"></a></h2>
 <ul><li>
-<strong>Titles follow Conventional Commits</strong>: <code>&lt;type&gt;: &lt;summary&gt;</code>, where <code>type</code> is one of <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>refactor</code>, <code>test</code>, <code>chore</code>, etc. (e.g. <code>feat: add scenario-scoped dqrng pcg64 RNG backend</code>). Use the imperative mood and keep the summary concise.</li>
+<strong>PRs are squash-merged</strong>, so the <strong>PR title becomes the single commit on <code>main</code></strong> — and that commit is what <code>fledge</code> reads to build <code>NEWS.md</code> (see <em>Update package version and news</em> above). The PR title is therefore the load-bearing message: it <strong>must</strong> be a valid Conventional Commit. Individual commits on the branch are squashed away, so their messages are not consumed by <code>fledge</code> — a clean history still helps review, but the title is what ships.</li>
+<li>
+<strong>Titles follow Conventional Commits</strong> — <code>&lt;type&gt;: &lt;summary&gt;</code> or <code>&lt;type&gt;(&lt;scope&gt;): &lt;summary&gt;</code>, where <code>type</code> is one of <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>refactor</code>, <code>test</code>, <code>chore</code>, etc. (e.g. <code>feat: add scenario-scoped dqrng pcg64 RNG backend</code>, <code>docs(openspec): propose registry, manifest, and task-tables changes</code>). Use the imperative mood and keep the summary concise.</li>
 <li>
 <strong>Escape function, object, and file names in backticks</strong> in PR titles and descriptions (e.g. <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code>, <code>run_scenario()</code>, <code>DESCRIPTION</code>).</li>
+<li>
+<strong>Reference the related issue</strong> in the title where one exists (e.g. <code>(#64)</code>) so it carries through to the changelog.</li>
 <li>Keep the PR title and description in sync with the change as it evolves; the description should capture the <em>current</em> state, not a revision log.</li>
 </ul></div>
 <div class="section level2">

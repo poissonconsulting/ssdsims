@@ -1050,6 +1050,8 @@
 <li>
 <strong><code>primer-primitives</code></strong> — Refactor <code>slice_sample_state</code>, <code>fit_dists_state</code>, <code>hc_state</code> around the new contract: <strong>each per-task body calls <code>local_dqrng_state(seed, primer)</code> exactly once</strong>, then invokes the (state-less) operation against the ambient RNG. The <code>_state</code> suffix marks the wrapper that installs the primer; the inner ssdtools / dplyr calls consume RNG from the now-set state. No <code>state =</code> argument on the inner ops. (The seeded <code>n_max</code> draw lives here as <code>slice_sample_state</code>; the <code>head(sample, nrow)</code> truncation is the <code>fit</code> step’s inline, RNG-free step — there is no separate sub-truncation step.)</li>
 <li>
+<strong><code>task-rng-postcheck</code></strong> — Per-task RNG-backend <strong>postcondition</strong>. Each <code>*_data_task_primer()</code> wrapper, when the task <em>ends</em>, verifies that dqrng (not merely <em>some</em> user-supplied RNG) still held base R’s <code>user_unif_rand</code> slot for the whole body, via a non-destructive state-advance witness (<code>dqrng_get_state()</code> → base draw → <code>dqrng_get_state()</code> → <code>dqrng_set_state()</code> restore); a frozen state means a foreign RNG hijacked the slot, so it <strong>aborts</strong> (chk-style), symmetric with the <code><a href="reference/local_dqrng_state.html">local_dqrng_state()</a></code> entry guard. Closes the gap that the <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">RNGkind()</a></code> probe (<code>dqrng_backend_active()</code>) is satisfied by a <em>foreign</em> user-supplied RNG: a second user-RNG package (e.g. <code>randtoolbox</code>) loaded in the session takes the single global slot while <code>RNGkind()[1]</code> still reads <code>"user-supplied"</code>. Validated (and the threat reproduced, dqrng vs <code>randtoolbox</code>) in <code>openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/</code>. Rides inside the per-task primitives, so it carries into the <code>targets</code> shard body and §7 <code>replay-helper</code> — each shard self-verifies in its own process. Depends on <code>primer-primitives</code> (<strong>landed</strong>) — so it is unblocked — and is orthogonal to <code>task-primer</code>.</li>
+<li>
 <strong><code>migrate-public-api</code></strong> — <em>Cosmetic, independent of the targets work (like <code>error-call-origin</code>).</em> Migrate <code>ssd_sim_data.data.frame</code>, <code>ssd_fit_dists_sims</code>, <code>ssd_hc_sims</code> to the new contract; keep the <code>_seed</code> wrappers as a one-release shim. <code>example-expanded*.R</code> re-runs with byte-equivalence. This is a surface rename over <code>primer-primitives</code>, which already establishes the contract — so, <strong>trusting the design</strong>, none of the targets-only plumbing (<code>scenario-accessors</code>, <code>manifest</code>, <code>task-tables</code>, …) waits on it. It can land at any time; the DAG shows it hanging off <code>primer-primitives</code> with a dashed, non-gating edge and no dependants.</li>
 <li>
 <strong><code>scenario-accessors</code></strong> — Datasets and <code>min_pmix</code> are <strong>materialised on the scenario, accessed by name</strong> — no registry (§1.1). Materialise the <code>min_pmix</code> functions on the scenario at construction (keyed by name, resolving name-strings then), and add <code>scenario_dataset(scenario, name)</code> / <code>scenario_min_pmix(scenario, name)</code> accessors; <code>resolve_min_pmix()</code> becomes the accessor. Hashing stays name-only, so a function-body edit does not move any cached fit branch (regression test). Adds no dependency (no Parquet here — that is <code>task-tables</code>). Persisting a <em>large</em> dataset to disk instead of carrying it inline is the deferred <code>dataset-provenance</code> step.</li>
@@ -1102,6 +1104,7 @@
     dqstate[local-dqrng-state]
     primer[task-primer]
     prims[primer-primitives]
+    postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
     partby[partition-by]
     shardrun[shard-runner-baseline]
@@ -1134,6 +1137,7 @@
     baseline --&gt; prims
     primer --&gt; prims
 
+    prims --&gt; postcheck
     baseline --&gt; partby
 
     acc --&gt; tt

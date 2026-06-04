@@ -297,14 +297,25 @@ conventionally-typed commit message (see Pull Requests below).
 
 ## Pull Requests
 
-- **Titles follow Conventional Commits**: `<type>: <summary>`, where
-  `type` is one of `feat`, `fix`, `docs`, `refactor`, `test`, `chore`,
-  etc. (e.g. `feat: add scenario-scoped dqrng pcg64 RNG backend`). Use
-  the imperative mood and keep the summary concise.
+- **PRs are squash-merged**, so the **PR title becomes the single commit
+  on `main`** — and that commit is what `fledge` reads to build
+  `NEWS.md` (see *Update package version and news* above). The PR title
+  is therefore the load-bearing message: it **must** be a valid
+  Conventional Commit. Individual commits on the branch are squashed
+  away, so their messages are not consumed by `fledge` — a clean history
+  still helps review, but the title is what ships.
+- **Titles follow Conventional Commits** — `<type>: <summary>` or
+  `<type>(<scope>): <summary>`, where `type` is one of `feat`, `fix`,
+  `docs`, `refactor`, `test`, `chore`, etc. (e.g.
+  `feat: add scenario-scoped dqrng pcg64 RNG backend`,
+  `docs(openspec): propose registry, manifest, and task-tables changes`).
+  Use the imperative mood and keep the summary concise.
 - **Escape function, object, and file names in backticks** in PR titles
   and descriptions
   (e.g. [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md),
   `run_scenario()`, `DESCRIPTION`).
+- **Reference the related issue** in the title where one exists
+  (e.g. `(#64)`) so it carries through to the changelog.
 - Keep the PR title and description in sync with the change as it
   evolves; the description should capture the *current* state, not a
   revision log.
