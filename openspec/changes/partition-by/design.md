@@ -6,9 +6,10 @@
 
 **Goals:**
 
-- Validate a supplied `partition_by` as a named list with `sample`/`fit`/`hc` entries (one per step), each a subset of that step's `task_axes()`, unique and non-missing.
+- Validate a supplied `partition_by` (and the complementary `bundle`) as per-step named lists (`sample`/`fit`/`hc`, possibly partial), each entry a subset of that step's `task_axes()`, unique and non-missing.
+- Offer `partition_by` (path axes) and `bundle` (inner axes) as complementary per-step entry points — at most one per step, mixable across steps — normalized to a single complete stored `partition_by`.
 - Reuse `task_axes()` as the vocabulary source of truth (no second constant); reject `nrow` only for the `sample` step, and unknown names everywhere.
-- Define and expose the path-vs-inner split via an internal accessor that `task-tables`/`hive-partitioning` call; supply three-step defaults as the `NULL` fallback; render path axes in `print()`.
+- Define and expose the path-vs-inner split via an internal accessor that `task-tables`/`hive-partitioning` call; supply three-step defaults as the fallback for unnamed steps; render both path and inner axes in `print()`.
 
 **Non-Goals:**
 
@@ -36,9 +37,13 @@ hc     <- c(fit, "ci", "nboot", "est_method", "ci_method", "parametric")
 
 The §5 sub-truncation property is preserved structurally: the single random draw is the **`sample`** task (keyed `dataset, sim, replace`, carrying `n_max = max(nrow)`), and `fit` truncates it inline (`head(sample, nrow)`, RNG-free) so `nrow` is a genuine `fit` cross-join axis (inherited by `hc`). So `nrow` is valid in `fit`/`hc` path axes and is rejected only under `sample` (which has no `nrow`), with a bespoke message pointing at the shared-draw rationale. This supersedes the draft's blanket "`nrow` is never an axis".
 
-### Decision: `partition_by` requires all three step entries when supplied
+### Decision: `partition_by` and `bundle` are per-step complementary entry points; the stored form is a complete, normalized `partition_by`
 
-If a user supplies `partition_by` at all, they supply the full `sample`/`fit`/`hc` named list — no partial merge onto defaults. *Why:* a partial merge hides which axes are path vs inner for the omitted steps and makes the stored field ambiguous to read back. Explicit-and-complete keeps the scenario self-describing; `NULL` → documented defaults covers the common case. *Alternative considered:* per-step merge onto defaults — rejected for that ambiguity (a `modifyList()`-on-defaults helper can be added later without changing the stored contract).
+A caller may name, **per step**, either the path axes (`partition_by`) **or** the axes to keep together in a shard (`bundle` = the inner complement), and may **mix across steps** (e.g. `partition_by` for `sample`, `bundle` for `fit`). For each step at most one of the two may name it; naming a step in **both** aborts (in the user-facing frame, naming the step). Each argument may be **partial**: a step named in neither falls back to its documented default. At construction the two are **normalized** into a single complete `scenario$partition_by` (the canonical path list): `bundle[[step]]` becomes `setdiff(task_axes(step), bundle[[step]])`, and defaults fill any step left unnamed.
+
+So the **stored** field is always the full three-step path list — never partial or ambiguous to read back (the original worry behind an all-or-nothing rule) — while the *input* is as terse as the caller likes. `bundle` is not stored separately: it is the lazy inner complement (`scenario_partition_axes()$inner`), recomputed for `print()`.
+
+*Why two entry points?* They are exact complements (`path ⊎ inner = task_axes(step)`), and each is the natural phrasing for a different intent: `partition_by` ("make one file per …", the standard Hive/Arrow term) when you want few path axes; `bundle` ("keep these together") when you want fine sharding and only a few inner axes. *Alternative considered:* whole-spec mutual exclusion (a complete `partition_by` **or** a complete `bundle`) — rejected as less ergonomic; per-step mixing subsumes it, and completeness is enforced by normalization rather than by the caller. This **supersedes** the earlier "`partition_by` requires all three entries when supplied" decision (the ambiguity it guarded against is removed by normalizing to a complete stored field).
 
 ### Decision: three-step defaults; `nrow` shards at the `fit` level
 
