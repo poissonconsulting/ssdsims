@@ -44,6 +44,20 @@ A failed postcondition means the task's draws did **not** come from dqrng — th
 
 `primer-primitives` (landed) centralises "install the primer once, then run the op" in the three `*_data_task_primer()` wrappers (`R/task-lists.R`) — the exact per-task bodies, and the same entry point `targets` shards and the §7 replay helper reuse. The postcondition belongs there, after the op returns, so it covers every path that draws without each caller re-implementing it. `local_dqrng_state()` (entry) and `chk_dqrng_backend_intact()` (exit) become the matching brackets around the body. *Alternative considered:* a single check at the end of `ssd_run_scenario_baseline()` — rejected; it would not localise *which* task corrupted the backend, and would miss the per-shard/per-process granularity that is the whole point in the cluster path.
 
+### Decision: name the culprit in the abort message
+
+When the witness fails, the operator's first question is "what took the RNG?". R can answer it (validated in `case7-who-owns-rng.R`), so the abort message SHALL be diagnostic rather than generic:
+
+- **Owner** — `getNativeSymbolInfo("user_unif_rand")$dll[["name"]]` names the package whose `user_unif_rand` R currently resolves (the same `R_FindSymbol` all-DLL search `RNG_Init` uses). *Gotcha:* a `DLLInfo` overloads `$` to look up a *native symbol* by name, so read the DLL name with `[["name"]]`, never `$name` (which tries to resolve a symbol called `name` and errors).
+- **Providers** — enumerating `getLoadedDLLs()` and testing each for the `user_unif_rand` symbol lists *every* loaded package that could take the single global slot (e.g. `dqrng`, `randtoolbox`), which points at the offending co-load even when more than one is present.
+
+The message branches on `RNGkind()[1]`, because the owner is only meaningful while a user-supplied RNG is active:
+
+- `RNGkind()[1] != "user-supplied"` → the backend was **torn down** mid-task; report the current `RNGkind()` (e.g. `"Mersenne-Twister"`) and that the dqrng backend was reset. *Do not* name the symbol owner — the symbol still resolves to some loaded DLL that is not serving RNG, so naming it would mislead.
+- `RNGkind()[1] == "user-supplied"` but dqrng did not advance → a **foreign user-RNG hijack**; name the owner and list the loaded user-RNG providers.
+
+*Alternative considered:* a generic "dqrng backend not intact" message — rejected; the diagnosis is cheap and the failure (a co-loaded user-RNG package) is otherwise hard to pin down.
+
 ### Decision: a standalone change, depending on `primer-primitives`
 
 The witness helper and the per-task postcondition are a self-contained robustness layer with one dependency — the `*_data_task_primer()` wrappers it hooks into, **now landed** (archived `2026-06-04-primer-primitives`), so the change is unblocked. Keeping it separate gives the dqrng-vs-randtoolbox exploration an obvious home (`exploration/`) and a clean spec delta on two capabilities, rather than retrofitting it into the already-archived `primer-primitives`.

@@ -2,6 +2,8 @@
 
 - [ ] 1.1 Add internal `chk_dqrng_backend_intact(call = rlang::caller_call())` to `R/dqrng-backend.R` (peer to `chk_dqrng_backend_active()`): record `dqrng::dqrng_get_state()`, take one base-R `runif(1)` draw, re-read the state, then restore the recorded state via `dqrng::dqrng_set_state()`; return invisibly iff the state advanced, else `chk::abort_chk(..., call = call)` with an actionable message (dqrng is not the bound user-supplied RNG)
 - [ ] 1.2 Document (in the function's comment block) the distinction from `dqrng_backend_active()`: the `RNGkind()` probe answers "is *a* user-supplied RNG active" (and stays the cheap reentrancy gate for `local_dqrng_backend()`), while `chk_dqrng_backend_intact()` answers "is **dqrng** the active one", referencing `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/`
+- [ ] 1.3 Add internal diagnostic helpers for the abort message (lift from `exploration/.../case7-who-owns-rng.R`): `rng_slot_owner()` → `getNativeSymbolInfo("user_unif_rand")$dll[["name"]]` (use `[["name"]]`, **not** `$name` — `DLLInfo` overloads `$` to look up a native symbol); `user_rng_providers()` → the loaded DLLs (`getLoadedDLLs()`) that export `user_unif_rand`
+- [ ] 1.4 Branch the abort message on `RNGkind()[1]`: if `!= "user-supplied"` report the current `RNGkind()` + "backend was reset" and do **not** name an owner; if `== "user-supplied"` name `rng_slot_owner()` and list `user_rng_providers()`
 
 ## 2. Per-task postcondition wiring
 
@@ -12,7 +14,8 @@
 
 - [ ] 3.1 `tests/testthat/test-dqrng-backend.R`: under an active backend, `chk_dqrng_backend_intact()` returns invisibly (intact); assert it advanced-then-restored dqrng's state (draw sequence unchanged across the call)
 - [ ] 3.2 Foreign-hijack test: with a non-dqrng user-supplied RNG bound to the slot while `RNGkind()[1] == "user-supplied"`, `chk_dqrng_backend_intact()` aborts with the expected `chk` error (mirror `exploration/.../case6-witness-vs-hijack.R`; use `skip_if_not_installed("randtoolbox")`)
-- [ ] 3.3 Torn-down test: with the backend reset to a non-user-supplied generator, `chk_dqrng_backend_intact()` aborts
+- [ ] 3.3 Torn-down test: with the backend reset to a non-user-supplied generator, `chk_dqrng_backend_intact()` aborts; the message reports the current `RNGkind()` and does not name a symbol owner
+- [ ] 3.3a Message-content tests: the foreign-hijack abort names the owning package (`randtoolbox`) and lists the loaded user-RNG providers; assert via a snapshot or `expect_match`
 - [ ] 3.4 Non-destructive test: a seeded draw sequence is byte-identical with and without an intervening `chk_dqrng_backend_intact()` call
 - [ ] 3.5 Primitives test: each `*_data_task_primer()` returns normally on a healthy backend and aborts when the backend is corrupted before the task ends; error origin is the user-facing frame
 - [ ] 3.6 Run `devtools::document()`, `air format .`, and `devtools::check()`

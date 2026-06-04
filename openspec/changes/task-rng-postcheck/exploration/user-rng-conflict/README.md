@@ -45,6 +45,7 @@ Rscript case4-resolution-probe.R dqrng         # binds dqrng, works
 Rscript case4-resolution-probe.R randtoolbox   # binds randtoolbox, segfault
 Rscript case5-state-witness.R              # the detection mechanism (basis of the spec)
 Rscript case6-witness-vs-hijack.R          # witness catches a hijack the cheap probe misses
+Rscript case7-who-owns-rng.R               # name the culprit + list providers (for the error message)
 ```
 
 Tested with R 4.5.3, dqrng 0.4.1, randtoolbox 2.0.5 (rngWELL 0.10-10).
