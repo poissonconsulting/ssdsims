@@ -25,9 +25,17 @@ it just threads outputs forward and returns the collected per-step results.
 \details{
 This is the no-frills baseline: it runs in-process, with \strong{no} \code{targets}
 dependency, \strong{no} shard grouping or \code{partition_by}, and \strong{no} Parquet I/O.
-It is also \strong{not} reproducible - no per-task RNG seeding happens here (that
-arrives with the \code{primer-primitives} roadmap step); pin the ambient RNG (e.g.
-\code{\link[withr:with_seed]{withr::with_seed()}}) for deterministic draws.
+
+It \strong{is} reproducible without an external seed. The runner opens one
+\code{\link[=local_dqrng_backend]{local_dqrng_backend()}} scope and seeds each \code{sample}/\code{fit}/\code{hc} task exactly
+once through its \verb{*_data_task_primer()} wrapper, with \code{seed = scenario$seed}
+and a per-task primer derived from the task's canonical identity
+(\code{\link[=task_primer]{task_primer()}} over the \code{task_axes(step)} columns). Because each task's
+\verb{(seed, primer)} pair fully determines its RNG starting point, two runs of a
+scenario with a fixed \code{seed} yield identical results, and a task's result is
+independent of the order in which tasks run. These same
+\verb{*_data_task_primer()} wrappers are the per-task entry point a future
+\code{targets} shard body and the replay helper (\code{TARGETS-DESIGN.md} §7) reuse.
 
 The scenario retains the data frames it was built from, so the runner reads
 them directly - no separate \code{data} argument. \code{min_pmix} names are resolved
@@ -41,8 +49,6 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   dists = "lnorm"
 )
-withr::with_seed(42L, {
-  out <- ssd_run_scenario_baseline(scenario)
-})
+out <- ssd_run_scenario_baseline(scenario)
 out$hc
 }
