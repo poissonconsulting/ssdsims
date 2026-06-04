@@ -701,7 +701,11 @@ shard, §6) — a single shared task table mapped lockstep through all
 three steps does **not** work when the grids differ. Layers link via
 the upstream **shard's partition path**: each task row carries its full
 parent identity (the `sample_id` / `fit_id` columns), and its parent
-*shard* is that identity projected onto the parent's path axes. Because
+*shard* is that identity projected onto the parent's path axes —
+**derived** at read/sourcing time, **not** stored, so the task table
+stays `partition_by`-independent and re-layout stays free (storing a
+Hive-path prefix as the key would couple the table to the layout).
+Because
 steps may partition independently — the §5 defaults deliberately
 *coarsen* downstream — a child shard generally spans a **set** of parent
 shards (**m:n**): an `hc` shard reads every `fit` shard for its
