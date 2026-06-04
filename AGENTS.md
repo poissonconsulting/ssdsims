@@ -191,7 +191,7 @@ Read that before writing tests.
   never edit `man/` or `NAMESPACE` by hand.
 - Whenever you add a new (non-internal) topic, add it to `_pkgdown.yml`
   and confirm with
-  [`pkgdown::check_pkgdown()`](https://rdrr.io/pkg/pkgdown/man/check_pkgdown.html).
+  [`pkgdown::check_pkgdown()`](https://pkgdown.r-lib.org/reference/check_pkgdown.html).
 - Examples in `@examples` are part of the spec — keep them small and
   runnable.
 
