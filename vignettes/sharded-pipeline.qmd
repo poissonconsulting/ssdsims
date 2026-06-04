@@ -145,38 +145,48 @@ anything.
 The sharded runner is single core. To run shards **in parallel** (or on a
 cluster), the same building blocks plug into a static-branching `targets`
 pipeline: `tarchetypes::tar_map()` mints one named target per shard, so
-`targets` caches, invalidates, and reruns each shard independently. A ready
-template ships with the package:
+`targets` caches, invalidates, and reruns each shard independently. Two ready
+example projects ship with the package --- a minimal `local` one and a fuller
+`example` one (adapted from `scripts/example.R`, sweeping `nrow`, `proportion`,
+and the estimation / CI methods):
 
 ```{r}
 #| label: template-path
-system.file("targets-templates", "local", "_targets.R", package = "ssdsims")
+list.files(system.file("targets-templates", "local", package = "ssdsims"))
 ```
 
-Copy it to your project root, edit the scenario, then run the pipeline (this
-needs the `targets` and `tarchetypes` Suggests):
-
-The template ships with a companion `run.R` driver (`tar_make()` + read the
-summary). Copy both to your project root and run it:
+Each directory holds `scenario.R` (the study, shared by both drivers),
+`_targets.R` (the pipeline), `run.R` (the **targets** driver), and
+`run-serial.R` (the **single-core** driver). Copy a directory's files to your
+project root, edit `scenario.R`, then run either driver (the targets path needs
+the `targets`/`tarchetypes` Suggests):
 
 ```{r}
 #| label: tar-make
 #| eval: false
 # install.packages(c("targets", "tarchetypes"))
 dir <- system.file("targets-templates", "local", package = "ssdsims")
-file.copy(file.path(dir, c("_targets.R", "run.R")), ".")
-source("run.R") # tar_make(): one target per shard -> results/<step>/...; then the summary
+file.copy(list.files(dir, full.names = TRUE), ".")
+
+source("run.R") # targets: tar_make() -> one target per shard -> results/<step>/...
 # or, from a shell:  Rscript run.R
+
+source("run-serial.R") # single core via ssd_run_scenario_shards() -> results-serial/
+# ...and, if results/ exists, it asserts the two drivers' estimates are identical
 ```
 
-The template uses `format = "file"` (targets passes the shard *path*, not its
+`_targets.R` uses `format = "file"` (targets passes the shard *path*, not its
 value, between steps) and `error = "null"` (a failing whole shard records its
 error and goes `NULL` without aborting the run --- the rest still build and the
 summary unions the survivors). Step ordering is wired with `tar_combine()`
 barriers, because a directory read carries no automatic dependency edge.
 
-Whatever the driver --- baseline, single-core shards, or `targets` --- the
-per-task results are identical; choose the one that fits the run.
+Because both drivers `source("scenario.R")` --- the same study --- and
+`partition_by` is a free re-layout, `run-serial.R` finishes by reading back
+`results-serial/summary.parquet` and `results/summary.parquet` and asserting the
+per-task estimates are byte-identical. Whatever the driver --- baseline,
+single-core shards, or `targets` --- the results are the same; choose the one
+that fits the run.
 
 ## See also
 

@@ -1,4 +1,4 @@
-# ssdsims local targets pipeline (TARGETS-DESIGN.md section 6).
+# ssdsims example targets pipeline (TARGETS-DESIGN.md section 6).
 #
 # Static branching: the scenario is a plain construction-time object built HERE,
 # at sourcing time - NOT a tar_target. Everything downstream is a pure function
