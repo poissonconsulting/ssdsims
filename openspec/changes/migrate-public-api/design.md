@@ -4,7 +4,7 @@
 
 The legacy public surface does not. `ssd_sim_data.data.frame()`, `ssd_fit_dists_sims()`, and `ssd_hc_sims()` still seed per task through the **L'Ecuyer-CMRG sub-stream lattice** in `R/internal.R`: `get_lecuyer_cmrg_stream_state(s)(seed, stream, start_sim)` produces a length-7 `.Random.seed` state, installed by `with_lecuyer_cmrg_state()` inside the `*_state` ops (`slice_sample_state`, `fit_dists_state`, `hc_state`) and their `*_seed` wrappers (`fit_dists_seed`, `hc_seed`). `ssd_run_scenario()` chains these three, and already opens a `local_dqrng_backend()` it does not yet use for seeding.
 
-This change is the §12 `migrate-public-api` step: a **cosmetic, non-gating** carry-over of those three functions onto the dqrng + primer contract, with the L'Ecuyer helpers kept as a one-release shim. The benchmark of correctness is the loop-free `scripts/example-expanded.R`, which currently proves the L'Ecuyer public path byte-equals a hand expansion built from the `*_state` primitives; after migration it must prove the same equality on the dqrng primitives.
+This change is the §12 `migrate-public-api` step: a **cosmetic** carry-over of those three functions onto the dqrng + primer contract, with the L'Ecuyer helpers kept as a one-release shim. Per the roadmap it has **no dependants** and depends on `primer-primitives` (the contract) and on `scenario-input-types` (so its byte-equivalence re-run can exercise the full public input surface; `inputs → migrate`). The benchmark of correctness is the loop-free `scripts/example-expanded.R`, which currently proves the L'Ecuyer public path byte-equals a hand expansion built from the `*_state` primitives; after migration it must prove the same equality on the dqrng primitives.
 
 ## Goals / Non-Goals
 

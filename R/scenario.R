@@ -10,8 +10,9 @@
 #' Input data is forwarded through [ssd_data()] for validation (a numeric
 #' `Conc` column is required) and retained on the scenario (as `$data`) so a
 #' local run ([ssd_run_scenario_baseline()]) can sample it directly. The dataset
-#' *names* (`$datasets`) are what the targets/cluster path hashes and resolves
-#' through the registry, so that path need not carry the data frames.
+#' *names* (`$datasets`) are what the targets/cluster path hashes; the validated
+#' tibbles ride on the scenario and are isolated by name via [scenario_dataset()],
+#' so the hash need not carry the data frames.
 #'
 #' # Dataset input
 #'
@@ -54,15 +55,49 @@
 #'   with a single argument that inputs the number of rows of data and returns
 #'   a proportion between 0 and 0.5 - in which case the name is derived from the
 #'   argument expression (e.g. `ssdtools::ssd_min_pmix` gives `"ssd_min_pmix"`),
-#'   mirroring dataset name derivation. Only the name is stored; the function is
-#'   resolved later via the `min_pmix` registry (a future roadmap step).
+#'   mirroring dataset name derivation. The name is what the task path hashes;
+#'   the resolved single-argument function is additionally materialised on the
+#'   scenario (keyed by name) for execution and isolated via
+#'   [scenario_min_pmix()]. A name-string is resolved to a function at
+#'   construction (from `ssdtools` or the caller's environment), failing fast if
+#'   it cannot be resolved to a single-argument function.
 #' @param range_shape1 A list of numeric vectors of length two of the lower and
 #'   upper bounds for the shape1 parameter.
 #' @param range_shape2 A list of numeric vectors of length two of the lower and
 #'   upper bounds for the shape2 parameter.
-#' @param partition_by An optional named list with `data`, `fit`, and `hc`
-#'   character vectors naming the Hive partition axes per step. When `NULL` the
-#'   documented per-step defaults are used.
+#' @param samples A logical scalar (default `FALSE`): retain the bootstrap draws
+#'   in the hc result's `samples` list-column (passed to [ssdtools::ssd_hc()]).
+#'   This is **output retention only** - it does not change the estimates or the
+#'   per-task RNG, so it is not a grid or task axis (a single `TRUE` is a superset
+#'   of `FALSE`). Changing it re-runs the hc step (the discarded draws must be
+#'   re-bootstrapped) but yields byte-identical estimates; retained samples can
+#'   be large (`nboot` draws per dist per task), so it is off by default.
+#' @param partition_by An optional, possibly-partial named list keyed by step
+#'   (`sample`/`fit`/`hc`) of character vectors naming the Hive **path** axes for
+#'   that step (one shard per path cell; the inner complement rides as Parquet
+#'   columns). Each entry must be unique, non-missing, and a subset of that
+#'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
+#'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
+#'   `range_shape1`, `range_shape2`; `hc` adds `ci`, `nboot`, `est_method`,
+#'   `ci_method`, `parametric`. `"nrow"` is rejected only for `sample` (the
+#'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
+#'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
+#'   there is no cross-step constraint; a step may be finer or coarser than its
+#'   neighbour on a shared axis (the m:n parent-shard relationship is resolved at
+#'   the read layer). Steps left unnamed take their documented defaults (`sample
+#'   = c("dataset", "sim", "replace")`, `fit = c("dataset", "sim", "nrow",
+#'   "rescale")`, `hc = c("dataset", "sim")`; these supersede `TARGETS-DESIGN.md`
+#'   section 5's pre-fold table). The split is orthogonal to the per-task RNG
+#'   primer, so changing it shifts file paths only, never results.
+#' @param bundle An optional, possibly-partial named list keyed by step, the
+#'   per-step **complement** of `partition_by`: it names the **inner** axes to
+#'   keep together within a shard, and the stored path axes become
+#'   `setdiff(task_axes(step), bundle[[step]])`. `partition_by` and `bundle` are
+#'   complementary per-step entry points - at most one may name a given step (a
+#'   step in **both** is an error), but they may be mixed across steps and either
+#'   may be partial. Use `partition_by` when you want few path axes, `bundle`
+#'   when you want fine sharding and only a few inner axes. Both normalise into
+#'   the single stored `partition_by` path list.
 #' @param upload An optional upload specification (a list), or `NULL` for no
 #'   upload.
 #' @param ... Unused; must be empty.
@@ -91,11 +126,14 @@ ssd_define_scenario <- function(
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  samples = FALSE,
   partition_by = NULL,
+  bundle = NULL,
   upload = NULL
 ) {
   data_expr <- rlang::enexpr(data)
   min_pmix_expr <- rlang::enexpr(min_pmix)
+  user_env <- rlang::caller_env()
   call <- environment()
   chk::chk_unused(...)
 
@@ -130,8 +168,8 @@ ssd_define_scenario <- function(
   chk::chk_length(replace, upper = 2L)
 
   chk::chk_null_or(name, vld = chk::vld_string)
-  chk::chk_null_or(partition_by, vld = chk::vld_list)
   chk::chk_null_or(upload, vld = chk::vld_list)
+  # `partition_by`/`bundle` are validated and normalised below.
 
   # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
   chk::chk_character(dists)
@@ -201,6 +239,9 @@ ssd_define_scenario <- function(
   chk::chk_unique(parametric)
   chk::chk_length(parametric, upper = 2L)
 
+  # `samples` is output-retention only (scalar, not a grid axis or task axis).
+  chk::chk_flag(samples)
+
   # --- ci = FALSE rejects bootstrap-only knobs ---------------------------
   if (length(ci) == 1L && isFALSE(ci)) {
     passed <- c(
@@ -226,10 +267,15 @@ ssd_define_scenario <- function(
   # --- datasets: validated and retained as an ssd_data() collection ------
   datasets <- scenario_datasets(data, name, data_expr, call = call)
 
-  # --- min_pmix names (no function bodies stored) ------------------------
-  min_pmix <- scenario_min_pmix_names(min_pmix, min_pmix_expr, call = call)
+  # --- min_pmix: names for hashing + functions materialised for execution -
+  min_pmix_spec <- scenario_min_pmix_materialise(
+    min_pmix,
+    min_pmix_expr,
+    env = user_env,
+    call = call
+  )
 
-  partition_by <- partition_by %||% scenario_default_partition_by()
+  partition_by <- validate_partition_by(partition_by, bundle, call = call)
 
   structure(
     list(
@@ -244,17 +290,19 @@ ssd_define_scenario <- function(
         rescale = rescale,
         computable = computable,
         at_boundary_ok = at_boundary_ok,
-        min_pmix = min_pmix,
+        min_pmix = min_pmix_spec$names,
         range_shape1 = range_shape1,
         range_shape2 = range_shape2
       ),
+      min_pmix_fns = min_pmix_spec$fns,
       hc = list(
         proportion = proportion,
         ci = ci,
         nboot = nboot,
         est_method = est_method,
         ci_method = ci_method,
-        parametric = parametric
+        parametric = parametric,
+        samples = samples
       ),
       partition_by = partition_by,
       upload = upload
@@ -264,13 +312,181 @@ ssd_define_scenario <- function(
 }
 
 #' Documented per-step `partition_by` defaults.
+#'
+#' Three-step defaults (`sample`/`fit`/`hc`), superseding `TARGETS-DESIGN.md`
+#' section 5's pre-fold table (whose `data` key predates the `sample` split and
+#' the `data`-into-`fit` fold). `nrow` shards at the `fit` level: each
+#' truncation size is its own fit shard, while the shared draw upstream is
+#' de-duplicated at the `sample` step.
 #' @noRd
 scenario_default_partition_by <- function() {
   list(
-    data = c("dataset", "sim", "replace"),
-    fit = c("dataset", "sim", "rescale"),
+    sample = c("dataset", "sim", "replace"),
+    fit = c("dataset", "sim", "nrow", "rescale"),
     hc = c("dataset", "sim")
   )
+}
+
+#' Validate `partition_by`/`bundle` and normalise to a complete `partition_by`.
+#'
+#' `partition_by` (path axes) and `bundle` (inner axes - the path complement)
+#' are complementary, optional, possibly-partial named lists keyed by step
+#' (`sample`/`fit`/`hc`). Each named entry is validated against that step's
+#' `task_axes()` vocabulary (character, unique, non-`NA`, a subset); `"nrow"` is
+#' rejected under `partition_by$sample` with a bespoke message (the shared draw
+#' carries no `nrow`; `fit` truncates it inline) and falls under the generic
+#' unknown-axis error for `bundle$sample`. A step named in **both** arguments
+#' aborts. Validation is **per-step only** - there is no cross-step
+#' parent-consistency check (steps partition independently; the m:n parent-shard
+#' relationship is resolved at the read layer). Returns the normalised, complete
+#' three-step `partition_by` path list: a `bundle[[step]]` becomes its path
+#' complement `setdiff(task_axes(step), bundle[[step]])`, and steps named in
+#' neither argument take their documented default. Aborts in the context of
+#' `call` (the user-facing function). Plain loops (not `purrr::walk`) keep
+#' internal frames out of the error header (error-call-origin rule).
+#' @noRd
+validate_partition_by <- function(
+  partition_by = NULL,
+  bundle = NULL,
+  call = rlang::caller_env()
+) {
+  validate_axis_list(partition_by, "partition_by", call = call)
+  validate_axis_list(bundle, "bundle", call = call)
+
+  both <- intersect(names(partition_by), names(bundle))
+  if (length(both)) {
+    chk::abort_chk(
+      "Step",
+      if (length(both) > 1L) "s" else "",
+      " ",
+      chk::cc(encodeString(both, quote = "\""), conj = " and "),
+      " named in both `partition_by` and `bundle`; ",
+      "give each step its path axes (`partition_by`) or its inner axes ",
+      "(`bundle`), not both.",
+      call = call
+    )
+  }
+
+  out <- scenario_default_partition_by()
+  for (step in names(partition_by)) {
+    out[[step]] <- partition_by[[step]]
+  }
+  for (step in names(bundle)) {
+    out[[step]] <- setdiff(task_axes(step), bundle[[step]])
+  }
+  out
+}
+
+#' Validate one of the `partition_by`/`bundle` axis lists (or `NULL`).
+#'
+#' `arg` names the argument for messages. Each named entry must name a real step
+#' and be a character vector that is unique, non-`NA`, and a subset of that
+#' step's `task_axes()`. `"nrow"` under `partition_by$sample` gets a bespoke
+#' message.
+#' @noRd
+validate_axis_list <- function(lst, arg, call = rlang::caller_env()) {
+  if (is.null(lst)) {
+    return(invisible(NULL))
+  }
+  steps <- c("sample", "fit", "hc")
+  if (!is.list(lst) || is.null(names(lst)) || !all(nzchar(names(lst)))) {
+    chk::abort_chk(
+      "`",
+      arg,
+      "` must be a named list keyed by step (`sample`, `fit`, `hc`).",
+      call = call
+    )
+  }
+  bad_steps <- setdiff(names(lst), steps)
+  if (length(bad_steps)) {
+    chk::abort_chk(
+      "`",
+      arg,
+      "` names unknown step",
+      if (length(bad_steps) > 1L) "s " else " ",
+      chk::cc(encodeString(bad_steps, quote = "\""), conj = " and "),
+      "; valid steps are `sample`, `fit`, and `hc`.",
+      call = call
+    )
+  }
+  for (step in names(lst)) {
+    axes <- lst[[step]]
+    if (!is.character(axes)) {
+      chk::abort_chk(
+        "`",
+        arg,
+        "$",
+        step,
+        "` must be a character vector.",
+        call = call
+      )
+    }
+    if (anyNA(axes)) {
+      chk::abort_chk(
+        "`",
+        arg,
+        "$",
+        step,
+        "` must not contain missing values.",
+        call = call
+      )
+    }
+    if (anyDuplicated(axes)) {
+      chk::abort_chk(
+        "`",
+        arg,
+        "$",
+        step,
+        "` must not contain duplicate axis names.",
+        call = call
+      )
+    }
+    if (arg == "partition_by" && step == "sample" && "nrow" %in% axes) {
+      chk::abort_chk(
+        "`partition_by$sample` must not include \"nrow\": the `sample` step ",
+        "is the shared draw and carries no `nrow` axis (every `nrow` ",
+        "truncates the same draw inside the `fit` step).",
+        call = call
+      )
+    }
+    unknown <- setdiff(axes, task_axes(step))
+    if (length(unknown)) {
+      chk::abort_chk(
+        "`",
+        arg,
+        "$",
+        step,
+        "` names unknown ",
+        if (length(unknown) > 1L) "axes " else "axis ",
+        chk::cc(encodeString(unknown, quote = "\""), conj = " and "),
+        "; valid axes for the `",
+        step,
+        "` step are ",
+        chk::cc(encodeString(task_axes(step), quote = "\""), conj = " and "),
+        ".",
+        call = call
+      )
+    }
+  }
+  invisible(NULL)
+}
+
+#' Path-vs-inner axis split for a scenario step.
+#'
+#' Returns `list(path = ..., inner = ...)` for `step`: the `path` axes are the
+#' scenario's `partition_by[[step]]` (the Hive directory levels - one shard per
+#' path cell, so the shard count is `prod(lengths)` of the path-axis value sets,
+#' and the `<step>_id` `path_key()` keys on them), and the `inner` axes are the
+#' lazy complement `setdiff(task_axes(step), path)` (carried as Parquet columns
+#' within each shard). This is the consumer hook for `task-tables` and
+#' `hive-partitioning`; storing only the path axes (and computing the inner
+#' complement) keeps `partition_by` the single source of truth. The split is
+#' orthogonal to the per-task primer (which hashes all of `task_axes(step)`), so
+#' it never changes results - only on-disk layout.
+#' @noRd
+scenario_partition_axes <- function(scenario, step) {
+  path <- scenario$partition_by[[step]]
+  list(path = path, inner = setdiff(task_axes(step), path))
 }
 
 #' Validate and retain the constructor's `data` argument.
@@ -404,16 +620,28 @@ list_expr_names <- function(
   nms
 }
 
-#' Derive `min_pmix` names from the value and captured argument expression.
+#' Materialise `min_pmix` names *and* functions from the value and captured
+#' argument expression.
 #'
-#' Accepts a character vector of names (used as-is), or a function / list of
-#' functions whose names are derived by symbol capture (mirroring datasets).
-#' Provided functions are validated; only the names are returned - no function
-#' bodies are stored.
+#' Returns `list(names = <character>, fns = <named list of functions>)`. The
+#' names are what the task path hashes (mirroring dataset name derivation); the
+#' functions ride on the scenario for execution, isolated later by name via
+#' [scenario_min_pmix()]. Accepts:
+#'
+#' * a character vector of names - each resolved to a single-argument function
+#'   at construction (from `ssdtools` or `env`), failing fast if unresolvable;
+#' * a function - validated, its name derived by symbol capture, kept under
+#'   that name;
+#' * a list of functions - each validated, names taken from the list or derived
+#'   per element, kept under those names.
+#'
+#' The names never carry function values into a hash (`task_axes("fit")` keys on
+#' the name only).
 #' @noRd
-scenario_min_pmix_names <- function(
+scenario_min_pmix_materialise <- function(
   min_pmix,
   min_pmix_expr,
+  env = rlang::caller_env(),
   call = rlang::caller_env()
 ) {
   if (is.character(min_pmix)) {
@@ -423,7 +651,14 @@ scenario_min_pmix_names <- function(
     if (anyDuplicated(min_pmix)) {
       chk::abort_chk("`min_pmix` names must be unique.", call = call)
     }
-    return(min_pmix)
+    # Plain loop (not `lapply`/`purrr::map`) so an unresolvable-name abort
+    # surfaces from `ssd_define_scenario()`, not an internal map frame
+    # (error-call-origin rule).
+    fns <- vector("list", length(min_pmix))
+    for (i in seq_along(min_pmix)) {
+      fns[[i]] <- resolve_min_pmix_name(min_pmix[[i]], env = env, call = call)
+    }
+    return(list(names = min_pmix, fns = rlang::set_names(fns, min_pmix)))
   }
 
   if (is.function(min_pmix)) {
@@ -436,7 +671,7 @@ scenario_min_pmix_names <- function(
         call = call
       )
     }
-    return(nm)
+    return(list(names = nm, fns = rlang::set_names(list(min_pmix), nm)))
   }
 
   if (is.list(min_pmix)) {
@@ -452,7 +687,7 @@ scenario_min_pmix_names <- function(
     if (anyDuplicated(nms)) {
       chk::abort_chk("`min_pmix` names must be unique.", call = call)
     }
-    return(nms)
+    return(list(names = nms, fns = rlang::set_names(min_pmix, nms)))
   }
 
   chk::abort_chk(
@@ -460,6 +695,28 @@ scenario_min_pmix_names <- function(
     "or a function or list of functions.",
     call = call
   )
+}
+
+#' Resolve a `min_pmix` name to a single-argument function at construction.
+#'
+#' Looks the name up in `ssdtools` first, then `env` (the caller's environment,
+#' searched inheritably). Aborts in the context of `call` when the name cannot
+#' be resolved to a single-argument function.
+#' @noRd
+resolve_min_pmix_name <- function(name, env, call = rlang::caller_env()) {
+  out <- rlang::env_get(rlang::ns_env("ssdtools"), name, default = NULL)
+  if (!rlang::is_function(out)) {
+    out <- rlang::env_get(env, name, default = NULL, inherit = TRUE)
+  }
+  if (!rlang::is_function(out) || length(formals(out)) != 1L) {
+    chk::abort_chk(
+      "Unable to resolve `min_pmix` name ",
+      encodeString(name, quote = "\""),
+      " to a single-argument function.",
+      call = call
+    )
+  }
+  out
 }
 
 #' Assert a `min_pmix` entry is a single-argument function (in the context of
@@ -488,6 +745,28 @@ print.ssdsims_scenario <- function(x, ...) {
   print_grid(x$fit)
   cat("  hc grid:\n")
   print_grid(x$hc)
+  cat("  partition_by:\n")
+  for (step in c("sample", "fit", "hc")) {
+    cat(
+      "    ",
+      step,
+      ": ",
+      paste(scenario_partition_axes(x, step)$path, collapse = ", "),
+      "\n",
+      sep = ""
+    )
+  }
+  cat("  bundle:\n")
+  for (step in c("sample", "fit", "hc")) {
+    cat(
+      "    ",
+      step,
+      ": ",
+      paste(scenario_partition_axes(x, step)$inner, collapse = ", "),
+      "\n",
+      sep = ""
+    )
+  }
   invisible(x)
 }
 

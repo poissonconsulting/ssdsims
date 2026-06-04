@@ -17,6 +17,12 @@ here; keep test guidance in this file rather than there.
   back to the capability it covers. (Older tests pre-dating OpenSpec use the
   function name as the prefix; prefer the capability name for new work.)
 
+## Fixtures
+
+- Keep `targets` pipeline fixtures (the `_targets.R` a test sources) as plain
+  text templates under `tests/testthat/fixtures/`, copied into a temp dir by the
+  test — do not build them inline with `writeLines()`.
+
 ## Expectations
 
 - Prefer specific expectations over `expect_true()` / `expect_false()` — they
@@ -43,6 +49,9 @@ here; keep test guidance in this file rather than there.
 
 - Avoid the `.package` argument to `local_mocked_bindings()` (it mutates another
   package's namespace); create a mockable wrapper in this package instead.
+- **Call internal (non-exported) helpers unqualified** in tests - `testthat`
+  runs tests in the package namespace, so `task_axes()`, `resolve_min_pmix()`,
+  `decode_obj()`, etc. resolve without `ssdsims:::`. Do not add the `:::`.
 
 ## Snapshot tests
 
@@ -82,4 +91,6 @@ here; keep test guidance in this file rather than there.
 - Pin the seed for any RNG-touching test (`withr::with_seed()` /
   `local_lecuyer_cmrg_seed()` / `local_dqrng_backend()`).
 - Assert `.Random.seed` is unchanged where a function is meant to be free of
-  RNG side effects (see `test-lecuyer-cmrg-seed.R`).
+  RNG side effects (see `test-lecuyer-cmrg-seed.R`). For code on the dqrng path,
+  also assert `get_dqrng_state()` is unchanged (the package's actual draw path),
+  as in `test-task-shards.R`.

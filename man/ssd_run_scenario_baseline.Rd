@@ -38,8 +38,10 @@ independent of the order in which tasks run. These same
 \code{targets} shard body and the replay helper (\code{TARGETS-DESIGN.md} §7) reuse.
 
 The scenario retains the data frames it was built from, so the runner reads
-them directly - no separate \code{data} argument. \code{min_pmix} names are resolved
-against \code{ssdtools} until the registry roadmap step lands.
+them directly - no separate \code{data} argument. \code{min_pmix} names are resolved to
+their materialised functions off the scenario via \code{\link[=scenario_min_pmix]{scenario_min_pmix()}}
+(resolved once, at construction), not by a runtime \code{ssdtools}/global-env
+search.
 }
 \examples{
 scenario <- ssd_define_scenario(

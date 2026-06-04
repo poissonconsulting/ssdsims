@@ -214,14 +214,28 @@ See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
 
 ## Pull Requests
 
-- **Titles follow Conventional Commits**: `<type>: <summary>`, where `type` is
-  one of `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, etc. (e.g.
-  `feat: add scenario-scoped dqrng pcg64 RNG backend`). Use the imperative mood
-  and keep the summary concise.
+- **PRs are squash-merged**, so the **PR title becomes the single commit on
+  `main`** — and that commit is what `fledge` reads to build `NEWS.md` (see
+  *Update package version and news* above). The PR title is therefore the
+  load-bearing message: it **must** be a valid Conventional Commit. Individual
+  commits on the branch are squashed away, so their messages are not
+  consumed by `fledge` — a clean history still helps review, but the title is
+  what ships.
+- **Titles follow Conventional Commits** — `<type>: <summary>` or
+  `<type>(<scope>): <summary>`, where `type` is one of `feat`, `fix`, `docs`,
+  `refactor`, `test`, `chore`, etc. (e.g.
+  `feat: add scenario-scoped dqrng pcg64 RNG backend`,
+  `docs(openspec): propose registry, manifest, and task-tables changes`). Use
+  the imperative mood and keep the summary concise.
 - **Escape function, object, and file names in backticks** in PR titles and
   descriptions (e.g. `local_dqrng_backend()`, `run_scenario()`, `DESCRIPTION`).
+- **Reference the related issue** in the title where one exists (e.g. `(#64)`)
+  so it carries through to the changelog.
 - Keep the PR title and description in sync with the change as it evolves; the
   description should capture the *current* state, not a revision log.
+- **Review threads**: when you address a review comment, reply on the thread
+  with what changed (or the answer) and leave it open — the reviewer resolves
+  their own threads.
 
 ## Continuous Integration
 
@@ -246,7 +260,7 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 
 The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged.
 
-**Keep the roadmap DAG honest.** Whenever a change is unblocking for — or depended upon by — another step, record that as an explicit edge in the §12 dependency DAG (and name the dependency in the prose entry), rather than describing a step as standalone. A step that something else waits on is **not** a leaf. When a step is renamed, port the rename through the §12 roadmap (entries + DAG) so the graph stays the source of truth.
+**Keep the roadmap and its Mermaid graph (TARGETS-DESIGN.md §12) up to date as part of each change** — add/rename nodes and edges when a change is proposed, and update each node's status colour as it progresses: **green = archived, yellow = done** (implemented, not yet archived), **red = proposed** (artifacts exist, not implemented), **unfilled = open** (roadmap only). The colours are Mermaid `classDef`s applied via `class` lines at the foot of the graph.
 
 ## Contact & Contribution
 

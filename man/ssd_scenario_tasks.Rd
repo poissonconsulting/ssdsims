@@ -4,14 +4,20 @@
 \alias{ssd_scenario_tasks}
 \title{Expand a Scenario into all Three Task Tables}
 \usage{
-ssd_scenario_tasks(scenario)
+ssd_scenario_tasks(scenario, step = NULL)
 }
 \arguments{
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
+
+\item{step}{Optional single step name (\code{"sample"}, \code{"fit"}, or \code{"hc"}). When
+supplied, returns just that step's \code{ssdsims_tasks} table (the same as the
+matching \verb{ssd_scenario_*_tasks()}); when \code{NULL} (default) returns the full
+\code{ssdsims_task_set}.}
 }
 \value{
-An \code{ssdsims_task_set} object: a list with \code{sample}, \code{fit}, and
-\code{hc} elements, each an \code{ssdsims_tasks} table.
+An \code{ssdsims_task_set} object (a list with \code{sample}, \code{fit}, and \code{hc}
+elements, each an \code{ssdsims_tasks} table), or - when \code{step} is supplied - the
+single \code{ssdsims_tasks} table for that step.
 }
 \description{
 The canonical expansion entry point (\code{TARGETS-DESIGN.md} section 1/section 2): derives the
@@ -26,4 +32,5 @@ scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
 tasks <- ssd_scenario_tasks(scenario)
 tasks
 tasks$hc
+ssd_scenario_tasks(scenario, "hc")
 }

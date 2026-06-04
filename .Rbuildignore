@@ -17,6 +17,7 @@
 ^air\.toml$
 ^\.ccache$
 ^AGENTS\.md$
+^CLAUDE\.md$
 ^GLOSSARY\.md$
 ^openspec$
 ^\.claude$
