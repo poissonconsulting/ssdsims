@@ -8,7 +8,7 @@ library(ssdsims)
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 2L,
-  nrow = c(5L, 6L, 10L, 20L, 50L),
+  nrow = c(5L, 10L), # c(5L, 6L, 10L, 20L, 50L),
   proportion = c(0.01, 0.05, 0.1, 0.2),
   est_method = c("arithmetic", "geometric", "multi"),
   ci = c(FALSE, TRUE),
@@ -22,9 +22,10 @@ scenario <- ssd_define_scenario(
     "weighted_samples"
   ),
   parametric = TRUE,
-  # scripts/example.R sweeps nboot = c(1, 5, 10, 50, 100, 500); kept to two
-  # values here so the example runs in a reasonable time — widen for a real
-  # study (run time scales with the bootstrap grid).
-  nboot = c(10L, 100L),
-  seed = 42L
+  nboot = c(5, 50), # c(1, 5, 10, 50, 100, 500), # * 100,
+  samples = TRUE,
+  seed = 42L,
+  bundle = list(
+    hc = c("ci_method", "est_method")
+  )
 )
