@@ -733,17 +733,25 @@ print.ssdsims_scenario <- function(x, ...) {
   print_grid(x$fit)
   cat("  hc grid:\n")
   print_grid(x$hc)
-  cat("  partition_by (path) / bundle (inner):\n")
+  cat("  partition_by:\n")
   for (step in c("sample", "fit", "hc")) {
-    axes <- scenario_partition_axes(x, step)
     cat(
       "    ",
       step,
-      ": path={",
-      paste(axes$path, collapse = ", "),
-      "} bundle={",
-      paste(axes$inner, collapse = ", "),
-      "}\n",
+      ": ",
+      paste(scenario_partition_axes(x, step)$path, collapse = ", "),
+      "\n",
+      sep = ""
+    )
+  }
+  cat("  bundle:\n")
+  for (step in c("sample", "fit", "hc")) {
+    cat(
+      "    ",
+      step,
+      ": ",
+      paste(scenario_partition_axes(x, step)$inner, collapse = ", "),
+      "\n",
       sep = ""
     )
   }

@@ -275,10 +275,14 @@
           est_method: multi
           ci_method: weighted_samples
           parametric: TRUE
-        partition_by (path) / bundle (inner):
-          sample: path={dataset, sim, replace} bundle={}
-          fit: path={dataset, sim, nrow, rescale} bundle={replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2}
-          hc: path={dataset, sim} bundle={replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric}
+        partition_by:
+          sample: dataset, sim, replace
+          fit: dataset, sim, nrow, rescale
+          hc: dataset, sim
+        bundle:
+          sample: 
+          fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -311,8 +315,12 @@
           est_method: multi, geometric
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
-        partition_by (path) / bundle (inner):
-          sample: path={dataset, sim, replace} bundle={}
-          fit: path={dataset, sim, nrow, rescale} bundle={replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2}
-          hc: path={dataset, sim} bundle={replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric}
+        partition_by:
+          sample: dataset, sim, replace
+          fit: dataset, sim, nrow, rescale
+          hc: dataset, sim
+        bundle:
+          sample: 
+          fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
 
