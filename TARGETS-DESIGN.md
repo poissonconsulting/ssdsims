@@ -1995,6 +1995,24 @@ already ran end to end (see §4, §6). These steps are therefore
   `tar_make()` again, and assert only the new dataset's shards build
   while the original dataset's shard targets are skipped (and `summary`
   re-runs); repeat for `nsim` growth.
+- **`step-scenario-slice`** — *Caveat (pre-existing) that this step
+  closes.* The `ssd_scenario_targets()` factory leaves `scenario` as a
+  bare symbol in every step command (`ssd_run_<step>_step(tasks, scenario,
+  …)`), so the **whole scenario object is a dependency of every shard
+  target** across all three steps. Editing *any* scenario field — even a
+  knob that feeds only one step, or only the output layer (e.g. `samples`,
+  which is `hc`-only) — therefore invalidates and rebuilds **all** shards,
+  not just the affected step's. Project each step's command onto the
+  **minimal slice** of the scenario it actually consumes (the resolved
+  per-step inputs / the fields that reach that step's per-task body and
+  primer), so a change to a step-irrelevant field leaves the other steps'
+  shards cached. Test: change an `hc`-only knob on a `tar_make()`-d
+  scenario and assert only `hc` (and `summary`) rebuild while `sample`/`fit`
+  shards are skipped; change a `fit`-only knob and assert `sample` stays
+  cached. **Depends on** `task-tables` (the factory it refines); pairs with
+  `path-axis-growth` (the path-axis counterpart of the same minimal-rebuild
+  contract) and is finalised against the invalidation model pinned by
+  `hive-partitioning` (§8).
 - **`shard-failure-survival`** — §6.2 — the shard body writes as many
   rows as ran successfully (a bad task yields a shorter shard, not an
   abort); the step target carries `error = "null"` only for the
@@ -2148,6 +2166,7 @@ flowchart TD
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
     pathgrow[path-axis-growth]
+    slice[step-scenario-slice]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -2178,6 +2197,7 @@ flowchart TD
     tt --> replay
     tt --> rewrite
     tt --> pathgrow
+    tt --> slice
 
     %% manifest is provenance/verification metadata: it depends on the
     %% scenario (head) and feeds the verification layer; it does NOT gate
@@ -2205,7 +2225,7 @@ flowchart TD
     class define,baseline,dqinit,dqstate,primer,prims archived
     class acc,partby,tt,shardrun done
     class inputs,manif proposed
-    class migrate,hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,lockin,cleanup open
+    class migrate,hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open
 ```
 
 **Node colours track each step's status** — green = archived, yellow = done
