@@ -23,7 +23,7 @@
 
 ## 5. Targets pipeline template
 
-- [x] 5.1 Add `inst/targets-templates/local/_targets.R`: build the scenario as a construction-time object, compute the three `*_shards()` tables at sourcing time, and `tar_map()` one named target per shard per step (`format = "file"`, `error = "null"`), plus a `summary` target
+- [x] 5.1 Add `inst/targets-templates/small/_targets.R`: build the scenario as a construction-time object, compute the three `*_shards()` tables at sourcing time, and `tar_map()` one named target per shard per step (`format = "file"`, `error = "null"`), plus a `summary` target
 - [x] 5.2 Document static branching and the construction-time scenario (§6); note whole-shard `error = "null"` gating is in scope, while *partial* survival (shorter shards, survivor-union, `warn = 2`) and the Hive layout are deferred to `shard-failure-survival`/`hive-partitioning`
 
 ## 6. Docs and reference

@@ -33,7 +33,7 @@ reference:
     Group a step's tasks into per-shard tables keyed by `partition_by`, run a
     shard with the per-task RNG primitives writing one Parquet per shard, and
     fan in a summary - the building blocks of the static-branching `targets`
-    pipeline (see the `inst/targets-templates/local/_targets.R` template).
+    pipeline (see the `inst/targets-templates/small/_targets.R` template).
   contents:
   - ssd_scenario_sample_shards
   - ssd_scenario_fit_shards

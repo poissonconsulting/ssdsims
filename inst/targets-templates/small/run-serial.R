@@ -7,10 +7,10 @@
 # per-task estimates must be identical.
 
 # Allow running from the repo root (e.g. Positron / VS Code Cmd+Shift+Enter),
-# not just from this example directory.
-if (dir.exists("inst/targets-templates/example")) {
+# not just from this small directory.
+if (dir.exists("inst/targets-templates/small")) {
   withr::local_dir(
-    "inst/targets-templates/example",
+    "inst/targets-templates/small",
     .local_envir = parent.frame(2)
   )
 }

@@ -60,7 +60,7 @@ The step targets carry `error = "null"` from the start (it is in the §6 sketch)
 
 ### Decision: ship the pipeline as an `inst/` template plus exported building blocks
 
-The `_targets.R` is shipped as a template under `inst/targets-templates/local/` (the cluster variant is `cluster-pipeline`'s `inst/targets-templates/cluster/`), built from the exported `ssd_scenario_*_shards()` + `ssd_run_*_step()` + `ssd_summarize()`. The integration test copies the template into a `tempdir()`, sources it for a tiny scenario, runs `targets::tar_make()`, and asserts every shard target completes and the unioned results equal `ssd_run_scenario_baseline()`. *Why a template, not a generator function?* A checked-in, readable `_targets.R` is what a cluster user copies and edits; a generator can come later without changing the building blocks.
+The `_targets.R` is shipped as a template under `inst/targets-templates/small/` (the cluster variant is `cluster-pipeline`'s `inst/targets-templates/cluster/`), built from the exported `ssd_scenario_*_shards()` + `ssd_run_*_step()` + `ssd_summarize()`. The integration test copies the template into a `tempdir()`, sources it for a tiny scenario, runs `targets::tar_make()`, and asserts every shard target completes and the unioned results equal `ssd_run_scenario_baseline()`. *Why a template, not a generator function?* A checked-in, readable `_targets.R` is what a cluster user copies and edits; a generator can come later without changing the building blocks.
 
 ### Decision: `manifest` is not a dependency of `task-tables` (avoid the inversion)
 

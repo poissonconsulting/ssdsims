@@ -1,4 +1,4 @@
-# ssdsims example targets pipeline (TARGETS-DESIGN.md section 6).
+# ssdsims large targets pipeline (TARGETS-DESIGN.md section 6).
 #
 # Copy this directory's files (`_targets.R`, `scenario.R`, `run.R`,
 # `run-serial.R`) to your project root, edit `scenario.R`, then `source("run.R")`

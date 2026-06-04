@@ -217,7 +217,7 @@ test_that("task-shards: ssd_summarize unions landed hc shards without recomputat
 test_that("task-shards: the shipped template tar_make()s every shard", {
   skip_targets()
   dir <- withr::local_tempdir()
-  template_dir <- system.file("targets-templates", "local", package = "ssdsims")
+  template_dir <- system.file("targets-templates", "small", package = "ssdsims")
   skip_if(!nzchar(template_dir))
   # `_targets.R` sources `scenario.R`, so copy both.
   file.copy(

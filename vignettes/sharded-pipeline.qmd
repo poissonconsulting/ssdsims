@@ -146,16 +146,16 @@ The sharded runner is single core. To run shards **in parallel** (or on a
 cluster), the same building blocks plug into a static-branching `targets`
 pipeline: `tarchetypes::tar_map()` mints one named target per shard, so
 `targets` caches, invalidates, and reruns each shard independently. Two ready
-example projects ship with the package --- a minimal `local` one and a fuller
-`example` one (adapted from `scripts/example.R`, sweeping `nrow`, `proportion`,
-and the estimation / CI methods). The `example` project parallelises its shards
+example projects ship with the package --- a minimal `small` one and a fuller
+`large` one (adapted from `scripts/example.R`, sweeping `nrow`, `proportion`,
+and the estimation / CI methods). The `large` project parallelises its shards
 across local workers with a mirai-backed `crew` controller
 (`tar_option_set(controller = crew::crew_controller_local())`); swap in a
 `crew.cluster` controller for SLURM/PBS:
 
 ```{r}
 #| label: template-path
-list.files(system.file("targets-templates", "local", package = "ssdsims"))
+list.files(system.file("targets-templates", "small", package = "ssdsims"))
 ```
 
 Each directory holds `scenario.R` (the study, shared by both drivers),
@@ -181,7 +181,7 @@ path needs the `targets`/`tarchetypes` Suggests):
 #| label: tar-make
 #| eval: false
 # install.packages(c("targets", "tarchetypes"))
-dir <- system.file("targets-templates", "local", package = "ssdsims")
+dir <- system.file("targets-templates", "small", package = "ssdsims")
 file.copy(list.files(dir, full.names = TRUE), ".")
 
 source("run.R") # targets: tar_make() -> one target per shard -> results/<step>/...

@@ -1,7 +1,7 @@
-# Run the ssdsims example targets pipeline.
+# Run the ssdsims large targets pipeline.
 #
 # The package ships this under
-# `system.file("targets-templates", "local", package = "ssdsims")`. Copy the
+# `system.file("targets-templates", "large", package = "ssdsims")`. Copy the
 # directory's files (`scenario.R`, `_targets.R`, `run.R`, `run-serial.R`) to your
 # project root, edit `scenario.R`, then run this driver — interactively with
 # `source("run.R")` or from a shell with `Rscript run.R`. (`run-serial.R` runs
@@ -16,9 +16,9 @@ library(targets)
 
 # Allow running from the project root (e.g. Positron / VS Code
 # Cmd+Shift+Enter), not just from this axis directory.
-if (dir.exists("inst/targets-templates/example")) {
+if (dir.exists("inst/targets-templates/large")) {
   withr::local_dir(
-    "inst/targets-templates/example",
+    "inst/targets-templates/large",
     .local_envir = parent.frame(2)
   )
 }

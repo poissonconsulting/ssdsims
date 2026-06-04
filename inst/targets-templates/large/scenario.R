@@ -1,4 +1,4 @@
-# The scenario for the fuller targets example, adapted from `scripts/example.R`:
+# The scenario for the large (fuller) targets example, adapted from `scripts/example.R`:
 # a wider study sweeping sample sizes, hazard proportions, estimation and CI
 # methods, and CI on/off. Shared by `_targets.R` (the targets pipeline) and
 # `run-serial.R` (the single-core shard runner) so both run the same study and

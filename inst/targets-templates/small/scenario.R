@@ -1,4 +1,4 @@
-# The scenario for the local targets example, shared by `_targets.R` (the
+# The scenario for the small targets example, shared by `_targets.R` (the
 # targets pipeline driven by run.R) and `run-serial.R` (the single-core shard
 # runner). Both source this file, so they run the *same* study and their
 # results can be compared. Edit to taste.
