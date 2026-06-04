@@ -699,10 +699,42 @@ Each step needs its **own** task table (`data_tasks`, `fit_tasks`,
 `hc_tasks`) and its own per-shard targets (one named target per
 shard, §6) — a single shared task table mapped lockstep through all
 three steps does **not** work when the grids differ. Layers link via
-the upstream **shard's partition path**: each task row carries the
-partition column values of the upstream shard it needs (the `data_id`
-/ `fit_id` columns are sugar for the path), and the per-shard body
-opens that one upstream Parquet. §6 wires this up concretely.
+the upstream **shard's partition path**: each task row carries its full
+parent identity (the `sample_id` / `fit_id` columns), and its parent
+*shard* is that identity projected onto the parent's path axes —
+**derived** at read/sourcing time, **not** stored, so the task table
+stays `partition_by`-independent and re-layout stays free (storing a
+Hive-path prefix as the key would couple the table to the layout).
+Because
+steps may partition independently — the §5 defaults deliberately
+*coarsen* downstream — a child shard generally spans a **set** of parent
+shards (**m:n**): an `hc` shard reads every `fit` shard for its
+`(dataset, sim)` across `nrow`/`rescale`, and with `replace = c(F, T)`
+a `fit` shard reads two `sample` shards. The per-shard body therefore
+opens the **set** of upstream Parquets its tasks reference and filters
+them (duckplyr predicate pushdown); it does **not** assume a single
+upstream shard. `shard-runner-baseline` (§12) proves this
+read+filter loop single-core; §6 wires it into `targets`.
+
+At the **task** level the linkage is **n:1** — each `fit`/`hc` task has
+exactly one parent task, so each table carries a single `<parent>_id`
+foreign key. That single key is a *special case* that holds only while
+the grids grow monotonically (`task_axes(sample) ⊆ task_axes(fit) ⊆
+task_axes(hc)`), so a child carries its parent's full identity and the
+m:n shard graph is *generated* from the single key (project each task's
+`<parent>_id` onto `path[parent]`, take the distinct set). A future
+**reduce** step — an across-replicate summary that *drops* an axis —
+references **many** parent tasks (a **set-valued** foreign key = a
+shared-axis glob, the same read), and this applies at **all three
+layers**, not just `hc`: one may reduce over any axis a layer carries
+(`sim`/`replace` at all three, `nrow` at `fit`/`hc`, the bootstrap knobs
+at `hc` only). The §6 `summary` is today's monolithic, un-sharded
+instance of that fan-in over all three layers; a sharded version is
+three reduce steps, each with a set-valued key to its own layer. A step
+that consumes more than one upstream step would simply carry more than
+one foreign-key column (a DAG, not a tree); the PK + FK-columns data
+model already expresses both relaxations, and neither is triggered by
+sharding.
 
 ---
 
@@ -755,15 +787,30 @@ step (as a buffering checkpoint) is a deferred decision tied to the
 caching/invalidation model — see the note in §8.
 
 Dependencies between tasks are **explicit**: each row carries a
-path-style `<step>_id` primary key — the Hive partition path itself,
-e.g. `dataset=boron/sim=1/replace=FALSE` — plus its parent step's id
-as a foreign key (`sample_id` on `fit`, `fit_id` on `hc`). These are
-the `fit_id` "sugar for the path" columns referenced above, made
-concrete: a child references its parent by a single joinable column,
+path-style `<step>_id` primary key — `path_key()` over **all** of the
+step's `task_axes()`, e.g. `dataset=boron/sim=1/replace=FALSE` — plus
+its parent step's id as a foreign key (`sample_id` on `fit`, `fit_id`
+on `hc`). A child references its parent by a single joinable column,
 and the baseline runner threads results by that foreign key. The ids
 are deterministic and stable under scenario growth (adding a dataset
 does not renumber existing rows), so they compose with the
 cache-by-existence story in §8.
+
+**Identity key ≠ Hive shard path — the PK/FK are task identity, not
+partitioning.** The `<step>_id` primary key and `<parent>_id` foreign
+key are the **task identity**: `path_key()` over *all* of
+`task_axes(step)`, unique per task, **`partition_by`-independent**, and
+exactly what the per-task primer hashes (§2) and the foreign-key join
+uses. The **Hive shard path** is a *separate* projection —
+`path_key(path[step])` over the `partition_by` **subset** (§5) — shared
+by every task in a shard and **`partition_by`-dependent**. They
+coincide only in the degenerate one-task-per-shard case; under any
+coarser `partition_by` the shard path is a *coarsening* of the identity
+key (many tasks share it, so it is **not** a primary key), and the
+parent *shard* a child reads is its `<parent>_id` projected onto
+`path[parent]` — derived at read/sourcing time, not stored (§5
+Implications). `partition_by` moves the shard path; it never touches
+the identity key, the primer, or results.
 
 ### Static branching: one named target per shard
 
@@ -992,13 +1039,15 @@ ssd_run_fit_step <- function(tasks, scenario, data_dir, out_dir) {
 The body loops once per task in the shard, primes the RNG with
 that task's primer, calls the (state-less) `_state` primitive, and
 stacks K result rows into one Parquet at the shard's partition
-path. Each fit shard opens the one upstream data shard via its
-partition path, so a fit shard never depends on the whole data step.
-Under static branching that scoping is natural: a fit shard target can
-name its single upstream data shard target (`data_step_boron_sim1_…`)
-for a precise edge, so adding new data shards mints new targets and
-leaves existing fit shards untouched — no directory-hash indirection
-required to avoid spurious rebuilds.
+path. Each fit shard opens the upstream data shard(s) its tasks
+reference — here a single shard, but in general the **set** of parent
+shards a child spans (§5/§6 Linking), read and filtered via duckplyr —
+so a fit shard never depends on the whole data step. Under static
+branching that scoping is computed at sourcing time: a fit shard target
+names its upstream data shard target(s) (Option 3, §12 `task-tables`)
+for precise per-shard edges, so adding new data shards mints new
+targets and leaves existing fit shards untouched — no directory-hash
+indirection required to avoid spurious rebuilds.
 
 **Dependencies and what re-runs on a knob change** (applied to the
 2/4/2 shard counts above; "1 shard re-runs" = its Parquet is
@@ -1067,13 +1116,22 @@ path uniquely identifies the shard, so no hash in the name.
 
 #### Linking between targets
 
-Within the pipeline, `targets` already wires the dependency: the
-fit branch for shard *S* declares the upstream data shard at the
-matching partition path and gets the **shard path passed in as a
-function argument** (the `format = "file"` contract). No
-lookup-by-hash in the body. The partition layout above is for
-*downstream queries* and for the debug replay (§7), not for the
-inter-target wiring.
+Within the pipeline, `targets` wires the dependency at **sourcing
+time**: the child branch for shard *S* depends on the **set** of
+upstream shards its tasks reference — computed from the static shard
+tables (the scenario is a plain sourcing-time object, §6) — and gets
+their **paths passed in as function arguments** (the `format = "file"`
+contract). No lookup-by-hash in the body. Because partitioning is
+per-step, that set is in general **many-to-many** (a child shard spans
+several parent shards; a parent shard feeds several children); the
+single-upstream case is just the degenerate one. To keep invalidation
+**per-shard** under m:n, the wiring computes each child branch's
+upstream target-name set at sourcing time and splices it in
+(`tar_target(child, f(!!!syms(parents)))`) rather than gluing the whole
+parent step together or globbing the parent directory blindly — see the
+`task-tables` step (§12) and `shard-runner-baseline`, which proves the
+same set-of-parents read+filter on one core. The partition layout above
+also serves *downstream queries* and the debug replay (§7).
 
 #### Why `format = "file"`, not the native Parquet store
 
@@ -1955,11 +2013,37 @@ already ran end to end (see §4, §6). These steps are therefore
   through a §8.3 pin. Depends on `task-tables` (for the expected count);
   pairs with `cloud-upload` (same sibling-target shape) and `manifest`
   (records expected-vs-actual per shard).
-- **`hive-partitioning`** — Write each per-task shard under a
-  Hive-partitioned path (§6 layout). Smoke: duckplyr predicate
-  pushdown returns the right subset without opening unrelated
-  shards. Pins the invalidation model, so it also settles the
-  deferred `data`-step-vs-fold decision recorded in §8.
+- **`shard-runner-baseline`** — §5 / §6 — a **single-core** runner
+  that materialises each step as Hive-partitioned Parquet shards (one
+  per `partition_by` path cell) and links steps by reading parent
+  shards back with duckplyr predicate pushdown, resolving the **m:n**
+  child-shard ← parent-shards dependency *at run time* (the distinct
+  set of parent shard paths over a child shard's tasks). "Shards
+  without `targets`", mirroring `task-list-loop-baseline`'s "tasks
+  without shards". First consumer of `partition-by`'s
+  `scenario_partition_axes()`; owns the Hive path/read helpers and
+  proves the write→glob-read→filter loop + m:n resolution in plain R.
+  Makes `partition-by`'s deferred acceptance test (changing
+  `partition_by` shifts paths, per-task results byte-identical)
+  landable here, **without `targets`**, against the in-memory baseline
+  as oracle. Adds `duckplyr` to `Imports` (the same engine the targets
+  read path uses, so this de-risks `hive-partitioning` directly).
+  Depends on `primer-primitives` + `partition-by`.
+- **`hive-partitioning`** — §6 / §8 — wire the (now-validated) Hive
+  write/read into the `targets` `task-tables` branches as
+  `format = "file"` outputs and **pin the invalidation model**
+  (`tar_cue` / content-hash, §8), so it also settles the deferred
+  `data`-step-vs-fold decision recorded in §8. Because the
+  child↔parent shard relationship is **m:n**, the invalidation model
+  must propagate over the fan-in: rewriting one parent shard
+  invalidates the **set** of child shards that read it — which rides on
+  `task-tables`' per-child upstream edges (Option 3, computed at
+  sourcing time), not on a single named edge. Reuses
+  `shard-runner-baseline`'s path/read helpers — the layout and
+  predicate-pushdown read are already proven there, so this step is the
+  `targets`-integration + caching half only (its smoke test moves to
+  `shard-runner-baseline`). Depends on `task-tables` and
+  `shard-runner-baseline`.
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
   `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
   on a real (or sandboxed) Slurm queue.
@@ -2045,6 +2129,7 @@ flowchart TD
     postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
     partby[partition-by]
+    shardrun[shard-runner-baseline]
 
     acc[scenario-accessors]
 
@@ -2075,9 +2160,15 @@ flowchart TD
     primer --> prims
 
     prims --> postcheck
+    baseline --> partby
+
     acc --> tt
     prims --> tt
     partby --> tt
+
+    prims --> shardrun
+    partby --> shardrun
+    shardrun --> hive
 
     tt --> hive
     tt --> cluster
@@ -2108,6 +2199,14 @@ non-gating** edge and **no dependants**: trusting the design, it is a
 cosmetic rename that no targets step waits on, so it can land any time
 (like `error-call-origin` and the Cleanup items). The dashed edge marks
 "follows from, but does not block."
+
+`shard-runner-baseline` sits off `primer-primitives` + `partition-by`,
+parallel to the `targets`-only plumbing: it proves the Hive
+write/read + m:n loop in plain R, then feeds `hive-partitioning`
+(which keeps the `targets`-integration + invalidation half). The
+`baseline → partby` edge is the previously-latent reuse dependency —
+`partition-by` reads `task_axes()`/`task_parent()` from
+`task-list-loop-baseline`.
 
 Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not
