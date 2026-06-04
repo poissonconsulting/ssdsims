@@ -716,10 +716,18 @@ Each step needs its **own** task table (`data_tasks`, `fit_tasks`,
 `hc_tasks`) and its own per-shard targets (one named target per
 shard, §6) — a single shared task table mapped lockstep through all
 three steps does **not** work when the grids differ. Layers link via
-the upstream **shard's partition path**: each task row carries the
-partition column values of the upstream shard it needs (the `data_id`
-/ `fit_id` columns are sugar for the path), and the per-shard body
-opens that one upstream Parquet. §6 wires this up concretely.
+the upstream **shard's partition path**: each task row carries its full
+parent identity (the `sample_id` / `fit_id` columns), and its parent
+*shard* is that identity projected onto the parent's path axes. Because
+steps may partition independently — the §5 defaults deliberately
+*coarsen* downstream — a child shard generally spans a **set** of parent
+shards (**m:n**): an `hc` shard reads every `fit` shard for its
+`(dataset, sim)` across `nrow`/`rescale`, and with `replace = c(F, T)`
+a `fit` shard reads two `sample` shards. The per-shard body therefore
+opens the **set** of upstream Parquets its tasks reference and filters
+them (duckplyr predicate pushdown); it does **not** assume a single
+upstream shard. `shard-runner-baseline` (§12) proves this
+read+filter loop single-core; §6 wires it into `targets`.
 
 ---
 
@@ -1084,13 +1092,22 @@ path uniquely identifies the shard, so no hash in the name.
 
 #### Linking between targets
 
-Within the pipeline, `targets` already wires the dependency: the
-fit branch for shard *S* declares the upstream data shard at the
-matching partition path and gets the **shard path passed in as a
-function argument** (the `format = "file"` contract). No
-lookup-by-hash in the body. The partition layout above is for
-*downstream queries* and for the debug replay (§7), not for the
-inter-target wiring.
+Within the pipeline, `targets` wires the dependency at **sourcing
+time**: the child branch for shard *S* depends on the **set** of
+upstream shards its tasks reference — computed from the static shard
+tables (the scenario is a plain sourcing-time object, §6) — and gets
+their **paths passed in as function arguments** (the `format = "file"`
+contract). No lookup-by-hash in the body. Because partitioning is
+per-step, that set is in general **many-to-many** (a child shard spans
+several parent shards; a parent shard feeds several children); the
+single-upstream case is just the degenerate one. To keep invalidation
+**per-shard** under m:n, the wiring computes each child branch's
+upstream target-name set at sourcing time and splices it in
+(`tar_target(child, f(!!!syms(parents)))`) rather than gluing the whole
+parent step together or globbing the parent directory blindly — see the
+`task-tables` step (§12) and `shard-runner-baseline`, which proves the
+same set-of-parents read+filter on one core. The partition layout above
+also serves *downstream queries* and the debug replay (§7).
 
 #### Why `format = "file"`, not the native Parquet store
 
@@ -1921,11 +1938,32 @@ already ran end to end (see §4, §6). These steps are therefore
   through a §8.3 pin. Depends on `task-tables` (for the expected count);
   pairs with `cloud-upload` (same sibling-target shape) and `manifest`
   (records expected-vs-actual per shard).
-- **`hive-partitioning`** — Write each per-task shard under a
-  Hive-partitioned path (§6 layout). Smoke: duckplyr predicate
-  pushdown returns the right subset without opening unrelated
-  shards. Pins the invalidation model, so it also settles the
-  deferred `data`-step-vs-fold decision recorded in §8.
+- **`shard-runner-baseline`** — §5 / §6 — a **single-core** runner
+  that materialises each step as Hive-partitioned Parquet shards (one
+  per `partition_by` path cell) and links steps by reading parent
+  shards back with duckplyr predicate pushdown, resolving the **m:n**
+  child-shard ← parent-shards dependency *at run time* (the distinct
+  set of parent shard paths over a child shard's tasks). "Shards
+  without `targets`", mirroring `task-list-loop-baseline`'s "tasks
+  without shards". First consumer of `partition-by`'s
+  `scenario_partition_axes()`; owns the Hive path/read helpers and
+  proves the write→glob-read→filter loop + m:n resolution in plain R.
+  Makes `partition-by`'s deferred acceptance test (changing
+  `partition_by` shifts paths, per-task results byte-identical)
+  landable here, **without `targets`**, against the in-memory baseline
+  as oracle. Adds `duckplyr` to `Imports` (the same engine the targets
+  read path uses, so this de-risks `hive-partitioning` directly).
+  Depends on `primer-primitives` + `partition-by`.
+- **`hive-partitioning`** — §6 / §8 — wire the (now-validated) Hive
+  write/read into the `targets` `task-tables` branches as
+  `format = "file"` outputs and **pin the invalidation model**
+  (`tar_cue` / content-hash, §8), so it also settles the deferred
+  `data`-step-vs-fold decision recorded in §8. Reuses
+  `shard-runner-baseline`'s path/read helpers — the layout and
+  predicate-pushdown read are already proven there, so this step is the
+  `targets`-integration + caching half only (its smoke test moves to
+  `shard-runner-baseline`). Depends on `task-tables` and
+  `shard-runner-baseline`.
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
   `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
   on a real (or sandboxed) Slurm queue.
@@ -2011,6 +2049,7 @@ flowchart TD
     prims[primer-primitives]
     migrate[migrate-public-api]
     partby[partition-by]
+    shardrun[shard-runner-baseline]
 
     subgraph targets [targets-only plumbing]
         reg[registry]
@@ -2040,8 +2079,14 @@ flowchart TD
     baseline --> prims
     primer --> prims
 
+    baseline --> partby
+
     prims --> tt
     partby --> tt
+
+    prims --> shardrun
+    partby --> shardrun
+    shardrun --> hive
 
     tt --> hive
     tt --> cluster
@@ -2063,6 +2108,14 @@ non-gating** edge and **no dependants**: trusting the design, it is a
 cosmetic rename that no targets step waits on, so it can land any time
 (like `error-call-origin` and the Cleanup items). The dashed edge marks
 "follows from, but does not block."
+
+`shard-runner-baseline` sits off `primer-primitives` + `partition-by`,
+parallel to the `targets`-only plumbing: it proves the Hive
+write/read + m:n loop in plain R, then feeds `hive-partitioning`
+(which keeps the `targets`-integration + invalidation half). The
+`baseline → partby` edge is the previously-latent reuse dependency —
+`partition-by` reads `task_axes()`/`task_parent()` from
+`task-list-loop-baseline`.
 
 Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not
