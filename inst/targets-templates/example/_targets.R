@@ -18,7 +18,7 @@ library(tarchetypes)
 # `workers` to your machine; swap in `crew.cluster` controllers for SLURM/PBS
 # etc. (`cluster-pipeline`, section 11). Needs the `crew` package installed.
 tar_option_set(
-  controller = crew::crew_controller_local(workers = 4L)
+  controller = crew::crew_controller_local(workers = 8L)
 )
 
 # `scenario` is defined in scenario.R — shared with run-serial.R so both drivers
