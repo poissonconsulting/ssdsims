@@ -1,5 +1,52 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9011
+
+## Features
+
+- Fold the `data` task step into `fit`; propose partitioning/RNG roadmap changes (#79).
+
+- Task-table derivation, baseline runner, and grouped pkgdown reference (#82).
+
+- Derive task tables and baseline loop runner from a scenario (#80).
+
+- Add `local_dqrng_state()` and `with_dqrng_state()` helpers (#78).
+
+- Reentrant `local_dqrng_backend()` + propose `task-list-loop-baseline` and `local-dqrng-state` (#74).
+
+- Add declarative `ssd_define_scenario()` and `ssd_data()` (#71).
+
+- Add scenario-scoped dqrng `pcg64` RNG backend (dqrng-init) (#72).
+
+## Chore
+
+- Rename `CLAUDE.md` to `AGENTS.md` (#86).
+
+- Sync `task-lists` spec and archive `task-list-loop-baseline-fold` (#85).
+
+- Cleanup.
+
+- Sync and archive `local-dqrng-state` change (#81).
+
+- Sync specs and archive `ssd-define-scenario` and `dqrng-init` (#77).
+
+- Initialize OpenSpec with foundational proposals and developer guide (#53).
+
+## Documentation
+
+- Add scenario-definition example script and Quarto vignette (#83).
+
+- Expand development workflow and coding guidelines (#76).
+
+- Add OpenSpec onboarding and workflow skills (#75).
+
+- Add design for targets-based pipeline (#67).
+
+## Refactoring
+
+- Rename `state` argument to `primer` in `local_dqrng_state()`/`with_dqrng_state()` (#84).
+
+
 # ssdsims 0.0.0.9010
 
 ## Chore
