@@ -20,7 +20,7 @@ Three primary goals, each a hard constraint:
   (§8.3).
 
 Parallelism is assumed throughout. The document covers, in order:
-the **scenario object** and central registries (§1), the
+the **scenario object** and its name-keyed datasets/`min_pmix` (§1), the
 **per-task dqrng+hash RNG mechanism** (§2), running locally (§3),
 assembling the cluster pipeline (§4), the three step grids and
 their fan-outs (§5), the concrete target graph and the **cloud
@@ -69,7 +69,7 @@ The most consequential design choices, with section refs:
   against the ambient RNG. No `state =` argument on the inner ops.
 - **Scenario is purely declarative (§1).** Stores `seed`, knobs,
   and *names* of datasets and `min_pmix` entries; the values are
-  resolved from an **implicit registry** in the scenario (§1.1). Names enter the per-task hash,
+  **materialised on the scenario, reached by name via accessors** (§1.1). Names enter the per-task hash,
   function definitions do not (so a code edit / JIT does not move tasks
   across primers, and the data stored in Parquet files remains simple).
 - **Three step grids, one primer per task (§5).** Data, fit and hc
@@ -128,8 +128,8 @@ The most consequential design choices, with section refs:
   runner — land before any RNG / dqrng machinery so the data shape is
   settled first. `migrate-public-api` is a cosmetic rename that the
   targets-only plumbing no longer waits on (trusting the design), and
-  the datasets / `min_pmix` registries collapse into one `registry`
-  step.
+  datasets / `min_pmix` are materialised on the scenario and reached by
+  name through `scenario-accessors` — no registry.
 
 ---
 
@@ -147,12 +147,12 @@ holding:
 ssdsims_scenario
 ├── seed         ← scalar integer; root of the per-task RNG (§2)
 ├── nsim         ← number of replicate sims per dataset
-├── datasets     ← character vector of dataset names referencing
-│                  the central dataset registry (§1.1)
+├── datasets     ← character vector of dataset names; the tibbles are
+│                  materialised on the scenario, reached by name (§1.1)
 ├── nrow         ← integer vector of sample sizes; subset property (§5)
 ├── fit          ← list of ssd_fit_dists() argument vectors;
-│                  min_pmix uses NAME references into the
-│                  min_pmix registry (§1.1)
+│                  min_pmix is a NAME; the function is materialised on
+│                  the scenario, reached by name (§1.1)
 ├── hc           ← list of ssd_hc() argument vectors; the ci-FALSE
 │                  collapse means bootstrap-only knobs (nboot,
 │                  ci_method, parametric) are stored as NA on tasks
@@ -180,11 +180,11 @@ Three design points distinguish this from the current code:
    dqrng + hash (§2) makes it unnecessary. Two scenarios with the
    same `seed` and the same task parameters produce identical RNG
    sequences.
-2. **Datasets and `min_pmix` are referenced by name.** Both live in
-   central registries; the scenario stores only names. This keeps the
-   scenario serializable as a tiny manifest (a few names + numeric
-   knobs) and lets the per-task hash (§2) ignore function-body
-   contents — so a non-behavior-changing code edit to a registered
+2. **Datasets and `min_pmix` are keyed by name.** Both are materialised
+   on the scenario and reached by name via accessors (§1.1); the scenario
+   stores the names as its identity surface (a few names + numeric knobs)
+   and the per-task hash (§2) keys on the name, ignoring function-body
+   contents — so a non-behavior-changing code edit to a `min_pmix`
    function does *not* invalidate cached results. See §1.1.
 3. **No `parent` reference at all.** Adding tasks on a *path* axis
    (new dataset, more `nsim`) creates new shards; existing shards
@@ -195,21 +195,26 @@ Three design points distinguish this from the current code:
    in-project with `tar_cue(depend = FALSE)` (§8.3), so the scenario
    carries no `parent`.
 
-### 1.1 Implicit registries: datasets and min_pmix
+### 1.1 Datasets and min_pmix: materialised on the scenario, accessed by name
 
-The scenario object itself stores only names for datasets and
-`min_pmix` entries — never the values. The actual lookup is the
-**targets project's** responsibility: a single `registry` target
-(§12) materializes each referenced name into a Parquet file (for
-data) or pins a function value (for `min_pmix`) once per project —
-datasets and `min_pmix` share one registry step because they have
-the same name-only-indirection shape (only the resolved payload
-differs: a Parquet file vs. a pinned function value). The "registry"
-is therefore an *implicit* part of the scenario when run through
-targets; for local use (no targets) the scenario constructor
-accepts data inline (`ssd_define_scenario(list(boron = ccme_boron,
-…))`) and the names are derived. Two motivations for the name-only
-indirection:
+The scenario carries datasets and `min_pmix` entries as **values
+materialised at construction, keyed by name** — the dataset tibbles
+(`scenario-input-types` realises every input via `ssd_data()`, `Conc`
+verified) and the `min_pmix` functions (a supplied function kept under
+its derived name; a name-string resolved to a function at construction).
+A consumer **isolates a value by name** with a thin accessor —
+`scenario_dataset(scenario, name)` / `scenario_min_pmix(scenario, name)`
+(the `scenario-accessors` step, §12) — so there is **no registry**: no
+per-project resolution target, no `results/datasets/*.parquet`, no pinned
+function value. The scenario is a referenced global in `_targets.R`
+transported to workers, and datasets/min_pmix functions are tiny, so the
+materialised values simply ride along.
+
+The crucial split is **hash by name, carry value for execution**: the
+per-task primer hashes the *name* (`task_axes`), never the value, so a
+recompile/JIT or a cosmetic edit can't move a task to a different RNG
+stream — while the value travels on the scenario purely to be run. Two
+reasons the hash keys on the name:
 
 1. **Function-value hashes are not stable.** This is the technical
    reason and the primary one. `rlang::hash()` over a function
@@ -230,72 +235,50 @@ indirection:
    bypasses all of these. (Source edits that change behavior are
    the user's contract — pin `ssdtools` and R versions in the
    manifest, §9.)
-2. **Compact, portable scenario manifests.** A scenario serializes
-   to a small JSON/Parquet sidecar containing names + numeric knobs;
-   data.frame contents and function bodies live in their own files.
+2. **A stable identity surface.** The names (plus numeric knobs) are
+   what the §9 manifest records and what task identities are built
+   from, independent of the materialised values that ride on the
+   scenario for execution. (Datasets are tiny, so carrying them inline
+   is cheap; if one ever grows too large to transport, the deferred
+   `dataset-provenance` step (§12) stores a generator + seed instead of
+   the bytes.)
 
-#### Dataset registry
+#### Datasets
 
-```
-   results/datasets/<name>.parquet     # one file per registered dataset
-   results/datasets/_index.json        # name -> { rows, conc_col, sha256, source }
-```
-
-Registration:
-
-```r
-ssd_register_dataset("boron",   ssddata::ccme_boron)
-ssd_register_dataset("cadmium", ssddata::ccme_cadmium)
-# Synthetic / function-generated datasets are materialized at
-# registration time, not lazily; the scenario hashes the name only.
-ssd_register_dataset(
-  "rlnorm_n100",
-  generator = function(seed) {
-    dqrng::dqset.seed(seed); tibble::tibble(Conc = ssdtools::ssd_rlnorm(100))
-  },
-  seed = 1L                       # captured so registration is deterministic
-)
-```
-
-Invariant: every registered dataset has a `Conc` column (the SSD
-convention; verified at registration). Other columns are passed
-through.
-
-Scenarios reference datasets by name:
+`scenario-input-types` materialises every input — a data frame, a
+generator function, a `fitdists`/`tmbfit`, a function-name string — to a
+validated tibble (numeric `Conc` verified) **at construction**, stored
+inline on the scenario under its derived name. A consumer reads one by
+name:
 
 ```r
-ssd_scenario(datasets = c("boron", "cadmium"), nsim = 100, …)
+scenario_dataset(scenario, "boron")   # the materialised tibble
 ```
 
-Synthetic datasets are **materialized at registration time**, not on
-demand: they live as Parquet files in the registry alongside
-real-world data. Tasks reading them via name go through the same
-hashed-key partition path as for empirical data. Trade-off: a
-function-generated dataset must fit in memory at registration; for
-large ones, generate directly to disk and register the resulting
-Parquet path.
+Generation is seeded independently of the scenario (the dataset *name*
+as the dqrng stream), so the realised bytes are reproducible by being
+**kept, not regenerated**. There is no on-disk dataset cache: the
+scenario already carries the bytes and is transported to workers.
+Trade-off: an inline dataset must fit in memory; the deferred
+`dataset-provenance` step (§12) is the escape hatch for one too large to
+transport, storing a generator + seed to rebuild from instead.
 
-> **Current state (resolved in `scenario-input-types`).** Datasets are
-> tiny, so a generator is materialised **eagerly in the constructor**
-> (`ssd_data(..., .seed = NULL)`, seeded independently of the scenario
-> with the dataset *name* as the dqrng stream) and the realised tibble
-> is carried **inline on the scenario** — reproducible by being kept,
-> not by regeneration. The `registry` step then only *persists* what
-> the scenario already holds. The name-only-and-regenerate path
-> described above (hash the name, rebuild from a generator + its seed)
-> is the deferred `dataset-provenance` step (§12), taken only if a
-> dataset ever grows too large to transport inline.
+#### `min_pmix`
 
-#### `min_pmix` registry
+`min_pmix` is materialised the same way: the scenario stores the
+**name** (in `fit$min_pmix`, which feeds the per-task primer and the
+task path) *and* the resolved single-argument **function**, keyed by
+name. A supplied function is kept under its derived name; a name-string
+(`"ssd_min_pmix"`, or a user function) is resolved at construction. A
+consumer reads it by name:
 
 ```r
-ssd_register_min_pmix("default", ssdtools::ssd_min_pmix)
-ssd_register_min_pmix("strict",  function(n) 0.05)
+scenario_min_pmix(scenario, "ssd_min_pmix")   # the materialised function
 ```
 
-The scenario's `fit$min_pmix` entries are names from this registry;
-the per-task primer hash uses the name, not the function. The actual
-function is looked up just before the call, after `dqset.seed()`.
+The primer hashes the *name*, never the function value (which is why
+storing the value is safe — see the two reasons above); the function is
+fetched via the accessor just before the call, after `dqset.seed()`.
 
 ### 1.2 The `ci = FALSE` collapse
 
@@ -1737,7 +1720,7 @@ the methods mid-session (not inside a scenario runner) use the same
 | Three steps cached as one (no per-step re-runs)      | §5, §6 — data/fit/hc are three grids and three targets, each with its own shard layer.      |
 | Same lattice for all steps despite grid mismatch     | §5 — each step has its own grid and per-task primer.                                              |
 | `nrow` invalidates data states for the same `sim`    | §5 — `nrow` is never an axis: data state keyed by `(dataset, sim, replace)`, slice truncates to `n`.    |
-| Single-dataset scenarios only                        | §1.1 — datasets are name-referenced in a central registry; cross-join axis.                 |
+| Single-dataset scenarios only                        | §1.1 — datasets are materialised on the scenario, keyed by name; cross-join axis.                 |
 | Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
 | Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci=FALSE` collapses `nboot`/`ci_method`/`parametric` to NA; one task instead of N. |
 | Branch failure unreproducible off the cluster        | §7 — task row + upstream shard replays the failing task via `_state` primitives.          |
@@ -1762,11 +1745,14 @@ restored on exit, not process-global).
    stable here but it isn't a documented guarantee. Document the
    assumption in the manifest and pin R versions, or implement our
    own `sample.int`-equivalent function with an explicit contract?
-2. **Dataset identity.** Datasets are keyed by **name** in the
-   registry, not by `digest::digest(df)`. Two registrations under the
-   same name with different bytes silently collide. Should the
-   registry refuse re-registration unless byte-identical, or carry a
-   content hash on the task ID alongside the name?
+2. **Dataset identity.** Datasets are keyed by **name** on the
+   scenario, not by `digest::digest(df)`. Within one scenario each name
+   is materialised once, so there is no registration to collide; the
+   open question is *across* scenarios sharing a results tree — two
+   scenarios using the same dataset name for different bytes would point
+   at the same partition path. Should a shared-tree run carry a content
+   hash on the task ID alongside the name, or is name uniqueness the
+   user's contract?
 3. **Force re-run inside one `targets` project.** §8.4 lists two
    options for re-running after a code fix: `unlink()` the bad
    shards, or `tar_invalidate(names = ...)`. Which is the
@@ -1817,8 +1803,9 @@ already ran end to end (see §4, §6). These steps are therefore
   rescale, est_method, nboot, ci, ...)`, forwarding the input data
   through `ssd_data()` (a tiny normaliser that validates the `Conc`
   column and tibble shape). Stores only declarative fields (seed,
-  knobs, dataset names — the data registry is *implicit*, see the
-  registry steps below). No RNG, no tasks, no targets yet. **Scoped to
+  knobs, dataset names — the datasets themselves are materialised on the
+  scenario, reached by name via `scenario-accessors`). No RNG, no tasks,
+  no targets yet. **Scoped to
   data-frame input only** (single or list); the other generator inputs
   are `scenario-input-types`, below.
 - **`scenario-input-types`** — Extend `ssd_define_scenario()` to accept
@@ -1871,23 +1858,20 @@ already ran end to end (see §4, §6). These steps are therefore
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
   re-runs with byte-equivalence. This is a surface rename over
   `primer-primitives`, which already establishes the contract — so,
-  **trusting the design**, none of the targets-only plumbing (`registry`,
-  `manifest`, `task-tables`, …) waits on it. It can land at any time; the
+  **trusting the design**, none of the targets-only plumbing
+  (`scenario-accessors`, `manifest`, `task-tables`, …) waits on it. It can land at any time; the
   DAG shows it hanging off `primer-primitives` with a dashed, non-gating
   edge and no dependants.
-- **`registry`** — **Targets-only**: an implicit registry of the
-  scenario's *named* entries, implemented as `tar_target`s that resolve
-  each name once per project — datasets to a Parquet file
-  (`results/datasets/<name>.parquet`) and `min_pmix` functions to a
-  pinned per-run function value. One step, not two, because both are the
-  same name-only indirection (§1.1) and differ only in the resolved
-  payload. Note: since `scenario-input-types` materialises generator
-  datasets **in the constructor** (inline on the scenario), the dataset
-  side of `registry` *persists* the tibble the scenario already
-  carries — it does not regenerate. Function-name / body edits don't
-  enter task hashes because the scenario refers to both by name.
-  Regression test: a body edit to a registered `min_pmix` function does
-  not move the hash of any cached fit branch.
+- **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
+  on the scenario, accessed by name** — no registry (§1.1). Materialise
+  the `min_pmix` functions on the scenario at construction (keyed by
+  name, resolving name-strings then), and add `scenario_dataset(scenario,
+  name)` / `scenario_min_pmix(scenario, name)` accessors;
+  `resolve_min_pmix()` becomes the accessor. Hashing stays name-only, so
+  a function-body edit does not move any cached fit branch (regression
+  test). Adds no dependency (no Parquet here — that is `task-tables`).
+  Persisting a *large* dataset to disk instead of carrying it inline is
+  the deferred `dataset-provenance` step.
 - **`manifest`** — Per-scenario manifest writer/reader with the
   §8.5 field set (the head records **complete session info**, not just
   the three named version pins). **Not on the `task-tables` critical
@@ -1985,8 +1969,7 @@ already ran end to end (see §4, §6). These steps are therefore
   not on the dependency DAG.* The decoupling `scenario-input-types`
   defers: stop transporting generated datasets inline and instead store
   only the name + generator reference + `.seed`, regenerating the tibble
-  in `registry` from that provenance (the name-only path sketched in
-  §1.1). Until a real dataset is large enough to make inline transport
+  from that provenance (rather than carrying the bytes; cf. §1.1). Until a real dataset is large enough to make inline transport
   heavy, the **generator code is the provenance** and the realised bytes
   ride on the scenario; this step is the escape hatch, not a near-term
   need. Tracking the *execution environment* (R / package versions) is
@@ -2024,13 +2007,13 @@ flowchart TD
     migrate[migrate-public-api]
     partby[partition-by]
 
+    acc[scenario-accessors]
+
     subgraph targets [targets-only plumbing]
-        reg[registry]
         tt[task-tables]
-        reg --> tt
+        manif[manifest]
     end
 
-    manif[manifest]
     hive[hive-partitioning]
     cluster[cluster-pipeline]
     survive[shard-failure-survival]
@@ -2045,12 +2028,13 @@ flowchart TD
     define --> partby
     define --> inputs
     primer --> inputs
-    inputs --> reg
+    inputs --> acc
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims
     primer --> prims
 
+    acc --> tt
     prims --> tt
     partby --> tt
 
