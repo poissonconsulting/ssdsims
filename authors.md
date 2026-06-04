@@ -12,12 +12,12 @@
 Source:
 [`DESCRIPTION`](https://github.com/poissonconsulting/ssdsims/blob/main/DESCRIPTION)
 
-Thorley J, Fisher R (2026). *ssdsims: What the Package Does (One Line,
-Title Case)*. R package version 0.0.0.9011,
+Thorley J, Fisher R (2026). *ssdsims: Simulation Analyses for Species
+Sensitivity Distributions*. R package version 0.0.0.9011,
 <https://poissonconsulting.github.io/ssdsims/>.
 
     @Manual{,
-      title = {ssdsims: What the Package Does (One Line, Title Case)},
+      title = {ssdsims: Simulation Analyses for Species Sensitivity Distributions},
       author = {Joe Thorley and Rebecca Fisher},
       year = {2026},
       note = {R package version 0.0.0.9011},

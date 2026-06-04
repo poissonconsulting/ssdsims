@@ -19,6 +19,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -93,6 +94,13 @@
 
         </dt>
         <dd>Run a Scenario with the Baseline Loop Runner</dd>
+
+        <dt>
+
+          <code><a href="ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code>
+
+        </dt>
+        <dd>Run a Scenario over Hive-partitioned Parquet Shards (single core)</dd>
       </dl></div><div class="section level2">
       <h2 id="simulation-pipeline">Simulation pipeline<a class="anchor" aria-label="anchor" href="#simulation-pipeline"></a></h2>
 
@@ -130,6 +138,101 @@
 
         </dt>
         <dd>Run Scenario</dd>
+      </dl></div><div class="section level2">
+      <h2 id="targets-pipeline">Targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline"></a></h2>
+
+      <div class="section-desc"><p>Group a step’s tasks into per-shard tables keyed by <code>partition_by</code>, run a shard with the per-task RNG primitives writing one Parquet per shard, and fan in a summary - the building blocks of the static-branching <code>targets</code> pipeline (see the <code>inst/targets-templates/small/_targets.R</code> template).</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ssd_scenario_sample_shards.html">ssd_scenario_sample_shards()</a></code>
+
+        </dt>
+        <dd>Group sample Tasks into Shards</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_fit_shards.html">ssd_scenario_fit_shards()</a></code>
+
+        </dt>
+        <dd>Group fit Tasks into Shards</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_hc_shards.html">ssd_scenario_hc_shards()</a></code>
+
+        </dt>
+        <dd>Group hc Tasks into Shards</dd>
+
+        <dt>
+
+          <code><a href="ssd_run_sample_step.html">ssd_run_sample_step()</a></code>
+
+        </dt>
+        <dd>Run a sample Shard</dd>
+
+        <dt>
+
+          <code><a href="ssd_run_fit_step.html">ssd_run_fit_step()</a></code>
+
+        </dt>
+        <dd>Run a fit Shard</dd>
+
+        <dt>
+
+          <code><a href="ssd_run_hc_step.html">ssd_run_hc_step()</a></code>
+
+        </dt>
+        <dd>Run an hc Shard</dd>
+
+        <dt>
+
+          <code><a href="ssd_scenario_targets.html">ssd_scenario_targets()</a></code>
+
+        </dt>
+        <dd>Build the Targets Pipeline for a Scenario</dd>
+
+        <dt>
+
+          <code><a href="ssd_summarize.html">ssd_summarize()</a></code>
+
+        </dt>
+        <dd>Summarise a Run's hc Estimates Across Shards</dd>
+
+        <dt>
+
+          <code><a href="scenario_results_dir.html">scenario_results_dir()</a></code>
+
+        </dt>
+        <dd>Layout-keyed Results Root for a Scenario</dd>
+      </dl></div><div class="section level2">
+      <h2 id="scenario-accessors">Scenario accessors<a class="anchor" aria-label="anchor" href="#scenario-accessors"></a></h2>
+
+      <div class="section-desc"><p>A technical detail of the pipelines: isolate an already-materialised value from a scenario by name - the dataset tibble or the <code>min_pmix</code> function. Names (not values) drive task hashing, so these accessors resolve a name back to the value carried on the scenario for execution.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="scenario_dataset.html">scenario_dataset()</a></code>
+
+        </dt>
+        <dd>Isolate a Materialised Dataset from a Scenario by Name</dd>
+
+        <dt>
+
+          <code><a href="scenario_min_pmix.html">scenario_min_pmix()</a></code>
+
+        </dt>
+        <dd>Isolate a Materialised <code>min_pmix</code> Function from a Scenario by Name</dd>
       </dl></div><div class="section level2">
       <h2 id="reproducible-rng">Reproducible RNG<a class="anchor" aria-label="anchor" href="#reproducible-rng"></a></h2>
 
@@ -189,7 +292,7 @@
           <code><a href="ssdsims-package.html">ssdsims</a></code> <code><a href="ssdsims-package.html">ssdsims-package</a></code>
 
         </dt>
-        <dd>ssdsims: What the Package Does (One Line, Title Case)</dd>
+        <dd>ssdsims: Simulation Analyses for Species Sensitivity Distributions</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

@@ -19,6 +19,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -78,7 +79,7 @@
 <li>
 <strong>step</strong>: One of the three RNG-touching stages of the pipeline: <strong>data</strong> (<code>slice_sample_state()</code>), <strong>fit</strong> (<code>fit_dists_state()</code>), <strong>hc</strong> (<code>hc_state</code>). Each step has its own task table (<code>data_tasks</code> / <code>fit_tasks</code> / <code>hc_tasks</code>), its own grid, its own <code>partition_by</code> axes, its own dynamic-branched target (<code>data_step</code> / <code>fit_step</code> / <code>hc_step</code>), and its own shard directory. The word “step” is reserved for these three stages.</li>
 <li>
-<strong>target</strong>: A <code>targets::tar_target()</code> declaration in the <code>_targets.R</code> script. A <em>static</em> target produces one object; a <em>dynamic-branched</em> target with <code>pattern = map(grouped_tbl)</code> produces one <strong>branch</strong> per group of the upstream grouped table.</li>
+<strong>target</strong>: A <code><a href="https://docs.ropensci.org/targets/reference/tar_target.html" class="external-link">targets::tar_target()</a></code> declaration in the <code>_targets.R</code> script. A <em>static</em> target produces one object; a <em>dynamic-branched</em> target with <code>pattern = map(grouped_tbl)</code> produces one <strong>branch</strong> per group of the upstream grouped table.</li>
 <li>
 <strong>branch</strong>: One sub-target of a dynamic-branched target — produced when <code>pattern = map(...)</code> is iterated over a grouped task table. <strong>1 branch = 1 group = 1 shard out</strong>; the branch body loops over the K tasks in its group, primes the RNG once per task, and writes one Parquet. <strong>Independent branches run in parallel</strong> — that is the unit of parallelism the design commits to. How branches are packed into Slurm jobs under <code>crew_controller_slurm()</code> is an open question (TARGETS-DESIGN.md §11).</li>
 <li>

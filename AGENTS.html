@@ -19,6 +19,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -192,7 +193,7 @@
 <li>
 <strong>parallel</strong> — L’Ecuyer-CMRG sub-streams (legacy path).</li>
 <li>
-<strong>duckplyr</strong> — Parquet I/O and off-cluster querying (targets path). <strong>Interact with Parquet files through <code>duckplyr</code> (DuckDB)</strong> — <code>duckplyr::read_parquet_duckdb()</code> for reads, <code>duckplyr::compute_parquet()</code> for writes — <strong>not <code>arrow</code></strong>. This is the team preference; confine the call sites behind the <code>ssd_read_parquet()</code> / <code>ssd_write_parquet()</code> internals.</li>
+<strong>duckplyr</strong> — Parquet I/O and off-cluster querying (targets path). <strong>Interact with Parquet files through <code>duckplyr</code> (DuckDB)</strong> — <code><a href="https://duckplyr.tidyverse.org/reference/read_parquet_duckdb.html" class="external-link">duckplyr::read_parquet_duckdb()</a></code> for reads, <code><a href="https://duckplyr.tidyverse.org/reference/compute_parquet.html" class="external-link">duckplyr::compute_parquet()</a></code> for writes — <strong>not <code>arrow</code></strong>. This is the team preference; confine the call sites behind the <code>ssd_read_parquet()</code> / <code>ssd_write_parquet()</code> internals.</li>
 </ul><p>See <code>DESCRIPTION</code> for versions and imports.</p>
 </div>
 <div class="section level2">
@@ -239,6 +240,8 @@
 <li>
 <strong>Reference the related issue</strong> in the title where one exists (e.g. <code>(#64)</code>) so it carries through to the changelog.</li>
 <li>Keep the PR title and description in sync with the change as it evolves; the description should capture the <em>current</em> state, not a revision log.</li>
+<li>
+<strong>Review threads</strong>: when you address a review comment, reply on the thread with what changed (or the answer) and leave it open — the reviewer resolves their own threads.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="continuous-integration">Continuous Integration<a class="anchor" aria-label="anchor" href="#continuous-integration"></a></h2>
@@ -261,6 +264,7 @@
 <li>
 <strong>Dynamic branching</strong> (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.</li>
 </ul><p>The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from <code>ssd-define-scenario</code> and <code>dqrng-init</code> (no dependencies). Each step is a coherent working state; parallel work streams are encouraged.</p>
+<p><strong>Keep the roadmap and its Mermaid graph (TARGETS-DESIGN.md §12) up to date as part of each change</strong> — add/rename nodes and edges when a change is proposed, and update each node’s status colour as it progresses: <strong>green = archived, yellow = done</strong> (implemented, not yet archived), <strong>red = proposed</strong> (artifacts exist, not implemented), <strong>unfilled = open</strong> (roadmap only). The colours are Mermaid <code>classDef</code>s applied via <code>class</code> lines at the foot of the graph.</p>
 </div>
 </div>
 <div class="section level2">

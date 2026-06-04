@@ -127,10 +127,11 @@ Terminology used throughout `ssdsims`.
   its own dynamic-branched target (`data_step` / `fit_step` /
   `hc_step`), and its own shard directory. The word “step” is reserved
   for these three stages.
-- **target**: A `targets::tar_target()` declaration in the `_targets.R`
-  script. A *static* target produces one object; a *dynamic-branched*
-  target with `pattern = map(grouped_tbl)` produces one **branch** per
-  group of the upstream grouped table.
+- **target**: A
+  [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+  declaration in the `_targets.R` script. A *static* target produces one
+  object; a *dynamic-branched* target with `pattern = map(grouped_tbl)`
+  produces one **branch** per group of the upstream grouped table.
 - **branch**: One sub-target of a dynamic-branched target — produced
   when `pattern = map(...)` is iterated over a grouped task table. **1
   branch = 1 group = 1 shard out**; the branch body loops over the K

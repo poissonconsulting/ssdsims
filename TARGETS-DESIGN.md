@@ -32,12 +32,13 @@ Terminology (per GLOSSARY.md): a **task** is one row of a
 `{data,fit,hc}_tasks` table — the smallest unit of computation, carrying
 a primer; a **shard** is the Parquet file produced by running one or
 several tasks (depending on **partitioning**). **Step** = one of the
-three stages data / fit / hc; **target** = `tar_target()` declaration;
-**job** = Slurm work unit. Each shard is its own named `*_step` target
-(minted by `tar_map` at construction time — **static branching**, §6); a
-shard’s tasks run inside that one target, which writes 1 shard.
-Independent shard targets run in parallel; how they map to Slurm jobs
-under `crew_controller_slurm()` is an open question (§11).
+three stages data / fit / hc; **target** =
+[`tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+declaration; **job** = Slurm work unit. Each shard is its own named
+`*_step` target (minted by `tar_map` at construction time — **static
+branching**, §6); a shard’s tasks run inside that one target, which
+writes 1 shard. Independent shard targets run in parallel; how they map
+to Slurm jobs under `crew_controller_slurm()` is an open question (§11).
 
 Background and the list of gaps this design closes are in `RNG-FLOW.md`
 §5. This is a forward-looking design; it does not document the existing
@@ -79,13 +80,16 @@ The most consequential design choices, with section refs:
   the hc-task table — no phantom branches.
 - **Static branching — one named target per shard (§6).** The shard set
   is a pure function of the scenario, known when `_targets.R` is
-  sourced, so `tarchetypes::tar_map()` mints one named target per shard
-  (no `pattern = map` over a runtime task-table target). The scenario is
-  a plain construction-time object, not a `tar_target()`. Dynamic
-  branching stays available as a documented fallback for extreme-scale
-  fan-outs (§6). The targets lab exercised both styles head to head and
-  confirmed the rule, including the cheap-extension payoff static
-  branching relies on (§6).
+  sourced, so
+  [`tarchetypes::tar_map()`](https://docs.ropensci.org/tarchetypes/reference/tar_map.html)
+  mints one named target per shard (no `pattern = map` over a runtime
+  task-table target). The scenario is a plain construction-time object,
+  not a
+  [`tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html).
+  Dynamic branching stays available as a documented fallback for
+  extreme-scale fan-outs (§6). The targets lab exercised both styles
+  head to head and confirmed the rule, including the cheap-extension
+  payoff static branching relies on (§6).
 - **Per-shard Parquet shards, Hive-style (§6).** Each shard target
   writes one Parquet file under `results/<step>/dataset=.../sim=.../`;
   downstream shards open the upstream shard by partition path
@@ -105,8 +109,12 @@ The most consequential design choices, with section refs:
   `assert_<step>` target — sibling to `upload_<step>` — compares the
   shard’s row count to the expected count and goes red on any shortfall,
   making incompleteness a first-class DAG node and the refresh set a
-  `tar_meta()` query (§8.4). Errors are read *after* `tar_make()`
-  returns (a target cannot call `tar_meta()` mid-run).
+  [`tar_meta()`](https://docs.ropensci.org/targets/reference/tar_meta.html)
+  query (§8.4). Errors are read *after*
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  returns (a target cannot call
+  [`tar_meta()`](https://docs.ropensci.org/targets/reference/tar_meta.html)
+  mid-run).
 - **Debug = task row + one upstream shard (§7).** Any failed branch
   replays locally with `local_dqrng_state(seed, primer)` + the
   immediate-upstream shard, no `targets` needed; the lightweight recipe
@@ -135,9 +143,11 @@ The most consequential design choices, with section refs:
 The scenario is **purely declarative**. It does not carry the
 materialized task grid; expansion happens via
 `ssd_scenario_tasks(scenario)` (§2). It is a **plain construction-time
-object** built at the top of `_targets.R`, not a `tar_target()` — so the
-shard set it expands to is known when the pipeline is sourced, which is
-what lets the steps use static branching (§6). An S3 object holding:
+object** built at the top of `_targets.R`, not a
+[`tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+— so the shard set it expands to is known when the pipeline is sourced,
+which is what lets the steps use static branching (§6). An S3 object
+holding:
 
     ssdsims_scenario
     ├── seed         ← scalar integer; root of the per-task RNG (§2)
@@ -542,7 +552,8 @@ hypothetical: the project’s crew labs (in the sister planning repo) have
 assembled and run them end to end on a SLURM cluster. One lab is the
 bare shape (A) — a `crew.cluster::crew_controller_slurm()` dispatching a
 no-op workload — and a second drives the real ssdsims per-sim pipeline
-(C) through that same controller, with a `crew::crew_controller_local()`
+(C) through that same controller, with a
+[`crew::crew_controller_local()`](https://wlandau.github.io/crew/reference/crew_controller_local.html)
 fallback for off-cluster smoke tests. The labs also pinned down the
 operational backend (B): a ManyLinux binary install path so worker nodes
 resolve the dependency tree without compiling, plus a login-node
@@ -815,32 +826,41 @@ the primer, or results.
 
 The shard set is a **pure function of the scenario**, and the scenario
 is known when `_targets.R` is *sourced* — it is a plain constructor call
-at the top of the file, not a `tar_target()`. So the fan-out width is
-fixed at construction time, never data-dependent at run time. By the
-standard rule of thumb — *static branching when the branch count is
-known at sourcing time, dynamic branching only when it depends on data
-computed during the run* — this design uses **static branching**:
-`tarchetypes::tar_map()` mints one named target per shard while the
-pipeline is built. The project’s targets lab (a set of single-behaviour
-toy pipelines in the sister planning repo) exercised both styles head to
-head — a static-branch axis and a dynamic-branch axis as the pair to
-compare: the same fan-out shape, decided at construction time vs at run
-time — and confirmed the rule applies here. Its most complete pipeline
-(pinning + `error = "null"` + per-shard upload, all composed) is itself
-built on static branching.
+at the top of the file, not a
+[`tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html).
+So the fan-out width is fixed at construction time, never data-dependent
+at run time. By the standard rule of thumb — *static branching when the
+branch count is known at sourcing time, dynamic branching only when it
+depends on data computed during the run* — this design uses **static
+branching**:
+[`tarchetypes::tar_map()`](https://docs.ropensci.org/tarchetypes/reference/tar_map.html)
+mints one named target per shard while the pipeline is built. The
+project’s targets lab (a set of single-behaviour toy pipelines in the
+sister planning repo) exercised both styles head to head — a
+static-branch axis and a dynamic-branch axis as the pair to compare: the
+same fan-out shape, decided at construction time vs at run time — and
+confirmed the rule applies here. Its most complete pipeline (pinning +
+`error = "null"` + per-shard upload, all composed) is itself built on
+static branching.
 
 Why static fits this design specifically:
 
 - **The scenario need not live in a target.** It is a construction-time
   object; `ssd_scenario_*_shards(scenario)` evaluate at sourcing time
-  and feed `tar_map()`’s `values`. `targets` still tracks the scenario
-  as a referenced global, so editing a knob still invalidates the
-  dependent shards — tracking is not lost by taking it out of a target.
+  and feed
+  [`tar_map()`](https://docs.ropensci.org/tarchetypes/reference/tar_map.html)’s
+  `values`. `targets` still tracks the scenario as a referenced global,
+  so editing a knob still invalidates the dependent shards — tracking is
+  not lost by taking it out of a target.
 - **Named, addressable shards.** Each shard is its own DAG node
-  (`fit_step_boron_sim1_rescaleFALSE`), so `tar_read()` /
-  `tar_invalidate()` (§8.3–§8.4) and the replay story (§7) can point at
-  one shard by name, and `tar_mermaid()` shows the real per-shard graph
-  with per-shard status colours.
+  (`fit_step_boron_sim1_rescaleFALSE`), so
+  [`tar_read()`](https://docs.ropensci.org/targets/reference/tar_read.html)
+  /
+  [`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html)
+  (§8.3–§8.4) and the replay story (§7) can point at one shard by name,
+  and
+  [`tar_mermaid()`](https://docs.ropensci.org/targets/reference/tar_mermaid.html)
+  shows the real per-shard graph with per-shard status colours.
 - **Extension is literally “more named targets.”** Adding a dataset or
   growing `nsim` (path-axis growth, §8.1) mints new shard targets at the
   next sourcing; `targets` diffs the target set and builds only the new
@@ -853,15 +873,16 @@ Why static fits this design specifically:
   below is still kept, but for the off-cluster query layer and replay,
   not as the inter-target wiring crutch dynamic branching would force.)
 
-**The bounded exception — scale.** `tar_map()` builds one target object
-per shard every time `_targets.R` is sourced, so a scenario with very
-many shards (thousands: many datasets × large `nsim` under a
-fine-grained `partition_by`) makes sourcing and the graph tooling heavy,
-where dynamic branching’s single pattern node stays light. Branching is
-an implementation detail *behind the shard abstraction* — one Parquet
-per shard, identical per-task RNG, partition-path linking, and replay
-contract either way — so a step whose fan-out is large enough to hurt
-may opt into dynamic branching
+**The bounded exception — scale.**
+[`tar_map()`](https://docs.ropensci.org/tarchetypes/reference/tar_map.html)
+builds one target object per shard every time `_targets.R` is sourced,
+so a scenario with very many shards (thousands: many datasets × large
+`nsim` under a fine-grained `partition_by`) makes sourcing and the graph
+tooling heavy, where dynamic branching’s single pattern node stays
+light. Branching is an implementation detail *behind the shard
+abstraction* — one Parquet per shard, identical per-task RNG,
+partition-path linking, and replay contract either way — so a step whose
+fan-out is large enough to hurt may opt into dynamic branching
 (`tar_target(pattern = map(<step>_tasks))` over a grouped task-table
 target) without changing anything else. Static is the default; dynamic
 is the documented escape hatch for extreme fan-outs.
@@ -877,13 +898,14 @@ the branching axes carry back here:
   *build the new variants + redo the fan-in*, not *redo everything*.
   That is precisely the path-axis-growth story this design leans on
   (§8.1) — confirmed, not assumed.
-- **Static mints separately-named, addressable nodes.** `tar_map()`
+- **Static mints separately-named, addressable nodes.**
+  [`tar_map()`](https://docs.ropensci.org/tarchetypes/reference/tar_map.html)
   produces N separately-named targets, each its own
-  `tar_read()`-addressable DAG node, matching the named-shard rationale
-  above; dynamic branching instead tracks branches under hashed names
-  with a downstream target that row-binds them automatically. The escape
-  hatch works; it just trades addressability for a single light pattern
-  node.
+  [`tar_read()`](https://docs.ropensci.org/targets/reference/tar_read.html)-addressable
+  DAG node, matching the named-shard rationale above; dynamic branching
+  instead tracks branches under hashed names with a downstream target
+  that row-binds them automatically. The escape hatch works; it just
+  trades addressability for a single light pattern node.
 - **A shard is just a multi-row target value.** A sharding spike
   confirms a shard target is simply a target that returns many rows; the
   branching axes only add ways to *generate* such targets — so branching
@@ -1006,8 +1028,9 @@ list(
 `summary` reads the three result directories directly with duckplyr
 rather than depending on each shard target — so it sees whatever shards
 landed (survivors included, §6.2) and does not pull every shard’s value
-back into R. `tarchetypes::tar_combine()` is the alternative fan-in when
-an in-memory bind is wanted instead.
+back into R.
+[`tarchetypes::tar_combine()`](https://docs.ropensci.org/tarchetypes/reference/tar_combine.html)
+is the alternative fan-in when an in-memory bind is wanted instead.
 
 A step body (sketch):
 
@@ -1072,11 +1095,35 @@ Three steps as three targets is what makes this matrix possible: a
 single combined branch (data + fit + hc) cannot cache a fit shard when
 only `nboot` changes.
 
+**Layout coherence across re-runs.** A shard’s Hive path depth and axes
+are a function of `partition_by`/`bundle`, while the readers glob
+`<step>/**/part.parquet` (depth-agnostic). So changing the split and
+re-running into one fixed `results/` would leave shards of a *different
+granularity* beside the new ones, and the glob would union stale and
+current shards — double-counting, since the `<step>_id` identity is
+`partition_by`-independent (one task lands in both the old coarse and
+the new fine shard). Two complementary fixes, by driver:
+
+- **Single-core (`ssd_run_scenario_shards`) — own the tree.** It clears
+  each `<dir>/<step>` before writing, so the tree always matches the
+  current layout. It has no cache to preserve, so clobbering is the
+  simplest correct fix.
+- **`targets` — per-layout root.** Each layout writes under
+  `scenario_results_dir(scenario)` =
+  `results/layout=<hash(partition_by)>`, so a split change yields a
+  fresh root (never *mixed* with the old) while the same layout reuses
+  its root (cache + `error = "null"` survivors preserved). Non-layout
+  knobs (seed, grids) keep the root and just rewrite shard paths at the
+  same depth (§8.1). Pruning an orphaned layout root and manifest-driven
+  reads are deferred to `manifest`/`shard-atomic-rewrite`.
+
 **Available for analysis:**
 
-After `tar_make()`, the three step layers are queryable independently
-via duckplyr without going through `targets` (Hive-partitioned reads
-auto-discover the partition columns from the path):
+After
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
+the three step layers are queryable independently via duckplyr without
+going through `targets` (Hive-partitioned reads auto-discover the
+partition columns from the path):
 
 ``` r
 duckplyr::read_parquet_duckdb("results/data/**/*.parquet") |>
@@ -1184,10 +1231,11 @@ from inside `ssd_run_<step>_step()` right after the local write:
 - **Content-hashing skips unchanged shards.** Because `upload_<step>`
   takes the shard’s path (`format = "file"`) as input, `targets` re-runs
   it only when that shard’s content hash changes. A re-driven
-  `tar_make()` that rebuilt nothing uploads nothing; a partial extension
-  uploads only the new/rewritten shards. (A combined lab pipeline
-  composes this with `error = "null"` and a pinning cue: fixing one
-  failed branch becomes a *minimal* re-upload, not a full redo.)
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  that rebuilt nothing uploads nothing; a partial extension uploads only
+  the new/rewritten shards. (A combined lab pipeline composes this with
+  `error = "null"` and a pinning cue: fixing one failed branch becomes a
+  *minimal* re-upload, not a full redo.)
 - **The graph builds and dry-runs with no credentials.**
   `ssd_upload_shard()` checks for credentials and, when absent, returns
   the local path as a no-op (a dry run) instead of erroring — so the
@@ -1229,9 +1277,10 @@ the destination URL and container name. Their absence is what flips
 **Connectivity probe up front.** `ssd_test_upload(scenario)` performs a
 minimal round-trip (list the container, write and delete a small marker
 blob) and either returns silently or errors with the backend’s
-diagnostic. The pipeline calls it once at the start of `tar_make()` so
-an auth or network failure aborts before any compute starts. Easy to run
-interactively too:
+diagnostic. The pipeline calls it once at the start of
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+so an auth or network failure aborts before any compute starts. Easy to
+run interactively too:
 
 ``` r
 
@@ -1242,10 +1291,11 @@ tar_make()
 
 **Failure mode.** A per-shard upload error becomes that `upload_<step>`
 branch’s error (and, under `error = "null"`, leaves the rest uploading);
-the local shard remains, so `tar_make()` can be re-driven and only the
-failed uploads retried. The scenario’s manifest records, per shard, the
-local sha256 and the cloud sha256; a mismatch flags a corrupted
-transfer.
+the local shard remains, so
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+can be re-driven and only the failed uploads retried. The scenario’s
+manifest records, per shard, the local sha256 and the cloud sha256; a
+mismatch flags a corrupted transfer.
 
 ### 6.2 Surviving a failed shard
 
@@ -1270,24 +1320,31 @@ gate:
   known when `_targets.R` is sourced and read from the Parquet *footer*
   (no scan). It errors (goes red) on any mismatch, so completeness is a
   first-class, coloured DAG node: green = full shard, red = short shard,
-  queryable via `tar_meta()` and visible in `tar_mermaid()`.
+  queryable via
+  [`tar_meta()`](https://docs.ropensci.org/targets/reference/tar_meta.html)
+  and visible in
+  [`tar_mermaid()`](https://docs.ropensci.org/targets/reference/tar_mermaid.html).
   `assert_<step>` itself carries `error = "null"` so one red assert does
   not abort the build. The expected count also catches *silent* shape
   bugs (a join that drops rows), not just task failures.
 
 So “see partial shard failures clearly” is the assert layer’s job; “keep
 going despite them” is the tolerant body’s. An errored *shard* (the
-exceptional case) is always out of date, so a re-driven `tar_make()`
+exceptional case) is always out of date, so a re-driven
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
 after a fix retries it (§8.4); a short shard is found by its red
 `assert_<step>` (also §8.4).
 
 Two constraints, both confirmed by the targets lab’s failure spike:
 
 - **Errors are read *after* the run, not inside it.** A target cannot
-  call `tar_meta()` (or other store functions) while the pipeline is
-  running. So `summary` detects a gap from the missing shard / `NULL`
-  value *inside* the DAG, and the error *messages* are pulled from
-  metadata once `tar_make()` returns:
+  call
+  [`tar_meta()`](https://docs.ropensci.org/targets/reference/tar_meta.html)
+  (or other store functions) while the pipeline is running. So `summary`
+  detects a gap from the missing shard / `NULL` value *inside* the DAG,
+  and the error *messages* are pulled from metadata once
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  returns:
 
   ``` r
 
@@ -1296,12 +1353,14 @@ Two constraints, both confirmed by the targets lab’s failure spike:
   ```
 
 - **The end-of-pipeline warning needs handling, not silencing.** Even
-  with `error = "null"`, `tar_make()` emits a “some targets errored”
-  warning at the end; under `options(warn = 2)` that becomes an abort.
-  The runner wraps `tar_make()` in a
-  [`withCallingHandlers()`](https://rdrr.io/r/base/conditions.html) that
-  muffles only that one expected warning rather than relaxing the global
-  option.
+  with `error = "null"`,
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  emits a “some targets errored” warning at the end; under
+  `options(warn = 2)` that becomes an abort. The runner wraps
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  in a [`withCallingHandlers()`](https://rdrr.io/r/base/conditions.html)
+  that muffles only that one expected warning rather than relaxing the
+  global option.
 
 **A short or `NULL` shard must flow cleanly downstream.** A shorter
 shard is still a valid Parquet, so `upload_<step>` ships it and the
@@ -1321,9 +1380,10 @@ re-uploads, and is re-queried (a minimal re-run, not a full redo).
 **Why split the producer from the assertion.** Folding the row-count
 check into the shard body would make a short shard *error*, which under
 `error = "null"` discards its hard-won survivor rows and, under the §8.3
-pin, would also force a rebuild on the next `tar_make()`. Keeping the
-check in a separate downstream target lets the survivors persist and
-stay queryable while the red `assert_<step>` flags the gap —
+pin, would also force a rebuild on the next
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html).
+Keeping the check in a separate downstream target lets the survivors
+persist and stay queryable while the red `assert_<step>` flags the gap —
 completeness is *reported*, not *enforced by destruction*. The cost is
 that an errored downstream assert does **not** invalidate its upstream
 shard, so refreshing a short shard is a deliberate step, not automatic;
@@ -1347,8 +1407,9 @@ tasks alongside it.
 
 ### Scenario
 
-`tar_make()` against `crew_controller_slurm()` fans out N hc shards;
-three branches error on remote workers:
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+against `crew_controller_slurm()` fans out N hc shards; three branches
+error on remote workers:
 
        targets reports:
          ✗ hc_step_3ab9c7   (slurm-worker-12)
@@ -1443,10 +1504,12 @@ is a feature, not a workaround.
 ### Lightweight reproduction: skip the rsync, verify the inputs
 
 If the prefix of the pipeline is cheap to re-run, the recipe above
-collapses: drive a local `tar_make()` up to the failing target and skip
-step 3 entirely. The catch is **verifying that the locally regenerated
-upstream matches what the cluster’s failed branch actually consumed** —
-without that, you might be debugging a phantom.
+collapses: drive a local
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+up to the failing target and skip step 3 entirely. The catch is
+**verifying that the locally regenerated upstream matches what the
+cluster’s failed branch actually consumed** — without that, you might be
+debugging a phantom.
 
 The mechanism is per-shard content-hashing (sha256). Every shard the
 cluster writes is fingerprinted with `sha256` and the value is stored in
@@ -1498,8 +1561,10 @@ verification is the bridge.
 Once the bug is fixed, the natural follow-up is to lock in the surviving
 N−3 shards and re-run only the 3 failures despite the code change — see
 §8.4 ([`unlink()`](https://rdrr.io/r/base/unlink.html) the bad
-Parquets + `tar_make()`), or §8.3 (`tar_cue(depend = FALSE)` to pin the
-survivors against the edit) depending on the scope of the change.
+Parquets +
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)),
+or §8.3 (`tar_cue(depend = FALSE)` to pin the survivors against the
+edit) depending on the scope of the change.
 
 ------------------------------------------------------------------------
 
@@ -1630,8 +1695,9 @@ shards the user *does* want refreshed — it deletes the metadata the cue
 compares against, overriding the pin per-target (§8.4). So the
 mixed-code case — keep the trusted shards, recompute a few under the new
 code — is two single-project moves: pin everything with the cue, then
-`tar_invalidate()` the handful to refresh. No second project, no
-`parent` reference, no cross-project file-input wiring.
+[`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html)
+the handful to refresh. No second project, no `parent` reference, no
+cross-project file-input wiring.
 
 (`tar_cue(depend = FALSE)` pins against *dependency/code* changes only;
 the target still rebuilds if its own `format = "file"` output goes
@@ -1639,8 +1705,10 @@ missing or if its task-table grouping changes — which is what makes
 path-axis and inner-axis growth in §8.1–§8.2 still work while the pin is
 in place. The lab also found one case the pin does **not** hold: an
 already-errored target reruns regardless, so a shard left broken under
-`error = "null"` retries on the next `tar_make()` even when pinned —
-exactly what you want for the §8.4 fix-and-refresh case.)
+`error = "null"` retries on the next
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+even when pinned — exactly what you want for the §8.4 fix-and-refresh
+case.)
 
 ### 8.4 Forced re-run after a code fix
 
@@ -1677,13 +1745,19 @@ tar_invalidate(names = sub("^assert_", "", short$name))  # the shard targets
 tar_make()                                                # only those recompute
 ```
 
-The runner closes this loop automatically: `tar_make()`, read the red
-asserts, `tar_invalidate()` their shard targets, `tar_make()` again — a
-two-pass refresh that needs no hand-maintained shard list and works
-through the §8.3 pin (`tar_invalidate()` overrides it). A shard whose
-shortfall is *deterministic* (a task that errors on every run) stays red
-and is the signal to investigate, not to loop on; deciding when to stop
-re-running is the runner’s policy, not the pipeline’s.
+The runner closes this loop automatically:
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
+read the red asserts,
+[`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html)
+their shard targets,
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+again — a two-pass refresh that needs no hand-maintained shard list and
+works through the §8.3 pin
+([`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html)
+overrides it). A shard whose shortfall is *deterministic* (a task that
+errors on every run) stays red and is the signal to investigate, not to
+loop on; deciding when to stop re-running is the runner’s policy, not
+the pipeline’s.
 
 ### 8.5 Manifest contents
 
@@ -1774,7 +1848,7 @@ discipline — documented in AGENTS.md (§RNG discipline).
 | Function-arg edits invalidate caches | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
 | Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci=FALSE` collapses `nboot`/`ci_method`/`parametric` to NA; one task instead of N. |
 | Branch failure unreproducible off the cluster | §7 — task row + upstream shard replays the failing task via `_state` primitives. |
-| Code fix re-runs every branch by hash invalidation | §8.3 — `tar_cue(depend = FALSE)` pins shards against the edit; §8.4 — `tar_invalidate()` / [`unlink()`](https://rdrr.io/r/base/unlink.html) refreshes only the chosen shards. |
+| Code fix re-runs every branch by hash invalidation | §8.3 — `tar_cue(depend = FALSE)` pins shards against the edit; §8.4 — [`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html) / [`unlink()`](https://rdrr.io/r/base/unlink.html) refreshes only the chosen shards. |
 | Off-cluster access to Parquet outputs | §6.1 — `scenario$upload` adds a per-shard `upload_<step>` target (content-hashed, dry-run offline) to a configurable object store (e.g. Azure Blob). |
 | Phantom local repros (regenerated upstream ≠ cluster’s actual) | §7 — manifest’s per-shard sha256 lets the lightweight recipe verify the local upstream before running the failing task. |
 
@@ -1814,9 +1888,10 @@ restored on exit, not process-global).
 4.  **Manifest format.** A scenario manifest stores `seed`, the
     `datasets` and `min_pmix` name lists, the `fit` and `hc`
     argument-vector grids, the `upload` spec, and pinned package
-    versions (§9). JSON sidecar next to Parquet, or `tar_read()` against
-    the project’s `_targets/` store? The latter is idiomatic but couples
-    a reader to the project’s `targets` version.
+    versions (§9). JSON sidecar next to Parquet, or
+    [`tar_read()`](https://docs.ropensci.org/targets/reference/tar_read.html)
+    against the project’s `_targets/` store? The latter is idiomatic but
+    couples a reader to the project’s `targets` version.
 5.  **Toy pipeline shape.** Ship a single
     `inst/targets-templates/cluster/` that the LLM-authoring prompt
     edits, or only documentation pointing at `crew.cluster` examples?
@@ -1936,12 +2011,16 @@ validated behaviour into the package, not discovering it.
   (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
   `_seed` wrappers as a one-release shim. `example-expanded*.R` re-runs
-  with byte-equivalence. This is a surface rename over
-  `primer-primitives`, which already establishes the contract — so,
-  **trusting the design**, none of the targets-only plumbing
-  (`scenario-accessors`, `manifest`, `task-tables`, …) waits on it. It
-  can land at any time; the DAG shows it hanging off `primer-primitives`
-  with a dashed, non-gating edge and no dependants.
+  with byte-equivalence across **every** input form, so it **depends
+  on** `scenario-input-types` (the full input surface must exist before
+  the public-API re-run can exercise it). This is otherwise a surface
+  rename over `primer-primitives`, which already establishes the
+  contract — so, **trusting the design**, none of the targets-only
+  plumbing (`scenario-accessors`, `manifest`, `task-tables`, …) waits on
+  it. With no dependants of its own, it can land any time after
+  `scenario-input-types`; the DAG shows the solid
+  `scenario-input-types → migrate-public-api` prereq plus a dashed,
+  non-gating edge off `primer-primitives`.
 - **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
   on the scenario, accessed by name** — no registry (§1.1). Materialise
   the `min_pmix` functions on the scenario at construction (keyed by
@@ -1972,16 +2051,18 @@ validated behaviour into the package, not discovering it.
   on each row, plus the `ssd_scenario_*_shards` wrappers that group
   those rows by `partition_by` into one row per shard (a `tasks`
   list-column) for `tar_map`’s `values`. The §6 sketch compiles and
-  `tar_make()`s a tiny scenario. **Static branching**: the scenario is a
-  plain construction-time object and `tar_map` mints one named target
-  per shard (§6) — no `pattern = map` over a runtime target.
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)s
+  a tiny scenario. **Static branching**: the scenario is a plain
+  construction-time object and `tar_map` mints one named target per
+  shard (§6) — no `pattern = map` over a runtime target.
 - **`path-axis-growth`** — §8.1 — assert **end-to-end that a minimal
   scenario change on a path axis rebuilds only the necessary shards**.
   Appending a dataset (or growing `nsim`) to a working, already-
-  `tar_make()`-d scenario mints new shard targets and leaves every
-  existing shard cached — the cheap-extension payoff the extensibility
-  goal leans on, validated in the targets lab’s `static-extend` axis
-  (§6) and ported here into the package’s own
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)-d
+  scenario mints new shard targets and leaves every existing shard
+  cached — the cheap-extension payoff the extensibility goal leans on,
+  validated in the targets lab’s `static-extend` axis (§6) and ported
+  here into the package’s own
   `ssd_scenario → ssd_scenario_*_shards → tar_map → tar_make` path.
   Split out of `task-tables` so that step stays a build-and-compile
   checkpoint while this one owns the incremental-rebuild contract; it is
@@ -1991,9 +2072,31 @@ validated behaviour into the package, not discovering it.
   cache-by-existence vs. content-hash fork), so the assertion is
   finalised once that decision lands. Test: run a tiny scenario to
   completion; append a dataset (a path axis for all three steps),
-  `tar_make()` again, and assert only the new dataset’s shards build
-  while the original dataset’s shard targets are skipped (and `summary`
-  re-runs); repeat for `nsim` growth.
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  again, and assert only the new dataset’s shards build while the
+  original dataset’s shard targets are skipped (and `summary` re-runs);
+  repeat for `nsim` growth.
+- **`step-scenario-slice`** — *Caveat (pre-existing) that this step
+  closes.* The
+  [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
+  factory leaves `scenario` as a bare symbol in every step command
+  (`ssd_run_<step>_step(tasks, scenario, …)`), so the **whole scenario
+  object is a dependency of every shard target** across all three steps.
+  Editing *any* scenario field — even a knob that feeds only one step,
+  or only the output layer (e.g. `samples`, which is `hc`-only) —
+  therefore invalidates and rebuilds **all** shards, not just the
+  affected step’s. Project each step’s command onto the **minimal
+  slice** of the scenario it actually consumes (the resolved per-step
+  inputs / the fields that reach that step’s per-task body and primer),
+  so a change to a step-irrelevant field leaves the other steps’ shards
+  cached. Test: change an `hc`-only knob on a
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)-d
+  scenario and assert only `hc` (and `summary`) rebuild while
+  `sample`/`fit` shards are skipped; change a `fit`-only knob and assert
+  `sample` stays cached. **Depends on** `task-tables` (the factory it
+  refines); pairs with `path-axis-growth` (the path-axis counterpart of
+  the same minimal-rebuild contract) and is finalised against the
+  invalidation model pinned by `hive-partitioning` (§8).
 - **`shard-failure-survival`** — §6.2 — the shard body writes as many
   rows as ran successfully (a bad task yields a shorter shard, not an
   abort); the step target carries `error = "null"` only for the
@@ -2002,19 +2105,23 @@ validated behaviour into the package, not discovering it.
   under `options(warn = 2)`. Test: a deterministically-failing task
   leaves a shorter shard and the other shards built; a deterministically
   -failing whole shard leaves the others built and the error readable
-  via `tar_meta()` after the run.
+  via
+  [`tar_meta()`](https://docs.ropensci.org/targets/reference/tar_meta.html)
+  after the run.
 - **`shard-completeness-assert`** — §6.2 / §8.4 — a downstream
   `assert_<step>` target per shard (sibling to `upload_<step>`) reads
   the shard’s row count from the Parquet footer and compares it to the
   expected count derived from the task table; errors (red) on any
   shortfall, itself under `error = "null"` so it does not abort the
   build. The runner reads the red asserts to drive the §8.4
-  fix-and-refresh loop (`tar_invalidate()` the short shards, re-make).
-  Test: a short shard turns its assert red and a full shard leaves it
-  green; the runner’s two-pass loop refreshes exactly the short shards
-  through a §8.3 pin. Depends on `task-tables` (for the expected count);
-  pairs with `cloud-upload` (same sibling-target shape) and `manifest`
-  (records expected-vs-actual per shard).
+  fix-and-refresh loop
+  ([`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html)
+  the short shards, re-make). Test: a short shard turns its assert red
+  and a full shard leaves it green; the runner’s two-pass loop refreshes
+  exactly the short shards through a §8.3 pin. Depends on `task-tables`
+  (for the expected count); pairs with `cloud-upload` (same
+  sibling-target shape) and `manifest` (records expected-vs-actual per
+  shard).
 - **`shard-runner-baseline`** — §5 / §6 — a **single-core** runner that
   materialises each step as Hive-partitioned Parquet shards (one per
   `partition_by` path cell) and links steps by reading parent shards
@@ -2046,14 +2153,18 @@ validated behaviour into the package, not discovering it.
   moves to `shard-runner-baseline`). Depends on `task-tables` and
   `shard-runner-baseline`.
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
-  `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()` on a
-  real (or sandboxed) Slurm queue.
+  `crew.cluster::crew_controller_slurm()`. End-to-end
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  on a real (or sandboxed) Slurm queue.
 - **`cloud-upload`** — §6.1 — per-shard `upload_<step>` target +
   `ssd_test_upload()` probe + `ssd_upload_shard()` with a credential
   check that dry-runs (no-op) when secrets are absent. Hello-Azure round
-  trip from interactive R; the connectivity probe is `tar_make()`’s
-  first target. Test: a second `tar_make()` with no shard changes
-  uploads nothing (content-hash skip); the graph builds offline.
+  trip from interactive R; the connectivity probe is
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)’s
+  first target. Test: a second
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  with no shard changes uploads nothing (content-hash skip); the graph
+  builds offline.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and `ssd_input_hash()`
   for the lightweight recipe. Tests simulate a branch failure and
   reproduce locally.
@@ -2069,9 +2180,10 @@ validated behaviour into the package, not discovering it.
   previous Parquet.
 - **`mixed-code-lockin`** — §8.3 — `tar_cue(depend = FALSE)` on the step
   targets to pin shards against a code change (in-project, no child
-  project); `tar_invalidate()` /
-  [`unlink()`](https://rdrr.io/r/base/unlink.html) for forced re-runs of
-  the chosen shards (§8.4). Both recipes have tests.
+  project);
+  [`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html)
+  / [`unlink()`](https://rdrr.io/r/base/unlink.html) for forced re-runs
+  of the chosen shards (§8.4). Both recipes have tests.
 - **`cleanup-lecuyer`** — Remove the L’Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes a
   historical reference.
@@ -2146,6 +2258,7 @@ flowchart TD
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
     pathgrow[path-axis-growth]
+    slice[step-scenario-slice]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -2153,7 +2266,7 @@ flowchart TD
     define --> partby
     define --> inputs
     primer --> inputs
-    inputs --> acc
+    define --> acc
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims
@@ -2177,6 +2290,7 @@ flowchart TD
     tt --> replay
     tt --> rewrite
     tt --> pathgrow
+    tt --> slice
 
     %% manifest is provenance/verification metadata: it depends on the
     %% scenario (head) and feeds the verification layer; it does NOT gate
@@ -2191,14 +2305,34 @@ flowchart TD
     rewrite --> lockin
     lockin --> cleanup
 
+    inputs --> migrate
     prims -.-> migrate
+
+    %% --- node status colouring (keep in sync as each change progresses) ---
+    %% green = archived, yellow = done (implemented, not yet archived),
+    %% red = proposed (artifacts exist, not implemented), unfilled = open (roadmap only)
+    classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
+    classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
+    classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
+    classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
+
+    class define,baseline,dqinit,dqstate,primer,prims archived
+    class acc,partby,tt,shardrun done
+    class inputs,manif proposed
+    class migrate,hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open
 ```
 
-`migrate-public-api` hangs off `primer-primitives` with a **dashed,
-non-gating** edge and **no dependants**: trusting the design, it is a
-cosmetic rename that no targets step waits on, so it can land any time
-(like `error-call-origin` and the Cleanup items). The dashed edge marks
-“follows from, but does not block.”
+**Node colours track each step’s status** — green = archived, yellow =
+done (implemented, not yet archived), red = proposed (artifacts exist,
+not yet implemented), unfilled = open (roadmap only). Keep the colouring
+in sync as changes progress.
+
+`migrate-public-api` waits only on `scenario-input-types` (its
+byte-equivalence re-run must exercise the full input surface) and hangs
+off `primer-primitives` with a **dashed, non-gating** edge; it has **no
+dependants**, so trusting the design no targets step waits on it and it
+can land any time once `scenario-input-types` is in. The dashed edge
+marks “follows from, but does not block.”
 
 `shard-runner-baseline` sits off `primer-primitives` + `partition-by`,
 parallel to the `targets`-only plumbing: it proves the Hive write/read +

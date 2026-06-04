@@ -52,7 +52,10 @@ reuse.
 
 The scenario retains the data frames it was built from, so the runner
 reads them directly - no separate `data` argument. `min_pmix` names are
-resolved against `ssdtools` until the registry roadmap step lands.
+resolved to their materialised functions off the scenario via
+[`scenario_min_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_min_pmix.md)
+(resolved once, at construction), not by a runtime `ssdtools`/global-env
+search.
 
 ## Examples
 

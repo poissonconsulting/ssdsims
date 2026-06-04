@@ -412,10 +412,11 @@ Concrete additions, ordered from cheapest to most architectural:
     scenario, with downstream meta-projects pulling from upstream ones,
     the building block is
     `targets::tar_read(name, store = "../prev/_targets")` or the
-    `tarchetypes::tar_render_rep`-style cross-project link. The PoC
-    doesn’t have this yet; it would land as a fifth example pipeline
-    (`inst/targets-examples/extend-previous/`) that points at the
-    per-sim project’s `results/` directory and adds `stream = 2`.
+    [`tarchetypes::tar_render_rep`](https://docs.ropensci.org/tarchetypes/reference/tar_render_rep.html)-style
+    cross-project link. The PoC doesn’t have this yet; it would land as
+    a fifth example pipeline (`inst/targets-examples/extend-previous/`)
+    that points at the per-sim project’s `results/` directory and adds
+    `stream = 2`.
 
 5.  **Persist the starting RNG state with the scenario, not just the
     seed.** The user’s question framed this exactly: *“does this mean we

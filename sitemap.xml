@@ -1,6 +1,7 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://poissonconsulting.github.io/ssdsims/404.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/AGENTS.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/CLAUDE.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/CONTRIBUTING.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/GLOSSARY.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/LICENSE-text.html</loc></url>
@@ -9,6 +10,7 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/TARGETS-DESIGN.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/articles/index.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/authors.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/index.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/news/index.html</loc></url>
@@ -18,17 +20,29 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/params.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/scenario_dataset.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/scenario_min_pmix.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_data.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_fit_step.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_hc_step.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_sample_step.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_shards.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_tasks.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_shards.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_tasks.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_shards.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_tasks.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssdsims-package.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/task_primer.html</loc></url>
 </urlset>

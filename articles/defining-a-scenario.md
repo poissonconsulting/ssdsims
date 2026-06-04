@@ -152,6 +152,15 @@ scenario
 #>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
+#>     samples: FALSE
+#>   partition_by:
+#>     sample: dataset, sim, replace
+#>     fit: dataset, sim, nrow, rescale
+#>     hc: dataset, sim
+#>   bundle:
+#>     sample: 
+#>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
 ```
 
 The [`print()`](https://rdrr.io/r/base/print.html) method shows the
@@ -194,6 +203,15 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
 #>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
+#>     samples: FALSE
+#>   partition_by:
+#>     sample: dataset, sim, replace
+#>     fit: dataset, sim, nrow, rescale
+#>     hc: dataset, sim
+#>   bundle:
+#>     sample: 
+#>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
 
 # 2. A single data frame with an explicit name.
 ssd_define_scenario(ssddata::ccme_boron, name = "boron", nsim = 2L, seed = 1L)
@@ -218,6 +236,15 @@ ssd_define_scenario(ssddata::ccme_boron, name = "boron", nsim = 2L, seed = 1L)
 #>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
+#>     samples: FALSE
+#>   partition_by:
+#>     sample: dataset, sim, replace
+#>     fit: dataset, sim, nrow, rescale
+#>     hc: dataset, sim
+#>   bundle:
+#>     sample: 
+#>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
 ```
 
 A named list (`list(boron = ..., cadmium = ...)`) takes names from the
@@ -226,10 +253,12 @@ list and `name=` is an error.
 
 ### `min_pmix` is referenced by name
 
-The `min_pmix` knob is stored **by name**, never as a function body, so
-the scenario stays serialisable. You can pass a character vector of
-names directly, or a function (or list of functions) whose name is
-derived by symbol capture — mirroring dataset naming. The default
+The `min_pmix` knob is referenced **by name**: the name — not the
+function body — is what enters the task identity and hashes, so the
+scenario’s identity stays stable under a recompile or a cosmetic edit.
+You can pass a character vector of names directly, or a function (or
+list of functions) whose name is derived by symbol capture (mirroring
+dataset naming). The default
 [`ssdtools::ssd_min_pmix`](https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html)
 is stored as `"ssd_min_pmix"`:
 
@@ -239,9 +268,33 @@ scenario$fit$min_pmix
 #> [1] "ssd_min_pmix"
 ```
 
-The registry that resolves a name back to a function is a future roadmap
-step; the baseline runner resolves names against `ssdtools` in the
-meantime.
+The resolved single-argument *function* is additionally **materialised
+on the scenario** at construction (a name-string is resolved then, from
+`ssdtools` or the caller’s environment, failing fast if it cannot be
+resolved). It rides along for execution and is retrieved by name with
+the
+[`scenario_min_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_min_pmix.md)
+accessor; datasets are reached the same way with
+[`scenario_dataset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_dataset.md):
+
+``` r
+
+identical(scenario_min_pmix(scenario, "ssd_min_pmix"), ssdtools::ssd_min_pmix)
+#> [1] TRUE
+head(scenario_dataset(scenario, "boron"), 3)
+#> # A tibble: 3 × 5
+#>   Chemical Species                Conc Group Units
+#>   <chr>    <chr>                 <dbl> <fct> <chr>
+#> 1 Boron    Oncorhynchus mykiss     2.1 Fish  mg/L 
+#> 2 Boron    Ictalurus punctatus     2.4 Fish  mg/L 
+#> 3 Boron    Micropterus salmoides   4.1 Fish  mg/L
+```
+
+Because the *name* drives hashing while the *value* only rides along for
+execution, two scenarios with the same `min_pmix` name but different
+function bodies produce byte-identical task identities — the split that
+lets a cluster worker resolve `min_pmix` off the transported scenario
+with no shared interactive environment.
 
 ### The `ci = FALSE` rule
 
@@ -431,21 +484,19 @@ hcs[c("dataset", "sim", "nrow", "ci", "hc_proportion", "hc_est")]
 #> # ℹ 98 more rows
 ```
 
-## What is not here yet
+## Next: shards and the targets pipeline
 
-This vignette tracks *what currently works*. The targets pipeline is
-landing in dependency order (`TARGETS-DESIGN.md` §12); the pieces still
-ahead include:
+The baseline runner threads results in memory. The next layer
+materialises each step as **Hive-partitioned Parquet shards** grouped by
+the scenario’s `partition_by` axes, and links steps by reading parent
+shards back — the storage hand-off the cluster `targets` pipeline uses.
+The [“Running a sharded
+pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+vignette covers that: the single-core
+[`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
+(byte-identical to the baseline runner) and the shipped `targets`
+template.
 
-- **Per-task RNG seeding** — a primer derived from
-  `rlang::hash(task_params)`, seeded via
-  `dqrng::dqset.seed(seed, stream = primer)`, making each task
-  reproducible independently of run order.
-- **Shards and Parquet I/O** — grouping tasks by the `partition_by` axes
-  into a Hive-partitioned directory tree.
-- **The `targets` backend** — static branching (`tar_map()`) by default,
-  with dynamic branching as an escape hatch for extreme fan-outs.
-- **The `min_pmix` and dataset registries** — resolving name references
-  back to functions and data.
-
-As each lands, a new section will document it here.
+Still ahead on the roadmap (`TARGETS-DESIGN.md` §12): a per-scenario
+manifest, cloud upload, shard-completeness assertions, and the
+crew/SLURM controller. As each lands, the vignettes grow to cover it.

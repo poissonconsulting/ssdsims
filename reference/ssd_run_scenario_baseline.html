@@ -29,6 +29,7 @@ it just threads outputs forward and returns the collected per-step results."></h
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -90,8 +91,10 @@ independent of the order in which tasks run. These same
 <code>*_data_task_primer()</code> wrappers are the per-task entry point a future
 <code>targets</code> shard body and the replay helper (<code>TARGETS-DESIGN.md</code> §7) reuse.</p>
 <p>The scenario retains the data frames it was built from, so the runner reads
-them directly - no separate <code>data</code> argument. <code>min_pmix</code> names are resolved
-against <code>ssdtools</code> until the registry roadmap step lands.</p>
+them directly - no separate <code>data</code> argument. <code>min_pmix</code> names are resolved to
+their materialised functions off the scenario via <code><a href="scenario_min_pmix.html">scenario_min_pmix()</a></code>
+(resolved once, at construction), not by a runtime <code>ssdtools</code>/global-env
+search.</p>
     </div>
 
     <div class="section level2">

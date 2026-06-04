@@ -243,10 +243,12 @@ New capabilities land via OpenSpec changes (e.g., `ssd-define-scenario`,
 - **parallel** — L’Ecuyer-CMRG sub-streams (legacy path).
 - **duckplyr** — Parquet I/O and off-cluster querying (targets path).
   **Interact with Parquet files through `duckplyr` (DuckDB)** —
-  `duckplyr::read_parquet_duckdb()` for reads,
-  `duckplyr::compute_parquet()` for writes — **not `arrow`**. This is
-  the team preference; confine the call sites behind the
-  `ssd_read_parquet()` / `ssd_write_parquet()` internals.
+  [`duckplyr::read_parquet_duckdb()`](https://duckplyr.tidyverse.org/reference/read_parquet_duckdb.html)
+  for reads,
+  [`duckplyr::compute_parquet()`](https://duckplyr.tidyverse.org/reference/compute_parquet.html)
+  for writes — **not `arrow`**. This is the team preference; confine the
+  call sites behind the `ssd_read_parquet()` / `ssd_write_parquet()`
+  internals.
 
 See `DESCRIPTION` for versions and imports.
 
@@ -319,6 +321,9 @@ conventionally-typed commit message (see Pull Requests below).
 - Keep the PR title and description in sync with the change as it
   evolves; the description should capture the *current* state, not a
   revision log.
+- **Review threads**: when you address a review comment, reply on the
+  thread with what changed (or the answer) and leave it open — the
+  reviewer resolves their own threads.
 
 ## Continuous Integration
 
@@ -355,6 +360,14 @@ The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order,
 starting from `ssd-define-scenario` and `dqrng-init` (no dependencies).
 Each step is a coherent working state; parallel work streams are
 encouraged.
+
+**Keep the roadmap and its Mermaid graph (TARGETS-DESIGN.md §12) up to
+date as part of each change** — add/rename nodes and edges when a change
+is proposed, and update each node’s status colour as it progresses:
+**green = archived, yellow = done** (implemented, not yet archived),
+**red = proposed** (artifacts exist, not implemented), **unfilled =
+open** (roadmap only). The colours are Mermaid `classDef`s applied via
+`class` lines at the foot of the graph.
 
 ## Contact & Contribution
 

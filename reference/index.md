@@ -20,6 +20,8 @@ builds on, with a baseline loop runner.
   : Derive the hc Task Table from a Scenario
 - [`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
   : Run a Scenario with the Baseline Loop Runner
+- [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
+  : Run a Scenario over Hive-partitioned Parquet Shards (single core)
 
 ## Simulation pipeline
 
@@ -35,6 +37,48 @@ and estimate hazard concentrations across simulations, end to end.
   bootstrapping
 - [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
   : Run Scenario
+
+## Targets pipeline
+
+Group a step’s tasks into per-shard tables keyed by `partition_by`, run
+a shard with the per-task RNG primitives writing one Parquet per shard,
+and fan in a summary - the building blocks of the static-branching
+`targets` pipeline (see the `inst/targets-templates/small/_targets.R`
+template).
+
+- [`ssd_scenario_sample_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_shards.md)
+  : Group sample Tasks into Shards
+- [`ssd_scenario_fit_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_shards.md)
+  : Group fit Tasks into Shards
+- [`ssd_scenario_hc_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_shards.md)
+  : Group hc Tasks into Shards
+- [`ssd_run_sample_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_sample_step.md)
+  : Run a sample Shard
+- [`ssd_run_fit_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_fit_step.md)
+  : Run a fit Shard
+- [`ssd_run_hc_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_hc_step.md)
+  : Run an hc Shard
+- [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
+  : Build the Targets Pipeline for a Scenario
+- [`ssd_summarize()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md)
+  : Summarise a Run's hc Estimates Across Shards
+- [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md)
+  : Layout-keyed Results Root for a Scenario
+
+## Scenario accessors
+
+A technical detail of the pipelines: isolate an already-materialised
+value from a scenario by name - the dataset tibble or the `min_pmix`
+function. Names (not values) drive task hashing, so these accessors
+resolve a name back to the value carried on the scenario for execution.
+
+- [`scenario_dataset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_dataset.md)
+  : Isolate a Materialised Dataset from a Scenario by Name
+
+- [`scenario_min_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_min_pmix.md)
+  :
+
+  Isolate a Materialised `min_pmix` Function from a Scenario by Name
 
 ## Reproducible RNG
 
@@ -59,4 +103,4 @@ backend (targets path) and L’Ecuyer-CMRG sub-streams (legacy path).
 
 - [`ssdsims`](https://poissonconsulting.github.io/ssdsims/reference/ssdsims-package.md)
   [`ssdsims-package`](https://poissonconsulting.github.io/ssdsims/reference/ssdsims-package.md)
-  : ssdsims: What the Package Does (One Line, Title Case)
+  : ssdsims: Simulation Analyses for Species Sensitivity Distributions

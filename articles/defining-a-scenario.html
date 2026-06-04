@@ -36,6 +36,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -178,7 +179,16 @@
 <span><span class="co">#&gt;     nboot: 10, 100</span></span>
 <span><span class="co">#&gt;     est_method: multi</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
-<span><span class="co">#&gt;     parametric: TRUE</span></span></code></pre></div>
+<span><span class="co">#&gt;     parametric: TRUE</span></span>
+<span><span class="co">#&gt;     samples: FALSE</span></span>
+<span><span class="co">#&gt;   partition_by:</span></span>
+<span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
+<span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
+<span><span class="co">#&gt;     hc: dataset, sim</span></span>
+<span><span class="co">#&gt;   bundle:</span></span>
+<span><span class="co">#&gt;     sample: </span></span>
+<span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span></span></code></pre></div>
 </div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method shows the declarative fields: the scalar <code>seed</code> and <code>nsim</code>, the <code>nrow</code> sample sizes, the dataset names, and the two argument grids (<code>fit</code> and <code>hc</code>). Note what is <em>not</em> shown — the data frames themselves are retained for the local runner but are not part of the declarative identity; the cluster path carries only the names.</p>
 <section class="level3"><h3 id="dataset-input-is-flexible">Dataset input is flexible<a class="anchor" aria-label="anchor" href="#dataset-input-is-flexible"></a>
@@ -209,6 +219,15 @@
 <span><span class="co">#&gt;     est_method: multi</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
+<span><span class="co">#&gt;     samples: FALSE</span></span>
+<span><span class="co">#&gt;   partition_by:</span></span>
+<span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
+<span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
+<span><span class="co">#&gt;     hc: dataset, sim</span></span>
+<span><span class="co">#&gt;   bundle:</span></span>
+<span><span class="co">#&gt;     sample: </span></span>
+<span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span></span>
 <span></span>
 <span><span class="co"># 2. A single data frame with an explicit name.</span></span>
 <span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, name <span class="op">=</span> <span class="st">"boron"</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
@@ -232,24 +251,46 @@
 <span><span class="co">#&gt;     nboot: 1000</span></span>
 <span><span class="co">#&gt;     est_method: multi</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
-<span><span class="co">#&gt;     parametric: TRUE</span></span></code></pre></div>
+<span><span class="co">#&gt;     parametric: TRUE</span></span>
+<span><span class="co">#&gt;     samples: FALSE</span></span>
+<span><span class="co">#&gt;   partition_by:</span></span>
+<span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
+<span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
+<span><span class="co">#&gt;     hc: dataset, sim</span></span>
+<span><span class="co">#&gt;   bundle:</span></span>
+<span><span class="co">#&gt;     sample: </span></span>
+<span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span></span></code></pre></div>
 </div>
 <p>A named list (<code>list(boron = ..., cadmium = ...)</code>) takes names from the list; an unnamed list derives them per element. Supplying both a named list and <code>name=</code> is an error.</p>
 </section><section class="level3"><h3 id="min_pmix-is-referenced-by-name">
 <code>min_pmix</code> is referenced by name<a class="anchor" aria-label="anchor" href="#min_pmix-is-referenced-by-name"></a>
 </h3>
-<p>The <code>min_pmix</code> knob is stored <strong>by name</strong>, never as a function body, so the scenario stays serialisable. You can pass a character vector of names directly, or a function (or list of functions) whose name is derived by symbol capture — mirroring dataset naming. The default <code><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssdtools::ssd_min_pmix</a></code> is stored as <code>"ssd_min_pmix"</code>:</p>
+<p>The <code>min_pmix</code> knob is referenced <strong>by name</strong>: the name — not the function body — is what enters the task identity and hashes, so the scenario’s identity stays stable under a recompile or a cosmetic edit. You can pass a character vector of names directly, or a function (or list of functions) whose name is derived by symbol capture (mirroring dataset naming). The default <code><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssdtools::ssd_min_pmix</a></code> is stored as <code>"ssd_min_pmix"</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scenario</span><span class="op">$</span><span class="va">fit</span><span class="op">$</span><span class="va">min_pmix</span></span>
 <span><span class="co">#&gt; [1] "ssd_min_pmix"</span></span></code></pre></div>
 </div>
-<p>The registry that resolves a name back to a function is a future roadmap step; the baseline runner resolves names against <code>ssdtools</code> in the meantime.</p>
+<p>The resolved single-argument <em>function</em> is additionally <strong>materialised on the scenario</strong> at construction (a name-string is resolved then, from <code>ssdtools</code> or the caller’s environment, failing fast if it cannot be resolved). It rides along for execution and is retrieved by name with the <code><a href="../reference/scenario_min_pmix.html">scenario_min_pmix()</a></code> accessor; datasets are reached the same way with <code><a href="../reference/scenario_dataset.html">scenario_dataset()</a></code>:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/scenario_min_pmix.html">scenario_min_pmix</a></span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"ssd_min_pmix"</span><span class="op">)</span>, <span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/scenario_dataset.html">scenario_dataset</a></span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"boron"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 3 × 5</span></span>
+<span><span class="co">#&gt;   Chemical Species                Conc Group Units</span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;    &lt;chr&gt;                 &lt;dbl&gt; &lt;fct&gt; &lt;chr&gt;</span></span>
+<span><span class="co">#&gt; 1 Boron    Oncorhynchus mykiss     2.1 Fish  mg/L </span></span>
+<span><span class="co">#&gt; 2 Boron    Ictalurus punctatus     2.4 Fish  mg/L </span></span>
+<span><span class="co">#&gt; 3 Boron    Micropterus salmoides   4.1 Fish  mg/L</span></span></code></pre></div>
+</div>
+<p>Because the <em>name</em> drives hashing while the <em>value</em> only rides along for execution, two scenarios with the same <code>min_pmix</code> name but different function bodies produce byte-identical task identities — the split that lets a cluster worker resolve <code>min_pmix</code> off the transported scenario with no shared interactive environment.</p>
 </section><section class="level3"><h3 id="the-ci-false-rule">The <code>ci = FALSE</code> rule<a class="anchor" aria-label="anchor" href="#the-ci-false-rule"></a>
 </h3>
 <p>When <code>ci = FALSE</code> is the <em>only</em> confidence-interval value, the bootstrap-only knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are meaningless, so passing any of them is an error:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
 <span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span>
@@ -265,7 +306,7 @@
 </h2>
 <p><code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks()</a></code> expands the scenario into the three per-step task tables — <code>sample</code>, <code>fit</code>, and <code>hc</code> — bundled into a task set. This is still RNG-free: no draws happen here.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">tasks</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_task_set&gt;</span></span>
@@ -276,7 +317,7 @@
 <p>The counts show how each step fans out from its parent. The key design choice is that the single expensive <strong>random draw</strong> is its own <code>sample</code> task, keyed only by <code>(dataset, sim, replace)</code>. The draw is of <code>n_max = max(nrow)</code> rows; every <code>nrow</code> value is then a cheap, RNG-free <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> <em>sub-truncation</em> of that one draw, done inline at the <code>fit</code> step. So <code>nrow</code> is an ordinary cross-join axis of the <code>fit</code> step and never multiplies the underlying draw — one draw is shared across all sample sizes.</p>
 <p>Each row carries a path-style <code>&lt;step&gt;_id</code> primary key (the Hive partition path) plus its parent step’s id as a foreign key, so dependencies are explicit and joinable:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">sample</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: sample&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace</span></span>
@@ -293,7 +334,7 @@
 </div>
 <p>The <code>ci = FALSE</code> collapse is visible in the <code>hc</code> table: the <code>ci = FALSE</code> rows carry <code>NA</code> for the bootstrap-only knobs and are not multiplied across them, while the <code>ci = TRUE</code> rows fan out fully.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span></span>
@@ -322,14 +363,14 @@
 <p><code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> is the no-frills runner. It executes the three task tables in dependency order, threading each task’s result forward to its children by the foreign-key id. It runs <strong>in-process</strong>, with no <code>targets</code>, no shard grouping, and no Parquet I/O.</p>
 <p>It <strong>is reproducible without an external seed</strong>: the runner opens one <code><a href="../reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> scope and seeds each task exactly once from <code>scenario$seed</code> plus a per-task primer (<code><a href="../reference/task_primer.html">task_primer()</a></code> over the task’s identity), so two runs of a scenario with a fixed <code>seed</code> yield identical results, regardless of the order in which tasks run:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "sample" "fit"    "hc"</span></span></code></pre></div>
 </div>
 <p>Each element is the corresponding task table augmented with a list column of per-task results — <code>sample</code> draws, <code>fits</code> objects, and <code>hc</code> tibbles (the <code>fit</code> step truncates its sample inline before fitting):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span></span>
@@ -354,7 +395,7 @@
 </div>
 <p>Unnest the hazard-concentration estimates back onto their task identities to get a tidy results table. <code>proportion</code> is not a task axis — it is passed whole to each <code>hc</code> call, so every result already carries its own <code>proportion</code> column:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hcs</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/unnest.html" class="external-link">unnest</a></span><span class="op">(</span></span>
 <span>  <span class="va">out</span><span class="op">$</span><span class="va">hc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"ci"</span>, <span class="st">"est_method"</span>, <span class="st">"hc"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  <span class="va">hc</span>,</span>
@@ -376,20 +417,10 @@
 <span><span class="co">#&gt; 10 boron       1    10 TRUE           0.2    4.91</span></span>
 <span><span class="co">#&gt; # ℹ 98 more rows</span></span></code></pre></div>
 </div>
-</section><section class="level2"><h2 id="what-is-not-here-yet">What is not here yet<a class="anchor" aria-label="anchor" href="#what-is-not-here-yet"></a>
+</section><section class="level2"><h2 id="next-shards-and-the-targets-pipeline">Next: shards and the targets pipeline<a class="anchor" aria-label="anchor" href="#next-shards-and-the-targets-pipeline"></a>
 </h2>
-<p>This vignette tracks <em>what currently works</em>. The targets pipeline is landing in dependency order (<code>TARGETS-DESIGN.md</code> §12); the pieces still ahead include:</p>
-<ul>
-<li>
-<strong>Per-task RNG seeding</strong> — a primer derived from <code>rlang::hash(task_params)</code>, seeded via <code>dqrng::dqset.seed(seed, stream = primer)</code>, making each task reproducible independently of run order.</li>
-<li>
-<strong>Shards and Parquet I/O</strong> — grouping tasks by the <code>partition_by</code> axes into a Hive-partitioned directory tree.</li>
-<li>
-<strong>The <code>targets</code> backend</strong> — static branching (<code>tar_map()</code>) by default, with dynamic branching as an escape hatch for extreme fan-outs.</li>
-<li>
-<strong>The <code>min_pmix</code> and dataset registries</strong> — resolving name references back to functions and data.</li>
-</ul>
-<p>As each lands, a new section will document it here.</p>
+<p>The baseline runner threads results in memory. The next layer materialises each step as <strong>Hive-partitioned Parquet shards</strong> grouped by the scenario’s <code>partition_by</code> axes, and links steps by reading parent shards back — the storage hand-off the cluster <code>targets</code> pipeline uses. The <a href="sharded-pipeline.html">“Running a sharded pipeline”</a> vignette covers that: the single-core <code><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code> (byte-identical to the baseline runner) and the shipped <code>targets</code> template.</p>
+<p>Still ahead on the roadmap (<code>TARGETS-DESIGN.md</code> §12): a per-scenario manifest, cloud upload, shard-completeness assertions, and the crew/SLURM controller. As each lands, the vignettes grow to cover it.</p>
 </section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

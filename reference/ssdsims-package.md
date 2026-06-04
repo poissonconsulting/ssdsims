@@ -1,6 +1,11 @@
-# ssdsims: What the Package Does (One Line, Title Case)
+# ssdsims: Simulation Analyses for Species Sensitivity Distributions
 
-What the package does (one paragraph).
+Runs reproducible simulation studies for species sensitivity
+distribution (SSD) models built on the 'ssdtools' package. Expands a
+declarative scenario into per-step task tables, draws data, fits
+distributions, and estimates hazard concentrations, with a
+'targets'-based, Hive-partitioned shard pipeline for running studies in
+parallel or on a cluster.
 
 ## See also
 

@@ -19,6 +19,7 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -291,7 +292,7 @@ sim=3   ●                      ●                    ●</code></pre>
 <code>start_sim = old_max + 1, nsim = N</code> is the “extend the existing batch with more sims” path.</li>
 <li>Returns a new <code>ssdsims_scenario</code> whose task grid contains <em>only</em> the new tasks. Old Parquet files remain valid (their task_ids don’t change), and a thin merge target reads the union.</li>
 </ul></li>
-<li><p><strong>DAG-of-DAGs.</strong> If the goal is literally one <code>targets</code> project per scenario, with downstream meta-projects pulling from upstream ones, the building block is <code>targets::tar_read(name, store = "../prev/_targets")</code> or the <code>tarchetypes::tar_render_rep</code>-style cross-project link. The PoC doesn’t have this yet; it would land as a fifth example pipeline (<code>inst/targets-examples/extend-previous/</code>) that points at the per-sim project’s <code>results/</code> directory and adds <code>stream = 2</code>.</p></li>
+<li><p><strong>DAG-of-DAGs.</strong> If the goal is literally one <code>targets</code> project per scenario, with downstream meta-projects pulling from upstream ones, the building block is <code>targets::tar_read(name, store = "../prev/_targets")</code> or the <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_render_rep.html" class="external-link">tarchetypes::tar_render_rep</a></code>-style cross-project link. The PoC doesn’t have this yet; it would land as a fifth example pipeline (<code>inst/targets-examples/extend-previous/</code>) that points at the per-sim project’s <code>results/</code> directory and adds <code>stream = 2</code>.</p></li>
 <li>
 <p><strong>Persist the starting RNG state with the scenario, not just the seed.</strong> The user’s question framed this exactly: <em>“does this mean we want to define and save the starting RNG state up front for each task?”</em>. The PoC already does this on the task row (<code>.state_{data,fit,hc}</code>), but it does <strong>not</strong> persist the <em>scenario</em> master state (it persists only <code>seed</code>). Two implications:</p>
 <ul><li>If the bug fix in <code>get_lecuyer_cmrg_stream_states()</code> ever regresses or its derivation changes (e.g. someone “improves” the seed→state transformation), every old Parquet becomes meaningless even though <code>seed</code> is unchanged.</li>

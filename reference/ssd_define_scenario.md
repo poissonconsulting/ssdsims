@@ -32,7 +32,9 @@ ssd_define_scenario(
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  samples = FALSE,
   partition_by = NULL,
+  bundle = NULL,
   upload = NULL
 )
 ```
@@ -108,9 +110,14 @@ ssd_define_scenario(
   proportion between 0 and 0.5 - in which case the name is derived from
   the argument expression (e.g.
   [`ssdtools::ssd_min_pmix`](https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html)
-  gives `"ssd_min_pmix"`), mirroring dataset name derivation. Only the
-  name is stored; the function is resolved later via the `min_pmix`
-  registry (a future roadmap step).
+  gives `"ssd_min_pmix"`), mirroring dataset name derivation. The name
+  is what the task path hashes; the resolved single-argument function is
+  additionally materialised on the scenario (keyed by name) for
+  execution and isolated via
+  [`scenario_min_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_min_pmix.md).
+  A name-string is resolved to a function at construction (from
+  `ssdtools` or the caller's environment), failing fast if it cannot be
+  resolved to a single-argument function.
 
 - range_shape1:
 
@@ -176,11 +183,52 @@ ssd_define_scenario(
   opposed to non-parametrically resampling the original data with
   replacement.
 
+- samples:
+
+  A logical scalar (default `FALSE`): retain the bootstrap draws in the
+  hc result's `samples` list-column (passed to
+  [`ssdtools::ssd_hc()`](https://bcgov.github.io/ssdtools/reference/ssd_hc.html)).
+  This is **output retention only** - it does not change the estimates
+  or the per-task RNG, so it is not a grid or task axis (a single `TRUE`
+  is a superset of `FALSE`). Changing it re-runs the hc step (the
+  discarded draws must be re-bootstrapped) but yields byte-identical
+  estimates; retained samples can be large (`nboot` draws per dist per
+  task), so it is off by default.
+
 - partition_by:
 
-  An optional named list with `data`, `fit`, and `hc` character vectors
-  naming the Hive partition axes per step. When `NULL` the documented
-  per-step defaults are used.
+  An optional, possibly-partial named list keyed by step
+  (`sample`/`fit`/`hc`) of character vectors naming the Hive **path**
+  axes for that step (one shard per path cell; the inner complement
+  rides as Parquet columns). Each entry must be unique, non-missing, and
+  a subset of that step's axis vocabulary: `sample` = `dataset`, `sim`,
+  `replace`; `fit` adds `nrow`, `rescale`, `computable`,
+  `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc`
+  adds `ci`, `nboot`, `est_method`, `ci_method`, `parametric`. `"nrow"`
+  is rejected only for `sample` (the shared draw carries no `nrow` axis;
+  the `fit` step truncates it inline), and is a valid path axis for
+  `fit`/`hc`. Steps partition **independently** - there is no cross-step
+  constraint; a step may be finer or coarser than its neighbour on a
+  shared axis (the m:n parent-shard relationship is resolved at the read
+  layer). Steps left unnamed take their documented defaults
+  (`sample = c("dataset", "sim", "replace")`,
+  `fit = c("dataset", "sim", "nrow", "rescale")`,
+  `hc = c("dataset", "sim")`; these supersede `TARGETS-DESIGN.md`
+  section 5's pre-fold table). The split is orthogonal to the per-task
+  RNG primer, so changing it shifts file paths only, never results.
+
+- bundle:
+
+  An optional, possibly-partial named list keyed by step, the per-step
+  **complement** of `partition_by`: it names the **inner** axes to keep
+  together within a shard, and the stored path axes become
+  `setdiff(task_axes(step), bundle[[step]])`. `partition_by` and
+  `bundle` are complementary per-step entry points - at most one may
+  name a given step (a step in **both** is an error), but they may be
+  mixed across steps and either may be partial. Use `partition_by` when
+  you want few path axes, `bundle` when you want fine sharding and only
+  a few inner axes. Both normalise into the single stored `partition_by`
+  path list.
 
 - upload:
 
@@ -198,8 +246,10 @@ for validation (a numeric `Conc` column is required) and retained on the
 scenario (as `$data`) so a local run
 ([`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md))
 can sample it directly. The dataset *names* (`$datasets`) are what the
-targets/cluster path hashes and resolves through the registry, so that
-path need not carry the data frames.
+targets/cluster path hashes; the validated tibbles ride on the scenario
+and are isolated by name via
+[`scenario_dataset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_dataset.md),
+so the hash need not carry the data frames.
 
 ## Dataset input
 
@@ -257,4 +307,13 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 
 #>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
+#>     samples: FALSE
+#>   partition_by:
+#>     sample: dataset, sim, replace
+#>     fit: dataset, sim, nrow, rescale
+#>     hc: dataset, sim
+#>   bundle:
+#>     sample: 
+#>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
 ```
