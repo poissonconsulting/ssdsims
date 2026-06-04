@@ -93,13 +93,7 @@ ssd_scenario_hc_shards <- function(scenario) {
 # has every axis value and the `<step>_id`/`<parent>_id` keys it needs.
 scenario_shards <- function(scenario, step) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
-  tbl <- switch(
-    step,
-    sample = ssd_scenario_sample_tasks(scenario),
-    fit = ssd_scenario_fit_tasks(scenario),
-    hc = ssd_scenario_hc_tasks(scenario)
-  )
-  tbl <- tibble::as_tibble(tbl)
+  tbl <- tibble::as_tibble(ssd_scenario_tasks(scenario, step))
   tbl$seed <- scenario$seed
   tbl$primer <- task_primers(tbl, step)
   path_axes <- scenario_partition_axes(scenario, step)$path

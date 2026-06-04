@@ -50,12 +50,7 @@ test_that("task-shards: union of a step's shard tasks equals its task table", {
       fit = ssd_scenario_fit_shards(scenario),
       hc = ssd_scenario_hc_shards(scenario)
     )
-    tasks <- switch(
-      step,
-      sample = ssd_scenario_sample_tasks(scenario),
-      fit = ssd_scenario_fit_tasks(scenario),
-      hc = ssd_scenario_hc_tasks(scenario)
-    )
+    tasks <- ssd_scenario_tasks(scenario, step)
     id <- paste0(step, "_id")
     union_ids <- sort(unlist(lapply(shards$tasks, function(t) t[[id]])))
     expect_identical(union_ids, sort(tasks[[id]]))

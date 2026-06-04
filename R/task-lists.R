@@ -119,16 +119,32 @@ ssd_scenario_hc_tasks <- function(scenario) {
 #' table.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
-#' @return An `ssdsims_task_set` object: a list with `sample`, `fit`, and
-#'   `hc` elements, each an `ssdsims_tasks` table.
+#' @param step Optional single step name (`"sample"`, `"fit"`, or `"hc"`). When
+#'   supplied, returns just that step's `ssdsims_tasks` table (the same as the
+#'   matching `ssd_scenario_*_tasks()`); when `NULL` (default) returns the full
+#'   `ssdsims_task_set`.
+#' @return An `ssdsims_task_set` object (a list with `sample`, `fit`, and `hc`
+#'   elements, each an `ssdsims_tasks` table), or - when `step` is supplied - the
+#'   single `ssdsims_tasks` table for that step.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
 #' tasks <- ssd_scenario_tasks(scenario)
 #' tasks
 #' tasks$hc
-ssd_scenario_tasks <- function(scenario) {
+#' ssd_scenario_tasks(scenario, "hc")
+ssd_scenario_tasks <- function(scenario, step = NULL) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  if (!is.null(step)) {
+    chk::chk_string(step)
+    chk::chk_subset(step, c("sample", "fit", "hc"))
+    return(switch(
+      step,
+      sample = ssd_scenario_sample_tasks(scenario),
+      fit = ssd_scenario_fit_tasks(scenario),
+      hc = ssd_scenario_hc_tasks(scenario)
+    ))
+  }
   structure(
     list(
       sample = ssd_scenario_sample_tasks(scenario),

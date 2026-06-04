@@ -222,6 +222,9 @@ See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
   descriptions (e.g. `local_dqrng_backend()`, `run_scenario()`, `DESCRIPTION`).
 - Keep the PR title and description in sync with the change as it evolves; the
   description should capture the *current* state, not a revision log.
+- **Review threads**: when you address a review comment, reply on the thread
+  with what changed (or the answer) and leave it open — the reviewer resolves
+  their own threads.
 
 ## Continuous Integration
 
