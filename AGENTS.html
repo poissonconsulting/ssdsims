@@ -191,6 +191,8 @@
 <strong>dqrng</strong> — New RNG backend (targets path).</li>
 <li>
 <strong>parallel</strong> — L’Ecuyer-CMRG sub-streams (legacy path).</li>
+<li>
+<strong>duckplyr</strong> — Parquet I/O and off-cluster querying (targets path). <strong>Interact with Parquet files through <code>duckplyr</code> (DuckDB)</strong> — <code>duckplyr::read_parquet_duckdb()</code> for reads, <code>duckplyr::compute_parquet()</code> for writes — <strong>not <code>arrow</code></strong>. This is the team preference; confine the call sites behind the <code>ssd_read_parquet()</code> / <code>ssd_write_parquet()</code> internals.</li>
 </ul><p>See <code>DESCRIPTION</code> for versions and imports.</p>
 </div>
 <div class="section level2">
