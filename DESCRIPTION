@@ -26,6 +26,7 @@ Imports:
     tidyr,
     withr
 Suggests: 
+    crew,
     knitr,
     quarto,
     readr,

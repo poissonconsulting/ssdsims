@@ -148,7 +148,10 @@ pipeline: `tarchetypes::tar_map()` mints one named target per shard, so
 `targets` caches, invalidates, and reruns each shard independently. Two ready
 example projects ship with the package --- a minimal `local` one and a fuller
 `example` one (adapted from `scripts/example.R`, sweeping `nrow`, `proportion`,
-and the estimation / CI methods):
+and the estimation / CI methods). The `example` project parallelises its shards
+across local workers with a mirai-backed `crew` controller
+(`tar_option_set(controller = crew::crew_controller_local())`); swap in a
+`crew.cluster` controller for SLURM/PBS:
 
 ```{r}
 #| label: template-path

@@ -23,10 +23,10 @@ if (dir.exists("inst/targets-templates/example")) {
   )
 }
 
-# Build the pipeline. `_targets.R` defines one named target per shard, so
-# independent shards can run in parallel; to scale out, configure a controller
-# (e.g. `crew` / `crew.cluster`) via `tar_option_set()` in `_targets.R` — the
-# shard set and `tar_make()` call here are unchanged.
+# Build the pipeline. `_targets.R` defines one named target per shard and sets a
+# mirai-backed `crew` controller, so independent shards run on parallel local
+# workers (tune `workers`, or swap a `crew.cluster` controller for SLURM/PBS).
+# Needs the `crew` package installed.
 tar_make()
 
 # The `summary` target is `format = "file"`, so its value is the path to the
