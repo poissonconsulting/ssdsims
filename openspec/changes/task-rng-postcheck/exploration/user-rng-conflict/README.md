@@ -43,6 +43,8 @@ Rscript case2-silent-wrong-numbers.R       # wrong numbers, no error
 Rscript case3-segfault.R                   # crashes (expected)
 Rscript case4-resolution-probe.R dqrng         # binds dqrng, works
 Rscript case4-resolution-probe.R randtoolbox   # binds randtoolbox, segfault
+Rscript case5-state-witness.R              # the detection mechanism (basis of the spec)
+Rscript case6-witness-vs-hijack.R          # witness catches a hijack the cheap probe misses
 ```
 
 Tested with R 4.5.3, dqrng 0.4.1, randtoolbox 2.0.5 (rngWELL 0.10-10).
@@ -79,3 +81,24 @@ order.
   (`register_methods()`) does.
 - Avoid loading two such packages in the same session; if unavoidable, never
   rely on load order and re-assert your backend immediately before use.
+
+## Detecting it at runtime (the `task-rng-postcheck` requirement)
+
+The cheap `RNGkind()[1] == "user-supplied"` probe (`dqrng_backend_active()`)
+**cannot** tell dqrng from a foreign user-supplied RNG — case 6 fools it. The
+fix is to use dqrng's **own state** as the witness (`case5-state-witness.R`):
+
+```r
+s0 <- dqrng::dqrng_get_state()
+runif(1)                       # routes through base R's user_unif_rand slot
+s1 <- dqrng::dqrng_get_state()
+dqrng::dqrng_set_state(s0)     # roll the witness draw back: non-destructive
+stopifnot(!identical(s0, s1))  # dqrng advanced  <=>  dqrng is the bound generator
+```
+
+If a foreign RNG holds the slot, the draw advances *its* state and dqrng's
+stays frozen, so the witness is `FALSE` and the check aborts. This is the basis
+for the parent change's per-task **postcondition**: each RNG-consuming task
+(`sample`/`fit`/`hc`) runs this witness when it *ends*, certifying that the
+draws it just made actually came from dqrng's pcg64. See `../../proposal.md`
+and `../../design.md`.
