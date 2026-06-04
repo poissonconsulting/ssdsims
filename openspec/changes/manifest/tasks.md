@@ -1,6 +1,6 @@
 ## 1. Dependencies and shared helpers
 
-- [ ] 1.1 Add `jsonlite`, `digest`, and `sessioninfo` to `DESCRIPTION` `Imports` (`digest` / `ssd_file_sha256()` are shared with `registry`; introduce in a shared utils file if not already present)
+- [ ] 1.1 Add `jsonlite`, `digest`, and `sessioninfo` to `DESCRIPTION` `Imports`; add the `ssd_file_sha256(path)` internal in a shared utils file
 - [ ] 1.2 Ensure the shared `ssd_file_sha256(path)` internal exists (`digest::digest(file = path, algo = "sha256")`)
 
 ## 2. Manifest head: writer and reader

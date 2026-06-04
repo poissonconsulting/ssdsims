@@ -23,7 +23,7 @@ Each task row in a shard's `tasks` list-column SHALL carry `seed = scenario$seed
 - **THEN** no random numbers SHALL be drawn and `.Random.seed` SHALL be unchanged
 
 ### Requirement: A per-shard step runner writes one Parquet per shard
-The package SHALL provide per-shard step runners `ssd_run_sample_step()`, `ssd_run_fit_step()`, and `ssd_run_hc_step()` that loop a shard's `tasks`, install each task's `(seed, primer)` exactly once via the existing `*_data_task_primer()` wrappers under an active dqrng backend, and write the shard's results to one Parquet file at the shard's partition path. The `fit` and `hc` runners SHALL read their upstream shard's Parquet by partition path (the `fit` runner truncating `head(sample, nrow)` inline, RNG-free) and resolve datasets and `min_pmix` through the `registry`. The runners SHALL NOT depend on the `manifest`; provenance/verification metadata is recorded by the downstream `manifest` consumers.
+The package SHALL provide per-shard step runners `ssd_run_sample_step()`, `ssd_run_fit_step()`, and `ssd_run_hc_step()` that loop a shard's `tasks`, install each task's `(seed, primer)` exactly once via the existing `*_data_task_primer()` wrappers under an active dqrng backend, and write the shard's results to one Parquet file at the shard's partition path. The `fit` and `hc` runners SHALL read their upstream shard's Parquet by partition path (the `fit` runner truncating `head(sample, nrow)` inline, RNG-free); the `sample` runner SHALL read its dataset via `scenario_dataset()` and the `fit` runner SHALL resolve `min_pmix` via `scenario_min_pmix()` (the `scenario-accessors` change). The runners SHALL NOT depend on the `manifest`; provenance/verification metadata is recorded by the downstream `manifest` consumers.
 
 #### Scenario: A shard runs its tasks and writes one Parquet
 - **WHEN** a step runner is called on a shard with `K` tasks
@@ -45,12 +45,19 @@ The package SHALL ship a `targets` pipeline template that builds the scenario as
 - **WHEN** the pipeline is sourced
 - **THEN** the scenario SHALL be a construction-time object and the per-step shard tables SHALL be computed at sourcing time to feed `tar_map()`'s `values`
 
-### Requirement: Targets results match the baseline runner
-The per-task results produced by the targets pipeline SHALL be byte-identical (as read-back R values) to those produced by `ssd_run_scenario_baseline()` for the same scenario, because both install the same per-task `(seed, primer)` via the same primitives and results are order-independent (`TARGETS-DESIGN.md` §5/§6).
+### Requirement: A failing whole shard does not abort the run
+The step targets SHALL carry `error = "null"` so that a shard whose body fails entirely records its error (readable via `tar_meta()` after the run) and yields a `NULL` target without aborting `tar_make()`; the remaining shard targets SHALL still build and `ssd_summarize()` SHALL union whatever shards landed (`TARGETS-DESIGN.md` §6.2). Finer *partial* survival (a single bad task yielding a shorter shard) is out of scope here (`shard-failure-survival`).
+
+#### Scenario: One failing shard leaves the others built
+- **WHEN** one shard's body fails entirely during `tar_make()` and the other shards succeed
+- **THEN** the run SHALL NOT abort, the failed shard's error SHALL be readable via `tar_meta()`, the other shards' Parquets SHALL be written, and `ssd_summarize()` SHALL union the shards that landed
+
+### Requirement: Targets results match the single-core baseline runner
+The per-task results produced by the targets pipeline SHALL be byte-identical (as read-back R values) to those produced by the single-core `ssd_run_scenario_baseline()` for the same scenario, because both install the same per-task `(seed, primer)` via the same primitives and results are order-independent (`TARGETS-DESIGN.md` §5/§6). The baseline runner thereby serves as the reference oracle that validates the targets-based runner.
 
 #### Scenario: Pipeline output equals baseline output
-- **WHEN** a scenario is run both through the targets pipeline and through `ssd_run_scenario_baseline()`
-- **THEN** the collected per-task `sample`, `fit`, and `hc` results SHALL be equal across the two runs
+- **WHEN** a scenario is run both through the targets pipeline and through `ssd_run_scenario_baseline()`, and both sides are sorted by the task-identity key (`<step>_id`) to normalise the unordered Parquet read
+- **THEN** the per-task `sample`, `fit`, and `hc` results SHALL be equal across the two runs
 
 ### Requirement: A summary fan-in reads the result layers without re-running upstream
 The package SHALL provide `ssd_summarize()` that reads the `sample`, `fit`, and `hc` result directories (via `duckplyr`) and writes a combined `results/summary.parquet`, without depending on each shard target's value and without re-running upstream steps (`TARGETS-DESIGN.md` §6).

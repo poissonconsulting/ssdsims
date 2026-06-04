@@ -36,7 +36,7 @@ The baseline `completed_shards` assembler walks the results tree and hashes each
 
 ### Decision: `manifest` does not own Parquet paths; the recorder takes a caller-supplied shard directory
 
-Path infrastructure already exists and is *not* duplicated here: `path_key()` (in `R/task-lists.R`, shipped) renders a row's Hive partition path from its axes, and the result-directory roots (`results/{sample,fit,hc}/…` and `results/datasets/…`) are introduced by `task-tables` and `registry`. `manifest` defines no paths of its own. `ssd_record_shard(dir, partition_key, sha256, ...)` is *handed* the shard's directory (the caller composes it from `path_key()` + the step's result root) and writes its sidecar there — so yes, the sha256 sidecar sits side-by-side with the shard's `part.parquet`, but the location is supplied, not computed by `manifest`.
+Path infrastructure already exists and is *not* duplicated here: `path_key()` (in `R/task-lists.R`, shipped) renders a row's Hive partition path from its axes, and the result-directory roots (`results/{sample,fit,hc}/…`) are introduced by `task-tables`. `manifest` defines no paths of its own. `ssd_record_shard(dir, partition_key, sha256, ...)` is *handed* the shard's directory (the caller composes it from `path_key()` + the step's result root) and writes its sidecar there — so yes, the sha256 sidecar sits side-by-side with the shard's `part.parquet`, but the location is supplied, not computed by `manifest`.
 
 Scope boundary (answering "does it belong in this change?"): `manifest` owns the manifest **document** — the sidecar record format, the reader, and the `completed_shards` assembler (including the post-hoc hashing path). The at-write-time *invocation* — the "on success, write the sidecar" call — lives with the consumers that need the trusted-as-produced sha (`replay-helper`, `cloud-upload`), not with the happy-path `task-tables` runner. The recorder helper stays in `manifest` because it is the format owner and must agree with the reader/assembler. *Alternative considered:* move `ssd_record_shard()` wholesale into a consumer step — rejected because it would split the sidecar format from the reader/assembler that must round-trip with it.
 
@@ -50,13 +50,13 @@ Rather than pin only `r`/`dqrng`/`ssdtools` (the §9 examples), the manifest rec
 
 ### Decision: sha256 over the shard Parquet bytes, via the shared helper
 
-`ssd_record_shard()` computes the recorded sha256 with the same `ssd_file_sha256()` internal `registry` uses for its index, so dataset-index hashes and shard hashes are computed identically. The optional `cloud_sha256` is supplied by the caller (`cloud-upload`) and stored verbatim when present; `manifest` does not perform uploads.
+`ssd_record_shard()` and the assembler compute sha256 with a shared `ssd_file_sha256()` internal (introduced by this change). The optional `cloud_sha256` is supplied by the caller (`cloud-upload`) and stored verbatim when present; `manifest` does not perform uploads.
 
 ## Risks / Trade-offs
 
 - **Sidecar proliferation** (one `.sha256.json` per shard) → mitigated: they are tiny, live inside the shard's own partition directory, and are unioned by the assembler; they also double as the per-shard integrity record §7's replay reads.
 - **Manifest/head drift if the scenario changes mid-run** → the head is a pure function of the scenario; the pipeline writes it at init from the same construction-time object that mints the shards (§6 static branching), so head and shard set cannot disagree within a run.
-- **Shared `ssd_file_sha256()` / `digest` ownership with `registry`** → the two changes are parallel in the DAG; whichever lands first adds the helper and `digest` to a shared utils file and `DESCRIPTION`, the other reuses it. Neither orders the other.
+- **`digest` / `ssd_file_sha256()` ownership** → this change introduces both (in a shared utils file); `scenario-accessors` no longer needs them since it dropped dataset persistence, so there is no cross-change ordering to coordinate.
 - **`jsonlite` numeric/integer fidelity** → use `auto_unbox = TRUE` and read with `simplifyVector = FALSE`; cover integer `seed`/`nboot` and logical knobs in a round-trip test so coercions are caught.
 
 ## Open Questions
