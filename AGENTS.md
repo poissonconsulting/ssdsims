@@ -233,6 +233,9 @@ See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
   so it carries through to the changelog.
 - Keep the PR title and description in sync with the change as it evolves; the
   description should capture the *current* state, not a revision log.
+- **Review threads**: when you address a review comment, reply on the thread
+  with what changed (or the answer) and leave it open — the reviewer resolves
+  their own threads.
 
 ## Continuous Integration
 
@@ -256,6 +259,8 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 - **Dynamic branching** (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.
 
 The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged.
+
+**Keep the roadmap and its Mermaid graph (TARGETS-DESIGN.md §12) up to date as part of each change** — add/rename nodes and edges when a change is proposed, and update each node's status colour as it progresses: **green = archived, yellow = done** (implemented, not yet archived), **red = proposed** (artifacts exist, not implemented), **unfilled = open** (roadmap only). The colours are Mermaid `classDef`s applied via `class` lines at the foot of the graph.
 
 ## Contact & Contribution
 

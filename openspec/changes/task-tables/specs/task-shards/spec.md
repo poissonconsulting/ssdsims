@@ -69,3 +69,21 @@ The package SHALL provide `ssd_summarize()` that reads the `sample`, `fit`, and 
 #### Scenario: Summary does not pull every shard value into R via targets
 - **WHEN** the summary target runs in the pipeline
 - **THEN** it SHALL read the result directories directly rather than depending on every shard target's in-memory value
+
+### Requirement: Results written under a per-layout root keyed by partition_by
+Because a step's Hive shard path depth/axes are a function of `partition_by`/`bundle`, the targets pipeline SHALL write each step's shards and the summary under a results root **keyed by the scenario's layout** — `scenario_results_dir(scenario)` = `<root>/layout=<hash of partition_by>`. Re-running a scenario with a changed `partition_by`/`bundle` SHALL therefore write to a *fresh* root and never mix shard granularities (a depth-agnostic glob over one root would otherwise union stale and current shards); re-running the *same* layout SHALL reuse the root (idempotent, cache-friendly). A non-layout knob (e.g. `seed`, a grid value) SHALL NOT change the root.
+
+#### Scenario: Different partition_by yields a different results root
+- **WHEN** `scenario_results_dir()` is computed for two scenarios that differ only in `partition_by`
+- **THEN** the two roots SHALL differ
+
+#### Scenario: Same layout yields the same root
+- **WHEN** `scenario_results_dir()` is computed twice for the same `partition_by` (other knobs may differ)
+- **THEN** the root SHALL be identical
+
+### Requirement: A target factory builds the whole pipeline from a scenario
+The package SHALL provide `ssd_scenario_targets(scenario, root)` that returns the complete list of `targets` objects for the static-branching pipeline — one `format = "file"`, `error = "null"` target per `partition_by` path cell per step (named by the step's path axes), the `tar_combine()` step-ordering barriers, and the `summary` — written under `root` (default `scenario_results_dir(scenario)`). A `_targets.R` SHALL therefore reduce to building a scenario and calling the factory; the per-task results SHALL be unchanged.
+
+#### Scenario: A `_targets.R` is just a scenario plus the factory call
+- **WHEN** a `_targets.R` does `source("scenario.R"); ssd_scenario_targets(scenario)` and `targets::tar_make()` runs
+- **THEN** every shard target SHALL build and the per-task results SHALL equal those of `ssd_run_scenario_baseline()` for the same scenario

@@ -1071,6 +1071,27 @@ Three steps as three targets is what makes this matrix possible: a
 single combined branch (data + fit + hc) cannot cache a fit shard
 when only `nboot` changes.
 
+**Layout coherence across re-runs.** A shard's Hive path depth and axes
+are a function of `partition_by`/`bundle`, while the readers glob
+`<step>/**/part.parquet` (depth-agnostic). So changing the split and
+re-running into one fixed `results/` would leave shards of a *different
+granularity* beside the new ones, and the glob would union stale and
+current shards — double-counting, since the `<step>_id` identity is
+`partition_by`-independent (one task lands in both the old coarse and the
+new fine shard). Two complementary fixes, by driver:
+
+- **Single-core (`ssd_run_scenario_shards`) — own the tree.** It clears
+  each `<dir>/<step>` before writing, so the tree always matches the
+  current layout. It has no cache to preserve, so clobbering is the
+  simplest correct fix.
+- **`targets` — per-layout root.** Each layout writes under
+  `scenario_results_dir(scenario)` = `results/layout=<hash(partition_by)>`,
+  so a split change yields a fresh root (never *mixed* with the old) while
+  the same layout reuses its root (cache + `error = "null"` survivors
+  preserved). Non-layout knobs (seed, grids) keep the root and just rewrite
+  shard paths at the same depth (§8.1). Pruning an orphaned layout root and
+  manifest-driven reads are deferred to `manifest`/`shard-atomic-rewrite`.
+
 **Available for analysis:**
 
 After `tar_make()`, the three step layers are queryable independently
@@ -1933,12 +1954,16 @@ already ran end to end (see §4, §6). These steps are therefore
   work (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
-  re-runs with byte-equivalence. This is a surface rename over
-  `primer-primitives`, which already establishes the contract — so,
-  **trusting the design**, none of the targets-only plumbing
-  (`scenario-accessors`, `manifest`, `task-tables`, …) waits on it. It can land at any time; the
-  DAG shows it hanging off `primer-primitives` with a dashed, non-gating
-  edge and no dependants.
+  re-runs with byte-equivalence across **every** input form, so it
+  **depends on** `scenario-input-types` (the full input surface must
+  exist before the public-API re-run can exercise it). This is otherwise
+  a surface rename over `primer-primitives`, which already establishes the
+  contract — so, **trusting the design**, none of the targets-only
+  plumbing (`scenario-accessors`, `manifest`, `task-tables`, …) waits on
+  it. With no dependants of its own, it can land any time after
+  `scenario-input-types`; the DAG shows the solid `scenario-input-types →
+  migrate-public-api` prereq plus a dashed, non-gating edge off
+  `primer-primitives`.
 - **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
   on the scenario, accessed by name** — no registry (§1.1). Materialise
   the `min_pmix` functions on the scenario at construction (keyed by
@@ -1992,6 +2017,24 @@ already ran end to end (see §4, §6). These steps are therefore
   `tar_make()` again, and assert only the new dataset's shards build
   while the original dataset's shard targets are skipped (and `summary`
   re-runs); repeat for `nsim` growth.
+- **`step-scenario-slice`** — *Caveat (pre-existing) that this step
+  closes.* The `ssd_scenario_targets()` factory leaves `scenario` as a
+  bare symbol in every step command (`ssd_run_<step>_step(tasks, scenario,
+  …)`), so the **whole scenario object is a dependency of every shard
+  target** across all three steps. Editing *any* scenario field — even a
+  knob that feeds only one step, or only the output layer (e.g. `samples`,
+  which is `hc`-only) — therefore invalidates and rebuilds **all** shards,
+  not just the affected step's. Project each step's command onto the
+  **minimal slice** of the scenario it actually consumes (the resolved
+  per-step inputs / the fields that reach that step's per-task body and
+  primer), so a change to a step-irrelevant field leaves the other steps'
+  shards cached. Test: change an `hc`-only knob on a `tar_make()`-d
+  scenario and assert only `hc` (and `summary`) rebuild while `sample`/`fit`
+  shards are skipped; change a `fit`-only knob and assert `sample` stays
+  cached. **Depends on** `task-tables` (the factory it refines); pairs with
+  `path-axis-growth` (the path-axis counterpart of the same minimal-rebuild
+  contract) and is finalised against the invalidation model pinned by
+  `hive-partitioning` (§8).
 - **`shard-failure-survival`** — §6.2 — the shard body writes as many
   rows as ran successfully (a bad task yields a shorter shard, not an
   abort); the step target carries `error = "null"` only for the
@@ -2146,6 +2189,7 @@ flowchart TD
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
     pathgrow[path-axis-growth]
+    slice[step-scenario-slice]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -2153,7 +2197,7 @@ flowchart TD
     define --> partby
     define --> inputs
     primer --> inputs
-    inputs --> acc
+    define --> acc
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims
@@ -2177,6 +2221,7 @@ flowchart TD
     tt --> replay
     tt --> rewrite
     tt --> pathgrow
+    tt --> slice
 
     %% manifest is provenance/verification metadata: it depends on the
     %% scenario (head) and feeds the verification layer; it does NOT gate
@@ -2191,13 +2236,33 @@ flowchart TD
     rewrite --> lockin
     lockin --> cleanup
 
+    inputs --> migrate
     prims -.-> migrate
+
+    %% --- node status colouring (keep in sync as each change progresses) ---
+    %% green = archived, yellow = done (implemented, not yet archived),
+    %% red = proposed (artifacts exist, not implemented), unfilled = open (roadmap only)
+    classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
+    classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
+    classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
+    classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
+
+    class define,baseline,dqinit,dqstate,primer,prims archived
+    class acc,partby,tt,shardrun done
+    class inputs,manif proposed
+    class migrate,hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open
 ```
 
-`migrate-public-api` hangs off `primer-primitives` with a **dashed,
-non-gating** edge and **no dependants**: trusting the design, it is a
-cosmetic rename that no targets step waits on, so it can land any time
-(like `error-call-origin` and the Cleanup items). The dashed edge marks
+**Node colours track each step's status** — green = archived, yellow = done
+(implemented, not yet archived), red = proposed (artifacts exist, not yet
+implemented), unfilled = open (roadmap only). Keep the colouring in sync as
+changes progress.
+
+`migrate-public-api` waits only on `scenario-input-types` (its
+byte-equivalence re-run must exercise the full input surface) and hangs
+off `primer-primitives` with a **dashed, non-gating** edge; it has **no
+dependants**, so trusting the design no targets step waits on it and it
+can land any time once `scenario-input-types` is in. The dashed edge marks
 "follows from, but does not block."
 
 `shard-runner-baseline` sits off `primer-primitives` + `partition-by`,

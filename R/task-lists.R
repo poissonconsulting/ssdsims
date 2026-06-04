@@ -119,16 +119,32 @@ ssd_scenario_hc_tasks <- function(scenario) {
 #' table.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
-#' @return An `ssdsims_task_set` object: a list with `sample`, `fit`, and
-#'   `hc` elements, each an `ssdsims_tasks` table.
+#' @param step Optional single step name (`"sample"`, `"fit"`, or `"hc"`). When
+#'   supplied, returns just that step's `ssdsims_tasks` table (the same as the
+#'   matching `ssd_scenario_*_tasks()`); when `NULL` (default) returns the full
+#'   `ssdsims_task_set`.
+#' @return An `ssdsims_task_set` object (a list with `sample`, `fit`, and `hc`
+#'   elements, each an `ssdsims_tasks` table), or - when `step` is supplied - the
+#'   single `ssdsims_tasks` table for that step.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
 #' tasks <- ssd_scenario_tasks(scenario)
 #' tasks
 #' tasks$hc
-ssd_scenario_tasks <- function(scenario) {
+#' ssd_scenario_tasks(scenario, "hc")
+ssd_scenario_tasks <- function(scenario, step = NULL) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  if (!is.null(step)) {
+    chk::chk_string(step)
+    chk::chk_subset(step, c("sample", "fit", "hc"))
+    return(switch(
+      step,
+      sample = ssd_scenario_sample_tasks(scenario),
+      fit = ssd_scenario_fit_tasks(scenario),
+      hc = ssd_scenario_hc_tasks(scenario)
+    ))
+  }
   structure(
     list(
       sample = ssd_scenario_sample_tasks(scenario),
@@ -163,8 +179,10 @@ ssd_scenario_tasks <- function(scenario) {
 #' `targets` shard body and the replay helper (`TARGETS-DESIGN.md` §7) reuse.
 #'
 #' The scenario retains the data frames it was built from, so the runner reads
-#' them directly - no separate `data` argument. `min_pmix` names are resolved
-#' against `ssdtools` until the registry roadmap step lands.
+#' them directly - no separate `data` argument. `min_pmix` names are resolved to
+#' their materialised functions off the scenario via [scenario_min_pmix()]
+#' (resolved once, at construction), not by a runtime `ssdtools`/global-env
+#' search.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
 #' @return A named list with `sample`, `fit`, and `hc` elements: each the
@@ -232,6 +250,7 @@ ssd_run_scenario_baseline <- function(scenario) {
   fit_tbl$fits <- purrr::pmap(
     fit_args,
     fit_data_task_primer,
+    scenario = scenario,
     dists = scenario$fit$dists,
     seed = seed
   )
@@ -246,6 +265,7 @@ ssd_run_scenario_baseline <- function(scenario) {
     hc_args,
     hc_data_task_primer,
     proportion = scenario$hc$proportion,
+    samples = scenario$hc$samples,
     seed = seed
   )
 
@@ -410,29 +430,17 @@ sample_data_task <- function(data, n_max, replace) {
   dplyr::slice_sample(data, n = n_max, replace = replace)
 }
 
-resolve_min_pmix <- function(name, call = rlang::caller_env()) {
-  out <- rlang::env_get(rlang::ns_env("ssdtools"), name, default = NULL)
-  if (!rlang::is_function(out)) {
-    out <- rlang::env_get(
-      rlang::global_env(),
-      name,
-      default = NULL,
-      inherit = TRUE
-    )
-  }
-  if (!rlang::is_function(out)) {
-    chk::abort_chk(
-      "Unable to resolve `min_pmix` name ",
-      encodeString(name, quote = "\""),
-      " to a function; there is no `min_pmix` registry yet.",
-      call = call
-    )
-  }
-  out
+# Resolve a `min_pmix` name to its function off the scenario (the materialised
+# store), not via a runtime `ssdtools`/global-env search. Resolution happened
+# once, at construction (`scenario_min_pmix_materialise()`), so a cluster worker
+# reads the function straight off the transported scenario.
+resolve_min_pmix <- function(scenario, name) {
+  scenario_min_pmix(scenario, name)
 }
 
 fit_data_task <- function(
   data,
+  scenario,
   dists,
   rescale,
   computable,
@@ -441,7 +449,7 @@ fit_data_task <- function(
   range_shape1,
   range_shape2
 ) {
-  min_pmix_fn <- resolve_min_pmix(min_pmix)
+  min_pmix_fn <- resolve_min_pmix(scenario, min_pmix)
   ssdtools::ssd_fit_dists(
     data,
     dists = dists,
@@ -463,7 +471,8 @@ hc_data_task <- function(
   nboot,
   est_method,
   ci_method,
-  parametric
+  parametric,
+  samples = FALSE
 ) {
   if (isTRUE(ci)) {
     ssdtools::ssd_hc(
@@ -474,14 +483,20 @@ hc_data_task <- function(
       est_method = est_method,
       ci_method = ci_method,
       parametric = parametric,
+      samples = samples,
       min_pboot = 0
     )
   } else {
+    # `samples` retains the *bootstrap* draws, which only exist when `ci = TRUE`.
+    # Without CI there is nothing to keep, and ssdtools' model-averaging cleanup
+    # errors if asked to retain a non-existent `samples` column, so the no-CI
+    # path never requests them regardless of the scenario's `samples` flag.
     ssdtools::ssd_hc(
       fits,
       proportion = proportion,
       ci = FALSE,
       est_method = est_method,
+      samples = FALSE,
       min_pboot = 0
     )
   }
@@ -505,6 +520,7 @@ sample_data_task_primer <- function(data, n_max, replace, seed, primer) {
 
 fit_data_task_primer <- function(
   data,
+  scenario,
   dists,
   rescale,
   computable,
@@ -518,6 +534,7 @@ fit_data_task_primer <- function(
   local_dqrng_state(seed, primer = primer)
   fit_data_task(
     data,
+    scenario = scenario,
     dists = dists,
     rescale = rescale,
     computable = computable,
@@ -537,7 +554,8 @@ hc_data_task_primer <- function(
   ci_method,
   parametric,
   seed,
-  primer
+  primer,
+  samples = FALSE
 ) {
   local_dqrng_state(seed, primer = primer)
   hc_data_task(
@@ -547,7 +565,8 @@ hc_data_task_primer <- function(
     nboot = nboot,
     est_method = est_method,
     ci_method = ci_method,
-    parametric = parametric
+    parametric = parametric,
+    samples = samples
   )
 }
 

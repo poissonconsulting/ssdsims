@@ -57,6 +57,71 @@
       Error in `ssd_define_scenario()`:
       ! `min_pmix` names must be unique.
 
+# scenario-accessors: an unresolvable min_pmix name fails fast
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, min_pmix = "no_such_fun")
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Unable to resolve `min_pmix` name "no_such_fun" to a single-argument function.
+
+# scenario-accessors: a name resolving to a multi-arg function fails fast
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, min_pmix = "two_arg")
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Unable to resolve `min_pmix` name "two_arg" to a single-argument function.
+
+# scenario-definition: partition_by rejects an unknown axis
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "nboot"), fit = c("dataset", "sim"), hc = c("dataset",
+          "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` names unknown axis '"nboot"'; valid axes for the `sample` step are '"dataset"', '"sim"' and '"replace"'.
+
+# scenario-definition: partition_by rejects nrow under the sample step
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "sim", "nrow"), fit = c("dataset", "sim", "nrow"), hc = c(
+          "dataset", "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` must not include "nrow": the `sample` step is the shared draw and carries no `nrow` axis (every `nrow` truncates the same draw inside the `fit` step).
+
+# scenario-definition: partition_by rejects duplicate or NA axis names
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "dataset"), fit = c("dataset", "sim"), hc = c("dataset",
+          "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` must not contain duplicate axis names.
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", NA_character_), fit = c("dataset", "sim"), hc = c(
+          "dataset", "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` must not contain missing values.
+
+# scenario-definition: a step named in both partition_by and bundle errors
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        fit = c("dataset", "sim")), bundle = list(fit = c("computable")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Step '"fit"' named in both `partition_by` and `bundle`; give each step its path axes (`partition_by`) or its inner axes (`bundle`), not both.
+
 # scenario-definition: ssd_data() collection plus name= is an error
 
     Code
@@ -210,6 +275,15 @@
           est_method: multi
           ci_method: weighted_samples
           parametric: TRUE
+          samples: FALSE
+        partition_by:
+          sample: dataset, sim, replace
+          fit: dataset, sim, nrow, rescale
+          hc: dataset, sim
+        bundle:
+          sample: 
+          fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -242,4 +316,22 @@
           est_method: multi, geometric
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
+          samples: FALSE
+        partition_by:
+          sample: dataset, sim, replace
+          fit: dataset, sim, nrow, rescale
+          hc: dataset, sim
+        bundle:
+          sample: 
+          fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+
+# scenario-definition: samples must be a flag
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L, samples = c(TRUE,
+        FALSE))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `samples` must be a flag (TRUE or FALSE).
 

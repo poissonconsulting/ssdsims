@@ -1,12 +1,17 @@
 Package: ssdsims
-Title: What the Package Does (One Line, Title Case)
+Title: Simulation Analyses for Species Sensitivity Distributions
 Version: 0.0.0.9011
 Authors@R: c(
     person("Joe", "Thorley", , "joe@poissonconsulting.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7683-4592")),
     person("Rebecca", "Fisher", , "R.Fisher@aims.gov.au", role = "aut")
   )
-Description: What the package does (one paragraph).
+Description: Runs reproducible simulation studies for species sensitivity
+    distribution (SSD) models built on the 'ssdtools' package. Expands a
+    declarative scenario into per-step task tables, draws data, fits
+    distributions, and estimates hazard concentrations, with a 'targets'-based,
+    Hive-partitioned shard pipeline for running studies in parallel or on a
+    cluster.
 License: Apache License (== 2.0) | file LICENSE
 URL: https://poissonconsulting.github.io/ssdsims/
 BugReports: https://github.com/poissonconsulting/ssdsims/issues
@@ -16,6 +21,7 @@ Imports:
     chk,
     dplyr,
     dqrng (>= 0.4.1),
+    duckplyr,
     methods,
     parallel,
     purrr,
@@ -25,15 +31,22 @@ Imports:
     tidyr,
     withr
 Suggests: 
+    crew,
     knitr,
     quarto,
     readr,
+    roxyglobals,
     ssddata,
-    testthat (>= 3.0.0)
+    tarchetypes,
+    targets,
+    testthat (>= 3.0.0),
+    tidyselect
 VignetteBuilder: quarto
 Remotes:
     poissonconsulting/ssdtools@dev
 Config/testthat/edition: 3
+Config/roxyglobals/unique: FALSE
 Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
+Roxygen: list(markdown = TRUE, roclets = c("collate", "namespace", "rd",
+    "roxyglobals::global_roclet"))
 Config/roxygen2/version: 8.0.0.9000

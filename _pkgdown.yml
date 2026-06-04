@@ -16,6 +16,7 @@ reference:
   - ssd_scenario_fit_tasks
   - ssd_scenario_hc_tasks
   - ssd_run_scenario_baseline
+  - ssd_run_scenario_shards
 
 - title: Simulation pipeline
   desc: >
@@ -26,6 +27,33 @@ reference:
   - ssd_fit_dists_sims
   - ssd_hc_sims
   - ssd_run_scenario
+
+- title: Targets pipeline
+  desc: >
+    Group a step's tasks into per-shard tables keyed by `partition_by`, run a
+    shard with the per-task RNG primitives writing one Parquet per shard, and
+    fan in a summary - the building blocks of the static-branching `targets`
+    pipeline (see the `inst/targets-templates/small/_targets.R` template).
+  contents:
+  - ssd_scenario_sample_shards
+  - ssd_scenario_fit_shards
+  - ssd_scenario_hc_shards
+  - ssd_run_sample_step
+  - ssd_run_fit_step
+  - ssd_run_hc_step
+  - ssd_scenario_targets
+  - ssd_summarize
+  - scenario_results_dir
+
+- title: Scenario accessors
+  desc: >
+    A technical detail of the pipelines: isolate an already-materialised value
+    from a scenario by name - the dataset tibble or the `min_pmix` function.
+    Names (not values) drive task hashing, so these accessors resolve a name
+    back to the value carried on the scenario for execution.
+  contents:
+  - scenario_dataset
+  - scenario_min_pmix
 
 - title: Reproducible RNG
   desc: >

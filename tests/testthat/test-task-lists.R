@@ -259,8 +259,9 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   # one shared draw of n_max = 6 rows; both nrow fits truncate that same draw
   expect_identical(nrow(out$sample$sample[[1L]]), 6L)
   expect_identical(length(unique(out$fit$sample_id)), 1L)
-  # No targets machinery and no Parquet I/O at this step.
-  expect_false("targets" %in% loadedNamespaces())
+  # The baseline runner does no Parquet I/O of its own (it threads results in
+  # memory). (`targets` is a package dependency since `task-tables`, so its
+  # presence in `loadedNamespaces()` is not a meaningful signal here.)
   expect_length(list.files(tmp, pattern = "\\.parquet$", recursive = TRUE), 0L)
 })
 
@@ -363,9 +364,12 @@ test_that("parallel-safe-seeding: fit/hc wrappers reproduce under a fixed (seed,
   local_dqrng_backend()
   data <- utils::head(ssddata::ccme_boron, 6L)
   fp <- task_primer(list(dataset = "boron", nrow = 6L, rescale = FALSE))
+  # The fit path resolves `min_pmix` off the scenario via the accessor.
+  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 
   fit1 <- fit_data_task_primer(
     data,
+    scenario = scenario,
     dists = "lnorm",
     rescale = FALSE,
     computable = TRUE,
@@ -440,4 +444,50 @@ test_that("task-lists: task-table column contracts are pinned", {
     names(ssd_scenario_fit_tasks(scenario))
     names(ssd_scenario_hc_tasks(scenario))
   })
+})
+
+# ---- samples retains bootstrap draws without changing estimates ------------
+
+test_that("scenario-definition: samples = TRUE retains hc draws but keeps estimates", {
+  args <- list(
+    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = "lnorm",
+    ci = c(FALSE, TRUE),
+    nboot = 10L
+  )
+  out_no <- ssd_run_scenario_baseline(do.call(ssd_define_scenario, args))
+  out_yes <- ssd_run_scenario_baseline(
+    do.call(ssd_define_scenario, c(args, list(samples = TRUE)))
+  )
+  est <- function(out) do.call(rbind, out$hc$hc)$est
+  expect_equal(est(out_no), est(out_yes)) # estimates unchanged
+  len <- function(out) unlist(lapply(out$hc$hc, function(h) lengths(h$samples)))
+  expect_true(all(len(out_no) == 0L)) # FALSE -> empty samples column
+  expect_true(any(len(out_yes) > 0L)) # TRUE -> bootstrap draws retained
+})
+
+test_that("scenario-definition: samples = TRUE works with multiple dists and ci = FALSE", {
+  # Regression: `samples = TRUE` retains the *bootstrap* draws, which only exist
+  # for `ci = TRUE`. With multiple dists (model averaging), asking ssdtools to
+  # keep a non-existent `samples` column on the `ci = FALSE` rows errored
+  # ("Can't select columns that don't exist"). The no-CI path must therefore
+  # never request samples, whatever the scenario flag.
+  scenario <- ssd_define_scenario(
+    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = c("lnorm", "gamma"),
+    ci = c(FALSE, TRUE),
+    nboot = 10L,
+    samples = TRUE
+  )
+  expect_no_error(out <- ssd_run_scenario_baseline(scenario))
+  # ci = TRUE rows keep draws; ci = FALSE rows have an empty samples column.
+  lens <- unlist(lapply(out$hc$hc, function(h) lengths(h$samples)))
+  expect_true(any(lens > 0L))
+  expect_true(any(lens == 0L))
 })

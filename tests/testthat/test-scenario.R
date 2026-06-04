@@ -74,7 +74,15 @@ test_that("scenario-definition: minimal construction stores declarative fields",
   )
   expect_named(
     s$hc,
-    c("proportion", "ci", "nboot", "est_method", "ci_method", "parametric")
+    c(
+      "proportion",
+      "ci",
+      "nboot",
+      "est_method",
+      "ci_method",
+      "parametric",
+      "samples"
+    )
   )
 })
 
@@ -95,15 +103,19 @@ test_that("scenario-definition: stores min_pmix by name, not as a function", {
 })
 
 test_that("scenario-definition: min_pmix accepts names, functions, and lists", {
-  # character names used as-is
+  # character names -> stored verbatim, resolved from the caller's environment
+  default <- function(n) 0.05
+  strict <- function(n) 0.1
+  s_names <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    min_pmix = c("default", "strict")
+  )
+  expect_identical(s_names$fit$min_pmix, c("default", "strict"))
   expect_identical(
-    ssd_define_scenario(
-      ssddata::ccme_boron,
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = c("default", "strict")
-    )$fit$min_pmix,
-    c("default", "strict")
+    s_names$min_pmix_fns,
+    list(default = default, strict = strict)
   )
   # bare function -> derived name
   expect_identical(
@@ -170,16 +182,305 @@ test_that("scenario-definition: min_pmix rejects duplicate names", {
   })
 })
 
-test_that("scenario-definition: partition_by defaults are populated", {
+test_that("scenario-accessors: a supplied min_pmix function is materialised under its name", {
+  my_fun <- function(n) 0.05
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    min_pmix = my_fun
+  )
+  expect_identical(s$fit$min_pmix, "my_fun")
+  expect_identical(s$min_pmix_fns, list(my_fun = my_fun))
+})
+
+test_that("scenario-accessors: a min_pmix name-string resolves at construction", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    min_pmix = "ssd_min_pmix"
+  )
+  expect_identical(s$fit$min_pmix, "ssd_min_pmix")
+  expect_identical(s$min_pmix_fns[["ssd_min_pmix"]], ssdtools::ssd_min_pmix)
+})
+
+test_that("scenario-accessors: an unresolvable min_pmix name fails fast", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      min_pmix = "no_such_fun"
+    )
+  })
+})
+
+test_that("scenario-accessors: a name resolving to a multi-arg function fails fast", {
+  two_arg <- function(a, b) 0.05
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      min_pmix = "two_arg"
+    )
+  })
+})
+
+test_that("scenario-accessors: materialisation does not change fit-task primers", {
+  # Same min_pmix name, functions with different bodies -> identical primers.
+  f_a <- function(n) 0.05
+  f_b <- function(n) 0.10
+  s_a <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    nrow = 6L,
+    seed = 1L,
+    min_pmix = list(shared = f_a)
+  )
+  s_b <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    nrow = 6L,
+    seed = 1L,
+    min_pmix = list(shared = f_b)
+  )
+  # The stored functions differ, but the name (the identity surface) does not.
+  expect_false(identical(s_a$min_pmix_fns, s_b$min_pmix_fns))
+  expect_identical(s_a$fit$min_pmix, s_b$fit$min_pmix)
+  fit_a <- ssd_scenario_fit_tasks(s_a)
+  fit_b <- ssd_scenario_fit_tasks(s_b)
+  expect_identical(
+    task_primer(fit_a[1, task_axes("fit")]),
+    task_primer(fit_b[1, task_axes("fit")])
+  )
+})
+
+test_that("scenario-definition: partition_by three-step defaults are populated", {
   s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
   expect_identical(
     s$partition_by,
     list(
-      data = c("dataset", "sim", "replace"),
-      fit = c("dataset", "sim", "rescale"),
+      sample = c("dataset", "sim", "replace"),
+      fit = c("dataset", "sim", "nrow", "rescale"),
       hc = c("dataset", "sim")
     )
   )
+})
+
+test_that("scenario-definition: a valid partition_by override is stored verbatim", {
+  pb <- list(
+    sample = c("dataset", "sim", "replace"),
+    fit = c("dataset", "sim", "nrow", "rescale"),
+    hc = c("dataset", "sim", "nrow")
+  )
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = pb
+  )
+  expect_identical(s$partition_by, pb)
+})
+
+test_that("scenario-definition: a partial partition_by defaults the unnamed steps", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = list(fit = c("dataset", "sim"))
+  )
+  expect_identical(
+    s$partition_by,
+    list(
+      sample = c("dataset", "sim", "replace"),
+      fit = c("dataset", "sim"),
+      hc = c("dataset", "sim")
+    )
+  )
+})
+
+test_that("scenario-definition: partition_by rejects an unknown axis", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "nboot"),
+        fit = c("dataset", "sim"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: partition_by rejects nrow under the sample step", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "sim", "nrow"),
+        fit = c("dataset", "sim", "nrow"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: partition_by accepts nrow as a fit/hc path axis", {
+  pb <- list(
+    sample = c("dataset", "sim", "replace"),
+    fit = c("dataset", "sim", "nrow"),
+    hc = c("dataset", "sim", "nrow")
+  )
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = pb
+  )
+  expect_identical(s$partition_by, pb)
+})
+
+test_that("scenario-definition: partition_by rejects duplicate or NA axis names", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "dataset"),
+        fit = c("dataset", "sim"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", NA_character_),
+        fit = c("dataset", "sim"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: a parent-inconsistent split is accepted (no cross-step check)", {
+  # `fit` shards on `replace` but its parent `sample` does not - steps partition
+  # independently; the m:n parent-shard relationship is resolved at the read
+  # layer, so this is accepted.
+  pb <- list(
+    sample = c("dataset", "sim"),
+    fit = c("dataset", "sim", "replace"),
+    hc = c("dataset", "sim")
+  )
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = pb
+  )
+  expect_identical(s$partition_by, pb)
+})
+
+test_that("scenario-definition: bundle normalises to the path complement", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    bundle = list(
+      fit = c(
+        "computable",
+        "at_boundary_ok",
+        "min_pmix",
+        "range_shape1",
+        "range_shape2"
+      )
+    )
+  )
+  expect_identical(
+    s$partition_by$fit,
+    c("dataset", "sim", "replace", "nrow", "rescale")
+  )
+  # unnamed steps keep their defaults
+  expect_identical(s$partition_by$hc, c("dataset", "sim"))
+})
+
+test_that("scenario-definition: partition_by and bundle mix across steps", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = list(sample = c("dataset", "sim")),
+    bundle = list(fit = c("computable", "at_boundary_ok"))
+  )
+  expect_identical(s$partition_by$sample, c("dataset", "sim"))
+  expect_identical(
+    s$partition_by$fit,
+    setdiff(task_axes("fit"), c("computable", "at_boundary_ok"))
+  )
+  expect_identical(s$partition_by$hc, c("dataset", "sim"))
+})
+
+test_that("scenario-definition: a step named in both partition_by and bundle errors", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(fit = c("dataset", "sim")),
+      bundle = list(fit = c("computable"))
+    )
+  })
+})
+
+test_that("scenario-definition: scenario_partition_axes splits path and inner", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
+  # inner = complement of task_axes(step)
+  fit_axes <- scenario_partition_axes(s, "fit")
+  expect_identical(fit_axes$path, c("dataset", "sim", "nrow", "rescale"))
+  expect_identical(
+    fit_axes$inner,
+    setdiff(task_axes("fit"), c("dataset", "sim", "nrow", "rescale"))
+  )
+  expect_identical(
+    fit_axes$inner,
+    c(
+      "replace",
+      "computable",
+      "at_boundary_ok",
+      "min_pmix",
+      "range_shape1",
+      "range_shape2"
+    )
+  )
+  # vocabularies equal task_axes(step)
+  for (step in c("sample", "fit", "hc")) {
+    ax <- scenario_partition_axes(s, step)
+    expect_identical(sort(c(ax$path, ax$inner)), sort(task_axes(step)))
+  }
+})
+
+test_that("scenario-definition: all-axes-in-path yields no inner axes", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = list(
+      sample = task_axes("sample"),
+      fit = task_axes("fit"),
+      hc = task_axes("hc")
+    )
+  )
+  expect_length(scenario_partition_axes(s, "hc")$inner, 0L)
 })
 
 test_that("scenario-definition: upload defaults to NULL", {
@@ -408,4 +709,31 @@ test_that("scenario-definition: print is stable for multiple datasets and vector
       parametric = c(TRUE, FALSE)
     )
   )
+})
+
+# ---- samples (output-retention scalar) -------------------------------------
+
+test_that("scenario-definition: samples defaults FALSE and is stored on hc", {
+  expect_false(
+    ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)$hc$samples
+  )
+  expect_true(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 1L,
+      seed = 1L,
+      samples = TRUE
+    )$hc$samples
+  )
+})
+
+test_that("scenario-definition: samples must be a flag", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 1L,
+      seed = 1L,
+      samples = c(TRUE, FALSE)
+    )
+  })
 })

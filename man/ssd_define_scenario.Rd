@@ -25,7 +25,9 @@ ssd_define_scenario(
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  samples = FALSE,
   partition_by = NULL,
+  bundle = NULL,
   upload = NULL
 )
 }
@@ -63,8 +65,12 @@ either a character vector of names, or a function (or list of functions)
 with a single argument that inputs the number of rows of data and returns
 a proportion between 0 and 0.5 - in which case the name is derived from the
 argument expression (e.g. \code{ssdtools::ssd_min_pmix} gives \code{"ssd_min_pmix"}),
-mirroring dataset name derivation. Only the name is stored; the function is
-resolved later via the \code{min_pmix} registry (a future roadmap step).}
+mirroring dataset name derivation. The name is what the task path hashes;
+the resolved single-argument function is additionally materialised on the
+scenario (keyed by name) for execution and isolated via
+\code{\link[=scenario_min_pmix]{scenario_min_pmix()}}. A name-string is resolved to a function at
+construction (from \code{ssdtools} or the caller's environment), failing fast if
+it cannot be resolved to a single-argument function.}
 
 \item{range_shape1}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape1 parameter.}
@@ -106,9 +112,39 @@ calculate the confidence limits (and SE) from the single set of samples.}
 
 \item{parametric}{A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.}
 
-\item{partition_by}{An optional named list with \code{data}, \code{fit}, and \code{hc}
-character vectors naming the Hive partition axes per step. When \code{NULL} the
-documented per-step defaults are used.}
+\item{samples}{A logical scalar (default \code{FALSE}): retain the bootstrap draws
+in the hc result's \code{samples} list-column (passed to \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}}).
+This is \strong{output retention only} - it does not change the estimates or the
+per-task RNG, so it is not a grid or task axis (a single \code{TRUE} is a superset
+of \code{FALSE}). Changing it re-runs the hc step (the discarded draws must be
+re-bootstrapped) but yields byte-identical estimates; retained samples can
+be large (\code{nboot} draws per dist per task), so it is off by default.}
+
+\item{partition_by}{An optional, possibly-partial named list keyed by step
+(\code{sample}/\code{fit}/\code{hc}) of character vectors naming the Hive \strong{path} axes for
+that step (one shard per path cell; the inner complement rides as Parquet
+columns). Each entry must be unique, non-missing, and a subset of that
+step's axis vocabulary: \code{sample} = \code{dataset}, \code{sim}, \code{replace}; \code{fit} adds
+\code{nrow}, \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix},
+\code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{ci}, \code{nboot}, \code{est_method},
+\code{ci_method}, \code{parametric}. \code{"nrow"} is rejected only for \code{sample} (the
+shared draw carries no \code{nrow} axis; the \code{fit} step truncates it inline), and
+is a valid path axis for \code{fit}/\code{hc}. Steps partition \strong{independently} -
+there is no cross-step constraint; a step may be finer or coarser than its
+neighbour on a shared axis (the m:n parent-shard relationship is resolved at
+the read layer). Steps left unnamed take their documented defaults (\code{sample = c("dataset", "sim", "replace")}, \code{fit = c("dataset", "sim", "nrow", "rescale")}, \code{hc = c("dataset", "sim")}; these supersede \code{TARGETS-DESIGN.md}
+section 5's pre-fold table). The split is orthogonal to the per-task RNG
+primer, so changing it shifts file paths only, never results.}
+
+\item{bundle}{An optional, possibly-partial named list keyed by step, the
+per-step \strong{complement} of \code{partition_by}: it names the \strong{inner} axes to
+keep together within a shard, and the stored path axes become
+\code{setdiff(task_axes(step), bundle[[step]])}. \code{partition_by} and \code{bundle} are
+complementary per-step entry points - at most one may name a given step (a
+step in \strong{both} is an error), but they may be mixed across steps and either
+may be partial. Use \code{partition_by} when you want few path axes, \code{bundle}
+when you want fine sharding and only a few inner axes. Both normalise into
+the single stored \code{partition_by} path list.}
 
 \item{upload}{An optional upload specification (a list), or \code{NULL} for no
 upload.}
@@ -128,8 +164,9 @@ and has \strong{no} dependency on \code{targets}.
 Input data is forwarded through \code{\link[=ssd_data]{ssd_data()}} for validation (a numeric
 \code{Conc} column is required) and retained on the scenario (as \verb{$data}) so a
 local run (\code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}}) can sample it directly. The dataset
-\emph{names} (\verb{$datasets}) are what the targets/cluster path hashes and resolves
-through the registry, so that path need not carry the data frames.
+\emph{names} (\verb{$datasets}) are what the targets/cluster path hashes; the validated
+tibbles ride on the scenario and are isolated by name via \code{\link[=scenario_dataset]{scenario_dataset()}},
+so the hash need not carry the data frames.
 }
 \section{Dataset input}{
 The preferred form is an \code{\link[=ssd_data]{ssd_data()}} collection, which owns validation and
