@@ -787,15 +787,30 @@ step (as a buffering checkpoint) is a deferred decision tied to the
 caching/invalidation model — see the note in §8.
 
 Dependencies between tasks are **explicit**: each row carries a
-path-style `<step>_id` primary key — the Hive partition path itself,
-e.g. `dataset=boron/sim=1/replace=FALSE` — plus its parent step's id
-as a foreign key (`sample_id` on `fit`, `fit_id` on `hc`). These are
-the `fit_id` "sugar for the path" columns referenced above, made
-concrete: a child references its parent by a single joinable column,
+path-style `<step>_id` primary key — `path_key()` over **all** of the
+step's `task_axes()`, e.g. `dataset=boron/sim=1/replace=FALSE` — plus
+its parent step's id as a foreign key (`sample_id` on `fit`, `fit_id`
+on `hc`). A child references its parent by a single joinable column,
 and the baseline runner threads results by that foreign key. The ids
 are deterministic and stable under scenario growth (adding a dataset
 does not renumber existing rows), so they compose with the
 cache-by-existence story in §8.
+
+**Identity key ≠ Hive shard path — the PK/FK are task identity, not
+partitioning.** The `<step>_id` primary key and `<parent>_id` foreign
+key are the **task identity**: `path_key()` over *all* of
+`task_axes(step)`, unique per task, **`partition_by`-independent**, and
+exactly what the per-task primer hashes (§2) and the foreign-key join
+uses. The **Hive shard path** is a *separate* projection —
+`path_key(path[step])` over the `partition_by` **subset** (§5) — shared
+by every task in a shard and **`partition_by`-dependent**. They
+coincide only in the degenerate one-task-per-shard case; under any
+coarser `partition_by` the shard path is a *coarsening* of the identity
+key (many tasks share it, so it is **not** a primary key), and the
+parent *shard* a child reads is its `<parent>_id` projected onto
+`path[parent]` — derived at read/sourcing time, not stored (§5
+Implications). `partition_by` moves the shard path; it never touches
+the identity key, the primer, or results.
 
 ### Static branching: one named target per shard
 

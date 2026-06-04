@@ -1,6 +1,6 @@
 ## Context
 
-`ssd-define-scenario` landed `partition_by` as a stored field with a default fallback, but its only validation is `chk::chk_null_or(partition_by, vld = chk::vld_list)`. `task-list-loop-baseline` (#80), as expanded by `task-list-loop-baseline-fold`, has since landed the three per-step task tables — `sample`, `fit`, `hc` (the `data` truncation is folded into `fit`) — together with `task_axes(step)` (the cumulative cross-join axes per step) and `add_task_ids()`/`path_key()`, which mint a path-style `<step>_id` over **all** of a step's axes plus the parent's `<parent>_id` foreign key. Per `TARGETS-DESIGN.md` §5, `partition_by` generalises that fixed path key into a configurable one: a step's chosen path axes become Hive directory levels (one shard per path cell, `Π |path axis|` shards) and the rest are inner Parquet columns. This change gives the knob a real contract; `task-tables`/`hive-partitioning` then make `path_key()` key on the chosen subset.
+`ssd-define-scenario` landed `partition_by` as a stored field with a default fallback, but its only validation is `chk::chk_null_or(partition_by, vld = chk::vld_list)`. `task-list-loop-baseline` (#80), as expanded by `task-list-loop-baseline-fold`, has since landed the three per-step task tables — `sample`, `fit`, `hc` (the `data` truncation is folded into `fit`) — together with `task_axes(step)` (the cumulative cross-join axes per step) and `add_task_ids()`/`path_key()`, which mint a path-style `<step>_id` over **all** of a step's axes plus the parent's `<parent>_id` foreign key. Per `TARGETS-DESIGN.md` §5, `partition_by` configures the **Hive shard path**: a step's chosen path axes become Hive directory levels (one shard per path cell, `Π |path axis|` shards) and the rest are inner Parquet columns. This change gives the knob a real contract; `task-tables`/`hive-partitioning` then render the shard path from the chosen subset. The `<step>_id`/`<parent>_id` **task-identity** keys are *not* affected — they remain `path_key()` over all of `task_axes(step)`, unique per task and `partition_by`-independent (see the decision below).
 
 ## Goals / Non-Goals
 
@@ -12,7 +12,7 @@
 
 **Non-Goals:**
 
-- Changing `task_axes()`, the task tables, or `add_task_ids()`/`path_key()` themselves (those are #80, and the path-key-on-subset rewiring is `task-tables`/`hive-partitioning`).
+- Changing `task_axes()`, the task tables, or `add_task_ids()`/`path_key()` themselves (those are #80; rendering the Hive **shard path** from the subset is `task-tables`/`hive-partitioning`, and it adds a shard-path key rather than replacing the `<step>_id` task identity).
 - **Any cross-step parent-consistency constraint.** Steps partition independently; m:n child↔parent shard relationships are accepted and resolved at the read layer (`shard-runner-baseline`/`task-tables`), not constrained here (see the decision below).
 - Building shards, Hive paths, or Parquet I/O.
 - The end-to-end acceptance test that *changing* `partition_by` shifts file paths while per-task results stay byte-identical: it needs shards, so it lands with `hive-partitioning`. Here the contract is validated at the scenario level only.
@@ -62,7 +62,7 @@ scenario_partition_axes <- function(scenario, step) {
 }
 ```
 
-The single accessor `task-tables`/`hive-partitioning` call. Storing only the path axes (and computing the inner complement) keeps `partition_by` the lone source of truth and the manifest compact. The path axes are exactly what a partition-aware `path_key()` will key on.
+The single accessor `task-tables`/`hive-partitioning` call. Storing only the path axes (and computing the inner complement) keeps `partition_by` the lone source of truth and the manifest compact. The path axes are exactly what the partition-aware **shard path** keys on — distinct from the `<step>_id` task-identity key, which stays over all of `task_axes(step)`.
 
 ### Decision: validate in the user-facing frame (per-step only)
 
@@ -75,6 +75,10 @@ An earlier draft of this change validated **parent-consistency** (`intersect(pat
 1. **The rationale is backwards.** A child shard maps to *one* parent shard only when `path[parent] ⊆ path[child]` (the child at least as fine as the parent on shared axes) — the *opposite* inclusion to the rule. The rule as written permits exactly the m:n it claimed to forbid.
 2. **The shipped defaults are m:n by design.** They *coarsen* downstream (`sample` keyed by `dataset,sim,replace`; `fit` by `dataset,sim,nrow,rescale`; `hc` by `dataset,sim`), so an `hc` shard reads every `fit` shard for its `(dataset,sim)` across `nrow`/`rescale`, and with `replace = c(F,T)` a `fit` shard reads two `sample` shards. No one-parent-shard rule (in either direction) is compatible with these defaults.
 3. **m:n needs no constraint to be correct.** Splitting/over-reading a parent shard is cheap: a child reads the set of parent shards its tasks reference and filters on path/inner columns (duckplyr predicate pushdown). So the relationship is resolved at the **read layer** — `shard-runner-baseline` proves it single-core, and the `targets` layer (`task-tables`, **Option 3**: splice each child branch's computed upstream target-name set at sourcing time) keeps per-shard invalidation under m:n. `partition_by` therefore stays purely per-step. The `<parent>_id` foreign key (full parent identity, minted by #80) is always well-defined regardless of `partition_by`; only the *shard* a parent task lives in is a coarsening of it, computed downstream.
+
+### Decision: the `<step>_id`/`<parent>_id` keys are task identity, not the shard path
+
+The primary and foreign keys are **task identity** — `path_key()` over *all* of `task_axes(step)` (#80) — unique per task and **`partition_by`-independent**. The **Hive shard path** is a *different* projection — `path_key(path[step])` over the partition subset — shared by every task in a shard and `partition_by`-dependent. The two coincide only when each shard holds one task; under any coarser `partition_by` the shard path is a coarsening of the identity key (so it cannot itself be the primary key — many tasks share it). This change configures the **shard path** (via `scenario_partition_axes()`); it leaves the identity keys untouched. *Why this matters:* the identity key is what the per-task primer hashes and what the `<parent>_id` foreign-key join uses, so anchoring it to the full axes (never the partition subset) is what keeps `partition_by` a free re-layout — change the split and only file paths move, never identity, RNG, or results. Earlier phrasings that said `partition_by` makes `path_key()`/`<step>_id` "key on the subset" are superseded by this: the subset drives the shard path, the identity key stays over all axes. (The `<step>_id` example `dataset=boron/sim=1/replace=FALSE` happens to equal the default sample shard path only because that default puts every sample axis in the path — the one-task-per-shard case.)
 
 ### Decision: `partition_by` is orthogonal to the per-task primer
 
@@ -89,7 +93,7 @@ Beyond `task-tables` and `hive-partitioning`, the new `shard-completeness-assert
 - **`task_axes()` is internal to `task-list-loop-baseline`** → reuse needs it reachable from `R/scenario.R`. Mitigation: same package, so a direct internal call works; if file-load order matters, keep both in the package namespace (no export needed).
 - **Accepting m:n defers shard-dependency resolution downstream** → no constraint here means `partition_by` alone does not tell you a child shard maps to one parent shard. Mitigation: that resolution is intentionally a read-layer concern — `shard-runner-baseline` proves it single-core and `task-tables` (Option 3) wires it under `targets`; the `<parent>_id` foreign key stays well-defined regardless.
 - **Restated defaults differ from the §5 table** → readers of §5 may expect different steps. Mitigation: the design and roxygen state the three-step defaults explicitly and note they supersede §5's pre-fold table.
-- **Acceptance test deferred to `hive-partitioning`** → the headline "changing `partition_by` shifts shards, results byte-identical" property is not verified here. Mitigation: scope is explicit (knob contract only); `hive-partitioning` owns the end-to-end test once `path_key()` keys on the chosen subset.
+- **Acceptance test deferred to `hive-partitioning`** → the headline "changing `partition_by` shifts shards, results byte-identical" property is not verified here. Mitigation: scope is explicit (knob contract only); `hive-partitioning` owns the end-to-end test once the shard path keys on the chosen subset.
 
 ## Open Questions
 

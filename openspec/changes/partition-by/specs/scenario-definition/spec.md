@@ -32,7 +32,7 @@
 - **THEN** the constructor SHALL abort with an informative error
 
 ### Requirement: Path-axis vs inner-axis split
-The package SHALL define, for each step, the inner (Parquet-column) axes as that step's axis vocabulary (`task_axes()`, #80) minus its `partition_by` path axes, and SHALL expose this split to downstream task-table and shard construction. The path axes determine the shard count for a step (`Π |path axis|`) and the `<step>_id` Hive path key (#80's `path_key()` over the chosen path axes); the inner axes are carried as columns within each shard.
+The package SHALL define, for each step, the inner (Parquet-column) axes as that step's axis vocabulary (`task_axes()`, #80) minus its `partition_by` path axes, and SHALL expose this split to downstream task-table and shard construction. The path axes determine the shard count for a step (`Π |path axis|`) and the **Hive shard path** (`path_key()` over the chosen path axes — distinct from the `<step>_id` task-identity key, which #80 keys over *all* axes and which `partition_by` does not change); the inner axes are carried as columns within each shard.
 
 #### Scenario: Inner axes are the complement of path axes
 - **WHEN** the fit step's vocabulary is queried for a scenario whose `fit` path axes are `c("dataset", "sim", "nrow", "rescale")`
@@ -40,7 +40,7 @@ The package SHALL define, for each step, the inner (Parquet-column) axes as that
 
 #### Scenario: All-axes-in-path yields no inner axes
 - **WHEN** a step's `partition_by` lists every axis in that step's vocabulary
-- **THEN** the inner-axis set for that step SHALL be empty (one task per shard — #80's default `<step>_id` granularity)
+- **THEN** the inner-axis set for that step SHALL be empty (one task per shard — the shard path then equals the `<step>_id` task identity, the only case where they coincide)
 
 #### Scenario: Per-step vocabularies match #80's task_axes()
 - **WHEN** the axis vocabulary is queried per step
