@@ -19,3 +19,4 @@
 - [ ] 3.4 Non-destructive test: a seeded draw sequence is byte-identical with and without an intervening `chk_dqrng_backend_intact()` call
 - [ ] 3.5 Primitives test: each `*_data_task_primer()` returns normally on a healthy backend and aborts when the backend is corrupted before the task ends; error origin is the user-facing frame
 - [ ] 3.6 Run `devtools::document()`, `air format .`, and `devtools::check()`
+- [ ] 3.7 Confirm `devtools::check()` is clean for the diagnostic helpers: `getNativeSymbolInfo()` and `getLoadedDLLs()` are exported base R functions (not the C-level non-API entry points the "checking compiled code" NOTE concerns), so no NOTE/WARNING is expected — verify none appears, and that the cross-package `user_unif_rand` lookup does not trip the "checking dependencies"/"foreign function calls" checks

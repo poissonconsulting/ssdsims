@@ -68,6 +68,7 @@ The witness helper and the per-task postcondition are a self-contained robustnes
 - **A pathological generator whose state does not change on a single draw** → not a concern for pcg64 (every draw advances the counter); the backend forces pcg64 (`set_dqrng_backend()`), so the witness is valid for the only generator ssdsims uses.
 - **Cost** → two `dqrng_get_state()` calls, one `runif(1)`, one `dqrng_set_state()` per task. Negligible against a fit/hc, and per-task (not per-draw).
 - **Does not catch the segfault hijack** (`case3`) → accepted and documented; that failure crashes the body's own draw first, and is prevented upstream by not registering at load and not co-loading user-RNG packages.
+- **`getNativeSymbolInfo()` / `getLoadedDLLs()` in the message helpers** → these are **exported, documented base R functions**, used widely on CRAN; they are *not* the C-level non-API entry points (e.g. `R_FindSymbol`) that the `R CMD check` "checking compiled code" NOTE concerns, so they raise no check note. A verification task (3.7) confirms this rather than relying on the assumption.
 
 ## Migration Plan
 
