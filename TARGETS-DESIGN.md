@@ -1936,12 +1936,16 @@ already ran end to end (see §4, §6). These steps are therefore
   work (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
-  re-runs with byte-equivalence. This is a surface rename over
-  `primer-primitives`, which already establishes the contract — so,
-  **trusting the design**, none of the targets-only plumbing
-  (`scenario-accessors`, `manifest`, `task-tables`, …) waits on it. It can land at any time; the
-  DAG shows it hanging off `primer-primitives` with a dashed, non-gating
-  edge and no dependants.
+  re-runs with byte-equivalence across **every** input form, so it
+  **depends on** `scenario-input-types` (the full input surface must
+  exist before the public-API re-run can exercise it). This is otherwise
+  a surface rename over `primer-primitives`, which already establishes the
+  contract — so, **trusting the design**, none of the targets-only
+  plumbing (`scenario-accessors`, `manifest`, `task-tables`, …) waits on
+  it. With no dependants of its own, it can land any time after
+  `scenario-input-types`; the DAG shows the solid `scenario-input-types →
+  migrate-public-api` prereq plus a dashed, non-gating edge off
+  `primer-primitives`.
 - **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
   on the scenario, accessed by name** — no registry (§1.1). Materialise
   the `min_pmix` functions on the scenario at construction (keyed by
@@ -2174,7 +2178,7 @@ flowchart TD
     define --> partby
     define --> inputs
     primer --> inputs
-    inputs --> acc
+    define --> acc
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims
@@ -2212,6 +2216,7 @@ flowchart TD
     rewrite --> lockin
     lockin --> cleanup
 
+    inputs --> migrate
     prims -.-> migrate
 
     %% --- node status colouring (keep in sync as each change progresses) ---
@@ -2233,10 +2238,11 @@ flowchart TD
 implemented), unfilled = open (roadmap only). Keep the colouring in sync as
 changes progress.
 
-`migrate-public-api` hangs off `primer-primitives` with a **dashed,
-non-gating** edge and **no dependants**: trusting the design, it is a
-cosmetic rename that no targets step waits on, so it can land any time
-(like `error-call-origin` and the Cleanup items). The dashed edge marks
+`migrate-public-api` waits only on `scenario-input-types` (its
+byte-equivalence re-run must exercise the full input surface) and hangs
+off `primer-primitives` with a **dashed, non-gating** edge; it has **no
+dependants**, so trusting the design no targets step waits on it and it
+can land any time once `scenario-input-types` is in. The dashed edge marks
 "follows from, but does not block."
 
 `shard-runner-baseline` sits off `primer-primitives` + `partition-by`,
