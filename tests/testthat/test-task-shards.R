@@ -112,12 +112,18 @@ test_that("task-shards: task rows carry (seed, primer) matching task_primer()", 
 
 test_that("task-shards: shard derivation draws no random numbers", {
   scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+  # Check both RNG paths: base R's `.Random.seed` and the dqrng stream state
+  # (the package's actual draw path). The derivation only hashes (task_primer
+  # via rlang::hash()) and groups, so neither should advance.
+  local_dqrng_backend()
   set.seed(99)
-  before <- .Random.seed
+  before_base <- .Random.seed
+  before_dqrng <- get_dqrng_state()
   ssd_scenario_sample_shards(scenario)
   ssd_scenario_fit_shards(scenario)
   ssd_scenario_hc_shards(scenario)
-  expect_identical(before, .Random.seed)
+  expect_identical(.Random.seed, before_base)
+  expect_identical(get_dqrng_state(), before_dqrng)
 })
 
 # ---- per-shard step runners (task 7.3) -------------------------------------
@@ -240,47 +246,17 @@ test_that("task-shards: the shipped template tar_make()s every shard", {
 
 # ---- byte-identity oracle (task 7.5) ---------------------------------------
 
-# Write a test pipeline over a saved numeric dataset so the worker and the
-# in-process baseline run the identical scenario.
-write_test_targets <- function(dir) {
+# Copy a plain-text pipeline fixture (`fixtures/<name>.R`) into `dir` as its
+# `_targets.R`, alongside the saved numeric dataset the fixture reads.
+setup_targets_fixture <- function(dir, fixture) {
   saveRDS(numeric_dataset(), file.path(dir, "data.rds"))
-  writeLines(
-    c(
-      "library(targets)",
-      "library(tarchetypes)",
-      "library(ssdsims)",
-      "scenario <- ssd_define_scenario(",
-      "  ssd_data(d = readRDS('data.rds')),",
-      "  nsim = 2L, nrow = c(5L, 10L), seed = 42L,",
-      "  rescale = c(FALSE, TRUE), dists = c('lnorm', 'gamma')",
-      ")",
-      "sample_targets <- tar_map(values = ssd_scenario_sample_shards(scenario),",
-      "  names = c(dataset, sim, replace),",
-      "  tar_target(sample_step, ssd_run_sample_step(tasks, scenario, 'results/sample'),",
-      "    format = 'file', error = 'null'))",
-      "fit_targets <- tar_map(values = ssd_scenario_fit_shards(scenario),",
-      "  names = c(dataset, sim, nrow, rescale),",
-      "  tar_target(fit_step, { sample_done; ssd_run_fit_step(tasks, scenario, 'results/sample', 'results/fit') },",
-      "    format = 'file', error = 'null'))",
-      "hc_targets <- tar_map(values = ssd_scenario_hc_shards(scenario),",
-      "  names = c(dataset, sim),",
-      "  tar_target(hc_step, { fit_done; ssd_run_hc_step(tasks, scenario, 'results/fit', 'results/hc') },",
-      "    format = 'file', error = 'null'))",
-      "list(",
-      "  sample_targets, tar_combine(sample_done, sample_targets),",
-      "  fit_targets, tar_combine(fit_done, fit_targets),",
-      "  hc_targets, tar_combine(hc_done, hc_targets),",
-      "  tar_target(summary, { hc_done; ssd_summarize('results/sample','results/fit','results/hc','results/summary.parquet') }, format = 'file')",
-      ")"
-    ),
-    file.path(dir, "_targets.R")
-  )
+  file.copy(test_path("fixtures", fixture), file.path(dir, "_targets.R"))
 }
 
 test_that("task-shards: pipeline per-task results equal the baseline runner", {
   skip_targets()
   dir <- withr::local_tempdir()
-  write_test_targets(dir)
+  setup_targets_fixture(dir, "byte-identity-targets.R")
   withr::local_dir(dir)
   suppressWarnings(targets::tar_make(reporter = "silent"))
 
@@ -330,31 +306,9 @@ test_that("task-shards: pipeline per-task results equal the baseline runner", {
 test_that("task-shards: a failing shard goes NULL and the survivors still summarize", {
   skip_targets()
   dir <- withr::local_tempdir()
-  saveRDS(numeric_dataset(), file.path(dir, "data.rds"))
-  # `min_pmix = "boom"` resolves to a function that errors -> the fit shards fail
-  # as whole shards (error = "null"); sample + summary still build.
-  writeLines(
-    c(
-      "library(targets)",
-      "library(tarchetypes)",
-      "library(ssdsims)",
-      "boom <- function(n) stop('boom')",
-      "scenario <- ssd_define_scenario(",
-      "  ssd_data(d = readRDS('data.rds')),",
-      "  nsim = 2L, nrow = 6L, seed = 42L, dists = 'lnorm', min_pmix = boom",
-      ")",
-      "sample_targets <- tar_map(values = ssd_scenario_sample_shards(scenario),",
-      "  names = c(dataset, sim, replace),",
-      "  tar_target(sample_step, ssd_run_sample_step(tasks, scenario, 'results/sample'),",
-      "    format = 'file', error = 'null'))",
-      "fit_targets <- tar_map(values = ssd_scenario_fit_shards(scenario),",
-      "  names = c(dataset, sim, nrow, rescale),",
-      "  tar_target(fit_step, { sample_done; ssd_run_fit_step(tasks, scenario, 'results/sample', 'results/fit') },",
-      "    format = 'file', error = 'null'))",
-      "list(sample_targets, tar_combine(sample_done, sample_targets), fit_targets)"
-    ),
-    file.path(dir, "_targets.R")
-  )
+  # The fixture's `min_pmix` resolves to a function that errors -> the fit shards
+  # fail as whole shards (error = "null"); the sample shards still build.
+  setup_targets_fixture(dir, "error-null-targets.R")
   withr::local_dir(dir)
   suppressWarnings(targets::tar_make(reporter = "silent"))
   meta <- targets::tar_meta(fields = "error")
