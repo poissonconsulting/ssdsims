@@ -176,6 +176,7 @@ New capabilities land via OpenSpec changes (e.g., `ssd-define-scenario`, `dqrng-
 - **rlang** — Hashing (task primers in new design), quoting.
 - **dqrng** — New RNG backend (targets path).
 - **parallel** — L'Ecuyer-CMRG sub-streams (legacy path).
+- **duckplyr** — Parquet I/O and off-cluster querying (targets path). **Interact with Parquet files through `duckplyr` (DuckDB)** — `duckplyr::read_parquet_duckdb()` for reads, `duckplyr::compute_parquet()` for writes — **not `arrow`**. This is the team preference; confine the call sites behind the `ssd_read_parquet()` / `ssd_write_parquet()` internals.
 
 See `DESCRIPTION` for versions and imports.
 

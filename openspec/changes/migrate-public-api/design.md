@@ -16,20 +16,20 @@ This change is the §12 `migrate-public-api` step: a **cosmetic, non-gating** ca
 - Leave the L'Ecuyer `*_state`/`*_seed` helpers in place (deprecated) for the generator methods, the `*-grids` scripts, and existing tests.
 
 **Non-Goals:**
-- Migrating the generator methods `ssd_sim_data.function`/`.character`/`.fitdists`/`.tmbfit` (they keep `do_call_seed`/L'Ecuyer; the declarative path handles generators via `scenario-input-types`/`registry`).
+- Migrating the generator methods `ssd_sim_data.function`/`.character`/`.fitdists`/`.tmbfit` (they keep `do_call_seed`/L'Ecuyer; the declarative path handles generators via `scenario-input-types`/`scenario-accessors`).
 - Removing the L'Ecuyer helpers — that is `cleanup-lecuyer`.
 - Preserving the *numeric values* of the old L'Ecuyer output (impossible across generators; intended).
-- Adding a `min_pmix` registry or name-based public `min_pmix` (out of scope; `registry`).
+- Adding `min_pmix`-by-name resolution to the public surface (out of scope; that is `scenario-accessors`).
 - Changing the declarative/targets primitives, which are frozen by `primer-primitives`.
 
 ## Decisions
 
 ### D1 — Reuse the seed-and-run pattern, not necessarily each `*_data_task_primer()` symbol
-The `sample` and `hc` steps map cleanly onto `sample_data_task_primer()` and `hc_data_task_primer()` (their grids match). The `fit` step does **not**: `fit_data_task()` resolves `min_pmix` **by name** via `resolve_min_pmix()` (the registry-style declarative contract), whereas the public `ssd_fit_dists_sims()` accepts a *list of functions* — including user-defined anonymous functions that have no resolvable name. Forcing the public function through the name-based primitive would break its documented `min_pmix = list(...)` contract.
+The `sample` and `hc` steps map cleanly onto `sample_data_task_primer()` and `hc_data_task_primer()` (their grids match). The `fit` step does **not**: `fit_data_task()` resolves `min_pmix` **by name** via `resolve_min_pmix()` (the name-keyed declarative contract, now `scenario-accessors`), whereas the public `ssd_fit_dists_sims()` accepts a *list of functions* — including user-defined anonymous functions that have no resolvable name. Forcing the public function through the name-based primitive would break its documented `min_pmix = list(...)` contract.
 
 **Decision:** preserve the public function-valued `min_pmix`. The migrated `ssd_fit_dists_sims()` adopts the *contract* (open backend → `local_dqrng_state(seed, primer)` once per task → run the state-less fit against the ambient RNG) using a thin function-valued seed-and-run path (the existing fit body minus the L'Ecuyer wrapper), rather than `fit_data_task_primer()`. `sample`/`hc` reuse the shipped wrappers directly.
 
-- *Alternative A (rejected):* change the public `min_pmix` to a name/string routed through `resolve_min_pmix()`. This is a public behavior change beyond "cosmetic" and breaks anonymous-function `min_pmix`; it belongs with `registry`, not here.
+- *Alternative A (rejected):* change the public `min_pmix` to a name/string routed through `resolve_min_pmix()`. This is a public behavior change beyond "cosmetic" and breaks anonymous-function `min_pmix`; it belongs with `scenario-accessors`, not here.
 - *Alternative B (rejected):* extend `fit_data_task()` to accept either a name or a function. Touches the frozen `primer-primitives` primitives and blurs the declarative contract.
 
 ### D2 — Per-task primer identity reuses `task_primer()` over the task's own columns
@@ -52,7 +52,7 @@ The three functions are exported and callable standalone, so each must activate 
 ## Risks / Trade-offs
 
 - **Numeric output changes for a fixed `seed` (L'Ecuyer → dqrng).** → Intended and acceptable pre-1.0; called out as BREAKING (numeric) in the proposal and in `NEWS.md`. Snapshot tests keyed to the old values are updated; reproducibility *for a fixed seed* and order-independence are the new, tested guarantees.
-- **`fit` not reusing `fit_data_task_primer()` risks drift from the declarative path.** → Mitigated by sharing the *contract* (one `local_dqrng_state()` per task) and by the byte-equivalence test; documented in D1 so a future `registry`-era cleanup can converge the two.
+- **`fit` not reusing `fit_data_task_primer()` risks drift from the declarative path.** → Mitigated by sharing the *contract* (one `local_dqrng_state()` per task) and by the byte-equivalence test; documented in D1 so a future `scenario-accessors`-era cleanup can converge the two.
 - **`stream` semantics quietly change** (L'Ecuyer top-level stream → primer component). → Signature unchanged; documented in Roxygen and the modified `parallel-safe-seeding` spec; distinct-stream independence is preserved and tested.
 - **`seed = NULL` behavior change** (D4). → Documented; the global-RNG-restored property is preserved and tested; reproducibility for explicit seeds is unaffected.
 - **Stale references to the L'Ecuyer helpers.** → They remain defined (shim), so the generator methods and `*-grids` scripts keep working until `cleanup-lecuyer`.
@@ -70,6 +70,6 @@ Rollback is a straight revert: the L'Ecuyer helpers are untouched, so reverting 
 
 ## Open Questions
 
-- **D1 (`fit` min_pmix):** confirm the public `min_pmix` stays function-valued here and name-based resolution is deferred to `registry`. (Assumed yes — preserves the public contract; the "cosmetic" framing covers only the seeding mechanism.)
+- **D1 (`fit` min_pmix):** confirm the public `min_pmix` stays function-valued here and name-based resolution is deferred to `scenario-accessors`. (Assumed yes — preserves the public contract; the "cosmetic" framing covers only the seeding mechanism.)
 - **D4 (`seed = NULL`):** confirm the "draw one scalar seed from the ambient RNG" semantics over alternatives (fixed default seed; abort when NULL). (Assumed the draw-once approach to match L'Ecuyer intent.)
 - **`*-grids` scripts:** keep and reconcile, or retire as historical now that dqrng makes per-task-own-stream the default? (Assumed keep + annotate; cheap and documents the equivalence.)
