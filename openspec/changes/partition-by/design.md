@@ -8,12 +8,12 @@
 
 - Validate a supplied `partition_by` as a named list with `sample`/`fit`/`hc` entries (one per step), each a subset of that step's `task_axes()`, unique and non-missing.
 - Reuse `task_axes()` as the vocabulary source of truth (no second constant); reject `nrow` only for the `sample` step, and unknown names everywhere.
-- Validate parent-consistency so the `<parent>_id` foreign key stays well-defined.
 - Define and expose the path-vs-inner split via an internal accessor that `task-tables`/`hive-partitioning` call; supply three-step defaults as the `NULL` fallback; render path axes in `print()`.
 
 **Non-Goals:**
 
 - Changing `task_axes()`, the task tables, or `add_task_ids()`/`path_key()` themselves (those are #80, and the path-key-on-subset rewiring is `task-tables`/`hive-partitioning`).
+- **Any cross-step parent-consistency constraint.** Steps partition independently; m:n child↔parent shard relationships are accepted and resolved at the read layer (`shard-runner-baseline`/`task-tables`), not constrained here (see the decision below).
 - Building shards, Hive paths, or Parquet I/O.
 - The end-to-end acceptance test that *changing* `partition_by` shifts file paths while per-task results stay byte-identical: it needs shards, so it lands with `hive-partitioning`. Here the contract is validated at the scenario level only.
 
@@ -64,9 +64,17 @@ scenario_partition_axes <- function(scenario, step) {
 
 The single accessor `task-tables`/`hive-partitioning` call. Storing only the path axes (and computing the inner complement) keeps `partition_by` the lone source of truth and the manifest compact. The path axes are exactly what a partition-aware `path_key()` will key on.
 
-### Decision: validate in the user-facing frame, incl. parent-consistency
+### Decision: validate in the user-facing frame (per-step only)
 
-Thread the constructor's `call` into `validate_partition_by(partition_by, call)`. Loop over `c("sample", "fit", "hc")` (a plain loop, not `purrr::walk`, per the error-origin convention). Per step: the entry exists, is a unique, non-`NA` character vector, and `setdiff(entry, task_axes(step))` is empty (`nrow`-under-`sample` gets the bespoke message). Then a **parent-consistency** check: for each non-root step, `intersect(path[[step]], task_axes(parent))` must be a subset of `path[[parent]]`, so a child shard maps to exactly one parent shard via `<parent>_id` (`task_parent()` gives the chain `sample ← fit ← hc`). Without it a child could be partitioned more finely on a shared axis than its parent, breaking the foreign-key join.
+Thread the constructor's `call` into `validate_partition_by(partition_by, call)`. Loop over `c("sample", "fit", "hc")` (a plain loop, not `purrr::walk`, per the error-origin convention). Per step: the entry exists, is a unique, non-`NA` character vector, and `setdiff(entry, task_axes(step))` is empty (`nrow`-under-`sample` gets the bespoke message). There is **no cross-step check** — each step's path axes are validated against its own vocabulary alone (see the next decision).
+
+### Decision: no parent-consistency rule — accept m:n
+
+An earlier draft of this change validated **parent-consistency** (`intersect(path[[step]], task_axes(parent)) ⊆ path[[parent]]`), justified as "so a child shard maps to exactly one parent shard". That rule is dropped. Three reasons:
+
+1. **The rationale is backwards.** A child shard maps to *one* parent shard only when `path[parent] ⊆ path[child]` (the child at least as fine as the parent on shared axes) — the *opposite* inclusion to the rule. The rule as written permits exactly the m:n it claimed to forbid.
+2. **The shipped defaults are m:n by design.** They *coarsen* downstream (`sample` keyed by `dataset,sim,replace`; `fit` by `dataset,sim,nrow,rescale`; `hc` by `dataset,sim`), so an `hc` shard reads every `fit` shard for its `(dataset,sim)` across `nrow`/`rescale`, and with `replace = c(F,T)` a `fit` shard reads two `sample` shards. No one-parent-shard rule (in either direction) is compatible with these defaults.
+3. **m:n needs no constraint to be correct.** Splitting/over-reading a parent shard is cheap: a child reads the set of parent shards its tasks reference and filters on path/inner columns (duckplyr predicate pushdown). So the relationship is resolved at the **read layer** — `shard-runner-baseline` proves it single-core, and the `targets` layer (`task-tables`, **Option 3**: splice each child branch's computed upstream target-name set at sourcing time) keeps per-shard invalidation under m:n. `partition_by` therefore stays purely per-step. The `<parent>_id` foreign key (full parent identity, minted by #80) is always well-defined regardless of `partition_by`; only the *shard* a parent task lives in is a coarsening of it, computed downstream.
 
 ### Decision: `partition_by` is orthogonal to the per-task primer
 
@@ -79,7 +87,7 @@ Beyond `task-tables` and `hive-partitioning`, the new `shard-completeness-assert
 
 
 - **`task_axes()` is internal to `task-list-loop-baseline`** → reuse needs it reachable from `R/scenario.R`. Mitigation: same package, so a direct internal call works; if file-load order matters, keep both in the package namespace (no export needed).
-- **Parent-consistency rule adds validation surface** → more to get right and to explain. Mitigation: it is a single `subset` check per non-root step with a targeted error; tested directly (a child finer than its parent on a shared axis aborts).
+- **Accepting m:n defers shard-dependency resolution downstream** → no constraint here means `partition_by` alone does not tell you a child shard maps to one parent shard. Mitigation: that resolution is intentionally a read-layer concern — `shard-runner-baseline` proves it single-core and `task-tables` (Option 3) wires it under `targets`; the `<parent>_id` foreign key stays well-defined regardless.
 - **Restated defaults differ from the §5 table** → readers of §5 may expect different steps. Mitigation: the design and roxygen state the three-step defaults explicitly and note they supersede §5's pre-fold table.
 - **Acceptance test deferred to `hive-partitioning`** → the headline "changing `partition_by` shifts shards, results byte-identical" property is not verified here. Mitigation: scope is explicit (knob contract only); `hive-partitioning` owns the end-to-end test once `path_key()` keys on the chosen subset.
 

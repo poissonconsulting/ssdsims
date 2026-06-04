@@ -46,9 +46,9 @@ The package SHALL define, for each step, the inner (Parquet-column) axes as that
 - **WHEN** the axis vocabulary is queried per step
 - **THEN** it SHALL equal `task_axes(step)`: `sample` = `dataset`, `sim`, `replace`; `fit` adds `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc` adds `ci`, `nboot`, `est_method`, `ci_method`, `parametric`
 
-#### Scenario: Child path is consistent with its parent
-- **WHEN** a step's path axes are validated against its parent step's path axes (the `<parent>_id` foreign key, #80; the chain is `sample ← fit ← hc`)
-- **THEN** the child's path axes restricted to the parent's vocabulary SHALL be a subset of the parent's path axes, so the foreign-key join to the parent shard is well-defined
+#### Scenario: Steps partition independently — no cross-step constraint
+- **WHEN** a step's path axes are a valid subset of its own vocabulary but differ arbitrarily from its parent step's path axes (e.g. finer or coarser on a shared axis)
+- **THEN** the constructor SHALL accept them without any parent-consistency check, since a child shard may span several parent shards (an m:n relationship resolved at the read layer, not by restricting `partition_by`); the `<parent>_id` foreign key remains well-defined regardless
 
 ### Requirement: partition_by rendered by print method
 `print.ssdsims_scenario()` SHALL render the per-step `partition_by` path axes alongside the other declarative fields.
