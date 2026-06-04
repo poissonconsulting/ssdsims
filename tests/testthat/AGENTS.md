@@ -49,6 +49,9 @@ here; keep test guidance in this file rather than there.
 
 - Avoid the `.package` argument to `local_mocked_bindings()` (it mutates another
   package's namespace); create a mockable wrapper in this package instead.
+- **Call internal (non-exported) helpers unqualified** in tests - `testthat`
+  runs tests in the package namespace, so `task_axes()`, `resolve_min_pmix()`,
+  `decode_obj()`, etc. resolve without `ssdsims:::`. Do not add the `:::`.
 
 ## Snapshot tests
 

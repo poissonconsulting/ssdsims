@@ -60,10 +60,19 @@ shard_path <- function(tasks, scenario, step) {
   path_key(tasks[1L, , drop = FALSE], scenario$partition_by[[step]])
 }
 
-# The partition path of the upstream shard a single task row depends on (the
-# parent step's path axes), used to open the parent Parquet by partition path.
-upstream_path <- function(task_row, scenario, parent) {
-  path_key(task_row, scenario$partition_by[[parent]])
+# Read a child shard's parent shards once each and return them bound into one
+# tibble. A child shard's tasks may span several parent shards (the m:n
+# relationship: a coarser parent keeps an axis the child shards on, or the child
+# is coarser and spans many parents); we read the *distinct* set of parent shard
+# paths the shard's tasks reference - each parent once, served to every task in
+# the shard that needs it - never opening an unrelated shard. Per-task rows are
+# then isolated in memory by the `<parent>_id` identity.
+read_parent_shards <- function(tasks, scenario, parent, parent_dir) {
+  paths <- unique(path_key(tasks, scenario$partition_by[[parent]]))
+  shards <- lapply(paths, function(p) {
+    ssd_read_parquet(file.path(parent_dir, p, "part.parquet"))
+  })
+  dplyr::bind_rows(shards)
 }
 
 #' Run a sample Shard
@@ -83,6 +92,11 @@ upstream_path <- function(task_row, scenario, parent) {
 #' @return The shard's Parquet path (the `format = "file"` contract).
 #' @seealso [ssd_run_fit_step()], [ssd_run_hc_step()], [ssd_scenario_sample_shards()].
 #' @export
+#' @examples
+#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+#' shards <- ssd_scenario_sample_shards(scenario)
+#' dir <- tempfile()
+#' ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
 ssd_run_sample_step <- function(tasks, scenario, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   local_dqrng_backend()
@@ -112,9 +126,10 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 
 #' Run a fit Shard
 #'
-#' Runs the `fit` tasks bundled into one shard: for each task, opens its parent
-#' `sample` shard's Parquet by partition path, isolates that task's draw by
-#' `sample_id` (restoring row order), truncates it inline (`head(sample, nrow)`,
+#' Runs the `fit` tasks bundled into one shard: reads the distinct set of parent
+#' `sample` shards the shard's tasks reference (each once - they may span several
+#' sample shards), isolates each task's draw by `sample_id` (restoring row
+#' order), truncates it inline (`head(sample, nrow)`,
 #' RNG-free, section 5), and fits with the per-task `(seed, primer)` through
 #' `fit_data_task_primer()` (resolving `min_pmix` off the scenario via
 #' [scenario_min_pmix()]). The fitted `fitdists` object is serialised into a
@@ -129,14 +144,37 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 #' @param out_dir The `fit` results root (e.g. `"results/fit"`).
 #' @return The shard's Parquet path.
 #' @export
+#' @examples
+#' \donttest{
+#' scenario <- ssd_define_scenario(
+#'   ssddata::ccme_boron,
+#'   nsim = 1L,
+#'   nrow = 6L,
+#'   seed = 42L,
+#'   dists = "lnorm"
+#' )
+#' dir <- tempfile()
+#' ssd_run_sample_step(
+#'   ssd_scenario_sample_shards(scenario)$tasks[[1L]],
+#'   scenario,
+#'   file.path(dir, "sample")
+#' )
+#' ssd_run_fit_step(
+#'   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
+#'   scenario,
+#'   file.path(dir, "sample"),
+#'   file.path(dir, "fit")
+#' )
+#' }
 ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   local_dqrng_backend()
+  # Read each distinct parent `sample` shard once, then isolate each task's draw
+  # in memory by `sample_id` (tasks in this shard may span several sample shards).
+  sample_tbl <- read_parent_shards(tasks, scenario, "sample", sample_dir)
   rows <- vector("list", nrow(tasks))
   for (i in seq_len(nrow(tasks))) {
     t <- tasks[i, ]
-    sp <- upstream_path(t, scenario, "sample")
-    sample_tbl <- ssd_read_parquet(file.path(sample_dir, sp, "part.parquet"))
     draw <- sample_tbl[sample_tbl$.sample_id == t$sample_id, ]
     draw <- draw[order(draw$.row), ]
     draw$.sample_id <- NULL
@@ -163,8 +201,9 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 
 #' Run an hc Shard
 #'
-#' Runs the `hc` tasks bundled into one shard: for each task, opens its parent
-#' `fit` shard's Parquet by partition path, isolates that task's fit by `fit_id`,
+#' Runs the `hc` tasks bundled into one shard: reads the distinct set of parent
+#' `fit` shards the shard's tasks reference (each once - an hc shard typically
+#' spans several fit shards), isolates each task's fit by `fit_id`,
 #' deserialises the `fitdists` object, and estimates the hazard concentration
 #' with the per-task `(seed, primer)` through `hc_data_task_primer()`. Each
 #' task's hc tibble (one or more rows - the `proportion` fan-out and the
@@ -179,15 +218,53 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #' @param out_dir The `hc` results root (e.g. `"results/hc"`).
 #' @return The shard's Parquet path.
 #' @export
+#' @examples
+#' \donttest{
+#' scenario <- ssd_define_scenario(
+#'   ssddata::ccme_boron,
+#'   nsim = 1L,
+#'   nrow = 6L,
+#'   seed = 42L,
+#'   dists = "lnorm"
+#' )
+#' dir <- tempfile()
+#' ssd_run_sample_step(
+#'   ssd_scenario_sample_shards(scenario)$tasks[[1L]],
+#'   scenario,
+#'   file.path(dir, "sample")
+#' )
+#' ssd_run_fit_step(
+#'   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
+#'   scenario,
+#'   file.path(dir, "sample"),
+#'   file.path(dir, "fit")
+#' )
+#' ssd_run_hc_step(
+#'   ssd_scenario_hc_shards(scenario)$tasks[[1L]],
+#'   scenario,
+#'   file.path(dir, "fit"),
+#'   file.path(dir, "hc")
+#' )
+#' }
 ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   local_dqrng_backend()
+  # Read each distinct parent `fit` shard once, then isolate each task's fit in
+  # memory by `fit_id` (an hc shard typically spans several fit shards).
+  fit_tbl <- read_parent_shards(tasks, scenario, "fit", fit_dir)
   rows <- vector("list", nrow(tasks))
   for (i in seq_len(nrow(tasks))) {
     t <- tasks[i, ]
-    fp <- upstream_path(t, scenario, "fit")
-    fit_tbl <- ssd_read_parquet(file.path(fit_dir, fp, "part.parquet"))
     blob <- fit_tbl$fit_blob[fit_tbl$fit_id == t$fit_id]
+    if (length(blob) != 1L) {
+      chk::abort_chk(
+        "Expected exactly one `fit` result for fit_id ",
+        encodeString(t$fit_id, quote = "\""),
+        ", found ",
+        length(blob),
+        " in the parent `fit` shard(s) (missing or duplicate result)."
+      )
+    }
     fits <- decode_obj(blob)
     hc <- hc_data_task_primer(
       fits = fits,
@@ -233,6 +310,24 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' the directory - rather than the shard target values - is what lets it union
 #' whatever shards landed (the survivors of a partially-failed run, section 6.2).
 #' @export
+#' @examples
+#' \donttest{
+#' scenario <- ssd_define_scenario(
+#'   ssddata::ccme_boron,
+#'   nsim = 1L,
+#'   nrow = 6L,
+#'   seed = 42L,
+#'   dists = "lnorm"
+#' )
+#' # Materialise the shards single-core, then fan in the hc layer.
+#' run <- ssd_run_scenario_shards(scenario)
+#' ssd_summarize(
+#'   file.path(run$dir, "sample"),
+#'   file.path(run$dir, "fit"),
+#'   file.path(run$dir, "hc"),
+#'   file.path(run$dir, "summary.parquet")
+#' )
+#' }
 ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
   glob <- file.path(dir_hc, "**", "part.parquet")
   hc <- ssd_read_parquet(glob)

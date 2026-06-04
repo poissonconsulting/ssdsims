@@ -21,12 +21,36 @@ the parent \code{sample} path-axis values, \code{seed}, and \code{primer}.}
 The shard's Parquet path.
 }
 \description{
-Runs the \code{fit} tasks bundled into one shard: for each task, opens its parent
-\code{sample} shard's Parquet by partition path, isolates that task's draw by
-\code{sample_id} (restoring row order), truncates it inline (\code{head(sample, nrow)},
+Runs the \code{fit} tasks bundled into one shard: reads the distinct set of parent
+\code{sample} shards the shard's tasks reference (each once - they may span several
+sample shards), isolates each task's draw by \code{sample_id} (restoring row
+order), truncates it inline (\code{head(sample, nrow)},
 RNG-free, section 5), and fits with the per-task \verb{(seed, primer)} through
 \code{fit_data_task_primer()} (resolving \code{min_pmix} off the scenario via
 \code{\link[=scenario_min_pmix]{scenario_min_pmix()}}). The fitted \code{fitdists} object is serialised into a
 \code{fit_blob} string column keyed by \code{fit_id}, and one Parquet is written at the
 shard's partition path.
+}
+\examples{
+\donttest{
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 1L,
+  nrow = 6L,
+  seed = 42L,
+  dists = "lnorm"
+)
+dir <- tempfile()
+ssd_run_sample_step(
+  ssd_scenario_sample_shards(scenario)$tasks[[1L]],
+  scenario,
+  file.path(dir, "sample")
+)
+ssd_run_fit_step(
+  ssd_scenario_fit_shards(scenario)$tasks[[1L]],
+  scenario,
+  file.path(dir, "sample"),
+  file.path(dir, "fit")
+)
+}
 }

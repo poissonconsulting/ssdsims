@@ -21,11 +21,41 @@ parent \code{fit} path-axis values and \code{fit_id}, \code{seed}, and \code{pri
 The shard's Parquet path.
 }
 \description{
-Runs the \code{hc} tasks bundled into one shard: for each task, opens its parent
-\code{fit} shard's Parquet by partition path, isolates that task's fit by \code{fit_id},
+Runs the \code{hc} tasks bundled into one shard: reads the distinct set of parent
+\code{fit} shards the shard's tasks reference (each once - an hc shard typically
+spans several fit shards), isolates each task's fit by \code{fit_id},
 deserialises the \code{fitdists} object, and estimates the hazard concentration
 with the per-task \verb{(seed, primer)} through \code{hc_data_task_primer()}. Each
 task's hc tibble (one or more rows - the \code{proportion} fan-out and the
 \code{ci = FALSE} collapse, section 1.2) is tagged with its \code{hc_id} and parent
 \code{fit_id}, stacked, and written as one Parquet at the shard's partition path.
+}
+\examples{
+\donttest{
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 1L,
+  nrow = 6L,
+  seed = 42L,
+  dists = "lnorm"
+)
+dir <- tempfile()
+ssd_run_sample_step(
+  ssd_scenario_sample_shards(scenario)$tasks[[1L]],
+  scenario,
+  file.path(dir, "sample")
+)
+ssd_run_fit_step(
+  ssd_scenario_fit_shards(scenario)$tasks[[1L]],
+  scenario,
+  file.path(dir, "sample"),
+  file.path(dir, "fit")
+)
+ssd_run_hc_step(
+  ssd_scenario_hc_shards(scenario)$tasks[[1L]],
+  scenario,
+  file.path(dir, "fit"),
+  file.path(dir, "hc")
+)
+}
 }

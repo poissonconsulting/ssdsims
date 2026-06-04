@@ -1,6 +1,6 @@
 ## 1. Dependencies
 
-- [x] 1.1 Add `targets`, `tarchetypes`, and `duckplyr` to `DESCRIPTION` `Imports`; add the `ssd_read_parquet()` / `ssd_write_parquet()` internals wrapping `duckplyr` (`read_parquet_duckdb()` / `compute_parquet()`)
+- [x] 1.1 Add `duckplyr` to `DESCRIPTION` `Imports` (the runners call it) and `targets`/`tarchetypes` to `Suggests` (used only by the shipped `_targets.R` template and the gated integration tests, so `Imports` would trip an "unused import" NOTE); add the `ssd_read_parquet()` / `ssd_write_parquet()` internals wrapping `duckplyr` (`read_parquet_duckdb()` / `compute_parquet()`)
 - [x] 1.2 Confirm prerequisites are in place: `scenario_partition_axes()` and the three-step `sample`/`fit`/`hc` defaults (`partition-by`), and the `scenario_dataset()` / `scenario_min_pmix()` accessors (`scenario-accessors`) (`manifest` is **not** a prerequisite)
 
 ## 2. Shard grouping wrappers

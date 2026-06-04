@@ -36,3 +36,22 @@ In a \code{targets} pipeline a directory read carries no dependency edge, so ord
 the directory - rather than the shard target values - is what lets it union
 whatever shards landed (the survivors of a partially-failed run, section 6.2).
 }
+\examples{
+\donttest{
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 1L,
+  nrow = 6L,
+  seed = 42L,
+  dists = "lnorm"
+)
+# Materialise the shards single-core, then fan in the hc layer.
+run <- ssd_run_scenario_shards(scenario)
+ssd_summarize(
+  file.path(run$dir, "sample"),
+  file.path(run$dir, "fit"),
+  file.path(run$dir, "hc"),
+  file.path(run$dir, "summary.parquet")
+)
+}
+}
