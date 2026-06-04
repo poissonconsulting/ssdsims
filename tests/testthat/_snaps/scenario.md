@@ -57,6 +57,22 @@
       Error in `ssd_define_scenario()`:
       ! `min_pmix` names must be unique.
 
+# scenario-accessors: an unresolvable min_pmix name fails fast
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, min_pmix = "no_such_fun")
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Unable to resolve `min_pmix` name "no_such_fun" to a single-argument function.
+
+# scenario-accessors: a name resolving to a multi-arg function fails fast
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, min_pmix = "two_arg")
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! Unable to resolve `min_pmix` name "two_arg" to a single-argument function.
+
 # scenario-definition: ssd_data() collection plus name= is an error
 
     Code

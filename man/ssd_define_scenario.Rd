@@ -63,8 +63,12 @@ either a character vector of names, or a function (or list of functions)
 with a single argument that inputs the number of rows of data and returns
 a proportion between 0 and 0.5 - in which case the name is derived from the
 argument expression (e.g. \code{ssdtools::ssd_min_pmix} gives \code{"ssd_min_pmix"}),
-mirroring dataset name derivation. Only the name is stored; the function is
-resolved later via the \code{min_pmix} registry (a future roadmap step).}
+mirroring dataset name derivation. The name is what the task path hashes;
+the resolved single-argument function is additionally materialised on the
+scenario (keyed by name) for execution and isolated via
+\code{\link[=scenario_min_pmix]{scenario_min_pmix()}}. A name-string is resolved to a function at
+construction (from \code{ssdtools} or the caller's environment), failing fast if
+it cannot be resolved to a single-argument function.}
 
 \item{range_shape1}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape1 parameter.}
@@ -128,8 +132,9 @@ and has \strong{no} dependency on \code{targets}.
 Input data is forwarded through \code{\link[=ssd_data]{ssd_data()}} for validation (a numeric
 \code{Conc} column is required) and retained on the scenario (as \verb{$data}) so a
 local run (\code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}}) can sample it directly. The dataset
-\emph{names} (\verb{$datasets}) are what the targets/cluster path hashes and resolves
-through the registry, so that path need not carry the data frames.
+\emph{names} (\verb{$datasets}) are what the targets/cluster path hashes; the validated
+tibbles ride on the scenario and are isolated by name via \code{\link[=scenario_dataset]{scenario_dataset()}},
+so the hash need not carry the data frames.
 }
 \section{Dataset input}{
 The preferred form is an \code{\link[=ssd_data]{ssd_data()}} collection, which owns validation and

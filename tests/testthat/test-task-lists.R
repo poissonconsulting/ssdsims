@@ -363,9 +363,12 @@ test_that("parallel-safe-seeding: fit/hc wrappers reproduce under a fixed (seed,
   local_dqrng_backend()
   data <- utils::head(ssddata::ccme_boron, 6L)
   fp <- task_primer(list(dataset = "boron", nrow = 6L, rescale = FALSE))
+  # The fit path resolves `min_pmix` off the scenario via the accessor.
+  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 
   fit1 <- fit_data_task_primer(
     data,
+    scenario = scenario,
     dists = "lnorm",
     rescale = FALSE,
     computable = TRUE,

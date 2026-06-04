@@ -95,15 +95,19 @@ test_that("scenario-definition: stores min_pmix by name, not as a function", {
 })
 
 test_that("scenario-definition: min_pmix accepts names, functions, and lists", {
-  # character names used as-is
+  # character names -> stored verbatim, resolved from the caller's environment
+  default <- function(n) 0.05
+  strict <- function(n) 0.1
+  s_names <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    min_pmix = c("default", "strict")
+  )
+  expect_identical(s_names$fit$min_pmix, c("default", "strict"))
   expect_identical(
-    ssd_define_scenario(
-      ssddata::ccme_boron,
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = c("default", "strict")
-    )$fit$min_pmix,
-    c("default", "strict")
+    s_names$min_pmix_fns,
+    list(default = default, strict = strict)
   )
   # bare function -> derived name
   expect_identical(
@@ -168,6 +172,81 @@ test_that("scenario-definition: min_pmix rejects duplicate names", {
       min_pmix = list(a = ssdtools::ssd_min_pmix, a = ssdtools::ssd_min_pmix)
     )
   })
+})
+
+test_that("scenario-accessors: a supplied min_pmix function is materialised under its name", {
+  my_fun <- function(n) 0.05
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    min_pmix = my_fun
+  )
+  expect_identical(s$fit$min_pmix, "my_fun")
+  expect_identical(s$min_pmix_fns, list(my_fun = my_fun))
+})
+
+test_that("scenario-accessors: a min_pmix name-string resolves at construction", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    min_pmix = "ssd_min_pmix"
+  )
+  expect_identical(s$fit$min_pmix, "ssd_min_pmix")
+  expect_identical(s$min_pmix_fns[["ssd_min_pmix"]], ssdtools::ssd_min_pmix)
+})
+
+test_that("scenario-accessors: an unresolvable min_pmix name fails fast", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      min_pmix = "no_such_fun"
+    )
+  })
+})
+
+test_that("scenario-accessors: a name resolving to a multi-arg function fails fast", {
+  two_arg <- function(a, b) 0.05
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      min_pmix = "two_arg"
+    )
+  })
+})
+
+test_that("scenario-accessors: materialisation does not change fit-task primers", {
+  # Same min_pmix name, functions with different bodies -> identical primers.
+  f_a <- function(n) 0.05
+  f_b <- function(n) 0.10
+  s_a <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    nrow = 6L,
+    seed = 1L,
+    min_pmix = list(shared = f_a)
+  )
+  s_b <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    nrow = 6L,
+    seed = 1L,
+    min_pmix = list(shared = f_b)
+  )
+  # The stored functions differ, but the name (the identity surface) does not.
+  expect_false(identical(s_a$min_pmix_fns, s_b$min_pmix_fns))
+  expect_identical(s_a$fit$min_pmix, s_b$fit$min_pmix)
+  fit_a <- ssd_scenario_fit_tasks(s_a)
+  fit_b <- ssd_scenario_fit_tasks(s_b)
+  expect_identical(
+    task_primer(fit_a[1, task_axes("fit")]),
+    task_primer(fit_b[1, task_axes("fit")])
+  )
 })
 
 test_that("scenario-definition: partition_by defaults are populated", {

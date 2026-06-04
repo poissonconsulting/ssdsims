@@ -163,8 +163,10 @@ ssd_scenario_tasks <- function(scenario) {
 #' `targets` shard body and the replay helper (`TARGETS-DESIGN.md` §7) reuse.
 #'
 #' The scenario retains the data frames it was built from, so the runner reads
-#' them directly - no separate `data` argument. `min_pmix` names are resolved
-#' against `ssdtools` until the registry roadmap step lands.
+#' them directly - no separate `data` argument. `min_pmix` names are resolved to
+#' their materialised functions off the scenario via [scenario_min_pmix()]
+#' (resolved once, at construction), not by a runtime `ssdtools`/global-env
+#' search.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
 #' @return A named list with `sample`, `fit`, and `hc` elements: each the
@@ -232,6 +234,7 @@ ssd_run_scenario_baseline <- function(scenario) {
   fit_tbl$fits <- purrr::pmap(
     fit_args,
     fit_data_task_primer,
+    scenario = scenario,
     dists = scenario$fit$dists,
     seed = seed
   )
@@ -410,29 +413,17 @@ sample_data_task <- function(data, n_max, replace) {
   dplyr::slice_sample(data, n = n_max, replace = replace)
 }
 
-resolve_min_pmix <- function(name, call = rlang::caller_env()) {
-  out <- rlang::env_get(rlang::ns_env("ssdtools"), name, default = NULL)
-  if (!rlang::is_function(out)) {
-    out <- rlang::env_get(
-      rlang::global_env(),
-      name,
-      default = NULL,
-      inherit = TRUE
-    )
-  }
-  if (!rlang::is_function(out)) {
-    chk::abort_chk(
-      "Unable to resolve `min_pmix` name ",
-      encodeString(name, quote = "\""),
-      " to a function; there is no `min_pmix` registry yet.",
-      call = call
-    )
-  }
-  out
+# Resolve a `min_pmix` name to its function off the scenario (the materialised
+# store), not via a runtime `ssdtools`/global-env search. Resolution happened
+# once, at construction (`scenario_min_pmix_materialise()`), so a cluster worker
+# reads the function straight off the transported scenario.
+resolve_min_pmix <- function(scenario, name) {
+  scenario_min_pmix(scenario, name)
 }
 
 fit_data_task <- function(
   data,
+  scenario,
   dists,
   rescale,
   computable,
@@ -441,7 +432,7 @@ fit_data_task <- function(
   range_shape1,
   range_shape2
 ) {
-  min_pmix_fn <- resolve_min_pmix(min_pmix)
+  min_pmix_fn <- resolve_min_pmix(scenario, min_pmix)
   ssdtools::ssd_fit_dists(
     data,
     dists = dists,
@@ -505,6 +496,7 @@ sample_data_task_primer <- function(data, n_max, replace, seed, primer) {
 
 fit_data_task_primer <- function(
   data,
+  scenario,
   dists,
   rescale,
   computable,
@@ -518,6 +510,7 @@ fit_data_task_primer <- function(
   local_dqrng_state(seed, primer = primer)
   fit_data_task(
     data,
+    scenario = scenario,
     dists = dists,
     rescale = rescale,
     computable = computable,

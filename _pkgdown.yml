@@ -17,6 +17,16 @@ reference:
   - ssd_scenario_hc_tasks
   - ssd_run_scenario_baseline
 
+- title: Scenario accessors
+  desc: >
+    Isolate an already-materialised value from a scenario by name - the dataset
+    tibble or the `min_pmix` function. Names (not values) drive task hashing, so
+    these accessors resolve a name back to the value carried on the scenario for
+    execution.
+  contents:
+  - scenario_dataset
+  - scenario_min_pmix
+
 - title: Simulation pipeline
   desc: >
     The immediate (non-targets) pipeline: simulate data, fit distributions, and
