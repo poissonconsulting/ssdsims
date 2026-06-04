@@ -30,6 +30,6 @@ The cheap probe catches (1) but not (2). The exploration's `case6` shows the pro
 
 - **New code**: `chk_dqrng_backend_intact()` in `R/dqrng-backend.R`; exit-check wiring in the `*_data_task_primer()` wrappers (`R/primer-primitives.R` / `R/task-lists.R`); tests in `tests/testthat/test-dqrng-backend.R` and the primitives test.
 - **APIs**: internal only — no public surface change.
-- **Dependencies**: none added. Uses dqrng's already-exported `dqrng_get_state()` / `dqrng_set_state()`. **Depends on `primer-primitives`** (which defines the per-task wrappers this hooks into); orthogonal to `task-primer`.
+- **Dependencies**: none added. Uses dqrng's already-exported `dqrng_get_state()` / `dqrng_set_state()`. Builds on `primer-primitives` (**landed**, archived `2026-06-04-primer-primitives`), which defines the per-task wrappers this hooks into; orthogonal to `task-primer` (also landed). The dependency is satisfied, so this change is ready to implement.
 - **Downstream**: the postcondition rides inside the `*_data_task_primer()` primitives, so it carries into the `targets` shard body and the §7 `replay-helper` for free — each shard self-verifies its RNG backend in its own process, where an independently-loaded foreign package is exactly the risk.
 - **Exploration**: `exploration/user-rng-conflict/` (the dqrng-vs-randtoolbox reprexes that motivated and validated this) lives in this change.

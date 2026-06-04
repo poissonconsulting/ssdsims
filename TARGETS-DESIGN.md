@@ -1881,7 +1881,8 @@ already ran end to end (see §4, §6). These steps are therefore
   `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/`.
   Rides inside the per-task primitives, so it carries into the `targets`
   shard body and §7 `replay-helper` — each shard self-verifies in its own
-  process. **Depends on `primer-primitives`**; orthogonal to `task-primer`.
+  process. Depends on `primer-primitives` (**landed**) — so it is
+  unblocked — and is orthogonal to `task-primer`.
 - **`migrate-public-api`** — *Cosmetic, independent of the targets
   work (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
