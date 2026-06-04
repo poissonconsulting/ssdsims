@@ -6,9 +6,9 @@ The baseline runner (`task-lists`) proves the three-step data shape in-process, 
 
 - Add `ssd_scenario_sample_shards()` / `_fit_shards()` / `_hc_shards()` — group each step's task table by its `partition_by` **path** axes (via `scenario_partition_axes()`) into one row per shard. Each shard row carries the path-axis columns (the `tar_map` target-name suffix and Hive path) and a `tasks` list-column of that shard's task rows, each decorated with `seed = scenario$seed`, its `primer` (`task_primer()` over `task_axes(step)`), and the upstream partition-path columns needed to open its parent shard.
 - Add per-shard step runners `ssd_run_sample_step()` / `ssd_run_fit_step()` / `ssd_run_hc_step()` — loop the shard's tasks, install each task's `(seed, primer)` once via the existing `*_data_task_primer()` wrappers, read the matching upstream shard's Parquet by partition path, and write the shard's Parquet; resolve `min_pmix` and datasets through the `registry`, and record the shard's sha256 through the `manifest`.
-- Add `ssd_summarize()` — a fan-in that reads the three result layers (via `duckplyr`/`arrow`) without pulling every shard value back into R (§6).
+- Add `ssd_summarize()` — a fan-in that reads the three result layers (via `duckplyr`) without pulling every shard value back into R (§6).
 - Ship a static-branching `_targets.R` template (`inst/targets-templates/local/`) using `tarchetypes::tar_map()` over the shard tables; the scenario is a plain construction-time object (no `tar_target`), so the shard set is fixed at sourcing time (§6).
-- Introduce `targets`, `tarchetypes`, and `duckplyr`.
+- Introduce `targets` and `tarchetypes` (`duckplyr`, the team's Parquet engine, arrives with `registry`).
 
 ## Capabilities
 
@@ -22,6 +22,6 @@ The baseline runner (`task-lists`) proves the three-step data shape in-process, 
 
 - **New code**: `R/task-shards.R` (the `*_shards()` grouping wrappers, reusing `task_axes()`/`path_key()`/`task_primers()` from `R/task-lists.R`); `R/targets-runner.R` (the three `ssd_run_*_step()` runners and `ssd_summarize()`); `inst/targets-templates/local/_targets.R`. Tests in `tests/testthat/test-task-shards.R` and a `tar_make()` integration test.
 - **APIs**: New exports for the shard wrappers, step runners, and `ssd_summarize()`. Roxygen/`man/` and a `_pkgdown.yml` "Targets pipeline" reference group.
-- **Dependencies**: adds `targets`, `tarchetypes`, and `duckplyr` to `Imports` (`arrow` arrives with `registry`).
+- **Dependencies**: adds `targets` and `tarchetypes` to `Imports` (`duckplyr` — Parquet I/O, the team preference — arrives with `registry`).
 - **On-disk layout**: writes `results/{sample,fit,hc}/<partition-path>/part.parquet` and `results/summary.parquet` (§6).
 - **Prerequisites**: `registry` (datasets persisted, `min_pmix` resolved), `manifest` (per-shard sha256 recording), `partition-by` (the `scenario_partition_axes()` path/inner split and the three-step `sample`/`fit`/`hc` defaults), and `primer-primitives` (the `*_data_task_primer()` wrappers — already landed). `shard-failure-survival`, `hive-partitioning`, and `cloud-upload` build on this step (the happy-path pipeline here; `error = "null"` survival, Hive predicate-pushdown, and per-shard upload land in those steps).

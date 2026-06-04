@@ -1,6 +1,6 @@
 ## 1. Dependencies
 
-- [ ] 1.1 Add `targets`, `tarchetypes`, and `duckplyr` to `DESCRIPTION` `Imports` (`arrow` arrives with `registry`)
+- [ ] 1.1 Add `targets` and `tarchetypes` to `DESCRIPTION` `Imports` (`duckplyr` — Parquet I/O — arrives with `registry`)
 - [ ] 1.2 Confirm prerequisites are in place: `scenario_partition_axes()` and the three-step `sample`/`fit`/`hc` defaults (`partition-by`), the `registry` resolver, and the `manifest` recorder
 
 ## 2. Shard grouping wrappers
@@ -19,7 +19,7 @@
 
 ## 4. Summary fan-in
 
-- [ ] 4.1 Add `ssd_summarize(dir_sample, dir_fit, dir_hc, path)`: read the result layers with `duckplyr`/`arrow` and write `results/summary.parquet`, without depending on shard target values or recomputing upstream
+- [ ] 4.1 Add `ssd_summarize(dir_sample, dir_fit, dir_hc, path)`: read the result layers with `duckplyr` and write `results/summary.parquet`, without depending on shard target values or recomputing upstream
 
 ## 5. Targets pipeline template
 

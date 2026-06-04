@@ -56,7 +56,7 @@ The per-task results produced by the targets pipeline SHALL be byte-identical (a
 - **THEN** the collected per-task `sample`, `fit`, and `hc` results SHALL be equal across the two runs
 
 ### Requirement: A summary fan-in reads the result layers without re-running upstream
-The package SHALL provide `ssd_summarize()` that reads the `sample`, `fit`, and `hc` result directories (via `duckplyr`/`arrow`) and writes a combined `results/summary.parquet`, without depending on each shard target's value and without re-running upstream steps (`TARGETS-DESIGN.md` §6).
+The package SHALL provide `ssd_summarize()` that reads the `sample`, `fit`, and `hc` result directories (via `duckplyr`) and writes a combined `results/summary.parquet`, without depending on each shard target's value and without re-running upstream steps (`TARGETS-DESIGN.md` §6).
 
 #### Scenario: Summary reads landed shards
 - **WHEN** `ssd_summarize()` is run after the shard Parquets are written

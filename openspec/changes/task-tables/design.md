@@ -9,7 +9,7 @@
 - Per-step shard tables: one row per `partition_by` path cell, with a `tasks` list-column carrying each task row plus its `(seed, primer)` and upstream partition-path columns — the `values` for `tar_map()`.
 - Per-shard step runners that reuse the existing `*_data_task_primer()` wrappers (one `local_dqrng_state(seed, primer)` per task), read upstream by partition path, and write one Parquet per shard.
 - A static-branching `_targets.R` template that mints one named target per shard and `tar_make()`s a tiny scenario, with results byte-identical to `ssd_run_scenario_baseline()`.
-- A `duckplyr`/`arrow` `ssd_summarize()` fan-in over the result layers.
+- A `duckplyr` `ssd_summarize()` fan-in over the result layers.
 
 **Non-Goals:**
 
@@ -42,7 +42,7 @@ The shard set is a pure function of the scenario, known when `_targets.R` is sou
 
 ### Decision: `format = "file"` step targets; `duckplyr` summary fan-in
 
-Step targets return the shard's Parquet **path** (`format = "file"`), not its value, so targets tracks the file and downstream targets pass paths, not in-memory frames (§6). `ssd_summarize()` reads the three result directories with `duckplyr`/`arrow` rather than depending on each shard target, so it sees whatever shards landed and does not pull every shard back into R (§6). `error = "null"` and survivor-union are deferred to `shard-failure-survival`; here the happy path.
+Step targets return the shard's Parquet **path** (`format = "file"`), not its value, so targets tracks the file and downstream targets pass paths, not in-memory frames (§6). `ssd_summarize()` reads the three result directories with `duckplyr` (the team's Parquet engine, `AGENTS.md`) rather than depending on each shard target, so it sees whatever shards landed and does not pull every shard back into R (§6). `error = "null"` and survivor-union are deferred to `shard-failure-survival`; here the happy path.
 
 ### Decision: ship the pipeline as an `inst/` template plus exported building blocks
 
@@ -51,9 +51,9 @@ The `_targets.R` is shipped as a template under `inst/targets-templates/local/` 
 ## Risks / Trade-offs
 
 - **`partition-by` is not yet applied** → `scenario_partition_axes()` and the three-step `sample`/`fit`/`hc` defaults are prerequisites; the current `scenario_default_partition_by()` still uses the pre-fold `data` key. This change depends on `partition-by` landing first; until then the shard wrappers cannot key on the split. Stated as a prerequisite in the proposal.
-- **Heavy dependency surface** (`targets`, `tarchetypes`, `arrow`, `duckplyr`) → these are the price of the cluster pipeline; the crew labs (§4) pinned a binary install path. Parquet I/O stays behind the `registry` `ssd_read_parquet()`/`ssd_write_parquet()` internals so the backend is swappable.
+- **Heavy dependency surface** (`targets`, `tarchetypes`, `duckplyr`) → these are the price of the cluster pipeline; the crew labs (§4) pinned a binary install path. Parquet I/O stays behind the `registry` `ssd_read_parquet()`/`ssd_write_parquet()` internals (`duckplyr`) so the engine is swappable.
 - **`tar_make()` in tests is slower than unit tests** → keep the integration scenario tiny (1 dataset, `nsim = 2`, `nrow = c(5, 10)`), run it in a `tempdir()`, and gate it behind `testthat::skip_on_cran()` / a `targets`-available skip so CRAN and offline checks stay fast.
-- **Byte-identity hinges on `arrow` write determinism** → assert equality on the *read-back R frames* (per-task results), not on raw Parquet bytes, so Parquet encoding choices don't make a faithful run look unequal.
+- **Byte-identity hinges on `duckplyr`/DuckDB write determinism** → assert equality on the *read-back R frames* (per-task results), not on raw Parquet bytes, so Parquet encoding choices don't make a faithful run look unequal.
 - **Manifest recording inside parallel shard bodies** → handled by `manifest`'s per-shard sidecar design (one writer per file); the runner just calls `ssd_record_shard()` on success.
 
 ## Open Questions

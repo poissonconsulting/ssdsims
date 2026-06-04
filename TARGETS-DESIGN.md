@@ -987,7 +987,7 @@ A step body (sketch):
 ssd_run_fit_step <- function(tasks, scenario, data_dir, out_dir) {
   rows <- purrr::pmap_dfr(tasks, function(task_id, primer, data_id,
                                           rescale, min_pmix, ...) {
-    upstream <- arrow::read_parquet(file.path(data_dir,
+    upstream <- duckplyr::read_parquet_duckdb(file.path(data_dir,
                                               # partition path from upstream cols
                                               .upstream_path(...),
                                               "part.parquet"))
@@ -1001,7 +1001,7 @@ ssd_run_fit_step <- function(tasks, scenario, data_dir, out_dir) {
                    .partition_path(tasks, scenario$partition_by$fit),
                    "part.parquet")
   dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
-  arrow::write_parquet(rows, out)
+  duckplyr::compute_parquet(rows, out)
   out
 }
 ```
@@ -1106,7 +1106,7 @@ layout (`_targets/objects/<name>`, no extension) is not a stable
 contract to read against from outside `targets`. `format = "file"`
 is the seam that actually passes storage between targets without the
 roundtrip: the target's value *is* the Parquet path, so a downstream
-branch receives a string and hands it straight to duckplyr / `arrow`
+branch receives a string and hands it straight to duckplyr
 / the uploader. That is why every step target here — and the
 `summary` and `upload_<step>` targets — is `format = "file"`.
 
@@ -1352,7 +1352,7 @@ without re-running every other shard.
 
    4. Reproduce, no targets involved.
       ───────────────────────────────
-      fit <- arrow::read_parquet(<upstream_path>) |>
+      fit <- duckplyr::read_parquet_duckdb(<upstream_path>) |>
              # the fit shard may contain multiple fit task rows;
              # pick the one this hc task points to.
              dplyr::filter(task_id == task$fit_id) |>
@@ -1550,9 +1550,9 @@ gain a row, so its Parquet bytes change and `summary` (which reads
 the shard) re-runs. But the corollary matters for §8.4 and for any
 no-op rewrite: if a rewrite reproduced the exact same bytes,
 `format = "file"` content-hashing would see no change and `summary`
-would not rebuild. Byte-stable Parquet writes (pinned `arrow`,
-deterministic column order) are what make that hash comparison
-meaningful.
+would not rebuild. Byte-stable Parquet writes (pinned
+`duckplyr`/DuckDB, deterministic column order) are what make that hash
+comparison meaningful.
 
 | What you added             | Inner axis for…   | Cost                                  |
 | -------------------------- | ----------------- | ------------------------------------- |

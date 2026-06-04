@@ -1,7 +1,7 @@
 ## 1. Dependencies and shared helpers
 
-- [ ] 1.1 Add `arrow` and `digest` to `DESCRIPTION` `Imports`
-- [ ] 1.2 Add thin internals `ssd_write_parquet(x, path)` / `ssd_read_parquet(path)` wrapping `arrow` (the single swap point for a future `nanoparquet` backend)
+- [ ] 1.1 Add `duckplyr` and `digest` to `DESCRIPTION` `Imports`
+- [ ] 1.2 Add thin internals `ssd_write_parquet(x, path)` / `ssd_read_parquet(path)` wrapping `duckplyr` (`duckplyr::compute_parquet()` / `duckplyr::read_parquet_duckdb()`) — the single audit point for Parquet I/O (team preference, `AGENTS.md`)
 - [ ] 1.3 Add a shared `ssd_file_sha256(path)` internal (`digest::digest(file = path, algo = "sha256")`); place it in a shared utils file so `manifest` can reuse it
 
 ## 2. Dataset registry
