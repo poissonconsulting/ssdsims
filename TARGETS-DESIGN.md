@@ -1515,7 +1515,8 @@ Adding a value to an axis that is **in `partition_by`** for a step
 creates new partition cells and therefore new shards; existing
 shards' Parquets stay byte-identical and are reused. No
 bookkeeping needed beyond `targets`' usual branch-level
-dependency tracking.
+dependency tracking. This minimal-rebuild-on-growth property is
+asserted end-to-end by the `path-axis-growth` step (§12).
 
 | What you added                  | Path axis for…       | Effect                                            |
 | ------------------------------- | -------------------- | ------------------------------------------------- |
@@ -1900,6 +1901,25 @@ already ran end to end (see §4, §6). These steps are therefore
   branching**: the scenario is a plain construction-time object and
   `tar_map` mints one named target per shard (§6) — no
   `pattern = map` over a runtime target.
+- **`path-axis-growth`** — §8.1 — assert **end-to-end that a minimal
+  scenario change on a path axis rebuilds only the necessary shards**.
+  Appending a dataset (or growing `nsim`) to a working, already-
+  `tar_make()`-d scenario mints new shard targets and leaves every
+  existing shard cached — the cheap-extension payoff the extensibility
+  goal leans on, validated in the targets lab's `static-extend` axis
+  (§6) and ported here into the package's own
+  `ssd_scenario → ssd_scenario_*_shards → tar_map → tar_make` path.
+  Split out of `task-tables` so that step stays a build-and-compile
+  checkpoint while this one owns the incremental-rebuild contract; it is
+  the path-axis counterpart to `shard-atomic-rewrite`'s inner-axis test.
+  **Depends on** `task-tables`. Note: the precise expected-cached set
+  follows the invalidation model pinned by `hive-partitioning` (the §8
+  cache-by-existence vs. content-hash fork), so the assertion is
+  finalised once that decision lands. Test: run a tiny scenario to
+  completion; append a dataset (a path axis for all three steps),
+  `tar_make()` again, and assert only the new dataset's shards build
+  while the original dataset's shard targets are skipped (and `summary`
+  re-runs); repeat for `nsim` growth.
 - **`shard-failure-survival`** — §6.2 — the shard body writes as many
   rows as ran successfully (a bad task yields a shorter shard, not an
   abort); the step target carries `error = "null"` only for the
@@ -2027,6 +2047,7 @@ flowchart TD
     cloud[cloud-upload]
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
+    pathgrow[path-axis-growth]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -2049,6 +2070,7 @@ flowchart TD
     tt --> cloud
     tt --> replay
     tt --> rewrite
+    tt --> pathgrow
 
     survive --> assert
     cluster --> survive
