@@ -26,7 +26,8 @@ ssd_write_parquet <- function(df, path) {
   path
 }
 
-#' Read a Parquet path (a file or a glob) back into a plain tibble.
+#' Read a Parquet path - a file, a glob, or a vector of files - back into a
+#' plain tibble (duckplyr combines a multi-file set in one DuckDB scan).
 #'
 #' `hive_partitioning = FALSE` so only the file's own columns return - the
 #' shard's `key=value` directory path would otherwise be auto-discovered and
@@ -60,19 +61,18 @@ shard_path <- function(tasks, scenario, step) {
   path_key(tasks[1L, , drop = FALSE], scenario$partition_by[[step]])
 }
 
-# Read a child shard's parent shards once each and return them bound into one
+# Read a child shard's parent shards once each and return them combined into one
 # tibble. A child shard's tasks may span several parent shards (the m:n
 # relationship: a coarser parent keeps an axis the child shards on, or the child
 # is coarser and spans many parents); we read the *distinct* set of parent shard
 # paths the shard's tasks reference - each parent once, served to every task in
-# the shard that needs it - never opening an unrelated shard. Per-task rows are
-# then isolated in memory by the `<parent>_id` identity.
+# the shard that needs it - never opening an unrelated shard. duckplyr combines
+# the file set in a single DuckDB scan; per-task rows are then isolated in memory
+# by the `<parent>_id` identity.
 read_parent_shards <- function(tasks, scenario, parent, parent_dir) {
   paths <- unique(path_key(tasks, scenario$partition_by[[parent]]))
-  shards <- lapply(paths, function(p) {
-    ssd_read_parquet(file.path(parent_dir, p, "part.parquet"))
-  })
-  dplyr::bind_rows(shards)
+  files <- file.path(parent_dir, paths, "part.parquet")
+  ssd_read_parquet(files)
 }
 
 #' Run a sample Shard
