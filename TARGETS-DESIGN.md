@@ -128,8 +128,8 @@ The most consequential design choices, with section refs:
   runner — land before any RNG / dqrng machinery so the data shape is
   settled first. `migrate-public-api` is a cosmetic rename that the
   targets-only plumbing no longer waits on (trusting the design), and
-  the datasets / `min_pmix` registries collapse into one `registry`
-  step.
+  the datasets / `min_pmix` are materialised on the scenario and reached
+  by name through `scenario-accessors` — no registry.
 
 ---
 
@@ -1817,8 +1817,9 @@ already ran end to end (see §4, §6). These steps are therefore
   rescale, est_method, nboot, ci, ...)`, forwarding the input data
   through `ssd_data()` (a tiny normaliser that validates the `Conc`
   column and tibble shape). Stores only declarative fields (seed,
-  knobs, dataset names — the data registry is *implicit*, see the
-  registry steps below). No RNG, no tasks, no targets yet. **Scoped to
+  knobs, dataset names — the dataset/`min_pmix` lookup lives on the
+  scenario, reached by name, see the `scenario-accessors` step
+  below). No RNG, no tasks, no targets yet. **Scoped to
   data-frame input only** (single or list); the other generator inputs
   are `scenario-input-types`, below.
 - **`scenario-input-types`** — Extend `ssd_define_scenario()` to accept
@@ -1871,23 +1872,25 @@ already ran end to end (see §4, §6). These steps are therefore
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
   re-runs with byte-equivalence. This is a surface rename over
   `primer-primitives`, which already establishes the contract — so,
-  **trusting the design**, none of the targets-only plumbing (`registry`,
-  `manifest`, `task-tables`, …) waits on it. It can land at any time; the
-  DAG shows it hanging off `primer-primitives` with a dashed, non-gating
-  edge and no dependants.
-- **`registry`** — **Targets-only**: an implicit registry of the
-  scenario's *named* entries, implemented as `tar_target`s that resolve
-  each name once per project — datasets to a Parquet file
-  (`results/datasets/<name>.parquet`) and `min_pmix` functions to a
-  pinned per-run function value. One step, not two, because both are the
-  same name-only indirection (§1.1) and differ only in the resolved
-  payload. Note: since `scenario-input-types` materialises generator
-  datasets **in the constructor** (inline on the scenario), the dataset
-  side of `registry` *persists* the tibble the scenario already
-  carries — it does not regenerate. Function-name / body edits don't
-  enter task hashes because the scenario refers to both by name.
-  Regression test: a body edit to a registered `min_pmix` function does
-  not move the hash of any cached fit branch.
+  **trusting the design**, none of the targets-only plumbing (`scenario-accessors`,
+  `manifest`, `task-tables`, …) waits on it. It is off the targets critical
+  path, but it is **not** dependant-free: it **gates `cleanup-lecuyer`**,
+  which cannot drop the L'Ecuyer-CMRG helpers and `_seed` shims until the
+  public step functions stop calling them. The DAG shows it following
+  `primer-primitives` and feeding `cleanup-lecuyer`.
+- **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
+  on the scenario, accessed by name** — no registry (§1.1). Materialise
+  the `min_pmix` functions on the scenario at construction (keyed by
+  name, resolving name-strings then), and add `scenario_dataset(scenario,
+  name)` / `scenario_min_pmix(scenario, name)` accessors;
+  `resolve_min_pmix()` becomes the accessor. Hashing stays name-only, so
+  a function-body edit does not move any cached fit branch (regression
+  test). **Depends on `scenario-input-types`**: non-data-frame datasets
+  must be materialisable (generators → inline tibble at construction)
+  before they can be carried on the scenario and reached by name. Adds no
+  *downstream* dependency (no Parquet here — that is `task-tables`).
+  Persisting a *large* dataset to disk instead of carrying it inline is
+  the deferred `dataset-provenance` step.
 - **`manifest`** — Per-scenario manifest writer/reader with the
   §8.5 field set; each step target writes each shard's sha256
   alongside the Parquet on success.
@@ -1956,7 +1959,8 @@ already ran end to end (see §4, §6). These steps are therefore
   of the chosen shards (§8.4). Both recipes have tests.
 - **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
-  a historical reference.
+  a historical reference. Depends on `migrate-public-api` (the public
+  step functions must be off the L'Ecuyer path first).
 - **`error-call-origin`** — *Cosmetic, independent of the rest.*
   Audit every user-facing function so its validation errors report the
   **calling function** as the origin (`Error in \`ssd_*()\`:`), never an
@@ -1973,7 +1977,7 @@ already ran end to end (see §4, §6). These steps are therefore
   not on the dependency DAG.* The decoupling `scenario-input-types`
   defers: stop transporting generated datasets inline and instead store
   only the name + generator reference + `.seed`, regenerating the tibble
-  in `registry` from that provenance (the name-only path sketched in
+  in `scenario-accessors` from that provenance (the name-only path sketched in
   §1.1). Until a real dataset is large enough to make inline transport
   heavy, the **generator code is the provenance** and the realised bytes
   ride on the scenario; this step is the escape hatch, not a near-term
@@ -2012,11 +2016,11 @@ flowchart TD
     migrate[migrate-public-api]
     partby[partition-by]
 
+    acc[scenario-accessors]
+
     subgraph targets [targets-only plumbing]
-        reg[registry]
         manif[manifest]
         tt[task-tables]
-        reg --> tt
         manif --> tt
     end
 
@@ -2034,12 +2038,13 @@ flowchart TD
     define --> partby
     define --> inputs
     primer --> inputs
-    inputs --> reg
+    inputs --> acc
     dqinit --> dqstate
     dqstate --> primer
     baseline --> prims
     primer --> prims
 
+    acc --> tt
     prims --> tt
     partby --> tt
 
@@ -2055,14 +2060,17 @@ flowchart TD
     rewrite --> lockin
     lockin --> cleanup
 
-    prims -.-> migrate
+    prims --> migrate
+    migrate --> cleanup
 ```
 
-`migrate-public-api` hangs off `primer-primitives` with a **dashed,
-non-gating** edge and **no dependants**: trusting the design, it is a
-cosmetic rename that no targets step waits on, so it can land any time
-(like `error-call-origin` and the Cleanup items). The dashed edge marks
-"follows from, but does not block."
+`migrate-public-api` follows `primer-primitives` (it reuses the
+`*_data_task_primer()` contract) and **gates `cleanup-lecuyer`**: the
+L'Ecuyer-CMRG helpers and `_seed` shims cannot be removed until the public
+step functions stop calling them. It is still off the *targets* critical
+path — no `scenario-accessors`/`manifest`/`task-tables` step waits on it — so it can
+land any time before `cleanup-lecuyer`, but unlike the truly dependant-free
+`error-call-origin` it is **not** a leaf: it has one downstream dependant.
 
 Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not
