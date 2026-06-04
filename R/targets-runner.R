@@ -420,6 +420,7 @@ ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
 #' @seealso [scenario_results_dir()], [ssd_run_scenario_shards()] (the
 #'   single-core, `targets`-free equivalent).
 #' @export
+#' @autoglobal
 #' @examples
 #' \dontrun{
 #' # _targets.R
