@@ -34,7 +34,10 @@ targets_summary <- "results/summary.parquet"
 if (file.exists(targets_summary)) {
   read_sorted <- function(path) {
     tbl <- tibble::as_tibble(dplyr::collect(
-      duckplyr::read_parquet_duckdb(path, options = list(hive_partitioning = FALSE))
+      duckplyr::read_parquet_duckdb(
+        path,
+        options = list(hive_partitioning = FALSE)
+      )
     ))
     tbl[order(tbl$hc_id, tbl$dist, tbl$proportion), ]
   }
