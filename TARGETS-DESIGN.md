@@ -1911,6 +1911,24 @@ already ran end to end (see §4, §6). These steps are therefore
   `n_max` draw lives here as `slice_sample_state`; the
   `head(sample, nrow)` truncation is the `fit` step's inline, RNG-free
   step — there is no separate sub-truncation step.)
+- **`task-rng-postcheck`** — Per-task RNG-backend **postcondition**.
+  Each `*_data_task_primer()` wrapper, when the task *ends*, verifies
+  that dqrng (not merely *some* user-supplied RNG) still held base R's
+  `user_unif_rand` slot for the whole body, via a non-destructive
+  state-advance witness (`dqrng_get_state()` → base draw →
+  `dqrng_get_state()` → `dqrng_set_state()` restore); a frozen state
+  means a foreign RNG hijacked the slot, so it **aborts** (chk-style),
+  symmetric with the `local_dqrng_state()` entry guard. Closes the gap
+  that the `RNGkind()` probe (`dqrng_backend_active()`) is satisfied by a
+  *foreign* user-supplied RNG: a second user-RNG package (e.g.
+  `randtoolbox`) loaded in the session takes the single global slot while
+  `RNGkind()[1]` still reads `"user-supplied"`. Validated (and the threat
+  reproduced, dqrng vs `randtoolbox`) in
+  `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/`.
+  Rides inside the per-task primitives, so it carries into the `targets`
+  shard body and §7 `replay-helper` — each shard self-verifies in its own
+  process. Depends on `primer-primitives` (**landed**) — so it is
+  unblocked — and is orthogonal to `task-primer`.
 - **`migrate-public-api`** — *Cosmetic, independent of the targets
   work (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
@@ -2108,6 +2126,7 @@ flowchart TD
     dqstate[local-dqrng-state]
     primer[task-primer]
     prims[primer-primitives]
+    postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
     partby[partition-by]
     shardrun[shard-runner-baseline]
@@ -2140,6 +2159,7 @@ flowchart TD
     baseline --> prims
     primer --> prims
 
+    prims --> postcheck
     baseline --> partby
 
     acc --> tt
