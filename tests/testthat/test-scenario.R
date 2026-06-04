@@ -249,16 +249,175 @@ test_that("scenario-accessors: materialisation does not change fit-task primers"
   )
 })
 
-test_that("scenario-definition: partition_by defaults are populated", {
+test_that("scenario-definition: partition_by three-step defaults are populated", {
   s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
   expect_identical(
     s$partition_by,
     list(
-      data = c("dataset", "sim", "replace"),
-      fit = c("dataset", "sim", "rescale"),
+      sample = c("dataset", "sim", "replace"),
+      fit = c("dataset", "sim", "nrow", "rescale"),
       hc = c("dataset", "sim")
     )
   )
+})
+
+test_that("scenario-definition: a valid partition_by override is stored verbatim", {
+  pb <- list(
+    sample = c("dataset", "sim", "replace"),
+    fit = c("dataset", "sim", "nrow", "rescale"),
+    hc = c("dataset", "sim", "nrow")
+  )
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = pb
+  )
+  expect_identical(s$partition_by, pb)
+})
+
+test_that("scenario-definition: partition_by rejects a missing step entry", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "sim"),
+        fit = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: partition_by rejects an unknown axis", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "nboot"),
+        fit = c("dataset", "sim"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: partition_by rejects nrow under the sample step", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "sim", "nrow"),
+        fit = c("dataset", "sim", "nrow"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: partition_by accepts nrow as a fit/hc path axis", {
+  pb <- list(
+    sample = c("dataset", "sim", "replace"),
+    fit = c("dataset", "sim", "nrow"),
+    hc = c("dataset", "sim", "nrow")
+  )
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = pb
+  )
+  expect_identical(s$partition_by, pb)
+})
+
+test_that("scenario-definition: partition_by rejects duplicate or NA axis names", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "dataset"),
+        fit = c("dataset", "sim"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", NA_character_),
+        fit = c("dataset", "sim"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: partition_by rejects a parent-inconsistent child", {
+  # `fit` shards on `replace` but its parent `sample` does not - the
+  # `sample_id` join would not be well-defined.
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(
+        sample = c("dataset", "sim"),
+        fit = c("dataset", "sim", "replace"),
+        hc = c("dataset", "sim")
+      )
+    )
+  })
+})
+
+test_that("scenario-definition: scenario_partition_axes splits path and inner", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
+  # inner = complement of task_axes(step)
+  fit_axes <- scenario_partition_axes(s, "fit")
+  expect_identical(fit_axes$path, c("dataset", "sim", "nrow", "rescale"))
+  expect_identical(
+    fit_axes$inner,
+    setdiff(task_axes("fit"), c("dataset", "sim", "nrow", "rescale"))
+  )
+  expect_identical(
+    fit_axes$inner,
+    c(
+      "replace",
+      "computable",
+      "at_boundary_ok",
+      "min_pmix",
+      "range_shape1",
+      "range_shape2"
+    )
+  )
+  # vocabularies equal task_axes(step)
+  for (step in c("sample", "fit", "hc")) {
+    ax <- scenario_partition_axes(s, step)
+    expect_identical(sort(c(ax$path, ax$inner)), sort(task_axes(step)))
+  }
+})
+
+test_that("scenario-definition: all-axes-in-path yields no inner axes", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = list(
+      sample = task_axes("sample"),
+      fit = task_axes("fit"),
+      hc = task_axes("hc")
+    )
+  )
+  expect_length(scenario_partition_axes(s, "hc")$inner, 0L)
 })
 
 test_that("scenario-definition: upload defaults to NULL", {

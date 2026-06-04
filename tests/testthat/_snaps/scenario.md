@@ -73,6 +73,65 @@
       Error in `ssd_define_scenario()`:
       ! Unable to resolve `min_pmix` name "two_arg" to a single-argument function.
 
+# scenario-definition: partition_by rejects a missing step entry
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "sim"), fit = c("dataset", "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by` is missing the 'hc' step entry; supply all of `sample`, `fit`, and `hc`.
+
+# scenario-definition: partition_by rejects an unknown axis
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "nboot"), fit = c("dataset", "sim"), hc = c("dataset",
+          "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` names unknown axis '"nboot"'; valid axes for the `sample` step are '"dataset"', '"sim"' and '"replace"'.
+
+# scenario-definition: partition_by rejects nrow under the sample step
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "sim", "nrow"), fit = c("dataset", "sim", "nrow"), hc = c(
+          "dataset", "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` must not include "nrow": the `sample` step is the shared draw and carries no `nrow` axis (every `nrow` truncates the same draw inside the `fit` step).
+
+# scenario-definition: partition_by rejects duplicate or NA axis names
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "dataset"), fit = c("dataset", "sim"), hc = c("dataset",
+          "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` must not contain duplicate axis names.
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", NA_character_), fit = c("dataset", "sim"), hc = c(
+          "dataset", "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$sample` must not contain missing values.
+
+# scenario-definition: partition_by rejects a parent-inconsistent child
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        sample = c("dataset", "sim"), fit = c("dataset", "sim", "replace"), hc = c(
+          "dataset", "sim")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$fit` is partitioned more finely than its parent `sample` on '"replace"'; a child step's shared path axes must be a subset of its parent's so the `sample_id` foreign-key join stays well-defined.
+
 # scenario-definition: ssd_data() collection plus name= is an error
 
     Code
@@ -226,6 +285,10 @@
           est_method: multi
           ci_method: weighted_samples
           parametric: TRUE
+        partition_by:
+          sample: dataset, sim, replace
+          fit: dataset, sim, nrow, rescale
+          hc: dataset, sim
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -258,4 +321,8 @@
           est_method: multi, geometric
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
+        partition_by:
+          sample: dataset, sim, replace
+          fit: dataset, sim, nrow, rescale
+          hc: dataset, sim
 

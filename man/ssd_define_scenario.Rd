@@ -110,9 +110,23 @@ calculate the confidence limits (and SE) from the single set of samples.}
 
 \item{parametric}{A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.}
 
-\item{partition_by}{An optional named list with \code{data}, \code{fit}, and \code{hc}
-character vectors naming the Hive partition axes per step. When \code{NULL} the
-documented per-step defaults are used.}
+\item{partition_by}{An optional named list with \strong{\code{sample}, \code{fit}, and \code{hc}}
+character vectors naming the Hive \strong{path} axes per step (one shard per path
+cell; the inner complement rides as Parquet columns). When supplied, all
+three step entries are required (no partial merge onto defaults), and each
+must be unique, non-missing, and a subset of that step's axis vocabulary:
+\code{sample} = \code{dataset}, \code{sim}, \code{replace}; \code{fit} adds \code{nrow}, \code{rescale},
+\code{computable}, \code{at_boundary_ok}, \code{min_pmix}, \code{range_shape1}, \code{range_shape2};
+\code{hc} adds \code{ci}, \code{nboot}, \code{est_method}, \code{ci_method}, \code{parametric}. \code{"nrow"}
+is rejected only for \code{sample} (the shared draw carries no \code{nrow} axis; the
+\code{fit} step truncates it inline), and is a valid path axis for \code{fit}/\code{hc}. A
+child step's path axes (restricted to the parent's vocabulary) must be a
+subset of the parent's, so the \verb{<parent>_id} join stays well-defined. When
+\code{NULL} the documented per-step defaults are used (\code{sample = c("dataset", "sim", "replace")}, \code{fit = c("dataset", "sim", "nrow", "rescale")}, \code{hc = c("dataset", "sim")}); these supersede
+\code{TARGETS-DESIGN.md} section 5's pre-fold table. The path/inner split is the
+layout knob \code{task-tables}/\code{hive-partitioning} consume; it is orthogonal to
+the per-task RNG primer, so changing it shifts file paths only, never
+results (the byte-identical acceptance test lands with \code{hive-partitioning}).}
 
 \item{upload}{An optional upload specification (a list), or \code{NULL} for no
 upload.}
