@@ -13,6 +13,12 @@
 
 library(targets)
 
+# Allow running from the project root (e.g. Positron / VS Code
+# Cmd+Shift+Enter), not just from this axis directory.
+if (dir.exists("inst/targets-templates/local")) {
+  withr::local_dir("inst/targets-templates/local", .local_envir = parent.frame(2))
+}
+
 # Build the pipeline. `_targets.R` defines one named target per shard, so
 # independent shards can run in parallel; to scale out, configure a controller
 # (e.g. `crew` / `crew.cluster`) via `tar_option_set()` in `_targets.R` — the
