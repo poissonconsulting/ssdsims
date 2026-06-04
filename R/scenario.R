@@ -65,25 +65,32 @@
 #'   upper bounds for the shape1 parameter.
 #' @param range_shape2 A list of numeric vectors of length two of the lower and
 #'   upper bounds for the shape2 parameter.
-#' @param partition_by An optional named list with **`sample`, `fit`, and `hc`**
-#'   character vectors naming the Hive **path** axes per step (one shard per path
-#'   cell; the inner complement rides as Parquet columns). When supplied, all
-#'   three step entries are required (no partial merge onto defaults), and each
-#'   must be unique, non-missing, and a subset of that step's axis vocabulary:
-#'   `sample` = `dataset`, `sim`, `replace`; `fit` adds `nrow`, `rescale`,
-#'   `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`;
-#'   `hc` adds `ci`, `nboot`, `est_method`, `ci_method`, `parametric`. `"nrow"`
-#'   is rejected only for `sample` (the shared draw carries no `nrow` axis; the
-#'   `fit` step truncates it inline), and is a valid path axis for `fit`/`hc`. A
-#'   child step's path axes (restricted to the parent's vocabulary) must be a
-#'   subset of the parent's, so the `<parent>_id` join stays well-defined. When
-#'   `NULL` the documented per-step defaults are used (`sample =
-#'   c("dataset", "sim", "replace")`, `fit = c("dataset", "sim", "nrow",
-#'   "rescale")`, `hc = c("dataset", "sim")`); these supersede
-#'   `TARGETS-DESIGN.md` section 5's pre-fold table. The path/inner split is the
-#'   layout knob `task-tables`/`hive-partitioning` consume; it is orthogonal to
-#'   the per-task RNG primer, so changing it shifts file paths only, never
-#'   results (the byte-identical acceptance test lands with `hive-partitioning`).
+#' @param partition_by An optional, possibly-partial named list keyed by step
+#'   (`sample`/`fit`/`hc`) of character vectors naming the Hive **path** axes for
+#'   that step (one shard per path cell; the inner complement rides as Parquet
+#'   columns). Each entry must be unique, non-missing, and a subset of that
+#'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
+#'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
+#'   `range_shape1`, `range_shape2`; `hc` adds `ci`, `nboot`, `est_method`,
+#'   `ci_method`, `parametric`. `"nrow"` is rejected only for `sample` (the
+#'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
+#'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
+#'   there is no cross-step constraint; a step may be finer or coarser than its
+#'   neighbour on a shared axis (the m:n parent-shard relationship is resolved at
+#'   the read layer). Steps left unnamed take their documented defaults (`sample
+#'   = c("dataset", "sim", "replace")`, `fit = c("dataset", "sim", "nrow",
+#'   "rescale")`, `hc = c("dataset", "sim")`; these supersede `TARGETS-DESIGN.md`
+#'   section 5's pre-fold table). The split is orthogonal to the per-task RNG
+#'   primer, so changing it shifts file paths only, never results.
+#' @param bundle An optional, possibly-partial named list keyed by step, the
+#'   per-step **complement** of `partition_by`: it names the **inner** axes to
+#'   keep together within a shard, and the stored path axes become
+#'   `setdiff(task_axes(step), bundle[[step]])`. `partition_by` and `bundle` are
+#'   complementary per-step entry points - at most one may name a given step (a
+#'   step in **both** is an error), but they may be mixed across steps and either
+#'   may be partial. Use `partition_by` when you want few path axes, `bundle`
+#'   when you want fine sharding and only a few inner axes. Both normalise into
+#'   the single stored `partition_by` path list.
 #' @param upload An optional upload specification (a list), or `NULL` for no
 #'   upload.
 #' @param ... Unused; must be empty.
@@ -113,6 +120,7 @@ ssd_define_scenario <- function(
   ci_method = "weighted_samples",
   parametric = TRUE,
   partition_by = NULL,
+  bundle = NULL,
   upload = NULL
 ) {
   data_expr <- rlang::enexpr(data)
@@ -153,7 +161,7 @@ ssd_define_scenario <- function(
 
   chk::chk_null_or(name, vld = chk::vld_string)
   chk::chk_null_or(upload, vld = chk::vld_list)
-  # `partition_by` is validated below, once the default has been applied.
+  # `partition_by`/`bundle` are validated and normalised below.
 
   # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
   chk::chk_character(dists)
@@ -256,8 +264,7 @@ ssd_define_scenario <- function(
     call = call
   )
 
-  partition_by <- partition_by %||% scenario_default_partition_by()
-  validate_partition_by(partition_by, call = call)
+  partition_by <- validate_partition_by(partition_by, bundle, call = call)
 
   structure(
     list(
@@ -308,53 +315,105 @@ scenario_default_partition_by <- function() {
   )
 }
 
-#' Validate a `partition_by` named list against the per-step axis vocabularies.
+#' Validate `partition_by`/`bundle` and normalise to a complete `partition_by`.
 #'
-#' When supplied, `partition_by` must be a named list with `sample`, `fit`, and
-#' `hc` entries (all three present). Each entry is a character vector of path
-#' axes that is unique, non-`NA`, and a subset of that step's `task_axes()`
-#' vocabulary (the single source of truth, from `R/task-lists.R`). `"nrow"` is
-#' rejected only under `sample` (the shared draw carries no `nrow` axis; `fit`
-#' truncates it inline). A parent-consistency check keeps the `<parent>_id`
-#' foreign-key join well-defined: a child step's path axes, restricted to the
-#' parent's vocabulary, must be a subset of the parent's path axes. Aborts in
-#' the context of `call` (the user-facing function), naming the offending
-#' step/axis. A plain loop (not `purrr::walk`) keeps internal frames out of the
-#' error header (error-call-origin rule).
+#' `partition_by` (path axes) and `bundle` (inner axes - the path complement)
+#' are complementary, optional, possibly-partial named lists keyed by step
+#' (`sample`/`fit`/`hc`). Each named entry is validated against that step's
+#' `task_axes()` vocabulary (character, unique, non-`NA`, a subset); `"nrow"` is
+#' rejected under `partition_by$sample` with a bespoke message (the shared draw
+#' carries no `nrow`; `fit` truncates it inline) and falls under the generic
+#' unknown-axis error for `bundle$sample`. A step named in **both** arguments
+#' aborts. Validation is **per-step only** - there is no cross-step
+#' parent-consistency check (steps partition independently; the m:n parent-shard
+#' relationship is resolved at the read layer). Returns the normalised, complete
+#' three-step `partition_by` path list: a `bundle[[step]]` becomes its path
+#' complement `setdiff(task_axes(step), bundle[[step]])`, and steps named in
+#' neither argument take their documented default. Aborts in the context of
+#' `call` (the user-facing function). Plain loops (not `purrr::walk`) keep
+#' internal frames out of the error header (error-call-origin rule).
 #' @noRd
-validate_partition_by <- function(partition_by, call = rlang::caller_env()) {
+validate_partition_by <- function(
+  partition_by = NULL,
+  bundle = NULL,
+  call = rlang::caller_env()
+) {
+  validate_axis_list(partition_by, "partition_by", call = call)
+  validate_axis_list(bundle, "bundle", call = call)
+
+  both <- intersect(names(partition_by), names(bundle))
+  if (length(both)) {
+    chk::abort_chk(
+      "Step",
+      if (length(both) > 1L) "s" else "",
+      " ",
+      chk::cc(encodeString(both, quote = "\""), conj = " and "),
+      " named in both `partition_by` and `bundle`; ",
+      "give each step its path axes (`partition_by`) or its inner axes ",
+      "(`bundle`), not both.",
+      call = call
+    )
+  }
+
+  out <- scenario_default_partition_by()
+  for (step in names(partition_by)) {
+    out[[step]] <- partition_by[[step]]
+  }
+  for (step in names(bundle)) {
+    out[[step]] <- setdiff(task_axes(step), bundle[[step]])
+  }
+  out
+}
+
+#' Validate one of the `partition_by`/`bundle` axis lists (or `NULL`).
+#'
+#' `arg` names the argument for messages. Each named entry must name a real step
+#' and be a character vector that is unique, non-`NA`, and a subset of that
+#' step's `task_axes()`. `"nrow"` under `partition_by$sample` gets a bespoke
+#' message.
+#' @noRd
+validate_axis_list <- function(lst, arg, call = rlang::caller_env()) {
+  if (is.null(lst)) {
+    return(invisible(NULL))
+  }
   steps <- c("sample", "fit", "hc")
-  if (!is.list(partition_by) || is.null(names(partition_by))) {
+  if (!is.list(lst) || is.null(names(lst)) || !all(nzchar(names(lst)))) {
     chk::abort_chk(
-      "`partition_by` must be a named list with ",
-      "`sample`, `fit`, and `hc` entries.",
+      "`",
+      arg,
+      "` must be a named list keyed by step (`sample`, `fit`, `hc`).",
       call = call
     )
   }
-  missing_steps <- setdiff(steps, names(partition_by))
-  if (length(missing_steps)) {
+  bad_steps <- setdiff(names(lst), steps)
+  if (length(bad_steps)) {
     chk::abort_chk(
-      "`partition_by` is missing the ",
-      chk::cc(missing_steps, conj = " and "),
-      " step entr",
-      if (length(missing_steps) > 1L) "ies" else "y",
-      "; supply all of `sample`, `fit`, and `hc`.",
+      "`",
+      arg,
+      "` names unknown step",
+      if (length(bad_steps) > 1L) "s " else " ",
+      chk::cc(encodeString(bad_steps, quote = "\""), conj = " and "),
+      "; valid steps are `sample`, `fit`, and `hc`.",
       call = call
     )
   }
-  for (step in steps) {
-    axes <- partition_by[[step]]
+  for (step in names(lst)) {
+    axes <- lst[[step]]
     if (!is.character(axes)) {
       chk::abort_chk(
-        "`partition_by$",
+        "`",
+        arg,
+        "$",
         step,
-        "` must be a character vector of path-axis names.",
+        "` must be a character vector.",
         call = call
       )
     }
     if (anyNA(axes)) {
       chk::abort_chk(
-        "`partition_by$",
+        "`",
+        arg,
+        "$",
         step,
         "` must not contain missing values.",
         call = call
@@ -362,13 +421,15 @@ validate_partition_by <- function(partition_by, call = rlang::caller_env()) {
     }
     if (anyDuplicated(axes)) {
       chk::abort_chk(
-        "`partition_by$",
+        "`",
+        arg,
+        "$",
         step,
         "` must not contain duplicate axis names.",
         call = call
       )
     }
-    if (step == "sample" && "nrow" %in% axes) {
+    if (arg == "partition_by" && step == "sample" && "nrow" %in% axes) {
       chk::abort_chk(
         "`partition_by$sample` must not include \"nrow\": the `sample` step ",
         "is the shared draw and carries no `nrow` axis (every `nrow` ",
@@ -379,7 +440,9 @@ validate_partition_by <- function(partition_by, call = rlang::caller_env()) {
     unknown <- setdiff(axes, task_axes(step))
     if (length(unknown)) {
       chk::abort_chk(
-        "`partition_by$",
+        "`",
+        arg,
+        "$",
         step,
         "` names unknown ",
         if (length(unknown) > 1L) "axes " else "axis ",
@@ -393,33 +456,7 @@ validate_partition_by <- function(partition_by, call = rlang::caller_env()) {
       )
     }
   }
-  # Parent-consistency: a child's path axes (restricted to the parent's
-  # vocabulary) must be a subset of the parent's path axes, so each child shard
-  # maps to exactly one parent shard via `<parent>_id` (chain sample<-fit<-hc).
-  for (step in steps) {
-    parent <- task_parent(step)
-    if (is.na(parent)) {
-      next
-    }
-    shared <- intersect(partition_by[[step]], task_axes(parent))
-    extra <- setdiff(shared, partition_by[[parent]])
-    if (length(extra)) {
-      chk::abort_chk(
-        "`partition_by$",
-        step,
-        "` is partitioned more finely than its parent `",
-        parent,
-        "` on ",
-        chk::cc(encodeString(extra, quote = "\""), conj = " and "),
-        "; a child step's shared path axes must be a subset of its parent's ",
-        "so the `",
-        parent,
-        "_id` foreign-key join stays well-defined.",
-        call = call
-      )
-    }
-  }
-  invisible(partition_by)
+  invisible(NULL)
 }
 
 #' Path-vs-inner axis split for a scenario step.
@@ -696,14 +733,17 @@ print.ssdsims_scenario <- function(x, ...) {
   print_grid(x$fit)
   cat("  hc grid:\n")
   print_grid(x$hc)
-  cat("  partition_by:\n")
+  cat("  partition_by (path) / bundle (inner):\n")
   for (step in c("sample", "fit", "hc")) {
+    axes <- scenario_partition_axes(x, step)
     cat(
       "    ",
       step,
-      ": ",
-      paste(x$partition_by[[step]], collapse = ", "),
-      "\n",
+      ": path={",
+      paste(axes$path, collapse = ", "),
+      "} bundle={",
+      paste(axes$inner, collapse = ", "),
+      "}\n",
       sep = ""
     )
   }

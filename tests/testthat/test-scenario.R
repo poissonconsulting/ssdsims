@@ -276,18 +276,21 @@ test_that("scenario-definition: a valid partition_by override is stored verbatim
   expect_identical(s$partition_by, pb)
 })
 
-test_that("scenario-definition: partition_by rejects a missing step entry", {
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssddata::ccme_boron,
-      nsim = 2L,
-      seed = 1L,
-      partition_by = list(
-        sample = c("dataset", "sim"),
-        fit = c("dataset", "sim")
-      )
+test_that("scenario-definition: a partial partition_by defaults the unnamed steps", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = list(fit = c("dataset", "sim"))
+  )
+  expect_identical(
+    s$partition_by,
+    list(
+      sample = c("dataset", "sim", "replace"),
+      fit = c("dataset", "sim"),
+      hc = c("dataset", "sim")
     )
-  })
+  )
 })
 
 test_that("scenario-definition: partition_by rejects an unknown axis", {
@@ -362,19 +365,71 @@ test_that("scenario-definition: partition_by rejects duplicate or NA axis names"
   })
 })
 
-test_that("scenario-definition: partition_by rejects a parent-inconsistent child", {
-  # `fit` shards on `replace` but its parent `sample` does not - the
-  # `sample_id` join would not be well-defined.
+test_that("scenario-definition: a parent-inconsistent split is accepted (no cross-step check)", {
+  # `fit` shards on `replace` but its parent `sample` does not - steps partition
+  # independently; the m:n parent-shard relationship is resolved at the read
+  # layer, so this is accepted.
+  pb <- list(
+    sample = c("dataset", "sim"),
+    fit = c("dataset", "sim", "replace"),
+    hc = c("dataset", "sim")
+  )
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = pb
+  )
+  expect_identical(s$partition_by, pb)
+})
+
+test_that("scenario-definition: bundle normalises to the path complement", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    bundle = list(
+      fit = c(
+        "computable",
+        "at_boundary_ok",
+        "min_pmix",
+        "range_shape1",
+        "range_shape2"
+      )
+    )
+  )
+  expect_identical(
+    s$partition_by$fit,
+    c("dataset", "sim", "replace", "nrow", "rescale")
+  )
+  # unnamed steps keep their defaults
+  expect_identical(s$partition_by$hc, c("dataset", "sim"))
+})
+
+test_that("scenario-definition: partition_by and bundle mix across steps", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    partition_by = list(sample = c("dataset", "sim")),
+    bundle = list(fit = c("computable", "at_boundary_ok"))
+  )
+  expect_identical(s$partition_by$sample, c("dataset", "sim"))
+  expect_identical(
+    s$partition_by$fit,
+    setdiff(task_axes("fit"), c("computable", "at_boundary_ok"))
+  )
+  expect_identical(s$partition_by$hc, c("dataset", "sim"))
+})
+
+test_that("scenario-definition: a step named in both partition_by and bundle errors", {
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
       ssddata::ccme_boron,
       nsim = 2L,
       seed = 1L,
-      partition_by = list(
-        sample = c("dataset", "sim"),
-        fit = c("dataset", "sim", "replace"),
-        hc = c("dataset", "sim")
-      )
+      partition_by = list(fit = c("dataset", "sim")),
+      bundle = list(fit = c("computable"))
     )
   })
 })

@@ -73,15 +73,6 @@
       Error in `ssd_define_scenario()`:
       ! Unable to resolve `min_pmix` name "two_arg" to a single-argument function.
 
-# scenario-definition: partition_by rejects a missing step entry
-
-    Code
-      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
-        sample = c("dataset", "sim"), fit = c("dataset", "sim")))
-    Condition
-      Error in `ssd_define_scenario()`:
-      ! `partition_by` is missing the 'hc' step entry; supply all of `sample`, `fit`, and `hc`.
-
 # scenario-definition: partition_by rejects an unknown axis
 
     Code
@@ -122,15 +113,14 @@
       Error in `ssd_define_scenario()`:
       ! `partition_by$sample` must not contain missing values.
 
-# scenario-definition: partition_by rejects a parent-inconsistent child
+# scenario-definition: a step named in both partition_by and bundle errors
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
-        sample = c("dataset", "sim"), fit = c("dataset", "sim", "replace"), hc = c(
-          "dataset", "sim")))
+        fit = c("dataset", "sim")), bundle = list(fit = c("computable")))
     Condition
       Error in `ssd_define_scenario()`:
-      ! `partition_by$fit` is partitioned more finely than its parent `sample` on '"replace"'; a child step's shared path axes must be a subset of its parent's so the `sample_id` foreign-key join stays well-defined.
+      ! Step '"fit"' named in both `partition_by` and `bundle`; give each step its path axes (`partition_by`) or its inner axes (`bundle`), not both.
 
 # scenario-definition: ssd_data() collection plus name= is an error
 
@@ -285,10 +275,10 @@
           est_method: multi
           ci_method: weighted_samples
           parametric: TRUE
-        partition_by:
-          sample: dataset, sim, replace
-          fit: dataset, sim, nrow, rescale
-          hc: dataset, sim
+        partition_by (path) / bundle (inner):
+          sample: path={dataset, sim, replace} bundle={}
+          fit: path={dataset, sim, nrow, rescale} bundle={replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2}
+          hc: path={dataset, sim} bundle={replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric}
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -321,8 +311,8 @@
           est_method: multi, geometric
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
-        partition_by:
-          sample: dataset, sim, replace
-          fit: dataset, sim, nrow, rescale
-          hc: dataset, sim
+        partition_by (path) / bundle (inner):
+          sample: path={dataset, sim, replace} bundle={}
+          fit: path={dataset, sim, nrow, rescale} bundle={replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2}
+          hc: path={dataset, sim} bundle={replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric}
 

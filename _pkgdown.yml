@@ -16,6 +16,7 @@ reference:
   - ssd_scenario_fit_tasks
   - ssd_scenario_hc_tasks
   - ssd_run_scenario_baseline
+  - ssd_run_scenario_shards
 
 - title: Simulation pipeline
   desc: >
