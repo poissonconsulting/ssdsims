@@ -87,6 +87,39 @@ Terminology used throughout `ssdsims`.
   contains 1+ task results, one row per task, with `task_id` as a
   column. In our design **one shard ≡ one partition leaf** (no `part-N`
   style splitting); the leaf file is always named `part.parquet`.
+- **path axis / inner axis**: The two halves of a step’s
+  `task_axes(step)` under a given partitioning. **Path axes** become
+  Hive directory levels; **inner axes** are the complement — ordinary
+  Parquet columns that vary row-to-row inside a shard. Together
+  `path ⊎ inner = task_axes(step)`.
+- **`partition_by`**: The per-step **path axes** — the canonical
+  sharding knob (`scenario$partition_by`, a `sample`/`fit`/`hc` named
+  list). `partition_by[[step]]` is a subset of `task_axes(step)` whose
+  values become the shard’s Hive path, one shard per cell; shard count
+  is `Π |path axis|`. More path axes → finer (more, smaller) shards.
+  This is the stored source of truth.
+- **`bundle`**: The per-step **inner axes** — the complement of
+  `partition_by` (`setdiff(task_axes(step), partition_by[[step]])`): the
+  axes whose tasks are *kept together* within one shard (more bundled
+  axes → coarser, larger files). An equal-status **alias** entry point
+  on
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md):
+  **per step** a caller names what to split on (`partition_by`) **or**
+  what to keep together (`bundle`) — at most one of the two per step,
+  but the two may be mixed across steps (e.g. `partition_by` for
+  `sample`, `bundle` for `fit`). ssdsims normalizes both into a single
+  complete, stored `partition_by` (defaults fill any step named in
+  neither) and recomputes `bundle` for
+  [`print()`](https://rdrr.io/r/base/print.html), which shows both.
+- **task identity vs shard path**: A task’s **identity** — its
+  `<step>_id` primary key and `<parent>_id` foreign key — is
+  `path_key()` over **all** of `task_axes(step)`: unique per task,
+  `partition_by`-independent, and exactly what the per-task **primer**
+  hashes and the foreign-key join uses. The **shard path** is the
+  coarser `path_key()` over `partition_by[[step]]` only, shared by every
+  task in a shard. They coincide only one-task-per-shard; changing
+  `partition_by` (or `bundle`) moves the shard path, never the identity,
+  the primer, or results.
 - **step**: One of the three RNG-touching stages of the pipeline:
   **data** (`slice_sample_state()`), **fit** (`fit_dists_state()`),
   **hc** (`hc_state`). Each step has its own task table (`data_tasks` /
