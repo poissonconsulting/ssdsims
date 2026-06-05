@@ -1,19 +1,5 @@
-# Gate the tests that actually drive a `targets` pipeline: they spawn a worker
-# that `library(ssdsims)`, so the package must be installed (true under R CMD
-# check, not under a bare `devtools::test()`), and they are slow.
-skip_targets <- function() {
-  testthat::skip_on_cran()
-  testthat::skip_if_not_installed("targets")
-  testthat::skip_if_not_installed("tarchetypes")
-  testthat::skip_if_not_installed("duckplyr")
-  testthat::skip_if_not_installed("ssdsims")
-}
-
-# A small numeric-only dataset: avoids factor/character columns so a draw
-# round-trips through Parquet byte-identically (the byte-identity oracle).
-numeric_dataset <- function() {
-  data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
-}
+# `skip_targets()` and `numeric_dataset()` live in `helper.R` (shared with
+# test-path-axis-growth.R).
 
 # ---- shard structure (task 7.1) --------------------------------------------
 
