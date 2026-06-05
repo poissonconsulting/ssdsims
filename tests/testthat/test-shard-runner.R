@@ -217,3 +217,44 @@ test_that("shard-runner: re-running with a changed partition_by leaves no stale 
   expect_identical(on_disk, length(run_coarse$fit))
   expect_lt(on_disk, length(run_fine$fit))
 })
+
+# ---- missing-parent guard: symmetric with the hc step's fit_id guard ---------
+
+test_that("shard-runner: fit step aborts when a parent sample draw is missing", {
+  scenario <- ssd_define_scenario(
+    ssd_data(d = sr_dataset()),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = "lnorm"
+  )
+  dir <- withr::local_tempdir()
+  sample_dir <- file.path(dir, "sample")
+  sample_shards <- ssd_scenario_sample_shards(scenario)
+  for (i in seq_len(nrow(sample_shards))) {
+    ssd_run_sample_step(sample_shards$tasks[[i]], scenario, sample_dir)
+  }
+
+  # Strip the parent draws (keep the shard files, drop their rows) so the fit
+  # task's `.sample_id` resolves to no rows - the missing-parent case.
+  files <- list.files(
+    sample_dir,
+    pattern = "part.parquet",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  for (f in files) {
+    ssd_write_parquet(ssd_read_parquet(f)[0L, ], f)
+  }
+
+  fit_shards <- ssd_scenario_fit_shards(scenario)
+  expect_error(
+    ssd_run_fit_step(
+      fit_shards$tasks[[1L]],
+      scenario,
+      sample_dir,
+      file.path(dir, "fit")
+    ),
+    "found none in the parent .sample. shard"
+  )
+})

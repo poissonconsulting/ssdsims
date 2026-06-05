@@ -210,6 +210,13 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   for (i in seq_len(nrow(tasks))) {
     t <- tasks[i, ]
     draw <- sample_tbl[sample_tbl$.sample_id == t$sample_id, ]
+    if (nrow(draw) == 0L) {
+      chk::abort_chk(
+        "Expected a `sample` draw for sample_id ",
+        encodeString(t$sample_id, quote = "\""),
+        ", found none in the parent `sample` shard(s) (missing parent result)."
+      )
+    }
     draw <- draw[order(draw$.row), ]
     draw$.sample_id <- NULL
     draw$.row <- NULL

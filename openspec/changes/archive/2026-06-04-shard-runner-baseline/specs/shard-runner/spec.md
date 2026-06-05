@@ -16,7 +16,7 @@ The package SHALL provide a single-core runner that executes a scenario's three 
 - **THEN** it SHALL complete in-process on a single core without constructing a `targets` pipeline, launching `crew` workers, or performing any cloud upload
 
 ### Requirement: Steps link by reading parent shards via duckplyr, resolving m:n dependencies
-For each non-root step, the runner SHALL obtain each task's parent result by **reading the parent step's shards back from disk via duckplyr** (`duckplyr::read_parquet_duckdb()` over the parent's Hive glob) and filtering to the rows the child needs, rather than from an in-memory result list. The runner SHALL resolve the parent dependency as a **many-to-many** relationship: for a given child shard it SHALL compute the **distinct set of parent shard paths** spanned by that shard's tasks (the `<parent>_id` full-identity foreign key projected onto the parent's path axes) and read exactly those parent shards, filtering on the parent's path and inner columns via predicate pushdown. The runner SHALL NOT assume that a child shard maps to exactly one parent shard.
+For each non-root step, the runner SHALL obtain each task's parent result by **reading the parent step's shards back from disk via duckplyr** (`duckplyr::read_parquet_duckdb()` over the parent's Hive glob) and filtering to the rows the child needs, rather than from an in-memory result list. The runner SHALL resolve the parent dependency as a **many-to-many** relationship: for a given child shard it SHALL compute the **distinct set of parent shard paths** spanned by that shard's tasks (the `<parent>_id` full-identity foreign key projected onto the parent's path axes) and read exactly those parent shards, filtering on the parent's path and inner columns via predicate pushdown. The runner SHALL NOT assume that a child shard maps to exactly one parent shard. When a child task's parent result is **absent** from the parent shards it read, the runner SHALL abort with a clear message naming the missing parent identity, rather than proceeding on empty input — symmetrically across steps (the `fit` step on a missing `sample` draw and the `hc` step on a missing or duplicated `fit` result).
 
 #### Scenario: A child shard reading several parent shards
 - **WHEN** a child shard's tasks span multiple parent shards (e.g. with `replace = c(FALSE, TRUE)` a `fit` shard whose `replace` axis is inner spans two `sample` shards, or under the default split an `hc` shard spans several `fit` shards across `nrow`/`rescale`)
@@ -29,6 +29,10 @@ For each non-root step, the runner SHALL obtain each task's parent result by **r
 #### Scenario: Parent lookup goes through Parquet, not memory
 - **WHEN** a child step resolves a parent result
 - **THEN** it SHALL read the parent value from the parent step's written Parquet shard(s) via duckplyr, not from an in-process named list
+
+#### Scenario: A missing parent result aborts with a clear message
+- **WHEN** a child task's parent identity resolves to no rows in the parent shards it read (a missing `sample` draw for the `fit` step, or a missing/duplicated `fit` result for the `hc` step)
+- **THEN** the runner SHALL abort with a message naming the missing parent identity, rather than fitting or estimating on empty input
 
 ### Requirement: partition_by is a free re-layout — per-task results are byte-identical to the in-memory baseline
 The per-task results produced by the sharded runner SHALL be identical to those of the in-memory baseline runner (`ssd_run_scenario_baseline()`) for the same scenario and seed, because the per-task `(seed, primer)` is derived from the task's canonical identity (`task_axes(step)`) and is invariant under `partition_by`. Changing a step's `partition_by` SHALL change only the shard file paths and the path/inner column placement, never the per-task result values.
