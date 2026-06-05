@@ -282,6 +282,14 @@ fetched via the accessor just before the call, after `dqset.seed()`.
 
 ### 1.2 The `ci = FALSE` collapse
 
+> **Proposed change — `scalar-ci-flag` (§12 Cleanup).** This section is slated
+> for retirement: `ci` is being demoted to a scalar flag (the `est` is
+> byte-identical whether `ci = TRUE`/`FALSE`, so `c(FALSE, TRUE)` only emits a
+> redundant row). When that change lands, `ci` leaves `task_axes("hc")`, the
+> collapse below reduces to "`ci = FALSE` ⟹ bootstrap-only knobs are `NA`," and
+> this section is removed. The text below describes current (pre-change)
+> behaviour.
+
 The hc-arg cross-join treats `nboot`, `ci_method`, and `parametric`
 as irrelevant when `ci = FALSE` — those knobs only affect bootstrap.
 Concrete rules:
@@ -2183,6 +2191,24 @@ public-API or ergonomics gaps.
   name resolution, remaining `*apply()` loops) for the same convention, so new
   and existing code read consistently. Surfaced in PR #101 review. Independent
   tidy-up with no dependants; not on the dependency DAG.
+- **`scalar-ci-flag`** — Demote `ci` from a grid/task axis to a **scalar
+  flag** (`chk_flag`, default `FALSE`), mirroring `samples`. The point
+  estimate `est` is byte-identical whether `ci = TRUE` or `ci = FALSE`
+  (verified across every `ssd_ci_methods()`; the estimate is analytic and
+  RNG-independent), so a single `ci = TRUE` run is a superset of `ci = FALSE`
+  (same `est`, plus `se`/`lcl`/`ucl`) and running `ci = c(FALSE, TRUE)` only
+  doubles the hc work for a redundant point-estimate row. Removes `"ci"` from
+  `task_axes("hc")` and the per-task primer, **retires the §1.2 `ci = FALSE`
+  collapse** (the `hc_grid_tbl()` branching collapses to one grid keyed by the
+  scalar `ci`), and keeps the bootstrap-knob guard with `ci = TRUE` as the
+  enablement path. `ci = FALSE` stays the cheap, bootstrap-free,
+  point-estimate mode — a scenario-wide either/or, not combinable with `TRUE`.
+  Removing `ci` from the primer shifts the hc bootstrap stream, so CIs
+  re-baseline (estimates unchanged); acceptable pre-release. Cross-references
+  `migrate-public-api` (whichever lands second drops `ci` from the hc
+  primer-identity enumeration). Surfaced verifying the `ci` axis against
+  `ssdtools`. Independent tidy-up with no dependants; not on the dependency
+  DAG.
 
 ### Dependency DAG (parallel streams)
 
@@ -2334,6 +2360,10 @@ Eight further changes were proposed in this round (all `openspec validate
   (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta)
   — the independent tidy-ups, kept **off** the dependency DAG per convention
   (no prerequisites, no dependants).
+
+A later independent tidy-up, `scalar-ci-flag` (`scenario-definition` +
+`task-lists` + `hazard-concentrations` deltas), demotes `ci` to a scalar flag
+and retires the §1.2 collapse; also off the dependency DAG.
 
 The remaining open nodes stay blocked: `cloud-upload`/`replay-helper` wait on
 `manifest` landing, `shard-failure-survival` on `cluster-pipeline`,
