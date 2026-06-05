@@ -1,20 +1,9 @@
-# Helper functions for the ssdsims cluster targets pipeline, sourced by
-# `_targets.R` (the same way it sources `scenario.R`). Kept out of `_targets.R`
-# so that file stays a readable pipeline definition — the controller block, the
-# scenario, the factory call, and the probe wiring — rather than carrying the
-# probe body and the gating glue inline.
+# Helper for the ssdsims cluster preflight, sourced by `preflight.R`.
 #
-# Two helpers:
-#   * `ssdsims_cluster_probe()` — the connectivity + worker-prerequisite check
-#     run as a target on a worker (TARGETS-DESIGN.md §4 ingredient B).
-#   * `gate_targets()`          — wires the probe in as an upstream dependency of
-#     the scenario's entry-step shards.
-
-# CONNECTIVITY + WORKER-PREREQUISITE PROBE (TARGETS-DESIGN.md §4 ingredient B).
-#
-# Run as a target on a worker — i.e. inside one SLURM job — before any scenario
-# shard, it verifies the worker can actually run ssdsims and aborts with an
-# actionable message naming the failed check:
+# CONNECTIVITY + WORKER-PREREQUISITE PROBE (TARGETS-DESIGN.md section 4
+# ingredient B). `preflight.R` runs this on a worker — inside one SLURM job —
+# before the scenario pipeline, to verify the worker can actually run ssdsims.
+# It aborts with an actionable message naming the failed check:
 #   * R resolves at the expected version  (else: module-load / install-path),
 #   * `library(ssdsims)` loads             (else: the ManyLinux binary path),
 #   * the scratch `tempdir()` is writable  (else: storage / scratch config).
@@ -69,36 +58,6 @@ ssdsims_cluster_probe <- function(expected = NULL) {
     )
   }
   unlink(probe_file)
-  # Witness: returned so downstream targets can depend on a green probe.
+  # Witness: returned so the preflight can report which worker answered.
   list(node = node, r_version = r_version, time = Sys.time())
-}
-
-# Gate the scenario shards on the probe: prepend a reference to `probe` to every
-# `sample`-step target's command (the `sample` step is the pipeline entry, so
-# gating it makes the probe a transitive upstream of every fit/hc/summary
-# target). `tar_make()` therefore builds the probe FIRST, and a probe failure
-# stops the scenario shards from running — the cluster-wiring/prerequisite
-# problem surfaces, not an obscure scenario error. The factory itself is
-# untouched; this only adds an edge from `probe` into the shards it already
-# minted. It walks the (nested) `tar_map()` list the factory returns and rebuilds
-# each `tar_target` with `{ probe; <original command> }`.
-gate_targets <- function(node, probe_name = "probe") {
-  if (inherits(node, "tar_target")) {
-    gated <- as.call(list(
-      as.name("{"),
-      as.name(probe_name),
-      node$command$expr[[1]]
-    ))
-    return(targets::tar_target_raw(
-      node$settings$name,
-      gated,
-      format = node$settings$format,
-      error = node$settings$error,
-      cue = node$cue
-    ))
-  }
-  if (is.list(node)) {
-    return(lapply(node, gate_targets, probe_name = probe_name))
-  }
-  node
 }

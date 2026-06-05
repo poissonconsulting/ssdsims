@@ -8,18 +8,20 @@ controller changes (`TARGETS-DESIGN.md` §4). So the per-task `sample`/`fit`/`hc
 results are byte-identical to the local run; the cluster is just a faster
 backend.
 
-Three ingredients assemble into `_targets.R`; **only B is cluster-specific**:
+Three ingredients assemble into the cluster run; **only B is cluster-specific**:
 
 | Ingredient | What | Where |
 |---|---|---|
-| **A — shape** | the per-shard target graph | `ssd_scenario_targets()` (reused verbatim) |
-| **B — backend** | the SLURM `crew` controller (queue, modules, scratch, workers, walltime) | the **one editable block** in `_targets.R` |
+| **A — shape** | the per-shard target graph | `ssd_scenario_targets()` in `_targets.R` (reused verbatim) |
+| **B — backend** | the SLURM `crew` controller (queue, modules, scratch, workers, walltime) | the **one editable block** in `controller.R` |
 | **C — content** | the scenario (seed, datasets, grids) | `scenario.R` |
 
-The files: `_targets.R` (pipeline + controller + probe wiring), `functions.R`
-(the probe body + the shard-gating helper, sourced by `_targets.R`),
-`scenario.R` (the study), `run.R` (the targets driver), `run-serial.R`
-(single-core oracle).
+The files: `controller.R` (the **one editable controller block**, sourced by
+both the pipeline and the preflight), `_targets.R` (the clean pipeline:
+controller + scenario + factory), `preflight.R` (the standalone
+connectivity/prerequisite check, kept out of the pipeline), `functions.R` (the
+probe body, sourced by `preflight.R`), `scenario.R` (the study), `run.R` (the
+driver: preflight then `tar_make()`), `run-serial.R` (single-core oracle).
 
 Get the template:
 
@@ -39,7 +41,7 @@ Your real starting point is your site's documentation: how to log in, submit an
 `sbatch` job, which partition/queue and account/allocation to use, the `module`
 system that provides R, the scratch filesystem, and the walltime/core limits.
 None of that mentions R, `crew`, or `targets`. This table bridges it to the
-**one editable controller block** in `_targets.R`
+**one editable controller block** in `controller.R`
 (`crew.cluster::crew_controller_slurm()` /
 `crew.cluster::crew_options_slurm()` — see `?crew.cluster::crew_controller_slurm`):
 
@@ -58,9 +60,9 @@ None of that mentions R, `crew`, or `targets`. This table bridges it to the
 
 Anything not covered by a named argument (a constraint, a QOS, a `--gres`) goes
 in `script_lines` as a literal `#SBATCH` line — `script_lines` is injected
-verbatim into the generated `sbatch` script. Also set `expected_r_version` (top
-of the editable block) to the major.minor your `module load` provides, so the
-probe (step 2) can confirm it.
+verbatim into the generated `sbatch` script. Also set `expected_r_version` (in
+`controller.R`) to the major.minor your `module load` provides, so the preflight
+(step 2) can confirm it.
 
 ### Backend B prerequisite — the worker install path
 
@@ -71,33 +73,40 @@ nodes are often offline or slow to build). The crew labs pinned this down with a
 pre-built Linux binaries (e.g. from the Posit Public Package Manager binary
 repository for your distro) into the library your `module load R/...` exposes, so
 the worker resolves everything at load time. Put the `module load` that exposes
-that library in `script_lines`. The probe in step 2 is the **login-node
+that library in `script_lines`. The preflight in step 2 is the **login-node
 prerequisite checker**: it fails loudly if a worker cannot load ssdsims, so you
 fix the install/module path before launching the study.
 
 ---
 
-## Step 2 — Confirm the mapping with the probe
+## Step 2 — Confirm the mapping with the preflight
 
-`_targets.R` defines a **probe** target that `tar_make()` builds *first*, as an
-explicit upstream dependency of every scenario shard. Building it dispatches
-**one** SLURM job through your controller and, inside that job, checks the things
-that actually break a real run:
+`preflight.R` is a standalone check, kept out of the main pipeline. Run it on its
+own:
+
+```r
+source("preflight.R") # or, from a shell:  Rscript preflight.R
+```
+
+It submits **one** SLURM job through your controller (`controller.R`) and, inside
+that job, checks the things that actually break a real run:
 
 1. **R resolves** at `expected_r_version` — else fix the `module load` line;
 2. **`library(ssdsims)` loads** — else fix the worker install/module path
    (backend B above);
 3. **`tempdir()` is writable** — else fix the scratch `export TMPDIR=...` line.
 
-A green probe returns a small witness (the worker's R version + node id) and
-means your controller block matches the site. A red probe **blocks the scenario
-shards** and names exactly which check failed, with the fix:
+A green preflight prints a small witness (the worker's R version + node id) and
+means your controller block matches the site. A failed preflight **aborts before
+the pipeline runs** and names exactly which check failed, with the fix:
 
 - *no job dispatched* → controller / queue / account wiring;
 - *R or ssdsims missing on the worker* → `module load` / install path;
 - *scratch not writable* → the `TMPDIR` / scratch path.
 
-So you debug the cluster wiring, never an obscure scenario error.
+So you debug the cluster wiring, never an obscure scenario error. `run.R` runs
+this preflight for you before `tar_make()`, so a broken cluster never reaches the
+expensive scenario shards.
 
 ---
 
@@ -121,11 +130,11 @@ Then run the pipeline:
 source("run.R") # or, from a shell on the login node:  Rscript run.R
 ```
 
-`run.R` builds the probe first, then dispatches the `small` scenario's shards
+`run.R` runs the preflight first, then dispatches the `small` scenario's shards
 across SLURM jobs (independent shards run concurrently), writes one Parquet per
 shard under `results/layout=<hash>/<step>/...`, unions them into
-`results/layout=<hash>/summary.parquet`, and prints the probe witness and a peek
-at the estimates. That is your first running cluster job, end to end.
+`results/layout=<hash>/summary.parquet`, and prints a peek at the estimates. That
+is your first running cluster job, end to end.
 
 > **No cluster handy?** `run.R` guards: if `crew.cluster` is not installed or
 > `sbatch` is not on `PATH`, it aborts with a clear message naming the missing
@@ -139,8 +148,8 @@ at the estimates. That is your first running cluster job, end to end.
 ## Step 4 — Swap in your own scenario
 
 Once the minimal job succeeds, edit `scenario.R` to your own study (start from
-the wider sweep this template ships, or `large/scenario.R`). **Leave `_targets.R`
-and the controller block unchanged** — the scenario and the
+the wider sweep this template ships, or `large/scenario.R`). **Leave
+`controller.R` and `_targets.R` unchanged** — the scenario and the
 `ssd_scenario_targets()` call are scheduler-independent. Run `run.R` again.
 
 ---
@@ -152,7 +161,7 @@ concurrently across your SLURM jobs. How many shard targets ride in one job is a
 `crew` configuration knob (`workers` caps concurrent jobs; `tasks_max` on the
 controller packs several shards into one worker's lifetime — "many-to-one";
 `tasks_max = 1L` gives one shard per job — "one-to-one"). It is documented in
-`_targets.R`, not hard-coded as 1:1 (`TARGETS-DESIGN.md` §11 Q6).
+`controller.R`, not hard-coded as 1:1 (`TARGETS-DESIGN.md` §11 Q6).
 
 ## See also
 

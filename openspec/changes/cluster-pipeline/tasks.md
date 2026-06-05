@@ -6,7 +6,7 @@
 
 - [x] 2.1 Add `inst/targets-templates/cluster/_targets.R` that `source("scenario.R")` then calls `ssd_scenario_targets(scenario)` verbatim (the same factory + scenario as `large/`), so the pipeline shape and content are scheduler-independent
 - [x] 2.2 Replace the local controller with `tar_option_set(controller = crew.cluster::crew_controller_slurm(...))`, with an editable resource block — `slurm_partition`/queue, `script_lines` (e.g. `module load R/4.x`), scratch/`tempdir`, worker count, walltime — drafted from the crew labs' working block (§4 ingredient B), confined to one place
-- [x] 2.3 Add a probe target that (a) submits and reclaims one SLURM job through the controller and (b) inside that job verifies the worker prerequisites — R resolves at the expected version, `library(ssdsims)` loads (the ManyLinux binary path), and scratch/`tempdir` is writable — returning a small witness; make the first scenario shard target name the probe as an explicit upstream dependency so `tar_make()` builds it first, and abort on failure with an actionable message naming which check failed (queue/account wiring, module/install path, or storage)
+- [x] 2.3 Add a standalone preflight (`preflight.R`, kept out of the main pipeline) that (a) submits and reclaims one SLURM job through the controller and (b) inside that job verifies the worker prerequisites — R resolves at the expected version, `library(ssdsims)` loads (the ManyLinux binary path), and scratch/`tempdir` is writable — returning a small witness; `run.R` runs it before `tar_make()` so a failure blocks the shards, aborting with an actionable message naming which check failed (queue/account wiring, module/install path, or storage)
 - [x] 2.4 Document the shard-target-to-SLURM-job packing convention (§11 Q6) as a commented `crew` setting; keep shards as the unit of parallelism (many-to-one or one-to-one depending on configuration)
 
 ## 3. Cluster template `scenario.R` and `run.R`
@@ -14,13 +14,13 @@
 - [x] 3.1 Add `inst/targets-templates/cluster/scenario.R` (the scenario object, ingredient C; the same shape as `large/scenario.R`, edited to taste)
 - [x] 3.2 Add `inst/targets-templates/cluster/run.R` mirroring `large/run.R`: source the scenario, `tar_make()`, report the summary path and a peek at the estimates
 - [x] 3.3 Guard `run.R` cleanly when `crew.cluster` is not installed or no SLURM queue is reachable — abort/skip with a clear message naming the missing prerequisite, and point at the local `large/` template for off-cluster runs (the cluster template carries no local-controller fallback of its own)
-- [x] 3.4 Keep `_targets.R` a readable pipeline definition: put the probe body and the shard-gating helper in a sourced `functions.R` (the same copy-and-source pattern as `scenario.R`), not inline
+- [x] 3.4 Keep `_targets.R` a clean pipeline definition: put the controller in a sourced `controller.R` (shared with the preflight), the probe body in `functions.R`, and the connectivity/prerequisite check in a standalone `preflight.R` — none of it inline in `_targets.R`
 
 ## 4. End-to-end SLURM validation
 
 - [ ] 4.1 Run `tar_make()` on a real or sandboxed SLURM queue: the connectivity probe builds first, then the scenario shard targets dispatch across SLURM jobs and run concurrently, each writing one shard Parquet — **pending a SLURM queue** (no scheduler in CI/sandbox; the documented manual/lab validation step, design Risks; the *behaviour* — probe-first, one Parquet per shard — is exercised under the local controller in 4.3)
 - [ ] 4.2 Confirm the cluster run's per-task `sample`/`fit`/`hc` results are byte-identical (read-back, sorted by task-identity key) to the local `large/` pipeline for the same scenario — **pending a SLURM queue** (the byte-identical comparison itself runs green off-cluster: `run-serial.R` reports `single-core vs cluster estimates identical: TRUE` against the local-smoke `run.R`)
-- [x] 4.3 Confirm off-cluster behaviour without a scheduler: `run.R` aborts/skips cleanly with a clear message (pointing at `large/`), and a `tests/testthat/test-cluster-pipeline.R` graph test statically asserts the probe gates every entry-step shard (no SLURM jobs dispatched)
+- [x] 4.3 Confirm off-cluster behaviour without a scheduler: `run.R` aborts/skips cleanly with a clear message (pointing at `large/`), and `tests/testthat/test-cluster-pipeline.R` exercises the preflight probe function directly (witness on success, actionable abort on a wrong R version) and statically asserts the shipped `_targets.R` graph carries no probe target (the pipeline stays clean)
 
 ## 5. Docs and reference
 
