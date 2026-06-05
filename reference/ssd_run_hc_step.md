@@ -58,20 +58,20 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/RtmpU3ckEQ/file346d6a9d47fe/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
+#> [1] "/tmp/RtmpzQABmg/file347448b27100/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/RtmpU3ckEQ/file346d6a9d47fe/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/RtmpzQABmg/file347448b27100/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 ssd_run_hc_step(
   ssd_scenario_hc_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "fit"),
   file.path(dir, "hc")
 )
-#> [1] "/tmp/RtmpU3ckEQ/file346d6a9d47fe/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/RtmpzQABmg/file347448b27100/hc/dataset=ccme_boron/sim=1/part.parquet"
 # }
 ```
