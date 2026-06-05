@@ -22,6 +22,7 @@ baseline_hc_rows <- function(base) {
 # ---- oracle: results match the in-memory baseline (task 5.1) ---------------
 
 test_that("shard-runner: per-task results match the in-memory baseline", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 2L,
@@ -55,6 +56,7 @@ test_that("shard-runner: per-task results match the in-memory baseline", {
 # ---- re-layout: partition_by shifts paths, not results (task 5.2) ----------
 
 test_that("shard-runner: re-layout shifts shard paths but not results", {
+  skip_if_not_installed("dqrng")
   args <- list(
     ssd_data(d = sr_dataset()),
     nsim = 2L,
@@ -89,6 +91,7 @@ test_that("shard-runner: re-layout shifts shard paths but not results", {
 # ---- m:n fan-in via inner `replace` (task 5.3) -----------------------------
 
 test_that("shard-runner: a fit shard reads several sample shards (inner replace)", {
+  skip_if_not_installed("dqrng")
   # `replace` is a sample PATH axis but a fit INNER axis by default, so one fit
   # shard's tasks span two sample shards.
   scenario <- ssd_define_scenario(
@@ -117,6 +120,7 @@ test_that("shard-runner: a fit shard reads several sample shards (inner replace)
 # ---- m:n fan-in via coarse child (task 5.4) --------------------------------
 
 test_that("shard-runner: an hc shard reads several fit shards (coarse hc)", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 1L,
@@ -140,6 +144,7 @@ test_that("shard-runner: an hc shard reads several fit shards (coarse hc)", {
 # ---- shard count follows partition_by, not task count (task 5.5) -----------
 
 test_that("shard-runner: shard count equals the path-cell count, not task count", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 2L,
@@ -169,6 +174,7 @@ test_that("shard-runner: shard count equals the path-cell count, not task count"
 # ---- reproducible and order-independent (task 5.6) -------------------------
 
 test_that("shard-runner: re-running yields identical per-task results", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 2L,
@@ -188,6 +194,7 @@ test_that("shard-runner: re-running yields identical per-task results", {
 # ---- owns its output tree: a re-layout leaves no stale shards ---------------
 
 test_that("shard-runner: re-running with a changed partition_by leaves no stale shards", {
+  skip_if_not_installed("dqrng")
   dir <- withr::local_tempdir()
   base_args <- list(
     ssd_data(d = sr_dataset()),
@@ -221,6 +228,7 @@ test_that("shard-runner: re-running with a changed partition_by leaves no stale 
 # ---- missing-parent guard: symmetric with the hc step's fit_id guard ---------
 
 test_that("shard-runner: fit step aborts when a parent sample draw is missing", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 1L,

@@ -1,4 +1,5 @@
 test_that("parallel-safe-seeding: local_dqrng_state installs state and restores on exit", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
 
   dqrng::dqset.seed(7L, stream = c(3L, 4L))
@@ -14,6 +15,7 @@ test_that("parallel-safe-seeding: local_dqrng_state installs state and restores 
 })
 
 test_that("parallel-safe-seeding: same (seed, state) reproduces identical draws", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
 
   seq_1 <- local({
@@ -28,6 +30,7 @@ test_that("parallel-safe-seeding: same (seed, state) reproduces identical draws"
 })
 
 test_that("parallel-safe-seeding: surrounding stream undisturbed by a nested local_dqrng_state scope", {
+  skip_if_not_installed("dqrng")
   with_nested <- local({
     local_dqrng_backend()
     dqrng::dqset.seed(7L, stream = c(3L, 4L))
@@ -49,6 +52,7 @@ test_that("parallel-safe-seeding: surrounding stream undisturbed by a nested loc
 })
 
 test_that("parallel-safe-seeding: local_dqrng_state aborts outside an active backend", {
+  skip_if_not_installed("dqrng")
   expect_false(dqrng_backend_active())
   expect_snapshot(error = TRUE, {
     local_dqrng_state(42L, c(1L, 2L))
@@ -56,6 +60,7 @@ test_that("parallel-safe-seeding: local_dqrng_state aborts outside an active bac
 })
 
 test_that("parallel-safe-seeding: local_dqrng_state validation", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
   expect_snapshot(error = TRUE, {
     local_dqrng_state(1.5, c(1L, 2L))
@@ -66,6 +71,7 @@ test_that("parallel-safe-seeding: local_dqrng_state validation", {
 })
 
 test_that("parallel-safe-seeding: local_dqrng_state accepts NA_integer_ in the primer", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
   expect_identical(
     local({
@@ -76,6 +82,7 @@ test_that("parallel-safe-seeding: local_dqrng_state accepts NA_integer_ in the p
 })
 
 test_that("parallel-safe-seeding: with_dqrng_state evaluates code and restores state", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
 
   dqrng::dqset.seed(7L, stream = c(3L, 4L))

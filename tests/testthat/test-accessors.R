@@ -50,6 +50,7 @@ test_that("scenario-accessors: resolve_min_pmix resolves via the accessor", {
 })
 
 test_that("scenario-accessors: baseline runner's default min_pmix is unchanged", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,

@@ -1,4 +1,5 @@
 test_that("dqrng-backend: set_dqrng_backend activates dqrng and reset reverts", {
+  skip_if_not_installed("dqrng")
   # Guard: ensure the backend is reset even if an expectation errors.
   withr::defer(reset_dqrng_backend())
 
@@ -20,6 +21,7 @@ test_that("dqrng-backend: set_dqrng_backend activates dqrng and reset reverts", 
 })
 
 test_that("dqrng-backend: local_dqrng_backend activates and resets on scope exit", {
+  skip_if_not_installed("dqrng")
   set.seed(1)
   base_draw <- runif(3)
 
@@ -38,6 +40,7 @@ test_that("dqrng-backend: local_dqrng_backend activates and resets on scope exit
 })
 
 test_that("dqrng-backend: reproducible draws for fixed (seed, stream)", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
 
   dqrng::dqset.seed(123L, stream = c(7L, 11L))
@@ -58,6 +61,7 @@ test_that("dqrng-backend: reproducible draws for fixed (seed, stream)", {
 })
 
 test_that("dqrng-backend: nested local_dqrng_backend() is a no-op leaving the stream unchanged", {
+  skip_if_not_installed("dqrng")
   withr::defer(reset_dqrng_backend())
 
   # Draw a seeded sequence with an intervening nested local_dqrng_backend()
@@ -93,6 +97,7 @@ test_that("dqrng-backend: nested local_dqrng_backend() is a no-op leaving the st
 })
 
 test_that("dqrng-backend: scenario execution leaves base R RNG unchanged", {
+  skip_if_not_installed("dqrng")
   # The backend is scoped to scenario execution: after a scenario completes,
   # base R RNG functions are no longer routed through dqrng.
   set.seed(1)

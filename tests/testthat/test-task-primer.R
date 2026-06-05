@@ -39,6 +39,7 @@ test_that("parallel-safe-seeding: task_primer matches experiment smoke values", 
 })
 
 test_that("parallel-safe-seeding: task_primer seeds dqrng reproducibly", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
   p1 <- list(dataset = "boron", sim = 1L, replace = FALSE)
   p2 <- list(dataset = "boron", sim = 2L, replace = FALSE)

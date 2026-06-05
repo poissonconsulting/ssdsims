@@ -109,6 +109,7 @@ test_that("task-shards: task rows carry (seed, primer) matching task_primer()", 
 })
 
 test_that("task-shards: shard derivation draws no random numbers", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
   # Check both RNG paths: base R's `.Random.seed` and the dqrng stream state
   # (the package's actual draw path). The derivation only hashes (task_primer
@@ -127,6 +128,7 @@ test_that("task-shards: shard derivation draws no random numbers", {
 # ---- per-shard step runners (task 7.3) -------------------------------------
 
 test_that("task-shards: step runners write one Parquet and read upstream by path", {
+  skip_if_not_installed("dqrng")
   dir <- withr::local_tempdir()
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
@@ -171,6 +173,7 @@ test_that("task-shards: step runners write one Parquet and read upstream by path
 # ---- summary fan-in (task 7.6) ---------------------------------------------
 
 test_that("task-shards: ssd_summarize unions landed hc shards without recomputation", {
+  skip_if_not_installed("dqrng")
   dir <- withr::local_tempdir()
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
@@ -254,6 +257,7 @@ setup_targets_fixture <- function(dir, fixture) {
 }
 
 test_that("task-shards: pipeline per-task results equal the baseline runner", {
+  skip_if_not_installed("dqrng")
   skip_targets()
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "byte-identity-targets.R")
@@ -640,6 +644,7 @@ test_that("task-shards: appending a dataset mints new shards and caches existing
 })
 
 test_that("task-shards: factory per-task results equal the baseline (slice drops no field)", {
+  skip_if_not_installed("dqrng")
   skip_targets()
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "slice-invalidation-targets.R")

@@ -1,4 +1,5 @@
 test_that("ssd_run_scenario.data.frame works", {
+  skip_if_not_installed("dqrng")
   with_lecuyer_cmrg_seed(10, {
     scenario <- ssd_run_scenario(
       ssddata::ccme_boron,
@@ -15,6 +16,7 @@ test_that("ssd_run_scenario.data.frame works", {
 })
 
 test_that("ssd_run_scenario.data.frame errors unknown argument", {
+  skip_if_not_installed("dqrng")
   chk::expect_chk_error(
     ssd_run_scenario(
       ssddata::ccme_boron,
@@ -27,6 +29,7 @@ test_that("ssd_run_scenario.data.frame errors unknown argument", {
 })
 
 test_that("ssd_run_scenario.data.frame passes vectorized arguments fits", {
+  skip_if_not_installed("dqrng")
   # Pin the seed so the sampled data (and therefore the fitted coefficients)
   # are deterministic on their own, rather than depending on the ambient RNG
   # state left by earlier tests in the session.
@@ -45,6 +48,7 @@ test_that("ssd_run_scenario.data.frame passes vectorized arguments fits", {
 })
 
 test_that("ssd_run_scenario.data.frame errors min_pboot", {
+  skip_if_not_installed("dqrng")
   expect_error(
     ssd_run_scenario(
       ssddata::ccme_boron,
@@ -59,6 +63,7 @@ test_that("ssd_run_scenario.data.frame errors min_pboot", {
 })
 
 test_that("ssd_run_scenario.function works", {
+  skip_if_not_installed("dqrng")
   with_lecuyer_cmrg_seed(10, {
     scenario <- ssd_run_scenario(rlnorm, nsim = 2)
   })
@@ -71,6 +76,7 @@ test_that("ssd_run_scenario.function works", {
 })
 
 test_that("ssd_run_scenario.character works", {
+  skip_if_not_installed("dqrng")
   with_lecuyer_cmrg_seed(10, {
     scenario <- ssd_run_scenario("rlnorm", nsim = 2)
   })
@@ -83,6 +89,7 @@ test_that("ssd_run_scenario.character works", {
 })
 
 test_that("ssd_run_scenario.tmbfit works", {
+  skip_if_not_installed("dqrng")
   with_lecuyer_cmrg_seed(10, {
     fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
     scenario <- ssd_run_scenario(fit[[1]], nsim = 2)
@@ -96,6 +103,7 @@ test_that("ssd_run_scenario.tmbfit works", {
 })
 
 test_that("ssd_run_scenario.fitdist works", {
+  skip_if_not_installed("dqrng")
   with_lecuyer_cmrg_seed(10, {
     fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
     scenario <- ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 2)
@@ -109,6 +117,7 @@ test_that("ssd_run_scenario.fitdist works", {
 })
 
 test_that("ssd_run_scenario.tmbfit uses the tmbfit's fitted estimates", {
+  skip_if_not_installed("dqrng")
   # Regression test: ssd_run_scenario.tmbfit computed the estimates from the
   # tmbfit but dropped them on the recursive call, so the rng function ran
   # with default parameters instead of the fitted ones. ssd_sim_data.tmbfit

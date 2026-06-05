@@ -259,6 +259,7 @@ test_that("task-lists: printing a task set reports per-step counts", {
 # ---- baseline runner -------------------------------------------------------
 
 test_that("task-lists: baseline runner threads sample -> fit -> hc", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
@@ -283,6 +284,7 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
 })
 
 test_that("task-lists: sub-truncation property holds across nrow", {
+  skip_if_not_installed("dqrng")
   # The fit step truncates a single shared draw inline; head(draw, 5) is a
   # byte-identical prefix of head(draw, 10) (TARGETS-DESIGN.md section 5).
   scenario <- ssd_define_scenario(
@@ -303,6 +305,7 @@ test_that("task-lists: sub-truncation property holds across nrow", {
 })
 
 test_that("parallel-safe-seeding: baseline runner is reproducible without an external seed", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
@@ -330,6 +333,7 @@ test_that("parallel-safe-seeding: baseline runner is reproducible without an ext
 })
 
 test_that("parallel-safe-seeding: baseline runner results are order-independent", {
+  skip_if_not_installed("dqrng")
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 3L,
@@ -359,6 +363,7 @@ test_that("parallel-safe-seeding: baseline runner results are order-independent"
 # ---- seed-and-run wrappers -------------------------------------------------
 
 test_that("parallel-safe-seeding: sample_data_task_primer seeds once and reproduces", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
   data <- ssddata::ccme_boron
   primer <- task_primer(list(dataset = "boron", sim = 1L, replace = FALSE))
@@ -378,6 +383,7 @@ test_that("parallel-safe-seeding: sample_data_task_primer seeds once and reprodu
 })
 
 test_that("parallel-safe-seeding: fit/hc wrappers reproduce under a fixed (seed, primer)", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
   data <- utils::head(ssddata::ccme_boron, 6L)
   fp <- task_primer(list(dataset = "boron", nrow = 6L, rescale = FALSE))
@@ -433,6 +439,7 @@ test_that("parallel-safe-seeding: state-less ops take no RNG argument", {
 })
 
 test_that("parallel-safe-seeding: sub-truncation under seeding (replace FALSE and TRUE)", {
+  skip_if_not_installed("dqrng")
   local_dqrng_backend()
   data <- ssddata::ccme_boron
   for (replace in c(FALSE, TRUE)) {
@@ -466,6 +473,7 @@ test_that("task-lists: task-table column contracts are pinned", {
 # ---- samples retains bootstrap draws without changing estimates ------------
 
 test_that("scenario-definition: samples = TRUE retains hc draws but keeps estimates", {
+  skip_if_not_installed("dqrng")
   args <- list(
     ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
     nsim = 1L,
@@ -487,6 +495,7 @@ test_that("scenario-definition: samples = TRUE retains hc draws but keeps estima
 })
 
 test_that("scenario-definition: samples = TRUE works with multiple dists and ci = FALSE", {
+  skip_if_not_installed("dqrng")
   # Regression: `samples = TRUE` retains the *bootstrap* draws, which only exist
   # for `ci = TRUE`. With multiple dists (model averaging), asking ssdtools to
   # keep a non-existent `samples` column on the `ci = FALSE` path errored
