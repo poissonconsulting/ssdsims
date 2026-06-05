@@ -6,7 +6,11 @@ Terminology used throughout `ssdsims`.
 
 - **seed**: A scalar integer passed to `base::set.seed()` (or the
   `seed` argument of `dqrng::dqset.seed()`). Both base R and dqrng
-  accept a single integer as the seed.
+  accept a single integer as the seed. In `ssd_define_scenario()` it is
+  the scenario's RNG root — one of the three **required positional**
+  arguments (`data, nsim, seed`), **not** a grid **axis** or a
+  **simulation setting** (below). Its canonical call-site slot is third,
+  immediately after `nsim` and before any `...` knob (e.g. `nrow`).
 - **state**: The full internal state of an RNG. For L'Ecuyer-CMRG,
   the state is a length-7 integer vector assignable to
   `.Random.seed` (it cannot be passed to `set.seed()`). For dqrng,

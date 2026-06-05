@@ -53,8 +53,8 @@ test_that("scenario-accessors: baseline runner's default min_pmix is unchanged",
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm"
   )
   out1 <- ssd_run_scenario_baseline(scenario)
