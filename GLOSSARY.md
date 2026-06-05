@@ -65,13 +65,24 @@ Terminology used throughout `ssdsims`.
   `fit` adds the fit-grid axes (`rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`);
   `hc` adds the hc-grid axes (`nboot`, `est_method`, `ci_method`,
-  `parametric`). `ci` is **not** an hc axis: it is a scenario-wide
-  scalar flag (the estimate is identical either way; TARGETS-DESIGN.md
-  §1.2), applied uniformly like `samples`. Contrast a *carried column*
-  (e.g. `n_max`), which is data on the row but is **not** fanned out over:
+  `parametric`). `proportion`, `ci`, and `samples` are **not** hc axes —
+  they are *simulation settings* (below), consumed within each task rather
+  than multiplying it. Contrast a *carried column* (e.g. `n_max`), which is
+  data on the row but is **not** fanned out over:
   `nrow` is deliberately not a `sample` axis because every `nrow` is
   a sub-truncation of one `n_max`-row draw (TARGETS-DESIGN.md §5),
   so it is an axis only of the (RNG-free) `data` truncation step.
+- **simulation setting**: A scenario knob that is **not** an axis — it is
+  absent from `task_axes(step)`, so it never creates a task, enters the
+  per-task **primer**, or becomes a **shard**/**partition** level. Its effect
+  is realised *inside* each task: it either fans out within the task's own
+  output (`proportion` → one HC row per value) or is applied uniformly to
+  every task (`ci`, `samples`). Where an **axis** multiplies the *task graph*,
+  a simulation setting only shapes the *contents* of a task's result. "Scalar"
+  is a near-synonym but a misnomer for `proportion`, which is vector-valued
+  yet still not an axis. In the `ssd_define_scenario()` signature the
+  simulation settings (`proportion`, `ci`, `samples`) are grouped together,
+  after the axes and before the partitioning arguments.
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is
   a *read-side* concept — query engines (duckplyr / DuckDB)
@@ -169,9 +180,9 @@ Terminology used throughout `ssdsims`.
 - **`proportion`**: The proportion of species affected at which the hazard
   concentration is computed.
 - **`ci`**: Scenario-wide scalar flag for whether to compute confidence
-  intervals on hazard concentrations. Not a cross-join axis — the point
-  estimate is identical whether `ci` is `TRUE` or `FALSE`, so `ci = TRUE` is a
-  superset of `ci = FALSE` (TARGETS-DESIGN.md §1.2).
+  intervals on hazard concentrations. A *simulation setting*, not a cross-join
+  axis — the point estimate is identical whether `ci` is `TRUE` or `FALSE`, so
+  `ci = TRUE` is a superset of `ci = FALSE` (TARGETS-DESIGN.md §1.2).
 - **`ci_method`**: The method used to compute confidence intervals (e.g.
   `multi_fixed`, `weighted_samples`).
 - **`nboot`**: The number of bootstrap replicates used when computing

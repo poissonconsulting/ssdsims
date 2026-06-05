@@ -294,8 +294,11 @@ analytically from the fit, independent of the bootstrap and the RNG, so it is
 FALSE` — same `est`, plus the populated `se` / `lcl` / `ucl`. Running both in
 one scenario would only emit a redundant point-estimate row per fit-task, so
 `ci` is a single either/or choice: `ci = FALSE` for cheap, bootstrap-free point
-estimates, or `ci = TRUE` for estimates plus CIs. This mirrors `samples`, the
-other scalar, non-axis hc knob.
+estimates, or `ci = TRUE` for estimates plus CIs. This makes `ci` a
+**simulation setting** (GLOSSARY) — a non-axis knob consumed within each task —
+alongside `samples` (applied uniformly) and `proportion` (which fans out within
+the task's own output). The three are grouped together in the
+`ssd_define_scenario()` signature, after the axes.
 
 Because the estimate carries no `ci`-dependence, `ci` is **excluded from
 `task_axes("hc")` and the per-task primer** and applied uniformly to every hc

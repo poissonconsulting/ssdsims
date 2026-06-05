@@ -57,11 +57,13 @@ The constructor still aborts when `ci = FALSE` *and* any of `nboot`/`ci_method`/
 
 *Alternative considered — thread `ci` from the scenario slice* (like `proportion`/`samples`, which are *not* task columns). Rejected as more churn for no gain: it would edit both runners and `hc_grid_tbl()`, whereas the carried-column route matches the existing `n_max` precedent and leaves the runners untouched. (`proportion`/`samples` are scenario-threaded for historical reasons; `ci` follows the closer `n_max` analogue.)
 
-### Decision: regroup the signature so the scalar flags are contiguous
+### Decision: regroup the signature so the simulation settings are contiguous
 
-Today `ci` sits *inside* the hc axes (between `proportion` and `nboot`) while `samples` sits after them, so the two scalar flags are not adjacent. Once `ci` is no longer an axis, it belongs with `samples`. The constructor signature is reordered by role: data/`seed`/`nsim`/`name`, then the cross-join axes (`nrow` … `parametric`), then the scalar simulation flags (`ci`, `samples`), then partitioning and the rest (`partition_by`, `bundle`, `upload`). `ci` moves from between `proportion`/`nboot` to immediately before `samples`. The stored `scenario$hc` list and `print_grid()` order follow the same role grouping (axes, then `ci`/`samples`), so the print snapshot reads coherently.
+We name the non-axis category a **simulation setting** (GLOSSARY): a knob absent from `task_axes(step)` that never multiplies tasks but is consumed inside each task — fanning out within its output (`proportion`) or applied uniformly (`ci`, `samples`). "Scalar" is the loose synonym, but a misnomer for `proportion` (vector-valued, yet still not an axis), which is why the precise term is worth introducing.
 
-This is a pure argument-reordering: `ci`'s default (`FALSE`) is unchanged and all call sites in the repo pass `ci` by name, so the move is safe. `proportion` stays in the axes group — it is a vector-valued grid knob (its fan-out happens inside `ssdtools::ssd_hc()` rather than via task expansion), not a scalar flag.
+Today these three are scattered: `proportion` and `ci` sit *inside* the hc axes (`proportion` before `ci`, then `nboot`…), while `samples` trails after them. The constructor signature is reordered by role: data/`seed`/`nsim`/`name`, then the cross-join axes (`nrow` … `nboot`, `est_method`, `ci_method`, `parametric`), then the simulation settings (`proportion`, `ci`, `samples`), then partitioning and the rest (`partition_by`, `bundle`, `upload`). So `proportion` and `ci` both move down to join `samples`. The stored `scenario$hc` list and `print_grid()` order follow the same role grouping (hc axes, then `proportion`/`ci`/`samples`), so the print snapshot reads coherently.
+
+This is a pure argument-reordering: the defaults are unchanged and all call sites in the repo pass these by name, so the move is safe.
 
 ### Decision: `ci` leaves the per-task primer — bootstrap CIs shift, estimates do not
 
