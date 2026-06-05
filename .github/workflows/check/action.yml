@@ -7,6 +7,15 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # Quarto renders package vignettes from the *installed* package rather than
+    # R CMD build's temporary library, so `library(<pkg>)` fails during the
+    # build's vignette re-render unless the package is installed first - most
+    # visibly on Windows. Install it up front, mirroring quarto-dev/quarto-r,
+    # which adds `local::.` "as we register vignette engine".
+    - name: Install the package so quarto resolves it when re-building vignettes
+      run: _R_SHLIB_STRIP_=true R CMD INSTALL .
+      shell: bash
+
     - uses: r-lib/actions/check-r-package@v2
       with:
         # Fails on R 3.6 on Windows, remove when this job is removed?
