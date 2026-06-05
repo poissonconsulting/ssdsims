@@ -41,16 +41,19 @@ For each step it \code{tarchetypes::tar_map()}s one named, \code{format = "file"
 \code{error = "null"} target per \code{partition_by} path cell (the \code{names} are the
 step's path axes), and writes every shard and the summary under the
 per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}} root (so a changed \code{partition_by}/\code{bundle}
-never mixes shard granularities). \code{scenario} is referenced as a global, so
-editing it invalidates the dependent shards.
+never mixes shard granularities). Each step's command splices in only the
+\strong{minimal scenario slice} its runner consumes (\code{scenario_step_slice()})
+rather than the bare \code{scenario} global, so editing a field a step does not
+read leaves the other steps' shards cached.
 }
 \section{Invalidation model}{
 
 The shard targets use \strong{content-hash invalidation over their \code{format = "file"} Parquet outputs} (TARGETS-DESIGN.md section 8), observable as
 \strong{cache-by-existence}: a shard is up to date iff its Parquet exists \emph{and} the
-inputs its body depends on - its task rows, the scenario, and the parent shard
-target(s) it reads - are unchanged. A missing Parquet rebuilds; a recomputed
-shard whose bytes are byte-identical leaves its dependents skipped.
+inputs its body depends on - its task rows, the step's minimal scenario slice
+(\code{scenario_step_slice()}), and the parent shard target(s) it reads - are
+unchanged. A missing Parquet rebuilds; a recomputed shard whose bytes are
+byte-identical leaves its dependents skipped.
 
 Instead of a coarse \code{sample -> fit -> hc} \code{tar_combine()} barrier (which marks
 the \emph{whole} downstream step out of date when any one parent shard changes),

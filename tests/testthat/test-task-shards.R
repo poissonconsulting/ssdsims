@@ -511,3 +511,92 @@ test_that("hive: invalidating one parent shard re-runs only the children that re
     c("sample_step_d_2", "fit_step_d_2", "hc_step_d_2") %in% outdated
   ))
 })
+
+# ---- per-step minimal scenario slice (step-scenario-slice) -----------------
+
+test_that("task-shards: changing an hc-only knob rebuilds only hc and summary", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "slice-invalidation-targets.R")
+  withr::local_dir(dir)
+  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+
+  # Flip the hc-only `samples` knob: only the hc slice changes, so only the hc
+  # shard's command moves; the sample/fit slices (and commands) are untouched.
+  saveRDS(list(dists = "lnorm", samples = TRUE), "knobs.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(c("hc_step_d_1", "summary") %in% outdated))
+  expect_false(any(c("sample_step_d_1", "fit_step_d_1") %in% outdated))
+})
+
+test_that("task-shards: changing a fit-only knob leaves sample cached", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "slice-invalidation-targets.R")
+  withr::local_dir(dir)
+  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+
+  # Flip the fit-only `dists` knob: the fit slice changes (and cascades into the
+  # hc shard that reads the fit shard, and summary), but the sample slice does
+  # not, so the sample shard stays cached.
+  saveRDS(list(dists = c("lnorm", "gamma"), samples = FALSE), "knobs.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(c("fit_step_d_1", "hc_step_d_1", "summary") %in% outdated))
+  expect_false("sample_step_d_1" %in% outdated)
+})
+
+test_that("task-shards: factory per-task results equal the baseline (slice drops no field)", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "slice-invalidation-targets.R")
+  withr::local_dir(dir)
+  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  scenario <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = "lnorm",
+    partition_by = list(
+      sample = c("dataset", "sim"),
+      fit = c("dataset", "sim"),
+      hc = c("dataset", "sim")
+    )
+  )
+  base <- ssd_run_scenario_baseline(scenario)
+
+  # fit objects equal the baseline's (so the fit slice dropped no consumed field,
+  # and the sample slice fed the same draw upstream). all.equal ignores the nil
+  # TMB external pointers a deserialised fitdists carries.
+  fit_pipe <- ssd_read_parquet("results/fit/**/part.parquet")
+  for (k in seq_along(base$fit$fit_id)) {
+    fp <- decode_obj(fit_pipe$fit_blob[match(
+      base$fit$fit_id[k],
+      fit_pipe$fit_id
+    )])
+    expect_true(isTRUE(all.equal(fp, base$fit$fits[[k]])))
+  }
+
+  # hc estimates equal the baseline's (the hc slice dropped no consumed field).
+  hc_pipe <- ssd_read_parquet("results/hc/**/part.parquet")
+  hc_pipe <- hc_pipe[order(hc_pipe$hc_id, hc_pipe$dist), ]
+  base_hc <- do.call(
+    rbind,
+    Map(
+      function(tb, id) {
+        tb$hc_id <- id
+        tibble::as_tibble(tb)
+      },
+      base$hc$hc,
+      base$hc$hc_id
+    )
+  )
+  base_hc <- base_hc[order(base_hc$hc_id, base_hc$dist), ]
+  expect_equal(hc_pipe$est, base_hc$est)
+})

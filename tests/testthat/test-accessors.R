@@ -64,3 +64,63 @@ test_that("scenario-accessors: baseline runner's default min_pmix is unchanged",
   expect_s3_class(out1$fit$fits[[1L]], "fitdists")
   expect_identical(out1$hc$hc, out2$hc$hc)
 })
+
+# ---- scenario_step_slice() -------------------------------------------------
+
+test_that("scenario-accessors: each step's slice carries its runner's inputs", {
+  scenario <- ssd_define_scenario(
+    ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    nsim = 1L,
+    seed = 1L,
+    dists = c("lnorm", "gamma")
+  )
+
+  sample_slice <- scenario_step_slice(scenario, "sample")
+  fit_slice <- scenario_step_slice(scenario, "fit")
+  hc_slice <- scenario_step_slice(scenario, "hc")
+
+  # The class tag survives, so the runners' chk_s3_class() and the accessors work.
+  expect_s3_class(sample_slice, "ssdsims_scenario")
+  expect_s3_class(fit_slice, "ssdsims_scenario")
+  expect_s3_class(hc_slice, "ssdsims_scenario")
+
+  # sample: the datasets + partition_by$sample, and nothing else.
+  expect_identical(scenario_dataset(sample_slice, "boron"), scenario$data$boron)
+  expect_identical(sample_slice$partition_by, scenario$partition_by["sample"])
+  expect_setequal(names(sample_slice), c("data", "partition_by"))
+
+  # fit: fit$dists + the min_pmix functions + partition_by for sample and fit.
+  expect_identical(fit_slice$fit$dists, scenario$fit$dists)
+  expect_identical(
+    scenario_min_pmix(fit_slice, "ssd_min_pmix"),
+    scenario$min_pmix_fns[["ssd_min_pmix"]]
+  )
+  expect_identical(
+    fit_slice$partition_by,
+    scenario$partition_by[c("sample", "fit")]
+  )
+  expect_setequal(names(fit_slice), c("fit", "min_pmix_fns", "partition_by"))
+  expect_null(fit_slice$data)
+
+  # hc: hc$proportion + hc$samples + partition_by for fit and hc.
+  expect_identical(hc_slice$hc$proportion, scenario$hc$proportion)
+  expect_identical(hc_slice$hc$samples, scenario$hc$samples)
+  expect_identical(hc_slice$partition_by, scenario$partition_by[c("fit", "hc")])
+  expect_setequal(names(hc_slice), c("hc", "partition_by"))
+  expect_null(hc_slice$data)
+})
+
+test_that("scenario-accessors: scenario_step_slice is deterministic and hashable", {
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 42L,
+    dists = "lnorm"
+  )
+  for (step in c("sample", "fit", "hc")) {
+    a <- scenario_step_slice(scenario, step)
+    b <- scenario_step_slice(scenario, step)
+    expect_identical(a, b)
+    expect_identical(rlang::hash(a), rlang::hash(b))
+  }
+})

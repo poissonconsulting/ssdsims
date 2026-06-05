@@ -109,6 +109,54 @@ read_parent_shards <- function(tasks, scenario, parent, parent_dir) {
   ssd_read_parquet(files)
 }
 
+# The minimal `ssdsims_scenario`-classed sub-object the named step's per-shard
+# runner consumes - a deterministic, hashable projection of the scenario so a
+# step's `tar_map()` command depends only on the fields that step reads, not the
+# bare `scenario` global (so editing a step-irrelevant field leaves the other
+# steps' shards cached). Reading the three runners pins each step's consumed set:
+#
+#   sample -> the datasets (read via `scenario_dataset()`) + `partition_by$sample`
+#             (its `shard_path()` axis).
+#   fit    -> `fit$dists` + the `min_pmix` functions (resolved via
+#             `scenario_min_pmix()` in the fit primer) + `partition_by` for
+#             `sample` (parent read) and `fit` (own path).
+#   hc     -> `hc$proportion` + `hc$samples` + `partition_by` for `fit` (parent
+#             read) and `hc` (own path).
+#
+# `seed`/`primer` are not sliced - they ride in each shard's `tasks` list-column.
+# The `min_pmix` functions hash by name (carried for `fit` execution but not part
+# of task identity), so carrying them does not couple a `fit` shard to a
+# function-body edit. The class tag is preserved so each runner's
+# `chk_s3_class()` and the `scenario_dataset()`/`scenario_min_pmix()` accessors
+# work unchanged on the slice. A pure function of the scenario's already-
+# materialised fields (no environment capture), so two computations are
+# byte-identical and produce the same dependency hash.
+scenario_step_slice <- function(scenario, step) {
+  chk::chk_s3_class(scenario, "ssdsims_scenario")
+  step <- rlang::arg_match0(step, c("sample", "fit", "hc"))
+  partition_by <- scenario$partition_by
+  slice <- switch(
+    step,
+    sample = list(
+      data = scenario$data,
+      partition_by = partition_by["sample"]
+    ),
+    fit = list(
+      fit = list(dists = scenario$fit$dists),
+      min_pmix_fns = scenario$min_pmix_fns,
+      partition_by = partition_by[c("sample", "fit")]
+    ),
+    hc = list(
+      hc = list(
+        proportion = scenario$hc$proportion,
+        samples = scenario$hc$samples
+      ),
+      partition_by = partition_by[c("fit", "hc")]
+    )
+  )
+  structure(slice, class = "ssdsims_scenario")
+}
+
 #' Run a sample Shard
 #'
 #' Runs the `sample` tasks bundled into one shard: under one
@@ -477,16 +525,19 @@ edge_block <- function(names) {
 #' `error = "null"` target per `partition_by` path cell (the `names` are the
 #' step's path axes), and writes every shard and the summary under the
 #' per-layout [scenario_results_dir()] root (so a changed `partition_by`/`bundle`
-#' never mixes shard granularities). `scenario` is referenced as a global, so
-#' editing it invalidates the dependent shards.
+#' never mixes shard granularities). Each step's command splices in only the
+#' **minimal scenario slice** its runner consumes (`scenario_step_slice()`)
+#' rather than the bare `scenario` global, so editing a field a step does not
+#' read leaves the other steps' shards cached.
 #'
 #' @section Invalidation model:
 #' The shard targets use **content-hash invalidation over their `format =
 #' "file"` Parquet outputs** (TARGETS-DESIGN.md section 8), observable as
 #' **cache-by-existence**: a shard is up to date iff its Parquet exists *and* the
-#' inputs its body depends on - its task rows, the scenario, and the parent shard
-#' target(s) it reads - are unchanged. A missing Parquet rebuilds; a recomputed
-#' shard whose bytes are byte-identical leaves its dependents skipped.
+#' inputs its body depends on - its task rows, the step's minimal scenario slice
+#' (`scenario_step_slice()`), and the parent shard target(s) it reads - are
+#' unchanged. A missing Parquet rebuilds; a recomputed shard whose bytes are
+#' byte-identical leaves its dependents skipped.
 #'
 #' Instead of a coarse `sample -> fit -> hc` `tar_combine()` barrier (which marks
 #' the *whole* downstream step out of date when any one parent shard changes),
@@ -561,8 +612,10 @@ ssd_scenario_targets <- function(
 
   # One `tar_map` per step: a named, format="file", error="null" target per
   # `partition_by` path cell. `tar_target_raw()` + `rlang::expr()` injects the
-  # result dirs as literals (`!!`) while leaving `scenario`/`tasks`/the per-child
-  # `.parents` edge block as symbols (resolved as targets globals / mapped values).
+  # result dirs *and* the step's minimal scenario slice as literals (`!!`) while
+  # leaving `tasks`/the per-child `.parents` edge block as symbols (resolved as
+  # mapped values). Splicing the slice - not the bare `scenario` global - is what
+  # scopes each step's dependency hash to the fields its runner actually reads.
   step_map <- function(step, shards, command) {
     tarchetypes::tar_map(
       values = shards,
@@ -577,11 +630,18 @@ ssd_scenario_targets <- function(
     )
   }
 
+  # Each step's command splices in only its minimal scenario slice (not the bare
+  # `scenario` global), so editing a field outside a step's slice no longer
+  # invalidates that step's shards.
+  sample_slice <- scenario_step_slice(scenario, "sample")
+  fit_slice <- scenario_step_slice(scenario, "fit")
+  hc_slice <- scenario_step_slice(scenario, "hc")
+
   # sample: a leaf step, no upstream shards.
   sample_targets <- step_map(
     "sample",
     sample_shards,
-    rlang::expr(ssd_run_sample_step(tasks, scenario, !!sample_dir))
+    rlang::expr(ssd_run_sample_step(tasks, !!sample_slice, !!sample_dir))
   )
   sample_names <- shard_cell_names(
     sample_targets,
@@ -602,7 +662,7 @@ ssd_scenario_targets <- function(
     fit_shards,
     rlang::expr({
       .parents # per-child edges to the sample shards this fit shard reads
-      ssd_run_fit_step(tasks, scenario, !!sample_dir, !!fit_dir)
+      ssd_run_fit_step(tasks, !!fit_slice, !!sample_dir, !!fit_dir)
     })
   )
   fit_names <- shard_cell_names(fit_targets, fit_shards, scenario, "fit")
@@ -619,7 +679,7 @@ ssd_scenario_targets <- function(
     hc_shards,
     rlang::expr({
       .parents # per-child edges to the fit shards this hc shard reads
-      ssd_run_hc_step(tasks, scenario, !!fit_dir, !!hc_dir)
+      ssd_run_hc_step(tasks, !!hc_slice, !!fit_dir, !!hc_dir)
     })
   )
   hc_names <- shard_cell_names(hc_targets, hc_shards, scenario, "hc")
