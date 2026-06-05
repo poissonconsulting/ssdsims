@@ -2176,6 +2176,20 @@ public-API or ergonomics gaps.
   so new and existing code read consistently. Surfaced in PR \#101
   review. Independent tidy-up with no dependants; not on the dependency
   DAG.
+- **`canonical-call-sites`** — Sweep call sites of the public
+  constructors so arguments are passed in signature order. The first
+  pass canonicalised every
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
+  call (R examples, tests, fixtures, scripts, vignettes, and the shipped
+  `inst/targets-templates/`) to lead with the required trio
+  `data, nsim, seed` before any `...` knob — `seed` is the scenario’s
+  RNG root, not a grid axis or simulation setting, so it sits third
+  rather than wedged between knobs like `nrow`. The convention is
+  recorded in `AGENTS.md` (Coding rules) and `GLOSSARY.md` (the `seed`
+  entry). This item revisits the remaining constructors
+  ([`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md),
+  the `ssd_run_*`/`ssd_scenario_*` family) for the same ordering.
+  Independent tidy-up with no dependants; not on the dependency DAG.
 
 ### Archived
 

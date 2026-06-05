@@ -292,7 +292,7 @@ or omit the knobs.
 ## Examples
 
 ``` r
-ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 42L)
+ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
 #> <ssdsims_scenario>
 #>   seed:     42
 #>   nsim:     100
