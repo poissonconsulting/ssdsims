@@ -2230,6 +2230,7 @@ flowchart TD
         shardrun[shard-runner-baseline]
         tt[task-tables]
         hive[hive-partitioning]
+        slice[step-scenario-slice]
     end
 
     inputs[scenario-input-types]
@@ -2244,7 +2245,6 @@ flowchart TD
     replay[replay-helper]
     rewrite[shard-atomic-rewrite]
     pathgrow[path-axis-growth]
-    slice[step-scenario-slice]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -2320,9 +2320,8 @@ flowchart TD
     classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive archived
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice archived
     class inputs,postcheck,manif,migrate,cluster,rewrite,pathgrow proposed
-    class slice done
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
@@ -2336,12 +2335,11 @@ subgraph** — when a step is archived, move its node declaration into that box
 as well as giving it the `archived` class.
 
 **Status snapshot (2026-06-05).** Twelve changes carry artifacts;
-`hive-partitioning` is now **archived** (green — content-hash model + per-child
-Option-3 edges landed in `R/targets-runner.R`), `step-scenario-slice` is
-**implemented** (done/yellow — slice helper + per-dataset `sample` slice landed,
-not yet archived), and the remaining ten stay **proposed but unimplemented**
-(verified against the source tree, not just the task lists). The four original
-proposals:
+`hive-partitioning` and `step-scenario-slice` are now both **archived** (green —
+the content-hash model + per-child Option-3 edges, and the per-step/per-dataset
+scenario slice, all landed in `R/targets-runner.R`), and the remaining ten stay
+**proposed but unimplemented** (verified against the source tree, not just the
+task lists). The four original proposals:
 - `task-rng-postcheck` — `dqrng` is still in `Imports` (not `Suggests`); no
   `dqrng_usable()`, no `chk_dqrng_backend_intact()`, no exit-bookend wiring.
 - `scenario-input-types` — `ssd_data()` still rejects non-data-frame input
@@ -2366,7 +2364,7 @@ Eight further changes were proposed in this round (all `openspec validate
   three minimal-rebuild contracts (`task-shards` deltas); each **finalises its
   cached-vs-rebuilt assertion against the invalidation model `hive-partitioning`
   pins**, shown as the dotted `hive -.-> {rewrite, pathgrow, slice}` edges.
-  `step-scenario-slice` is now **implemented** (done/yellow): besides the
+  `step-scenario-slice` is now **archived** (green): besides the
   per-step slice, it builds the `sample` slice **per dataset** (per shard), so
   appending a dataset leaves the existing shards cached. That per-dataset slice
   is precisely what makes `path-axis-growth`'s dataset-growth contract hold, so
