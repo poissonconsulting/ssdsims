@@ -549,6 +549,32 @@ test_that("task-shards: changing a fit-only knob leaves sample cached", {
   expect_false("sample_step_d_1" %in% outdated)
 })
 
+test_that("task-shards: appending a dataset mints new shards and caches existing ones", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  file.copy(
+    test_path("fixtures", "dataset-growth-targets.R"),
+    file.path(dir, "_targets.R")
+  )
+  withr::local_dir(dir)
+  saveRDS(list(d1 = numeric_dataset()), "datasets.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+
+  # Append a second dataset: its shards are new path cells; the per-dataset
+  # `sample` slice keeps d1's shard commands byte-identical, so only d2's shards
+  # (and `summary`) are outdated while every d1 shard stays cached.
+  saveRDS(list(d1 = numeric_dataset(), d2 = numeric_dataset()), "datasets.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(
+    c("sample_step_d2_1", "fit_step_d2_1", "hc_step_d2_1", "summary") %in%
+      outdated
+  ))
+  expect_false(any(
+    c("sample_step_d1_1", "fit_step_d1_1", "hc_step_d1_1") %in% outdated
+  ))
+})
+
 test_that("task-shards: factory per-task results equal the baseline (slice drops no field)", {
   skip_targets()
   dir <- withr::local_tempdir()

@@ -14,12 +14,20 @@
 - [x] 3.1 In `ssd_scenario_targets()`'s `step_map()`, bind each step's slice (`scenario_step_slice(scenario, step)`) to a per-step value and **splice it** into the command via `rlang::expr()`'s `!!`, replacing the bare `scenario` symbol — `ssd_run_sample_step(tasks, !!sample_slice, !!sample_dir)` and the `fit`/`hc` analogues — leaving the per-child `.parents` edge block, `tasks`, and path-axis `names` untouched
 - [x] 3.2 Update the `ssd_scenario_targets()` roxygen: replace "scenario is referenced as a global, so editing it invalidates the dependent shards" with the per-step minimal-slice contract (editing a step-irrelevant field leaves the other steps' shards cached)
 
+## 3b. Per-dataset `sample` slice (path-axis-growth payoff)
+
+- [x] 3b.1 Add a `datasets` argument to `scenario_step_slice(scenario, step, datasets = names(scenario$data))` that restricts the `sample` slice's carried datasets to the named subset (no effect on `fit`/`hc`, which carry no datasets)
+- [x] 3b.2 In `ssd_scenario_targets()`, build the `sample` slice **per shard** (`unique(tasks$dataset)`) as a `.slice` mapped value on the `sample` shards table and reference it in the command (`ssd_run_sample_step(tasks, .slice, !!sample_dir)`); keep `fit`/`hc` slices step-global (`!!`)
+- [x] 3b.3 Update the factory roxygen / comments to state the per-shard `sample` slice and the appending-a-dataset-caches-existing-shards consequence
+
 ## 4. Tests
 
 - [x] 4.1 `scenario_step_slice()`: each step's slice carries exactly its runner's consumed fields and omits the others; the slice is `ssdsims_scenario`-classed and byte-identical across two computations (deterministic/hashable)
 - [x] 4.2 End-to-end: `tar_make()` a tiny scenario, change an `hc`-only knob (`hc$samples`), `tar_make()` again, and assert only `hc` (and `summary`) rebuild while `sample`/`fit` shards are skipped (via `tar_progress()`/`tar_outdated()`) — finalised against the `hive-partitioning` model
 - [x] 4.3 End-to-end: change a `fit`-only knob (`fit$dists`) and assert `sample` shards stay cached while `fit`/`hc`/`summary` rebuild
 - [x] 4.4 Regression: the per-task `sample`/`fit`/`hc` results remain byte-identical to `ssd_run_scenario_baseline()` for the same scenario (the slice drops no consumed field)
+- [x] 4.5 Unit: the `sample` slice carries only the named dataset(s) and is byte-identical when the scenario gains further datasets (the per-dataset independence)
+- [x] 4.6 End-to-end: `tar_make()` a one-dataset scenario, append a dataset, re-source, and assert only the new dataset's `sample`/`fit`/`hc` shards (and `summary`) are outdated while every existing dataset's shards stay cached
 
 ## 5. Docs and checks
 

@@ -110,6 +110,23 @@ test_that("scenario-accessors: each step's slice carries its runner's inputs", {
   expect_null(hc_slice$data)
 })
 
+test_that("scenario-accessors: the sample slice carries only the named dataset(s)", {
+  df <- data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
+  two <- ssd_define_scenario(ssd_data(a = df, b = df), nsim = 1L, seed = 1L)
+  three <- ssd_define_scenario(
+    ssd_data(a = df, b = df, c = df),
+    nsim = 1L,
+    seed = 1L
+  )
+  # A per-shard sample slice carries only the dataset(s) that shard reads, so it
+  # is independent of the other datasets: appending a dataset leaves the slice
+  # for an existing dataset byte-identical (the path-axis-growth payoff).
+  one <- scenario_step_slice(two, "sample", "a")
+  expect_named(one$data, "a")
+  expect_identical(one$data$a, two$data$a)
+  expect_identical(one, scenario_step_slice(three, "sample", "a"))
+})
+
 test_that("scenario-accessors: scenario_step_slice is deterministic and hashable", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,

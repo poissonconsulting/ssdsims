@@ -41,10 +41,12 @@ For each step it \code{tarchetypes::tar_map()}s one named, \code{format = "file"
 \code{error = "null"} target per \code{partition_by} path cell (the \code{names} are the
 step's path axes), and writes every shard and the summary under the
 per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}} root (so a changed \code{partition_by}/\code{bundle}
-never mixes shard granularities). Each step's command splices in only the
+never mixes shard granularities). Each step's command depends only on the
 \strong{minimal scenario slice} its runner consumes (\code{scenario_step_slice()})
 rather than the bare \code{scenario} global, so editing a field a step does not
-read leaves the other steps' shards cached.
+read leaves the other steps' shards cached. The \code{sample} slice is built
+\strong{per shard}, carrying only the dataset(s) that shard reads, so appending a
+dataset mints a new shard and leaves every existing shard cached.
 }
 \section{Invalidation model}{
 

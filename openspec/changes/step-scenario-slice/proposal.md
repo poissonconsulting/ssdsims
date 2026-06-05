@@ -6,12 +6,12 @@ The step runners already consume only a small, fixed slice of the scenario each 
 
 ## What Changes
 
-- Add a deterministic, hashable **scenario-slice helper** `scenario_step_slice(scenario, step)` that returns the minimal sub-object the named step's per-shard runner consumes — the resolved per-step inputs and the fields that reach that step's per-task body and its `shard_path()`/`read_parent_shards()` primer:
-  - `sample` → `data`/`datasets` (read via `scenario_dataset()`) + `partition_by$sample`.
+- Add a deterministic, hashable **scenario-slice helper** `scenario_step_slice(scenario, step, datasets)` that returns the minimal sub-object the named step's per-shard runner consumes — the resolved per-step inputs and the fields that reach that step's per-task body and its `shard_path()`/`read_parent_shards()` primer:
+  - `sample` → the `datasets` it draws from (read via `scenario_dataset()`) + `partition_by$sample`.
   - `fit` → `fit$dists` + `min_pmix_fns` (resolved via `scenario_min_pmix()`) + `partition_by` for `sample` and `fit` (parent + own path).
   - `hc` → `hc$proportion` + `hc$samples` + `partition_by` for `fit` and `hc`.
   - (`seed`/`primer` ride in each shard's `tasks` list-column and are **not** part of the slice.)
-- Refactor `ssd_scenario_targets()` so `step_map()` binds the step's slice to a per-step symbol and **splices that symbol** into the step command (e.g. `ssd_run_sample_step(tasks, .(sample_slice), …)`) instead of the bare `scenario`. The slice is the global `targets` tracks, so editing a field outside a step's slice no longer invalidates that step's shards.
+- Refactor `ssd_scenario_targets()` so each step command depends on its slice instead of the bare `scenario`. The `fit`/`hc` slices carry no datasets and are step-global, spliced once via `!!`. The `sample` slice carries datasets, so it is built **per shard** — carrying only the dataset(s) that shard reads (`unique(tasks$dataset)`) — and carried as a per-shard `.slice` mapped value alongside `tasks`/`.parents`. Editing a field outside a step's slice no longer invalidates that step's shards; and because each `sample` shard depends only on its own dataset, **appending a dataset mints a new shard and leaves every existing shard cached** (the path-axis-growth payoff, which the bare global — and a whole-`data` slice — both defeated).
 - The per-task results SHALL be unchanged: the slice carries exactly the fields the runner reads today.
 
 ## Capabilities

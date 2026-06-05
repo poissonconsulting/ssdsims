@@ -44,7 +44,7 @@ Add an internal `scenario_step_slice(scenario, step)` that returns the minimal `
 
 The slice for each step:
 
-- `sample` → `data`, `partition_by[c("sample")]`.
+- `sample` → the dataset(s) the shard reads (the helper's `datasets` argument), `partition_by[c("sample")]`.
 - `fit` → `fit$dists` (and the fit fields the primer needs), `min_pmix_fns`, `partition_by[c("sample", "fit")]`.
 - `hc` → `hc$proportion`, `hc$samples`, `partition_by[c("fit", "hc")]`.
 
@@ -52,7 +52,13 @@ Each slice retains only the named step's own path plus any parent paths it reads
 
 ### Decision: deterministic and hashable
 
-The slice MUST be a pure function of `scenario` (no environment capture, no timestamps), so two sourcings of the same scenario produce byte-identical slices and therefore identical `targets` dependency hashes — re-sourcing `_targets.R` must not spuriously invalidate shards. The `min_pmix_fns` functions are already materialised on the scenario at construction and hash on *name*, not body (`scenario-accessors`), so carrying them in the `fit` slice does not couple the `fit` shards to a function-body edit. `data` tibbles are likewise materialised once at construction; they hash by value, which is the intended `sample`-only dependency (editing a dataset *should* rebuild `sample`).
+The slice MUST be a pure function of its arguments (no environment capture, no timestamps), so two sourcings of the same scenario produce byte-identical slices and therefore identical `targets` dependency hashes — re-sourcing `_targets.R` must not spuriously invalidate shards. The `min_pmix_fns` functions are already materialised on the scenario at construction and hash on *name*, not body (`scenario-accessors`), so carrying them in the `fit` slice does not couple the `fit` shards to a function-body edit. `data` tibbles are likewise materialised once at construction; the per-shard `sample` slice carries only the shard's own dataset(s), so each hashes by value — the intended dependency (editing a dataset *should* rebuild that dataset's `sample` shard) — while leaving the shards of the *other* datasets untouched when the dataset set grows.
+
+### Decision: the `sample` slice is built per shard (per dataset), not per step
+
+The `sample` slice is the only one that carries datasets (`fit`/`hc` read their parent shards off disk). A single step-global `sample` slice would carry the *whole* `data` list, so its hash moves whenever **any** dataset is added — re-running *every* existing `sample` shard when a new dataset is appended, which defeats the `path-axis-growth` cheap-extension contract (`TARGETS-DESIGN.md` §8.1: appending a dataset mints new shards and leaves existing ones cached). This is the same over-rebuild the bare `scenario` global caused, merely narrowed to the dataset axis.
+
+So the `sample` slice is built **per shard**: each sample shard carries only the dataset(s) its tasks read (`unique(tasks$dataset)` — one dataset when `dataset` is a path axis, which it is by default), supplied via the helper's `datasets` argument. The per-shard slices ride a `.slice` column on the `sample` shards table and are referenced as a mapped value in the command (alongside `tasks` and the per-child `.parents`), exactly as `tar_map()` already inlines those per-branch values. A sample shard's command is then independent of every dataset it does not draw from, so appending a dataset leaves each existing shard's command — and its cached Parquet — byte-identical. The `fit`/`hc` slices carry no datasets and are unaffected by dataset growth, so they stay step-global and are spliced once via `!!`. This change owns the *step-axis* minimal-rebuild contract; pinning it per-dataset also makes it the slice's contribution to the *path-axis* contract `path-axis-growth` asserts.
 
 ### Decision: splice a per-step slice symbol into each command, not the bare `scenario`
 
