@@ -1,0 +1,87 @@
+## ADDED Requirements
+
+### Requirement: Typed, self-validating upload destination objects
+The package SHALL represent an upload destination as a classed S3 object rather than an untyped list. It SHALL provide `ssd_upload_azure(url, container)` returning an object of class `c("ssdsims_upload_azure_blob", "ssdsims_upload")` and `ssd_upload_dryrun()` returning an object of class `c("ssdsims_upload_dryrun", "ssdsims_upload")`. The constructors SHALL validate their arguments at construction time — `ssd_upload_azure()` SHALL require `url` and `container` to be non-empty strings and abort, in the context of the user-facing call, with an informative error naming the offending argument when they are not. An upload object SHALL be a plain, serialisable value carrying only the destination (e.g. `url`, `container`) and SHALL NOT carry credentials, secrets, open connections, or environments, so it travels unchanged to `crew` workers and through `targets`.
+
+#### Scenario: Azure object constructed and classed
+- **WHEN** `ssd_upload_azure(url = "https://acct.blob.core.windows.net", container = "ssdsims-results")` is called
+- **THEN** it SHALL return an object inheriting `"ssdsims_upload_azure_blob"` and `"ssdsims_upload"` that stores the `url` and `container` and carries no credentials
+
+#### Scenario: Dry-run object constructed and classed
+- **WHEN** `ssd_upload_dryrun()` is called
+- **THEN** it SHALL return an object inheriting `"ssdsims_upload_dryrun"` and `"ssdsims_upload"` that reaches no network
+
+#### Scenario: Construction validates the destination
+- **WHEN** `ssd_upload_azure()` is called with a missing or non-string `url` or `container`
+- **THEN** it SHALL abort at construction time with an informative error naming the offending argument, rather than deferring the failure to upload time
+
+### Requirement: A front-door probe verifies credentials and connectivity, failing loud
+The package SHALL provide `ssd_test_upload(upload)`, a generic dispatching on the upload object's class, that confirms before any compute whether the destination is reachable and the credentials are in the right place. For an Azure destination it SHALL resolve the credentials from the environment (e.g. `AZURE_STORAGE_ACCOUNT` and `AZURE_STORAGE_KEY`, or a service-principal combination) and, when a required variable is **absent**, abort with a **loud error naming the missing variable**; when credentials are present it SHALL perform a minimal round-trip (list the container, then write and delete a small marker blob), returning silently on success and aborting with the backend's diagnostic on failure. For a dry-run destination it SHALL succeed trivially without reaching any network. The probe SHALL be runnable interactively as a one-liner so a user can check their wiring at the prompt before `tar_make()`.
+
+#### Scenario: Azure probe names a missing credential
+- **WHEN** `ssd_test_upload(ssd_upload_azure(...))` is called with a required `AZURE_*` environment variable unset
+- **THEN** it SHALL abort with an error that names the missing variable, rather than succeeding silently or failing later on a worker
+
+#### Scenario: Azure probe round-trips when wired
+- **WHEN** `ssd_test_upload(ssd_upload_azure(...))` is called with valid credentials present
+- **THEN** it SHALL list the container and write then delete a marker blob, and return silently on success
+
+#### Scenario: Dry-run probe is trivially OK
+- **WHEN** `ssd_test_upload(ssd_upload_dryrun())` is called
+- **THEN** it SHALL return successfully without resolving credentials or reaching any network
+
+### Requirement: A per-shard ship generic dispatches on the destination, failing loud on absent credentials
+The package SHALL provide `ssd_upload_shard(path, upload)`, a generic dispatching on the upload object's class, that ships one shard Parquet to the destination. For an Azure destination it SHALL upload the file at `path` to `<url>/<container>/<step>/<partition-path>/part.parquet` and return the local `path` (so the target stays `format = "file"`); when the required credentials are **absent** it SHALL abort with a loud error (not a silent no-op), so that intent to skip the network is only ever expressed by passing `ssd_upload_dryrun()`. For a dry-run destination it SHALL perform no network I/O, record a skip, and return the local `path`. A failed Azure upload SHALL surface as an error on that call (which, under the pipeline's per-shard `error = "null"`, leaves the local shard on disk and the rest uploading, so a re-driven run retries only the failed uploads).
+
+#### Scenario: Azure ships the shard and returns the local path
+- **WHEN** `ssd_upload_shard(path, ssd_upload_azure(...))` is called with valid credentials
+- **THEN** it SHALL put the shard's Parquet at the destination's Hive path and return the local `path`
+
+#### Scenario: Azure with absent credentials fails loud
+- **WHEN** `ssd_upload_shard(path, ssd_upload_azure(...))` is called with the required credentials absent
+- **THEN** it SHALL abort with an error, NOT return the path as a silent no-op
+
+#### Scenario: Dry-run records a skip and reaches no network
+- **WHEN** `ssd_upload_shard(path, ssd_upload_dryrun())` is called
+- **THEN** it SHALL perform no network I/O, record that the shard was skipped, and return the local `path`
+
+### Requirement: Upload is an opt-in runner concern with NULL and dry-run modes
+The cloud-upload behaviour SHALL be selected by the runner's `upload` argument (see the `task-shards` factory), not by an `ssdsims_scenario` field, and SHALL support three modes. With `upload = NULL` (the default) the pipeline SHALL contain **no** `upload_<step>` targets — the upload feature is absent from the DAG. With `upload = ssd_upload_dryrun()` the pipeline SHALL contain the `upload_<step>` targets but each SHALL be a no-op that reaches no network, so the DAG shape is exercised offline and in CI without credentials. With `upload = ssd_upload_azure(...)` the pipeline SHALL contain the `upload_<step>` targets that ship to Azure. The same scenario run with different `upload` values SHALL produce byte-identical per-task results; only the presence and behaviour of the `upload_<step>` targets SHALL differ.
+
+#### Scenario: NULL adds no upload nodes
+- **WHEN** the factory is called with `upload = NULL`
+- **THEN** the returned target list SHALL contain no `upload_<step>` targets
+
+#### Scenario: Dry-run adds no-op upload nodes
+- **WHEN** the factory is called with `upload = ssd_upload_dryrun()` and the pipeline is run
+- **THEN** the `upload_<step>` targets SHALL be present and SHALL complete without reaching any network
+
+#### Scenario: Upload mode does not change results
+- **WHEN** the same scenario is run with `upload = NULL`, with `ssd_upload_dryrun()`, and with `ssd_upload_azure(...)`
+- **THEN** the per-task result rows SHALL be byte-identical across the three runs
+
+### Requirement: Per-shard upload targets are content-hashed and record the cloud sha256
+When `upload` is non-`NULL`, the factory SHALL pair each step shard target with an `upload_<step>` target in the same `tar_map`, with `format = "file"` and `error = "null"`, taking the shard's local path as input. Because the upload target depends on the shard's content hash, an unchanged shard SHALL NOT be re-uploaded on a re-driven `tar_make()`, and a partial extension SHALL upload only the new or rewritten shards. The upload SHALL record the cloud copy's sha256 in the manifest (paired with the local sha256), so a transfer corruption is detectable as a mismatch; the local shard SHALL remain on disk so `targets`' `format = "file"` tracking of the compute step is unaffected.
+
+#### Scenario: Unchanged shards are not re-uploaded
+- **WHEN** a pipeline with a non-`NULL` `upload` is `tar_make()`'d, then re-driven with no shard content changed
+- **THEN** no `upload_<step>` target SHALL re-run, so nothing is re-uploaded
+
+#### Scenario: Only changed shards re-upload
+- **WHEN** a scenario is extended so that only some shards are new or rewritten, and `tar_make()` is re-driven
+- **THEN** only the `upload_<step>` targets for the new or rewritten shards SHALL run
+
+#### Scenario: The cloud sha256 is recorded
+- **WHEN** a shard is uploaded
+- **THEN** the cloud copy's sha256 SHALL be recorded in the manifest alongside the local sha256, so a mismatch flags a corrupted transfer
+
+### Requirement: The backend set is extensible by a documented constructor-plus-methods contract
+The package SHALL document, on the `ssd_upload_shard()` generic's help page, the contract for adding a new destination backend (e.g. S3, GCS): provide a constructor returning an object of class `c("ssdsims_upload_<backend>", "ssdsims_upload")` and implement the three methods (`ssd_upload_shard()`, `ssd_test_upload()`, and the construction-time validation) for it. The package SHALL NOT ship speculative backends beyond Azure and dry-run; the dispatch SHALL be open so a new backend is added without editing the existing methods.
+
+#### Scenario: Extension contract is documented
+- **WHEN** a developer reads `?ssd_upload_shard`
+- **THEN** it SHALL state that a new backend is added by writing a constructor returning an `ssdsims_upload_<backend>`/`ssdsims_upload` object and implementing the three methods, with no edit to existing methods
+
+#### Scenario: No speculative backends are shipped
+- **WHEN** the package's exported upload constructors are enumerated
+- **THEN** only `ssd_upload_azure()` and `ssd_upload_dryrun()` SHALL be present
