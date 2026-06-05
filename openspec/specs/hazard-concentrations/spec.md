@@ -32,7 +32,7 @@ Default argument values SHALL be `proportion = 0.05`, `ci = FALSE`, `nboot = 100
 - **THEN** the function SHALL compute a point estimate (no CI) for the 5th-percentile hazard concentration using `est_method = "multi"`
 
 ### Requirement: Argument validation
-The function SHALL validate arguments against the methods exposed by `ssdtools` and abort on invalid input.
+The function SHALL validate arguments against the methods exposed by `ssdtools` and abort on invalid input. `ci` SHALL be validated as a flag (a single non-`NA` `TRUE`/`FALSE`); it is applied as a scalar and is not part of the function's factorial expansion.
 
 #### Scenario: Unknown est_method
 - **WHEN** `est_method` contains a value not in `ssdtools::ssd_est_methods()`
@@ -45,6 +45,10 @@ The function SHALL validate arguments against the methods exposed by `ssdtools` 
 #### Scenario: Missing fits column
 - **WHEN** the input tibble lacks a `fits` column
 - **THEN** `ssd_hc_sims()` SHALL abort with an error
+
+#### Scenario: ci must be a flag
+- **WHEN** `ssd_hc_sims()` is called with a non-flag `ci` (e.g. `ci = c(FALSE, TRUE)`)
+- **THEN** `ssd_hc_sims()` SHALL abort with an error, since `ci` is a scalar flag
 
 ### Requirement: min_pboot is not user-configurable
 The function SHALL reserve `min_pboot = 0` and reject any user attempt to override it.
