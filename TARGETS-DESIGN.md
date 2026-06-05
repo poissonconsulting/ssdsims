@@ -2115,6 +2115,32 @@ already ran end to end (see §4, §6). These steps are therefore
   step targets to pin shards against a code change (in-project, no
   child project); `tar_invalidate()` / `unlink()` for forced re-runs
   of the chosen shards (§8.4). Both recipes have tests.
+  `hive-partitioning` pinned the cue *semantics* — the
+  `ssd_scenario_targets(cue = )` argument, the "Pinning trusted shards"
+  roxygen, and the §8.3 carve-outs — and threaded the cue onto every
+  shard target; this change documents the **specifics** of
+  `tar_cue(depend = FALSE)` as a runnable recipe and locks them in with
+  *runtime* tests (the `hive-partitioning` verification found the pin
+  covered only structurally — the `cue` is set on the targets — but
+  never exercised through an actual `tar_make()`):
+  - **All-or-nothing at the factory.** The `cue` argument is applied
+    uniformly to every shard target across all three steps; the factory
+    exposes no per-shard cue. Document that pinning a *subset* is
+    expressed by pinning everything and then `tar_invalidate()`-ing the
+    handful to refresh (§8.4), not by a per-shard cue.
+  - **The carve-outs, asserted at runtime.** Drive a pipeline, set the
+    pin, edit a per-task primitive, and assert which shards rebuild: a
+    pinned shard whose `format = "file"` Parquet is missing, whose
+    task-table grouping changed (so path-axis/inner-axis growth still
+    apply under the pin), or that previously errored under
+    `error = "null"` SHALL still rebuild; an otherwise-trusted pinned
+    shard SHALL NOT.
+  - **The §8.4 fix-and-refresh loop.** `tar_invalidate()` / `unlink()`
+    overrides the pin for the chosen shards; the `assert_<step>`
+    red-target query names the short shards to refresh
+    (`shard-completeness-assert` supplies the asserts). Document the
+    two-pass `tar_make()` → read asserts → `tar_invalidate()` →
+    `tar_make()` recipe end to end.
 - **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
   a historical reference. **Depends on `migrate-public-api`** (the public
