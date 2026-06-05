@@ -143,8 +143,8 @@
 # scenario-definition: ssd_data() collection plus name= is an error
 
     Code
-      ssd_define_scenario(ssd_data(boron = ssddata::ccme_boron), nsim = 2L, name = "x",
-      seed = 1L)
+      ssd_define_scenario(ssd_data(boron = ssddata::ccme_boron), nsim = 2L, seed = 1L,
+      name = "x")
     Condition
       Error in `ssd_define_scenario()`:
       ! `name` must not be supplied when `data` is an `ssd_data()` collection.
@@ -161,8 +161,8 @@
 # scenario-definition: named list plus name= is an error
 
     Code
-      ssd_define_scenario(list(boron = ssddata::ccme_boron), nsim = 2L, name = "x",
-      seed = 1L)
+      ssd_define_scenario(list(boron = ssddata::ccme_boron), nsim = 2L, seed = 1L,
+      name = "x")
     Condition
       Error in `ssd_define_scenario()`:
       ! `name` must not be supplied with a named list of datasets.
@@ -279,7 +279,8 @@
 # scenario-definition: print is stable for a single dataset
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 42L)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L,
+        10L))
     Output
       <ssdsims_scenario>
         seed:     42
@@ -316,7 +317,7 @@
 
     Code
       ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
-      nsim = 50L, nrow = c(5L, 6L, 10L), seed = 1L, rescale = c(FALSE, TRUE),
+      nsim = 50L, seed = 1L, nrow = c(5L, 6L, 10L), rescale = c(FALSE, TRUE),
       computable = c(FALSE, TRUE), at_boundary_ok = c(TRUE, FALSE), range_shape1 = list(
         c(0.05, 20), c(0.1, 10)), proportion = c(0.05, 0.1), ci = TRUE, nboot = c(100,
         1000), est_method = c("multi", "geometric"), ci_method = c("weighted_samples",

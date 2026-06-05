@@ -24,8 +24,8 @@ min_pmix <- if (isTRUE(readRDS("grow.rds"))) {
 scenario <- ssd_define_scenario(
   ssd_data(d = readRDS("data.rds")),
   nsim = 2L,
-  nrow = 6L,
   seed = 42L,
+  nrow = 6L,
   dists = "lnorm",
   min_pmix = min_pmix,
   partition_by = list(

@@ -15,8 +15,8 @@ datasets <- readRDS("datasets.rds")
 scenario <- ssd_define_scenario(
   do.call(ssd_data, datasets),
   nsim = 1L,
-  nrow = 6L,
   seed = 42L,
+  nrow = 6L,
   dists = "lnorm",
   partition_by = list(
     sample = c("dataset", "sim"),

@@ -110,7 +110,7 @@
 #' @return An S3 object of class `ssdsims_scenario`.
 #' @export
 #' @examples
-#' ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 42L)
+#' ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
 ssd_define_scenario <- function(
   data,
   nsim,

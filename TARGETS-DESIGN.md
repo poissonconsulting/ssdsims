@@ -1076,7 +1076,7 @@ rewritten with the new task set):
 | `nrow` value added (sub-trunc; not an axis) | rewrite all if `max(nrow)` grows; cached otherwise | inherits via prefix (open Q, §11) | inherits via prefix (open Q, §11) | re-run  |
 | `replace` value added (data path; fit/hc inner under default) | new shards only | rewrite all (`replace` ∈ fit inner) | rewrite all (`replace` ∈ hc inner) | re-run  |
 | `rescale` value added (fit path; hc inner under default) | cached    | new shards only                   | rewrite all (`rescale` ∈ hc inner) | re-run  |
-| `dists` change (fit inner)        | cached                            | rewrite all 4                     | rewrite all 2                     | re-run  |
+| `dists` change (fit setting, not an axis) | cached                    | rewrite all 4                     | rewrite all 2                     | re-run  |
 | `min_pmix` value (fit inner)      | cached                            | rewrite all 4                     | rewrite all 2                     | re-run  |
 | `nboot` value added (hc inner)    | cached                            | cached                            | rewrite all 2                     | re-run  |
 | `est_method` value added (hc inner) | cached                          | cached                            | rewrite all 2                     | re-run  |
@@ -1641,16 +1641,23 @@ comparison meaningful.
 | What you added             | Inner axis for…   | Cost                                  |
 | -------------------------- | ----------------- | ------------------------------------- |
 | new `min_pmix` name        | fit               | rewrite all fit shards (was K tasks each → now K+1) |
-| `dists` change             | fit               | rewrite all fit shards                 |
+| `dists` change             | fit (setting, not an axis — content rewrite) | rewrite all fit shards |
 | `nboot` value              | hc                | rewrite all hc shards                  |
 | `est_method` value         | hc                | rewrite all hc shards                  |
 | `ci_method` / `parametric` | hc                | rewrite all hc shards                  |
 
-**To avoid the rewrite cost**, move the axis into `partition_by`
+**To avoid the rewrite cost**, move the *axis* into `partition_by`
 for that step. The trade is shard count vs. cache reuse: pushing
 an axis into the path means future growth on that axis adds new
 shards instead of rewriting old ones, at the cost of producing
-more (smaller) Parquets up front.
+more (smaller) Parquets up front. This escape hatch applies only to
+the genuine inner *axes* (`min_pmix`, `nboot`, `est_method`,
+`ci_method`, `parametric`): they are in `task_axes(step)`, so they
+can be promoted to path axes. `dists` is in the table for its cost,
+not its category — it is a fit-level **simulation setting**, not an
+axis, so it cannot be a partition level and its rewrite is intrinsic
+(changing `dists` re-fits the *contents* of every fit task, rather
+than adding a row).
 
 ### 8.3 Pinning shards despite a code change — `tar_cue(depend = FALSE)`
 
@@ -1765,19 +1772,67 @@ sequence) is verified by `scripts/experiment-dqrng-hash.R`.
 
 Constraints the design lives with rather than solves.
 
-### `dists` and `nboot` are not fit/hc grid axes
+### No nested reuse of ssdtools' inner `dists` / `nboot` loops
 
 `dists` controls *which* distributions `ssdtools::ssd_fit_dists()`
 fits to a given data slice; `nboot` controls how many bootstrap
-iterations `ssdtools::ssd_hc()` runs. Both iterations live inside
-ssdtools and are not exposed at the ssdsims level. Adding a
-distribution to `dists` therefore invalidates every fit branch (the
-hash changes); raising `nboot` invalidates every hc branch. Reusing
-partial results — `nboot = 100` ⊂ `nboot = 1000` — would require
-either (a) wrapping each per-distribution / per-bootstrap iteration
-in ssdsims with its own dqrng stream and aggregating, or (b) an
-ssdtools change to expose the inner loops. Sketch only; out of
-scope.
+iterations `ssdtools::ssd_hc()` runs. Both loops live *inside*
+ssdtools and are not exposed at the ssdsims level, so neither
+nesting — `c("lnorm", "gamma") ⊂ c("lnorm", "gamma", "llogis")`,
+`nboot = 100 ⊂ nboot = 1000` — can be reused incrementally: a larger
+run re-fits or re-draws from scratch rather than extending the
+cached smaller one. Exploiting the nesting would require either (a)
+wrapping each per-distribution / per-bootstrap iteration in ssdsims
+with its own dqrng stream and aggregating, or (b) an ssdtools change
+to expose the inner loops. Sketch only; out of scope.
+
+The two knobs sit on **opposite** sides of the axis/setting split
+(GLOSSARY.md), and their cache behaviour differs accordingly — the
+heading is *not* "neither is an axis":
+
+- **`dists` is a fit-level *simulation setting*, not an axis.** It is
+  a single character vector applied uniformly to every fit task (one
+  model-averaged `ssd_fit_dists()` call per task); it is absent from
+  `task_axes("fit")`, so it never enters a **primer** or a
+  **partition**. Because a `dists` vector defines *one* model-averaged
+  fit, fanning out per-distribution would change the science, so it is
+  deliberately not an axis. Editing it (e.g. adding `llogis`) changes
+  the content fed to every fit task and re-fits the whole slice — the
+  "rewrite all fit shards" row of §8 — with no way to fit only the
+  added distribution and merge.
+- **`nboot` *is* an hc grid axis** (`task_axes("hc")`): distinct
+  values fan out into separate tasks, identities, and shards, so they
+  are cached independently and `partition_by[["hc"]]` may list
+  `nboot` to shard by it. Raising `nboot` does **not** invalidate the
+  existing branch — the smaller value keeps its own identity and shard
+  (the `nsim`-grow story, §8.1); what is unavailable is *content*
+  reuse **across** nboot values.
+
+**Why `nboot` enters the per-task primer (and `nrow` does not).**
+Bootstrapping is the *only* RNG consumer in hc estimation: `ssd_hc()`
+computes the point estimate `est` analytically from the fit,
+independent of the bootstrap and the RNG (§1.2), so a `ci = FALSE`
+task draws no random numbers at all and an hc task's RNG use is
+entirely the `nboot`-iteration bootstrap. The per-task primer
+(`task_primer()` over `task_axes("hc")`, which includes `nboot`)
+therefore gives **each `nboot` value its own dqrng stream** →
+statistically *independent* bootstrap draws, each fully reproducible
+on its own. The alternative — hashing the hc primer over
+`task_axes("hc")` *minus* `nboot` (decoupling the primer from the
+task identity, exactly as §5 keeps `nrow` out of the *sample* draw's
+primer) — would make every `nboot` value draw from one shared primed
+stream, so `nboot = 100`'s draws would be a **prefix** of
+`nboot = 1000`'s (a subset property), which is the RNG precondition
+that would make any future inner-loop reuse *coherent* (the extra 900
+draws continue the same stream rather than starting an independent
+one). We keep `nboot` **in** the primer because, unlike `nrow` —
+whose `head(sample, nrow)` truncation is *our* deterministic code,
+validated by `scripts/experiment-subset-property.R` — the bootstrap
+loop is *internal to ssdtools* (the opaque-RNG limitation below), so
+the prefix/subset property cannot be guaranteed or easily validated.
+Independent-stream-per-`nboot` is the honest, robust default; the
+shared-stream nesting is revisitable only if ssdtools exposes the
+loop or its prefix-stability is validated and pinned.
 
 ### `ssdtools` RNG flow is opaque
 
@@ -2102,6 +2157,29 @@ public-API or ergonomics gaps.
   name resolution, remaining `*apply()` loops) for the same convention, so new
   and existing code read consistently. Surfaced in PR #101 review. Independent
   tidy-up with no dependants; not on the dependency DAG.
+- **`canonical-call-sites`** — Sweep call sites of the public constructors so
+  arguments are passed in signature order. The first pass canonicalised every
+  `ssd_define_scenario()` call (R examples, tests, fixtures, scripts, vignettes,
+  and the shipped `inst/targets-templates/`) to lead with the required trio
+  `data, nsim, seed` before any `...` knob — `seed` is the scenario's RNG root,
+  not a grid axis or simulation setting, so it sits third rather than wedged
+  between knobs like `nrow`. The convention is recorded in `AGENTS.md` (Coding
+  rules) and `GLOSSARY.md` (the `seed` entry). This item revisits the remaining
+  constructors (`ssd_data()`, the `ssd_run_*`/`ssd_scenario_*` family) for the
+  same ordering. Independent tidy-up with no dependants; not on the dependency
+  DAG.
+
+- **`dists-simulation-setting`** — Reconcile `dists`'s classification across the
+  spec, signature, and docs. `dists` is absent from `task_axes("fit")` — a
+  fit-level **simulation setting** (one model-averaged `ssd_fit_dists()` per
+  task, applied uniformly), not a cross-join axis — but the `scenario-definition`
+  role-grouping requirement lists it among the axes and the signature wedges it
+  in the fit-axis block. This change moves `dists` to lead the contiguous
+  simulation-settings block (`… parametric, dists, proportion, ci, samples`),
+  corrects the spec, and sweeps call sites. Behaviour-preserving (no task-graph,
+  primer, or shard change); pairs with the §9 / GLOSSARY corrections that also
+  fixed the stale *"`dists` and `nboot` are not fit/hc grid axes"* heading
+  (`nboot` **is** an hc axis). Independent tidy-up; not on the dependency DAG.
 
 ### Archived
 
