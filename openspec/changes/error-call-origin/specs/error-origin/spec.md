@@ -1,9 +1,9 @@
 ## ADDED Requirements
 
 ### Requirement: User-facing validation errors report the calling function as origin
-This contract distinguishes **anticipated, legitimate user errors** (validation
-of user input) from **unexpected errors** (conditions the package does not
-anticipate — internal/programming failures). It governs the former only.
+This contract SHALL apply only to **anticipated, legitimate user errors**
+(validation of user input), not to **unexpected errors** (internal or
+programming failures the package does not anticipate).
 
 For an *anticipated user error*, every exported user-facing function SHALL raise
 the validation error in the context of that function. This covers the `ssd_*()`
