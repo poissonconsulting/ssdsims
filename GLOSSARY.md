@@ -64,9 +64,11 @@ Terminology used throughout `ssdsims`.
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
   `fit` adds the fit-grid axes (`rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`);
-  `hc` adds the hc-grid axes (`ci`, `nboot`, `est_method`,
-  `ci_method`, `parametric`). Contrast a *carried column* (e.g.
-  `n_max`), which is data on the row but is **not** fanned out over:
+  `hc` adds the hc-grid axes (`nboot`, `est_method`, `ci_method`,
+  `parametric`). `ci` is **not** an hc axis: it is a scenario-wide
+  scalar flag (the estimate is identical either way; TARGETS-DESIGN.md
+  §1.2), applied uniformly like `samples`. Contrast a *carried column*
+  (e.g. `n_max`), which is data on the row but is **not** fanned out over:
   `nrow` is deliberately not a `sample` axis because every `nrow` is
   a sub-truncation of one `n_max`-row draw (TARGETS-DESIGN.md §5),
   so it is an axis only of the (RNG-free) `data` truncation step.
@@ -166,8 +168,10 @@ Terminology used throughout `ssdsims`.
   `proportion` (e.g. `hc5` is the 5% quantile); see `ssdtools::ssd_hc()`.
 - **`proportion`**: The proportion of species affected at which the hazard
   concentration is computed.
-- **`ci`**: Whether to compute confidence intervals on hazard
-  concentrations.
+- **`ci`**: Scenario-wide scalar flag for whether to compute confidence
+  intervals on hazard concentrations. Not a cross-join axis — the point
+  estimate is identical whether `ci` is `TRUE` or `FALSE`, so `ci = TRUE` is a
+  superset of `ci = FALSE` (TARGETS-DESIGN.md §1.2).
 - **`ci_method`**: The method used to compute confidence intervals (e.g.
   `multi_fixed`, `weighted_samples`).
 - **`nboot`**: The number of bootstrap replicates used when computing

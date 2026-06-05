@@ -76,9 +76,12 @@ The most consequential design choices, with section refs:
   fan out independently; `nrow` is **never** an axis of the data
   step — every `nrow` value is a `head(., n)` of a single
   `n_max`-row sample.
-- **`ci = FALSE` collapses bootstrap knobs (§1.2).** When `ci =
-  FALSE` the `nboot` / `ci_method` / `parametric` axes are stored
-  as `NA` in the hc-task table — no phantom branches.
+- **`ci` is a scalar flag, not an axis (§1.2).** `ci` is a scenario-wide
+  `TRUE`/`FALSE` choice (the point estimate is identical either way; `ci =
+  TRUE` merely adds the CI columns), so it is excluded from `task_axes("hc")`
+  and the per-task primer. When `ci = FALSE` the `nboot` / `ci_method` /
+  `parametric` axes are stored as `NA` in the hc-task table — no phantom
+  branches.
 - **Static branching — one named target per shard (§6).** The shard
   set is a pure function of the scenario, known when `_targets.R` is
   sourced, so `tarchetypes::tar_map()` mints one named target per
@@ -153,10 +156,10 @@ ssdsims_scenario
 ├── fit          ← list of ssd_fit_dists() argument vectors;
 │                  min_pmix is a NAME; the function is materialised on
 │                  the scenario, reached by name (§1.1)
-├── hc           ← list of ssd_hc() argument vectors; the ci-FALSE
-│                  collapse means bootstrap-only knobs (nboot,
-│                  ci_method, parametric) are stored as NA on tasks
-│                  where ci = FALSE (§1.2)
+├── hc           ← list of ssd_hc() argument vectors; ci is a scalar
+│                  flag (not an axis, §1.2) — when ci = FALSE the
+│                  bootstrap-only knobs (nboot, ci_method, parametric)
+│                  are stored as NA on the hc tasks
 ├── partition_by ← list(data = ..., fit = ..., hc = ...) of character
 │                  vectors picking the Hive partition axes per step;
 │                  one shard per (step, partition-cell). Default:
@@ -280,42 +283,43 @@ The primer hashes the *name*, never the function value (which is why
 storing the value is safe — see the two reasons above); the function is
 fetched via the accessor just before the call, after `dqset.seed()`.
 
-### 1.2 The `ci = FALSE` collapse
+### 1.2 `ci` is a scalar flag (not an axis)
 
-> **Proposed change — `scalar-ci-flag` (§12 Cleanup).** This section is slated
-> for retirement: `ci` is being demoted to a scalar flag (the `est` is
-> byte-identical whether `ci = TRUE`/`FALSE`, so `c(FALSE, TRUE)` only emits a
-> redundant row). When that change lands, `ci` leaves `task_axes("hc")`, the
-> collapse below reduces to "`ci = FALSE` ⟹ bootstrap-only knobs are `NA`," and
-> this section is removed. The text below describes current (pre-change)
-> behaviour.
+`ci` is a scenario-wide scalar flag (`TRUE`/`FALSE`, default `FALSE`), not a
+grid/task axis (delivered by the `scalar-ci-flag` change, §12). The point
+estimate is the reason: `ssdtools::ssd_hc()` computes the estimate (`est`)
+analytically from the fit, independent of the bootstrap and the RNG, so it is
+**byte-identical** whether `ci = TRUE` or `ci = FALSE` (verified across every
+`ssd_ci_methods()`). A `ci = TRUE` run is therefore a strict superset of `ci =
+FALSE` — same `est`, plus the populated `se` / `lcl` / `ucl`. Running both in
+one scenario would only emit a redundant point-estimate row per fit-task, so
+`ci` is a single either/or choice: `ci = FALSE` for cheap, bootstrap-free point
+estimates, or `ci = TRUE` for estimates plus CIs. This mirrors `samples`, the
+other scalar, non-axis hc knob.
 
-The hc-arg cross-join treats `nboot`, `ci_method`, and `parametric`
-as irrelevant when `ci = FALSE` — those knobs only affect bootstrap.
-Concrete rules:
+Because the estimate carries no `ci`-dependence, `ci` is **excluded from
+`task_axes("hc")` and the per-task primer** and applied uniformly to every hc
+task. The bootstrap-only knobs (`nboot`, `ci_method`, `parametric`) only affect
+the bootstrap:
 
-- If `ci = FALSE` is the only value, `nboot` / `ci_method` /
-  `parametric` are ignored with a one-line message at scenario
-  construction (and the scenario's `print()` records the ignore so
-  it's visible in tracing).
-- If both `ci = c(FALSE, TRUE)`, the `ci = FALSE` row collapses to a
-  single task per upstream fit (bootstrap knobs are NA in the grid),
-  while `ci = TRUE` rows fan out across `nboot × ci_method ×
+- If `ci = FALSE`, those knobs are meaningless: supplying any of them aborts at
+  scenario construction (set `ci = TRUE` or omit them), and the hc-task table
+  stores them as `NA`, leaving `est_method` as the only fan-out axis.
+- If `ci = TRUE`, the hc grid fans out across `nboot × est_method × ci_method ×
   parametric` as usual.
 
-In the hc task table:
+In the hc task table (here a `ci = TRUE` scenario with two `nboot` values):
 
-| sim | nrow | rescale | ci    | nboot | ci_method        | parametric |
-| --: | ---: | :------ | :---- | ----: | :--------------- | :--------- |
-| 1   | 5    | FALSE   | FALSE | NA    | NA               | NA         |
-| 1   | 5    | FALSE   | TRUE  | 100   | weighted_samples | TRUE       |
-| 1   | 5    | FALSE   | TRUE  | 1000  | weighted_samples | TRUE       |
+| sim | nrow | rescale | ci   | nboot | ci_method        | parametric |
+| --: | ---: | :------ | :--- | ----: | :--------------- | :--------- |
+| 1   | 5    | FALSE   | TRUE | 100   | weighted_samples | TRUE       |
+| 1   | 5    | FALSE   | TRUE | 1000  | weighted_samples | TRUE       |
 
-The hash of an `NA`-bearing row is well-defined as long as `NA` is
-encoded canonically — `task_primer()` does this via
-`rlang::hash()` on the named list. The collapse therefore stops
-phantom streams from being allocated to combinations that don't
-exist in practice.
+A `ci = FALSE` scenario instead yields one row per `est_method` with `nboot` /
+`ci_method` / `parametric` all `NA`. The hash of an `NA`-bearing row is
+well-defined as long as `NA` is encoded canonically — `task_primer()` does this
+via `rlang::hash()` on the named list — so the `NA` bootstrap knobs never
+allocate phantom streams to combinations that don't exist in practice.
 
 ---
 
@@ -422,8 +426,9 @@ value is sub-truncation of the same `n_max`-row sample (§5). For a
 fit task: data-task identity plus the fit-arg-grid row (`rescale`,
 `computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
 `range_shape2`). For an hc task: fit-task identity plus the hc-arg-
-grid row (`nboot`, `est_method`, `ci_method`, `parametric` — modulo
-the `ci = FALSE` collapse documented in §1.2).
+grid row (`nboot`, `est_method`, `ci_method`, `parametric`). `ci` is a
+scalar flag, **not** in the hash (§1.2); when `ci = FALSE` the bootstrap-only
+knobs are `NA` in that row (canonically encoded).
 
 Function-valued parameters (`min_pmix`) are referenced **by name**
 (§1.1) so that a recompile/JIT does not move the task to a different
@@ -780,7 +785,7 @@ these task tables:
 | -------- | ---------------------------------------------- | ---- | ---------------------------------------------------------- |
 | `sample` | `dataset, sim, replace`                        | yes  | one draw of `n_max = max(nrow)` rows (carried column)      |
 | `fit`    | `sample` axes, `nrow` `× fit grid`             | yes  | truncates `head(sample, nrow)` inline (RNG-free) then fits |
-| `hc`     | fit axes `× hc grid` (§1.2 collapse)           | yes  | as above                                                   |
+| `hc`     | fit axes `× hc grid` (scalar `ci`, §1.2)       | yes  | `ci` is a scalar flag, not an axis; bootstrap knobs `NA` when `ci = FALSE` |
 
 This keeps the sub-truncation property **structural**: there is
 exactly one `sample` task per `(dataset, sim, replace)`, so the
@@ -1810,7 +1815,7 @@ the methods mid-session (not inside a scenario runner) use the same
 | `nrow` invalidates data states for the same `sim`    | §5 — `nrow` is never an axis: data state keyed by `(dataset, sim, replace)`, slice truncates to `n`.    |
 | Single-dataset scenarios only                        | §1.1 — datasets are materialised on the scenario, keyed by name; cross-join axis.                 |
 | Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
-| Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci=FALSE` collapses `nboot`/`ci_method`/`parametric` to NA; one task instead of N. |
+| Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci` is a scalar flag (not an axis); under `ci=FALSE` the bootstrap-only knobs are rejected at construction and stored `NA`, so they never fan out. |
 | Branch failure unreproducible off the cluster        | §7 — task row + upstream shard replays the failing task via `_state` primitives.          |
 | Code fix re-runs every branch by hash invalidation   | §8.3 — `tar_cue(depend = FALSE)` pins shards against the edit; §8.4 — `tar_invalidate()` / `unlink()` refreshes only the chosen shards. |
 | Off-cluster access to Parquet outputs                | §6.1 — `scenario$upload` adds a per-shard `upload_<step>` target (content-hashed, dry-run offline) to a configurable object store (e.g. Azure Blob). |

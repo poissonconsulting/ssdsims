@@ -32,7 +32,7 @@ So a `ci = TRUE` hc row is a strict superset of the `ci = FALSE` row for the sam
 
 ### Decision: `ci` is a scalar flag, modelled on `samples`
 
-`ci` becomes `chk::chk_flag(ci)` (a single non-`NA` `TRUE`/`FALSE`), default `FALSE`, stored at `scenario$hc$ci`. It is **not** a member of `task_axes("hc")` and therefore never enters `path_key()`, the inner-axis complement, or `task_primer()`. It is applied to every hc task uniformly — the hc step reads it from the scenario's `hc` slice, exactly as `samples` is read. `print.ssdsims_scenario()` continues to render it among the hc knobs.
+`ci` becomes `chk::chk_flag(ci)` (a single non-`NA` `TRUE`/`FALSE`), default `FALSE`, stored at `scenario$hc$ci`. It is **not** a member of `task_axes("hc")` and therefore never enters `path_key()`, the inner-axis complement, or `task_primer()`. It is applied to every hc task uniformly. `print.ssdsims_scenario()` continues to render it among the hc knobs.
 
 *Rationale:* the estimate is invariant to `ci`, so `ci` carries no task-distinguishing information; a constant in the primer hash only obscures intent. Excluding it makes the hc task identity depend solely on the knobs that actually change a task's output (`est_method`, and under `ci = TRUE` the bootstrap knobs).
 
@@ -51,6 +51,12 @@ The "collapse" as a concept (deciding the `ci = FALSE` *portion* of a mixed grid
 
 The constructor still aborts when `ci = FALSE` *and* any of `nboot`/`ci_method`/`parametric` is explicitly supplied — those knobs are meaningless without a bootstrap. The guard simplifies from `length(ci) == 1L && isFALSE(ci)` to `isFALSE(ci)`, and the message changes from "Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob(s)" to "Set `ci = TRUE` to enable bootstrap, or omit the knob(s)."
 
+### Decision: `ci` stays a *carried column* on the hc task table (like `n_max`), not an axis
+
+`ci` remains a column on the hc task table — `hc_grid_tbl()` keeps emitting it (now single-valued) — but is excluded from `task_axes("hc")`. This is the established **carried-column** pattern: `n_max` is likewise a column on every `sample` task (the shared draw size) yet is not a `sample` axis, so it is neither hashed into the primer nor used as a partition level. Both hc step runners already read `ci` from that column — the in-memory baseline (`ssd_run_scenario_baseline()`, via `pmap` over `hc_args[c("ci", …)]` in `R/task-lists.R`) and the shared `ssd_run_hc_step()` (`ci = t$ci`, used by both the single-core `ssd_run_scenario_sharded()` and the `targets` pipeline) — so **no runner code changes**: dropping `ci` from `task_axes("hc")` removes it from the primer/partition split while the column it reads stays put. The shard write/read already round-trips non-axis carried columns (it does so for `n_max`), so `ci` needs no special handling there either.
+
+*Alternative considered — thread `ci` from the scenario slice* (like `proportion`/`samples`, which are *not* task columns). Rejected as more churn for no gain: it would edit both runners and `hc_grid_tbl()`, whereas the carried-column route matches the existing `n_max` precedent and leaves the runners untouched. (`proportion`/`samples` are scenario-threaded for historical reasons; `ci` follows the closer `n_max` analogue.)
+
 ### Decision: `ci` leaves the per-task primer — bootstrap CIs shift, estimates do not
 
 Dropping `"ci"` from `task_axes("hc")` changes the hash fed to `task_primer()` for hc tasks (a constant term is removed), which shifts the per-task dqrng stream and therefore the bootstrap draws. Consequently `lcl`/`ucl`/`se` change value for a given seed; `est` does not (it is RNG-independent). This is a one-time re-baseline, acceptable for an unreleased package with no downstream dependants (`TARGETS-DESIGN.md` §12 — "breaking-change steps are fine"). Snapshot fixtures re-record.
@@ -67,4 +73,4 @@ Dropping `"ci"` from `task_axes("hc")` changes the hash fed to `task_primer()` f
 
 ## Open Questions
 
-- **None blocking.** Whether `ci` should be carried as a (constant) column on the hc task table or read purely from the scenario slice is an implementation detail settled toward "read from the scenario slice, like `samples`"; either is spec-conformant since `ci` is excluded from `task_axes("hc")`.
+- **None blocking.** The carried-column-vs-scenario-slice question is resolved above (carried column, like `n_max`); both are spec-conformant since `ci` is excluded from `task_axes("hc")`.
