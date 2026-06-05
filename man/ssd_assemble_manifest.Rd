@@ -16,14 +16,13 @@ invisibly.
 }
 \description{
 Builds the manifest's \code{completed_shards} map - shard partition path to
-\verb{\{ sha256, cloud_sha256? \}} - from the shard Parquets present under \code{dir}, so
-the manifest reflects the set of shards whose Parquet exists
-(\code{TARGETS-DESIGN.md} section 8.5). A shard's per-shard sidecar
-(\code{\link[=ssd_record_shard]{ssd_record_shard()}}) is preferred where present (carrying the
-trusted-as-produced sha256, and \code{cloud_sha256} when uploaded); otherwise the
-shard's Parquet is hashed directly. Assembly therefore needs \strong{no} hook into
-the pipeline runner - the shards are the truth. A shard whose Parquet is
-absent is absent from \code{completed_shards}.
+\code{{ sha256 }} - from the shard Parquets present under \code{dir}, so the manifest
+reflects the set of shards whose Parquet exists (\code{TARGETS-DESIGN.md} section
+8.5). A shard's per-shard sidecar (\code{\link[=ssd_record_shard]{ssd_record_shard()}}) is preferred where
+present (carrying the trusted-as-produced sha256); otherwise the shard's
+Parquet is hashed directly. Assembly therefore needs \strong{no} hook into the
+pipeline runner - the shards are the truth. A shard whose Parquet is absent
+is absent from \code{completed_shards}.
 }
 \details{
 The assembled tail is merged into the manifest head at \verb{<dir>/manifest.json}

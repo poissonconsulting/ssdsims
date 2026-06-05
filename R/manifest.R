@@ -100,13 +100,11 @@ ssd_read_manifest <- function(dir) {
 #' Record a Completed Shard's sha256 Alongside its Parquet
 #'
 #' On a shard's successful write, records that shard's sha256 in a per-shard
-#' sidecar (`<dir>/.sha256.json`) next to the shard's Parquet rather than
-#' mutating a shared manifest, so parallel shard targets do not race
-#' (`TARGETS-DESIGN.md` section 8.5). This captures the **trusted-as-produced**
-#' sha256 - and, when a cloud-copy sha256 is supplied (`upload` set, section
-#' 6.1), the cloud copy's sha256 - which post-hoc hashing of possibly-touched
-#' files cannot. [ssd_assemble_manifest()] prefers a sidecar where present and
-#' falls back to hashing.
+#' sidecar (`<dir>/meta.json`) next to the shard's Parquet rather than mutating a
+#' shared manifest, so parallel shard targets do not race (`TARGETS-DESIGN.md`
+#' section 8.5). This captures the **trusted-as-produced** sha256 - which
+#' post-hoc hashing of possibly-touched files cannot. [ssd_assemble_manifest()]
+#' prefers a sidecar where present and falls back to hashing.
 #'
 #' The shard directory is **supplied by the caller** (composed from the row's
 #' Hive partition path and the step's result root); the manifest computes no
@@ -118,27 +116,19 @@ ssd_read_manifest <- function(dir) {
 #'   `"fit/dataset=boron/sim=1/rescale=FALSE"`, recorded in the sidecar.
 #' @param sha256 The shard Parquet's sha256, as produced (e.g. from the shared
 #'   `ssd_file_sha256()` internal).
-#' @param cloud_sha256 An optional sha256 of the shard's cloud copy, recorded
-#'   alongside the local sha256 when supplied.
 #' @return The path to the written sidecar, invisibly.
 #' @seealso [ssd_assemble_manifest()], [ssd_write_manifest()].
 #' @export
 #' @examples
 #' dir <- withr::local_tempdir()
 #' ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", strrep("a", 64))
-ssd_record_shard <- function(dir, partition_key, sha256, cloud_sha256 = NULL) {
+ssd_record_shard <- function(dir, partition_key, sha256) {
   chk::chk_string(dir)
   chk::chk_string(partition_key)
   chk::chk_string(sha256)
-  if (!is.null(cloud_sha256)) {
-    chk::chk_string(cloud_sha256)
-  }
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   record <- list(partition_key = partition_key, sha256 = sha256)
-  if (!is.null(cloud_sha256)) {
-    record$cloud_sha256 <- cloud_sha256
-  }
-  path <- file.path(dir, ".sha256.json")
+  path <- file.path(dir, "meta.json")
   jsonlite::write_json(record, path, auto_unbox = TRUE, pretty = TRUE)
   invisible(path)
 }
@@ -146,14 +136,13 @@ ssd_record_shard <- function(dir, partition_key, sha256, cloud_sha256 = NULL) {
 #' Assemble `completed_shards` from the Shards on Disk
 #'
 #' Builds the manifest's `completed_shards` map - shard partition path to
-#' `{ sha256, cloud_sha256? }` - from the shard Parquets present under `dir`, so
-#' the manifest reflects the set of shards whose Parquet exists
-#' (`TARGETS-DESIGN.md` section 8.5). A shard's per-shard sidecar
-#' ([ssd_record_shard()]) is preferred where present (carrying the
-#' trusted-as-produced sha256, and `cloud_sha256` when uploaded); otherwise the
-#' shard's Parquet is hashed directly. Assembly therefore needs **no** hook into
-#' the pipeline runner - the shards are the truth. A shard whose Parquet is
-#' absent is absent from `completed_shards`.
+#' `{ sha256 }` - from the shard Parquets present under `dir`, so the manifest
+#' reflects the set of shards whose Parquet exists (`TARGETS-DESIGN.md` section
+#' 8.5). A shard's per-shard sidecar ([ssd_record_shard()]) is preferred where
+#' present (carrying the trusted-as-produced sha256); otherwise the shard's
+#' Parquet is hashed directly. Assembly therefore needs **no** hook into the
+#' pipeline runner - the shards are the truth. A shard whose Parquet is absent
+#' is absent from `completed_shards`.
 #'
 #' The assembled tail is merged into the manifest head at `<dir>/manifest.json`
 #' (written by [ssd_write_manifest()]) and written back, so [ssd_read_manifest()]
@@ -256,17 +245,13 @@ assemble_completed_shards <- function(dir) {
   completed_shards
 }
 
-# One `completed_shards` entry: a sidecar's recorded sha (and `cloud_sha256`)
-# when present, else the Parquet's sha256 hashed on disk.
+# One `completed_shards` entry: a sidecar's recorded sha when present, else the
+# Parquet's sha256 hashed on disk.
 shard_entry <- function(shard_dir, parquet) {
-  sidecar <- file.path(shard_dir, ".sha256.json")
+  sidecar <- file.path(shard_dir, "meta.json")
   if (file.exists(sidecar)) {
     record <- jsonlite::read_json(sidecar, simplifyVector = FALSE)
-    entry <- list(sha256 = record$sha256)
-    if (!is.null(record$cloud_sha256)) {
-      entry$cloud_sha256 <- record$cloud_sha256
-    }
-    return(entry)
+    return(list(sha256 = record$sha256))
   }
   list(sha256 = ssd_file_sha256(parquet))
 }

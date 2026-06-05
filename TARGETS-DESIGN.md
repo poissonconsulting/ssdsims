@@ -1286,9 +1286,14 @@ tar_make()
 **Failure mode.** A per-shard upload error becomes that
 `upload_<step>` branch's error (and, under `error = "null"`, leaves
 the rest uploading); the local shard remains, so `tar_make()` can be
-re-driven and only the failed uploads retried. The scenario's
-manifest records, per shard, the local sha256 and the cloud sha256; a
-mismatch flags a corrupted transfer.
+re-driven and only the failed uploads retried. Each shard's `meta.json`
+sidecar (the manifest's per-shard sha256 record, §8.5) is uploaded
+**alongside** its Parquet, so the trusted-as-produced sha256 travels with
+the data; a downloaded copy is verified by re-hashing it against that
+recorded sha256, and a mismatch flags a corrupted transfer. The manifest
+itself carries no separate cloud-copy sha256 — under a faithful byte copy
+it would equal the recorded sha256, so `cloud-upload` needs nothing added
+to the manifest (the two are decoupled).
 
 ### 6.2 Surviving a failed shard
 
@@ -1743,9 +1748,11 @@ directory):
 - `fit`, `hc` — the argument-vector grids.
 - `partition_by` — the per-shard path axes (§5).
 - `completed_shards` — set of shard partition paths whose Parquet
-  exists and is trusted, with each shard's sha256 (recorded at
-  write time, including the cloud copy's sha256 if `upload` is
-  set; see §6.1, §7).
+  exists and is trusted, with each shard's sha256 (the
+  trusted-as-produced value, recorded at write time in a per-shard
+  `meta.json` sidecar; see §6.1, §7). No separate cloud-copy sha256:
+  the sidecar is uploaded with the shard and a download is verified by
+  re-hashing against this sha256 (§6.1).
 - `r_version`, `dqrng_version`, `ssdtools_version` — versions
   pinned for bit-stability across re-runs (§9).
 
@@ -1952,9 +1959,13 @@ already ran end to end (see §4, §6). These steps are therefore
   shards' existence (`completed_shards`), never the reverse — the
   `task-tables` runner reads nothing from it. The `completed_shards`
   assembler hashes the shards on disk; recording each shard's sha256
-  *at write time* (and the cloud copy's sha256) is the
+  *at write time* (in a per-shard `meta.json` sidecar) is the
   trusted-as-produced enhancement wired in by the consumers that need
   it (`replay-helper`, `cloud-upload`), not by the happy-path pipeline.
+  It records **one** trusted sha256 per shard and nothing cloud-specific,
+  so `manifest` and `cloud-upload` are **decoupled**: `cloud-upload`
+  uploads the sidecar with the shard and verifies a download by
+  re-hashing against that sha256, needing nothing added to the manifest.
   Land it before its first consumer (`replay-helper` /
   `shard-completeness-assert`), and operationally before the first
   expensive cluster run whose results you intend to trust/reproduce;

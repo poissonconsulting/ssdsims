@@ -4,7 +4,7 @@
 \alias{ssd_record_shard}
 \title{Record a Completed Shard's sha256 Alongside its Parquet}
 \usage{
-ssd_record_shard(dir, partition_key, sha256, cloud_sha256 = NULL)
+ssd_record_shard(dir, partition_key, sha256)
 }
 \arguments{
 \item{dir}{The shard's directory - where the shard's Parquet (and its
@@ -15,22 +15,17 @@ sidecar) live. Created if it does not exist.}
 
 \item{sha256}{The shard Parquet's sha256, as produced (e.g. from the shared
 \code{ssd_file_sha256()} internal).}
-
-\item{cloud_sha256}{An optional sha256 of the shard's cloud copy, recorded
-alongside the local sha256 when supplied.}
 }
 \value{
 The path to the written sidecar, invisibly.
 }
 \description{
 On a shard's successful write, records that shard's sha256 in a per-shard
-sidecar (\verb{<dir>/.sha256.json}) next to the shard's Parquet rather than
-mutating a shared manifest, so parallel shard targets do not race
-(\code{TARGETS-DESIGN.md} section 8.5). This captures the \strong{trusted-as-produced}
-sha256 - and, when a cloud-copy sha256 is supplied (\code{upload} set, section
-6.1), the cloud copy's sha256 - which post-hoc hashing of possibly-touched
-files cannot. \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}} prefers a sidecar where present and
-falls back to hashing.
+sidecar (\verb{<dir>/meta.json}) next to the shard's Parquet rather than mutating a
+shared manifest, so parallel shard targets do not race (\code{TARGETS-DESIGN.md}
+section 8.5). This captures the \strong{trusted-as-produced} sha256 - which
+post-hoc hashing of possibly-touched files cannot. \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}}
+prefers a sidecar where present and falls back to hashing.
 }
 \details{
 The shard directory is \strong{supplied by the caller} (composed from the row's

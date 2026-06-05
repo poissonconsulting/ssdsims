@@ -70,24 +70,11 @@ test_that("manifest: ssd_record_shard writes a per-shard sidecar", {
   sha <- strrep("a", 64L)
   ssd_record_shard(shard_dir, key, sha)
 
-  sidecar <- file.path(shard_dir, ".sha256.json")
+  sidecar <- file.path(shard_dir, "meta.json")
   expect_true(file.exists(sidecar))
   record <- jsonlite::read_json(sidecar, simplifyVector = FALSE)
   expect_identical(record$partition_key, key)
   expect_identical(record$sha256, sha)
-  expect_null(record$cloud_sha256)
-})
-
-test_that("manifest: ssd_record_shard records cloud sha256 when supplied", {
-  dir <- withr::local_tempdir()
-  ssd_record_shard(dir, "fit/dataset=boron", strrep("a", 64L), strrep("b", 64L))
-
-  record <- jsonlite::read_json(
-    file.path(dir, ".sha256.json"),
-    simplifyVector = FALSE
-  )
-  expect_identical(record$sha256, strrep("a", 64L))
-  expect_identical(record$cloud_sha256, strrep("b", 64L))
 })
 
 test_that("manifest: concurrent shard records write distinct sidecars", {
@@ -101,9 +88,8 @@ test_that("manifest: concurrent shard records write distinct sidecars", {
   }
   sidecars <- list.files(
     dir,
-    pattern = "^\\.sha256\\.json$",
-    recursive = TRUE,
-    all.files = TRUE
+    pattern = "^meta\\.json$",
+    recursive = TRUE
   )
   expect_length(sidecars, 2L)
 })
@@ -132,12 +118,11 @@ test_that("manifest: assembler prefers a shard's recorded sidecar", {
   parquet <- file.path(dir, key, "part.parquet")
   dir.create(dirname(parquet), recursive = TRUE)
   writeLines("shard-bytes", parquet)
-  ssd_record_shard(dirname(parquet), key, strrep("a", 64L), strrep("b", 64L))
+  ssd_record_shard(dirname(parquet), key, strrep("a", 64L))
 
   manifest <- ssd_assemble_manifest(dir)
   entry <- manifest$completed_shards[[key]]
   expect_identical(entry$sha256, strrep("a", 64L))
-  expect_identical(entry$cloud_sha256, strrep("b", 64L))
   expect_false(identical(entry$sha256, ssd_file_sha256(parquet)))
 })
 

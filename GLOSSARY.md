@@ -104,12 +104,13 @@ Terminology used throughout `ssdsims`.
   Parquet results. ssdsims writes two (TARGETS-DESIGN.md §8.5): the
   per-scenario **manifest** (`<results>/manifest.json` — the scenario's
   declarative fields, session info, and `completed_shards`), and a
-  per-**shard** sha256 record (`.sha256.json`) written next to each
+  per-**shard** sha256 record (`meta.json`) written next to each
   shard's `part.parquet` at write time, recording that shard's
-  trusted-as-produced sha256 (and its cloud copy's sha256 when
-  uploaded). One writer per sidecar file, so parallel shard targets
-  never race on a shared manifest; the manifest assembler later unions
-  the per-shard sidecars into `completed_shards`.
+  trusted-as-produced sha256. One writer per sidecar file, so parallel
+  shard targets never race on a shared manifest; the manifest assembler
+  later unions the per-shard sidecars into `completed_shards`. The shard
+  sidecar is uploaded with its Parquet, so a download can be verified by
+  re-hashing it against the recorded sha256.
 - **path axis / inner axis**: The two halves of a step's
   `task_axes(step)` under a given partitioning. **Path axes** become
   Hive directory levels; **inner axes** are the complement — ordinary

@@ -10,12 +10,11 @@
 
 ## 3. Per-shard recording
 
-- [x] 3.1 Add `ssd_record_shard(dir, partition_key, sha256, cloud_sha256 = NULL)`: write a per-shard sidecar (e.g. `<shard-dir>/.sha256.json`) next to the shard's Parquet — one writer per file, no shared-manifest mutation
-- [x] 3.2 Record `cloud_sha256` alongside the local sha256 when supplied (§6.1)
+- [x] 3.1 Add `ssd_record_shard(dir, partition_key, sha256)`: write a per-shard sidecar (`<shard-dir>/meta.json`) next to the shard's Parquet — one writer per file, no shared-manifest mutation. `manifest` records one trusted-as-produced sha256 per shard and nothing cloud-specific (`cloud-upload` ships the sidecar and verifies by re-hash; see design)
 
 ## 4. Assembly
 
-- [x] 4.1 Add the assembler: scan the results tree for shard Parquets and build `completed_shards` (`partition path -> { sha256, cloud_sha256? }`) — use a shard's per-shard sidecar when present, else hash the Parquet directly (no dependency on the `task-tables` runner); merge into the manifest head
+- [x] 4.1 Add the assembler: scan the results tree for shard Parquets and build `completed_shards` (`partition path -> { sha256 }`) — use a shard's per-shard sidecar when present, else hash the Parquet directly (no dependency on the `task-tables` runner); merge into the manifest head
 - [x] 4.2 A shard whose Parquet is absent SHALL be absent from `completed_shards`
 
 ## 5. Docs and reference
@@ -26,6 +25,6 @@
 ## 6. Tests and checks
 
 - [x] 6.1 `tests/testthat/test-manifest.R`: write/read round-trip preserves declarative fields and the session-info block (incl. the `r`/`dqrng`/`ssdtools` subset), with `seed`/`nboot` whole numbers and logical knobs intact
-- [x] 6.2 `ssd_record_shard()` writes a per-shard sidecar; cloud sha256 recorded when supplied; concurrent records do not collide (distinct sidecars)
-- [x] 6.3 Assembler builds `completed_shards` by hashing shards on disk; prefers a sidecar's recorded sha (and `cloud_sha256`) when present; a shard with no Parquet is absent
+- [x] 6.2 `ssd_record_shard()` writes a per-shard `meta.json` sidecar; concurrent records do not collide (distinct sidecars)
+- [x] 6.3 Assembler builds `completed_shards` by hashing shards on disk; prefers a sidecar's recorded sha when present; a shard with no Parquet is absent
 - [x] 6.4 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`
