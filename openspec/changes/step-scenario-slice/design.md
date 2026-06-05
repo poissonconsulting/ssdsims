@@ -1,12 +1,14 @@
 ## Context
 
-`ssd_scenario_targets()` (in `R/targets-runner.R`) builds the static-branching pipeline by `tar_map()`ping one `format = "file"`, `error = "null"` target per `partition_by` path cell per step. Each step's command is constructed with `bquote()`, which injects the result directories as literals but leaves `scenario` as a **bare symbol**:
+`ssd_scenario_targets()` (in `R/targets-runner.R`) builds the static-branching pipeline by `tar_map()`ping one `format = "file"`, `error = "null"` target per `partition_by` path cell per step. Each step's command is constructed with `rlang::expr()`, which injects the result directories as literals (`!!`) but leaves `scenario` as a **bare symbol**:
 
 ```r
-bquote(ssd_run_sample_step(tasks, scenario, .(sample_dir)))
-bquote({ sample_done; ssd_run_fit_step(tasks, scenario, .(sample_dir), .(fit_dir)) })
-bquote({ fit_done;    ssd_run_hc_step(tasks, scenario, .(fit_dir), .(hc_dir)) })
+rlang::expr(ssd_run_sample_step(tasks, scenario, !!sample_dir))
+rlang::expr({ .parents; ssd_run_fit_step(tasks, scenario, !!sample_dir, !!fit_dir) })
+rlang::expr({ .parents; ssd_run_hc_step(tasks, scenario, !!fit_dir, !!hc_dir) })
 ```
+
+(`.parents` is the per-child upstream-edge block `hive-partitioning` splices in; it does not affect the `scenario` coupling this change addresses.)
 
 `targets` tracks `scenario` as a global referenced by every one of these commands, so the **whole scenario object is a dependency of every shard target across all three steps**. Editing *any* scenario field therefore invalidates and rebuilds *all* shards — even a knob that feeds only one step. Concretely, `scenario$hc$samples` is consumed only by `ssd_run_hc_step()`, yet bumping it today rebuilds every `sample` and `fit` shard too. `TARGETS-DESIGN.md` §12 records this as a pre-existing caveat this change closes, and the function's own roxygen states the coupling as if it were necessary ("`scenario` is referenced as a global, so editing it invalidates the dependent shards").
 
@@ -54,14 +56,14 @@ The slice MUST be a pure function of `scenario` (no environment capture, no time
 
 ### Decision: splice a per-step slice symbol into each command, not the bare `scenario`
 
-Refactor `step_map()` so the step's slice is bound as a per-step global (e.g. `sample_slice`, `fit_slice`, `hc_slice`) and **spliced** into the command via `bquote()`'s `.()`, replacing the bare `scenario` symbol:
+Refactor `step_map()` so the step's slice is bound as a per-step global (e.g. `sample_slice`, `fit_slice`, `hc_slice`) and **spliced** into the command via `rlang::expr()`'s `!!`, replacing the bare `scenario` symbol:
 
 ```r
 sample_slice <- scenario_step_slice(scenario, "sample")
-bquote(ssd_run_sample_step(tasks, .(sample_slice), .(sample_dir)))
+rlang::expr(ssd_run_sample_step(tasks, !!sample_slice, !!sample_dir))
 ```
 
-`targets` then tracks each command's dependency as the *slice* it splices, not the whole scenario. Because `.()` inlines the slice value into the command expression at sourcing time (the same mechanism already used for the result-dir literals), the per-step slice — not `scenario` — is what enters the target's dependency hash, so a field outside a step's slice no longer reaches that step's shards. The barriers (`sample_done`/`fit_done`) and `tasks`/path-axis names are untouched. *Alternative considered:* keep `scenario` a global and add a `tar_cue()` filter — rejected; that fights `targets`' dependency model instead of giving it a correctly-scoped global, and would not survive a re-source cleanly.
+`targets` then tracks each command's dependency as the *slice* it splices, not the whole scenario. Because `!!` inlines the slice value into the command expression at sourcing time (the same mechanism already used for the result-dir literals), the per-step slice — not `scenario` — is what enters the target's dependency hash, so a field outside a step's slice no longer reaches that step's shards. The per-child `.parents` edge block (`hive-partitioning`) and `tasks`/path-axis names are untouched. *Alternative considered:* keep `scenario` a global and add a `tar_cue()` filter — rejected; that fights `targets`' dependency model instead of giving it a correctly-scoped global, and would not survive a re-source cleanly.
 
 ### Decision: the assertion finalises against the `hive-partitioning` invalidation model
 

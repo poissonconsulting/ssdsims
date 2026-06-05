@@ -11,7 +11,7 @@
 
 ## 3. Refactor the factory to splice the slice
 
-- [ ] 3.1 In `ssd_scenario_targets()`'s `step_map()`, bind each step's slice (`scenario_step_slice(scenario, step)`) to a per-step value and **splice it** into the command via `bquote()`'s `.()`, replacing the bare `scenario` symbol — `ssd_run_sample_step(tasks, .(sample_slice), .(sample_dir))` and the `fit`/`hc` analogues — leaving the `sample_done`/`fit_done` barriers, `tasks`, and path-axis `names` untouched
+- [ ] 3.1 In `ssd_scenario_targets()`'s `step_map()`, bind each step's slice (`scenario_step_slice(scenario, step)`) to a per-step value and **splice it** into the command via `rlang::expr()`'s `!!`, replacing the bare `scenario` symbol — `ssd_run_sample_step(tasks, !!sample_slice, !!sample_dir)` and the `fit`/`hc` analogues — leaving the per-child `.parents` edge block, `tasks`, and path-axis `names` untouched
 - [ ] 3.2 Update the `ssd_scenario_targets()` roxygen: replace "scenario is referenced as a global, so editing it invalidates the dependent shards" with the per-step minimal-slice contract (editing a step-irrelevant field leaves the other steps' shards cached)
 
 ## 4. Tests

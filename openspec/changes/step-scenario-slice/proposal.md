@@ -25,7 +25,7 @@ The step runners already consume only a small, fixed slice of the scenario each 
 
 ## Impact
 
-- **New code**: `scenario_step_slice(scenario, step)` (internal, in `R/targets-runner.R` next to `shard_path()`/`read_parent_shards()`, or `R/accessors.R`); a refactor of `ssd_scenario_targets()`'s `step_map()` + the three `bquote()` step commands. The runners' signatures are unchanged — they still receive a scenario-shaped object, now the slice.
+- **New code**: `scenario_step_slice(scenario, step)` (internal, in `R/targets-runner.R` next to `shard_path()`/`read_parent_shards()`, or `R/accessors.R`); a refactor of `ssd_scenario_targets()`'s `step_map()` + the three `rlang::expr()` step commands. The runners' signatures are unchanged — they still receive a scenario-shaped object, now the slice.
 - **APIs**: no new exports (the slice helper is internal); `ssd_scenario_targets()`'s contract is unchanged from the caller's side.
 - **Invalidation model**: the expected-cached set is **finalised against the invalidation model pinned by `hive-partitioning`** (the §8 cache-by-existence vs. content-hash fork). This change owns the *per-step input* dependency edge; `hive-partitioning` owns how a shard's *value* propagates. See design.
 - **Dependencies (direction)**: **depends on** `hive-partitioning` (pins the invalidation model the assertion finalises against) and on the landed `task-tables` (the `ssd_scenario_targets()` factory this refines). **Pairs with** `path-axis-growth` (the path-axis counterpart of the same minimal-rebuild contract). TARGETS-DESIGN.md §12 DAG: `task-tables → step-scenario-slice`, `hive-partitioning → step-scenario-slice`.

@@ -2172,6 +2172,17 @@ public-API or ergonomics gaps.
   (which already projects the blob column out). Surfaced by the
   `shard-runner-baseline` / `task-tables` verification. Independent tidy-up
   with no dependants; not on the dependency DAG.
+- **`tidyverse-rlang-alignment`** — Align the package's code with the
+  tidyverse design: prefer **rlang** over base-R idioms throughout, especially
+  metaprogramming — `rlang::expr()`/`!!`/`inject()`/`call2()`/`sym()`/`syms()`
+  in place of `bquote()`/`substitute()`/`quote()`/`as.call()`/`as.symbol()`,
+  `rlang::set_names()` for `names<-`, and `purrr` iteration over `*apply()`
+  where it reads more clearly. `ssd_scenario_targets()` (the `targets` factory)
+  was migrated to rlang when `hive-partitioning` landed; this item sweeps the
+  rest of `R/` (e.g. the L'Ecuyer/`do_call_seed()` helpers, `get0()`/`match.fun()`
+  name resolution, remaining `*apply()` loops) for the same convention, so new
+  and existing code read consistently. Surfaced in PR #101 review. Independent
+  tidy-up with no dependants; not on the dependency DAG.
 
 ### Dependency DAG (parallel streams)
 

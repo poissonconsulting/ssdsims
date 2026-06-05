@@ -411,21 +411,16 @@ ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
 # one source of truth mapping cell -> target name.
 shard_cell_names <- function(mapped, shards, scenario, step) {
   in_order <- mapped[[paste0(step, "_step")]]
-  nms <- vapply(in_order, function(t) t$settings$name, character(1))
+  nms <- purrr::map_chr(in_order, function(t) t$settings$name)
   # All rows of a shard share its path cell (it is the grouping key), so the
   # first row gives the cell - mirrors `shard_path()`.
-  cells <- vapply(
-    seq_len(nrow(shards)),
-    function(i) {
-      path_key(
-        shards$tasks[[i]][1L, , drop = FALSE],
-        scenario$partition_by[[step]]
-      )
-    },
-    character(1)
+  cells <- purrr::map_chr(
+    shards$tasks,
+    function(tasks) {
+      path_key(tasks[1L, , drop = FALSE], scenario$partition_by[[step]])
+    }
   )
-  names(nms) <- cells
-  nms
+  rlang::set_names(nms, cells)
 }
 
 # For each child shard, the language block that names the parent shard target(s)
@@ -440,11 +435,8 @@ child_parent_edges <- function(
   parent,
   parent_cell_names
 ) {
-  lapply(seq_len(nrow(child_shards)), function(i) {
-    cells <- unique(path_key(
-      child_shards$tasks[[i]],
-      scenario$partition_by[[parent]]
-    ))
+  purrr::map(child_shards$tasks, function(tasks) {
+    cells <- unique(path_key(tasks, scenario$partition_by[[parent]]))
     nms <- parent_cell_names[cells]
     if (anyNA(nms)) {
       chk::abort_chk(
@@ -463,7 +455,7 @@ child_parent_edges <- function(
 # in a command purely so `targets` records the upstream edges; the values are the
 # parents' `format = "file"` paths (cheap strings).
 edge_block <- function(names) {
-  as.call(c(as.symbol("{"), lapply(names, as.symbol)))
+  rlang::call2("{", !!!rlang::syms(names))
 }
 
 #' Build the Targets Pipeline for a Scenario
@@ -568,9 +560,9 @@ ssd_scenario_targets <- function(
   hc_shards <- ssd_scenario_hc_shards(scenario)
 
   # One `tar_map` per step: a named, format="file", error="null" target per
-  # `partition_by` path cell. `tar_target_raw()` + `bquote()` injects the result
-  # dirs as literals while leaving `scenario`/`tasks`/the per-child `.parents`
-  # edge block as symbols (resolved as targets globals / mapped values).
+  # `partition_by` path cell. `tar_target_raw()` + `rlang::expr()` injects the
+  # result dirs as literals (`!!`) while leaving `scenario`/`tasks`/the per-child
+  # `.parents` edge block as symbols (resolved as targets globals / mapped values).
   step_map <- function(step, shards, command) {
     tarchetypes::tar_map(
       values = shards,
@@ -589,7 +581,7 @@ ssd_scenario_targets <- function(
   sample_targets <- step_map(
     "sample",
     sample_shards,
-    bquote(ssd_run_sample_step(tasks, scenario, .(sample_dir)))
+    rlang::expr(ssd_run_sample_step(tasks, scenario, !!sample_dir))
   )
   sample_names <- shard_cell_names(
     sample_targets,
@@ -608,9 +600,9 @@ ssd_scenario_targets <- function(
   fit_targets <- step_map(
     "fit",
     fit_shards,
-    bquote({
+    rlang::expr({
       .parents # per-child edges to the sample shards this fit shard reads
-      ssd_run_fit_step(tasks, scenario, .(sample_dir), .(fit_dir))
+      ssd_run_fit_step(tasks, scenario, !!sample_dir, !!fit_dir)
     })
   )
   fit_names <- shard_cell_names(fit_targets, fit_shards, scenario, "fit")
@@ -625,9 +617,9 @@ ssd_scenario_targets <- function(
   hc_targets <- step_map(
     "hc",
     hc_shards,
-    bquote({
+    rlang::expr({
       .parents # per-child edges to the fit shards this hc shard reads
-      ssd_run_hc_step(tasks, scenario, .(fit_dir), .(hc_dir))
+      ssd_run_hc_step(tasks, scenario, !!fit_dir, !!hc_dir)
     })
   )
   hc_names <- shard_cell_names(hc_targets, hc_shards, scenario, "hc")
@@ -637,9 +629,9 @@ ssd_scenario_targets <- function(
   # partially-failed run (`error = "null"`).
   summary_target <- targets::tar_target_raw(
     "summary",
-    bquote({
-      .(edge_block(unname(hc_names))) # order/value-depend on every hc shard
-      ssd_summarize(.(sample_dir), .(fit_dir), .(hc_dir), .(summary_path))
+    rlang::expr({
+      !!edge_block(unname(hc_names)) # order/value-depend on every hc shard
+      ssd_summarize(!!sample_dir, !!fit_dir, !!hc_dir, !!summary_path)
     }),
     format = "file"
   )
