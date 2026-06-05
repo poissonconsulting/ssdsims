@@ -31,12 +31,10 @@ Imports:
     tidyr,
     withr
 Suggests: 
-    callr,
     crew,
     dqrng (>= 0.4.1),
     knitr,
     quarto,
-    randtoolbox,
     readr,
     roxyglobals,
     ssddata,

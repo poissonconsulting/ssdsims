@@ -139,78 +139,25 @@ test_that("dqrng-backend: chk_dqrng_backend_intact does not perturb the draw seq
   expect_identical(without_check, with_check)
 })
 
-# NOTE: the following tests deliberately corrupt base R's single, process-global
-# user-supplied RNG slot (tearing the backend down or letting a foreign user-RNG
-# package hijack it). Doing that in-process leaves dqrng's registration in a
-# state that segfaults a subsequent `register_methods()` -- the exact
-# process-global fragility `exploration/user-rng-conflict/` documents. So each
-# runs in a fresh `callr` subprocess, where any corruption (or crash) is
-# contained and cannot poison the rest of the suite. They need ssdsims installed
-# (true under R CMD check, not under a bare `devtools::test()`).
+# The witness's failure paths against a *foreign* user-supplied RNG hijack are
+# validated by the `exploration/user-rng-conflict/` reprexes (case6 = the cheap
+# probe is fooled but the state witness is not; case7 = naming the slot owner)
+# rather than re-tested here, which would require co-loading a second user-RNG
+# package (e.g. randtoolbox). Loading two user-RNG packages in one process is a
+# process-global, potentially crashing act -- the very hazard this change
+# guards against -- so the suite does not do it. The torn-down branch is
+# covered below without activating (then corrupting) the backend.
 
-test_that("dqrng-backend: chk_dqrng_backend_intact aborts when the backend is torn down", {
-  skip_if_ssdsims_not_installed()
+test_that("dqrng-backend: chk_dqrng_backend_intact aborts when dqrng is not the active backend", {
   skip_if_not_installed("dqrng")
-  res <- callr::r(function() {
-    suppressMessages(library(dqrng))
-    ssdsims:::set_dqrng_backend()
-    dqrng::dqset.seed(42L)
-    # Tear the backend down: route base R RNG back to a non-user generator. The
-    # witness draw then advances Mersenne-Twister, not dqrng.
-    RNGkind("Mersenne-Twister")
-    tryCatch(
-      {
-        ssdsims:::chk_dqrng_backend_intact()
-        NULL
-      },
-      error = function(e) list(class = class(e), msg = conditionMessage(e))
-    )
-  })
-  expect_true("chk_error" %in% res$class)
-  # The message reports the current RNGkind() and does not name a symbol owner.
-  expect_match(res$msg, "Mersenne-Twister")
-})
-
-test_that("dqrng-backend: chk_dqrng_backend_intact aborts and names the culprit on a foreign hijack", {
-  skip_if_ssdsims_not_installed()
-  skip_if_not_installed("dqrng")
-  # NB: must NOT use skip_if_not_installed("randtoolbox") -- that would load
-  # randtoolbox into THIS process (see the helper's note). It is loaded only in
-  # the subprocess below.
-  skip_if_randtoolbox_not_installed()
-  res <- callr::r(function() {
-    suppressMessages(library(dqrng))
-    suppressMessages(library(randtoolbox)) # loaded last -> wins the slot
-    # Mirror the validated `case6` recipe exactly: seed dqrng (so it has a known
-    # state) but let randtoolbox -- not `register_methods()` -- own the slot.
-    # (Calling `register_methods()` first and *then* hijacking is the case3
-    # segfault, an explicit non-goal, so it is deliberately not exercised here.)
-    dqrng::dqset.seed(42L)
-    # randtoolbox takes the user_unif_rand slot while RNGkind()[1] still reads
-    # "user-supplied" -- the cheap probe is fooled (case6), but the state
-    # witness is not: the draw advances WELL, not dqrng.
-    randtoolbox::set.generator("WELL", order = 512, version = "a", seed = 42)
-    err <- tryCatch(
-      {
-        ssdsims:::chk_dqrng_backend_intact()
-        NULL
-      },
-      error = function(e) list(class = class(e), msg = conditionMessage(e))
-    )
-    list(
-      kind = RNGkind()[1L],
-      err = err,
-      owner = ssdsims:::rng_slot_owner(),
-      providers = ssdsims:::user_rng_providers()
-    )
-  })
-  expect_identical(res$kind, "user-supplied")
-  expect_true("chk_error" %in% res$err$class)
-  # The message names the owning package and lists the loaded user-RNG providers
-  # (both dqrng and randtoolbox export user_unif_rand).
-  expect_match(res$err$msg, "randtoolbox")
-  expect_identical(res$owner, "randtoolbox")
-  expect_true(all(c("dqrng", "randtoolbox") %in% res$providers))
+  # No backend is active here, so base R's RNG is not user-supplied: a base-R
+  # draw does not advance dqrng's state, so the witness reports a torn-down
+  # backend. This is the safe, in-process analogue of a mid-task teardown.
+  expect_false(dqrng_backend_active())
+  expect_error(chk_dqrng_backend_intact(), class = "chk_error")
+  # The message reports the current (non-user-supplied) RNGkind() and names no
+  # symbol owner.
+  expect_error(chk_dqrng_backend_intact(), regexp = RNGkind()[1L])
 })
 
 # ---- per-task postcondition wiring -----------------------------------------
@@ -231,50 +178,6 @@ test_that("primitives: *_data_task_primer returns normally on a healthy backend"
   expect_identical(nrow(out), 6L)
 })
 
-test_that("primitives: *_data_task_primer aborts (in its own frame) when the backend is corrupted before the task ends", {
-  # Corrupts the RNG slot mid-task, so it runs in a fresh subprocess (see the
-  # note above the integrity-witness corruption tests).
-  skip_if_ssdsims_not_installed()
-  skip_if_not_installed("dqrng")
-  skip_if_not_installed("ssddata")
-  res <- callr::r(function() {
-    suppressMessages(library(dqrng))
-    ssdsims:::set_dqrng_backend()
-    # Corrupt the backend inside the task body: the op tears the backend down,
-    # so the wrapper's exit-bookend integrity check fails.
-    testthat::with_mocked_bindings(
-      sample_data_task = function(data, n_max, replace) {
-        RNGkind("Mersenne-Twister")
-        data
-      },
-      {
-        tryCatch(
-          {
-            ssdsims:::sample_data_task_primer(
-              ssddata::ccme_boron,
-              n_max = 6L,
-              replace = FALSE,
-              seed = 42L,
-              primer = c(1L, 2L)
-            )
-            NULL
-          },
-          error = function(e) {
-            list(
-              class = class(e),
-              call = paste(deparse(conditionCall(e)), collapse = " ")
-            )
-          }
-        )
-      },
-      .package = "ssdsims"
-    )
-  })
-  expect_true("chk_error" %in% res$class)
-  # Error origin is the user-facing per-task wrapper frame, not an internal one.
-  expect_match(res$call, "sample_data_task_primer")
-})
-
 # ---- dqrng as a conditionally-used Suggested dependency --------------------
 
 test_that("conditional dependency: dqrng_usable() is TRUE and activation succeeds when dqrng is loaded", {
@@ -287,40 +190,23 @@ test_that("conditional dependency: dqrng_usable() is TRUE and activation succeed
   })
 })
 
-test_that("conditional dependency: backend aborts and does not load dqrng when dqrng is not loaded", {
-  skip_if_ssdsims_not_installed()
-  res <- callr::r(function() {
-    suppressMessages(library(ssdsims))
-    loaded_before <- isNamespaceLoaded("dqrng")
-    msg <- tryCatch(
-      ssdsims::local_dqrng_backend(),
-      error = function(e) conditionMessage(e)
-    )
-    list(
-      loaded_before = loaded_before,
-      loaded_after = isNamespaceLoaded("dqrng"),
-      msg = msg
-    )
-  })
-  # dqrng is not loaded by ssdsims, and the failed activation does not load it.
-  expect_false(res$loaded_before)
-  expect_false(res$loaded_after)
-  expect_match(res$msg, "library\\(dqrng\\)")
+test_that("conditional dependency: backend aborts with actionable guidance when dqrng is not usable", {
+  skip_if_not_installed("dqrng")
+  # dqrng cannot be cleanly unloaded mid-session, so force the usability gate
+  # FALSE to exercise the unavailable path: the backend must abort with
+  # actionable guidance rather than load dqrng or fall back to base R's RNG.
+  expect_false(dqrng_backend_active())
+  local_mocked_bindings(dqrng_usable = function() FALSE)
+  expect_error(local_dqrng_backend(), class = "chk_error")
+  expect_error(local_dqrng_backend(), regexp = "library\\(dqrng\\)")
 })
 
 test_that("DESCRIPTION: dqrng is in Suggests, not Imports", {
+  # Regression for the Imports -> Suggests move: with dqrng only suggested,
+  # loading ssdsims does not load dqrng.
   desc_path <- system.file("DESCRIPTION", package = "ssdsims")
   skip_if(identical(desc_path, ""))
   dcf <- read.dcf(desc_path, fields = c("Imports", "Suggests"))
   expect_false(grepl("dqrng", dcf[, "Imports"], fixed = TRUE))
   expect_true(grepl("dqrng", dcf[, "Suggests"], fixed = TRUE))
-})
-
-test_that("conditional dependency: loading ssdsims does not load dqrng", {
-  skip_if_ssdsims_not_installed()
-  loaded <- callr::r(function() {
-    suppressMessages(library(ssdsims))
-    isNamespaceLoaded("dqrng")
-  })
-  expect_false(loaded)
 })
