@@ -1,19 +1,5 @@
-# Gate the tests that actually drive a `targets` pipeline: they spawn a worker
-# that `library(ssdsims)`, so the package must be installed (true under R CMD
-# check, not under a bare `devtools::test()`), and they are slow.
-skip_targets <- function() {
-  testthat::skip_on_cran()
-  testthat::skip_if_not_installed("targets")
-  testthat::skip_if_not_installed("tarchetypes")
-  testthat::skip_if_not_installed("duckplyr")
-  testthat::skip_if_not_installed("ssdsims")
-}
-
-# A small numeric-only dataset: avoids factor/character columns so a draw
-# round-trips through Parquet byte-identically (the byte-identity oracle).
-numeric_dataset <- function() {
-  data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
-}
+# `skip_targets()` and `numeric_dataset()` live in `helper.R` (shared with
+# test-path-axis-growth.R).
 
 # ---- shard structure (task 7.1) --------------------------------------------
 
@@ -510,6 +496,67 @@ test_that("hive: invalidating one parent shard re-runs only the children that re
   expect_false(any(
     c("sample_step_d_2", "fit_step_d_2", "hc_step_d_2") %in% outdated
   ))
+})
+
+# ---- inner-axis growth: atomic byte-stable rewrite (shard-atomic-rewrite) --
+
+test_that("shard-atomic-rewrite: growing a fit inner axis rewrites the fit shards byte-stably and leaves sample cached", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "inner-growth-targets.R")
+  withr::local_dir(dir)
+
+  # First build: one fit task per shard (min_pmix = loose only).
+  saveRDS(FALSE, "grow.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  # Capture each affected fit shard's Parquet before the growth.
+  fit_shard_dirs <- dirname(list.files(
+    "results/fit",
+    pattern = "part.parquet",
+    recursive = TRUE,
+    full.names = TRUE
+  ))
+  expect_gt(length(fit_shard_dirs), 0L)
+  prior <- lapply(file.path(fit_shard_dirs, "part.parquet"), ssd_read_parquet)
+  names(prior) <- fit_shard_dirs
+  expect_true(all(vapply(prior, nrow, integer(1L)) == 1L))
+
+  # Grow the fit grid by one `min_pmix` (an inner axis) and re-source: tar_make
+  # re-reads `_targets.R`, which now builds the two-value scenario. The layout
+  # is unchanged (min_pmix is not a partition_by axis), so the per-layout root
+  # is identical and the shards are rewritten in place, not re-pathed.
+  saveRDS(TRUE, "grow.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  # Exactly the fit shards (and their hc/summary subtree) are stale; the sample
+  # shards - a step the inner-axis growth does not touch - are not.
+  expect_true(all(c("fit_step_d_1", "fit_step_d_2") %in% outdated))
+  expect_false(any(c("sample_step_d_1", "sample_step_d_2") %in% outdated))
+
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  # The sample shards are reported cached by targets and are NOT rebuilt.
+  progress <- targets::tar_progress()
+  sample_progress <- progress$progress[grepl("^sample_step_", progress$name)]
+  expect_identical(unique(sample_progress), "skipped")
+
+  for (d in fit_shard_dirs) {
+    # Whole-file overwrite: still a single Parquet per shard (no in-place append).
+    expect_length(list.files(d, pattern = "[.]parquet$"), 1L)
+    after <- ssd_read_parquet(file.path(d, "part.parquet"))
+    # The shard now carries the larger task set: loose + strict.
+    expect_identical(nrow(after), 2L)
+
+    prior_tbl <- prior[[d]][order(prior[[d]]$fit_id), ]
+    kept <- after[after$fit_id %in% prior_tbl$fit_id, ]
+    kept <- kept[order(kept$fit_id), ]
+    # The row present before the growth reads back byte-identical to the prior
+    # Parquet (the prior task's (seed, primer) unchanged -> same serialised blob).
+    expect_identical(kept$fit_id, prior_tbl$fit_id)
+    expect_identical(kept$fit_blob, prior_tbl$fit_blob)
+    # The shard differs from the prior Parquet only by the added min_pmix row.
+    expect_identical(nrow(after) - nrow(kept), 1L)
+  }
 })
 
 # ---- per-step minimal scenario slice (step-scenario-slice) -----------------

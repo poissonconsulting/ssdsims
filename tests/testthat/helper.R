@@ -37,3 +37,49 @@ expect_snapshot_data <- function(x, name, digits = 6) {
     compare = testthat::compare_file_text
   )
 }
+
+# ---- targets-pipeline helpers (test-task-shards.R, test-path-axis-growth.R) --
+
+# Gate the tests that actually drive a `targets` pipeline: they spawn a worker
+# that `library(ssdsims)`, so the package must be installed (true under R CMD
+# check, not under a bare `devtools::test()`), and they are slow.
+skip_targets <- function() {
+  testthat::skip_on_cran()
+  testthat::skip_if_not_installed("targets")
+  testthat::skip_if_not_installed("tarchetypes")
+  testthat::skip_if_not_installed("duckplyr")
+  testthat::skip_if_not_installed("ssdsims")
+}
+
+# A small numeric-only dataset: avoids factor/character columns so a draw
+# round-trips through Parquet byte-identically (the byte-identity oracle).
+numeric_dataset <- function() {
+  data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
+}
+
+# A snapshot of a completed run for the path-axis-growth test: the shard target
+# names the pipeline minted (one per shard, derived from the shard tables, not
+# hard-coded), each shard Parquet's md5, and the summary row count. Captured
+# before a path-axis growth, then re-read after the second `tar_make()` to assert
+# the existing shards were skipped byte-identically and the summary grew. Only
+# called from inside a fixture's working directory (a `targets` store + results).
+growth_state <- function() {
+  shards <- setdiff(targets::tar_progress()$name, "summary")
+  files <- sort(list.files(
+    "results",
+    pattern = "part\\.parquet$",
+    recursive = TRUE,
+    full.names = TRUE
+  ))
+  summary_file <- list.files(
+    "results",
+    pattern = "summary\\.parquet$",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  list(
+    shards = shards,
+    md5 = tools::md5sum(files),
+    summary_rows = nrow(ssd_read_parquet(summary_file))
+  )
+}
