@@ -26,8 +26,9 @@ Runs the \code{hc} tasks bundled into one shard: reads the distinct set of paren
 spans several fit shards), isolates each task's fit by \code{fit_id},
 deserialises the \code{fitdists} object, and estimates the hazard concentration
 with the per-task \verb{(seed, primer)} through \code{hc_data_task_primer()}. Each
-task's hc tibble (one or more rows - the \code{proportion} fan-out and the
-\code{ci = FALSE} collapse, section 1.2) is tagged with its \code{hc_id} and parent
+task's hc tibble (one or more rows - the \code{proportion} fan-out, with the
+scalar \code{ci} applied uniformly and bootstrap-only knobs \code{NA} when
+\code{ci = FALSE}) is tagged with its \code{hc_id} and parent
 \code{fit_id}, stacked, and written as one Parquet at the shard's partition path.
 }
 \examples{

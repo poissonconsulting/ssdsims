@@ -19,12 +19,12 @@ ssd_define_scenario(
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
-  proportion = 0.05,
-  ci = FALSE,
   nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  proportion = 0.05,
+  ci = FALSE,
   samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
@@ -78,10 +78,6 @@ upper bounds for the shape1 parameter.}
 \item{range_shape2}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape2 parameter.}
 
-\item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
-
-\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
-
 \item{nboot}{A count of the number of bootstrap samples to use to estimate the confidence limits. A value of 10,000 is recommended for official guidelines.}
 
 \item{est_method}{A string specifying whether to estimate directly from
@@ -112,6 +108,10 @@ calculate the confidence limits (and SE) from the single set of samples.}
 
 \item{parametric}{A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.}
 
+\item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
+
+\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
+
 \item{samples}{A logical scalar (default \code{FALSE}): retain the bootstrap draws
 in the hc result's \code{samples} list-column (passed to \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}}).
 This is \strong{output retention only} - it does not change the estimates or the
@@ -126,8 +126,9 @@ that step (one shard per path cell; the inner complement rides as Parquet
 columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: \code{sample} = \code{dataset}, \code{sim}, \code{replace}; \code{fit} adds
 \code{nrow}, \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix},
-\code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{ci}, \code{nboot}, \code{est_method},
-\code{ci_method}, \code{parametric}. \code{"nrow"} is rejected only for \code{sample} (the
+\code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{nboot}, \code{est_method},
+\code{ci_method}, \code{parametric} (\code{ci} is a scalar hc flag, not an axis).
+\code{"nrow"} is rejected only for \code{sample} (the
 shared draw carries no \code{nrow} axis; the \code{fit} step truncates it inline), and
 is a valid path axis for \code{fit}/\code{hc}. Steps partition \strong{independently} -
 there is no cross-step constraint; a step may be finer or coarser than its
@@ -186,11 +187,16 @@ accepted in four forms (routed through the same \code{Conc} validation):
 Supplying both a named list and \verb{name=} is an error.
 }
 
-\section{\code{ci = FALSE}}{
-When \code{ci = FALSE} is the only confidence-interval value, the bootstrap-only
-knobs \code{nboot}, \code{ci_method}, and \code{parametric} are meaningless. Passing any of
-them in that case is an error; set \code{ci = c(FALSE, TRUE)} to enable bootstrap,
-or omit the knobs.
+\section{\code{ci}}{
+\code{ci} is a scalar flag (not a cross-join axis): the point estimate \code{est} is
+invariant to \code{ci} - it is computed analytically from the fit, independent of
+the bootstrap and RNG - so a single \code{ci = TRUE} run is a strict superset of
+\code{ci = FALSE} (same \code{est}, plus the \code{se}/\code{lcl}/\code{ucl} columns). The choice is
+scenario-wide either/or: \code{ci = FALSE} for cheap, bootstrap-free point
+estimates, or \code{ci = TRUE} for estimates plus confidence intervals. When
+\code{ci = FALSE}, the bootstrap-only knobs \code{nboot}, \code{ci_method}, and \code{parametric}
+are meaningless; passing any of them in that case is an error, so set
+\code{ci = TRUE} to enable bootstrap, or omit the knobs.
 }
 
 \examples{

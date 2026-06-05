@@ -24,7 +24,7 @@ scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 2L,
   seed = 42L,
-  ci = c(FALSE, TRUE)
+  ci = TRUE
 )
 ssd_scenario_hc_shards(scenario)
 }

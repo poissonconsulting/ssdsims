@@ -103,24 +103,41 @@ test_that("task-lists: hc table has K * H rows", {
   expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 4L)
 })
 
-test_that("task-lists: ci = c(FALSE, TRUE) collapses the bootstrap-only knobs", {
+test_that("task-lists: ci is not an hc axis", {
+  expect_false("ci" %in% task_axes("hc"))
+})
+
+test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
     seed = 42L,
-    ci = c(FALSE, TRUE),
+    ci = FALSE,
+    est_method = c("arithmetic", "multi")
+  )
+  fit_tasks <- ssd_scenario_fit_tasks(scenario)
+  hc_tasks <- ssd_scenario_hc_tasks(scenario)
+  # One row per est_method, no fan-out over the bootstrap-only knobs.
+  expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 2L)
+  expect_true(all(hc_tasks$ci == FALSE))
+  expect_true(all(is.na(hc_tasks$nboot)))
+  expect_true(all(is.na(hc_tasks$ci_method)))
+  expect_true(all(is.na(hc_tasks$parametric)))
+})
+
+test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 42L,
+    ci = TRUE,
     nboot = c(10L, 100L)
   )
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
   hc_tasks <- ssd_scenario_hc_tasks(scenario)
-  # Per fit task: 1 collapsed ci = FALSE row + 2 ci = TRUE rows (nboot) = 3,
-  # not the naive 2 ci * 2 nboot = 4 full cross-join.
-  expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 3L)
-  false_rows <- hc_tasks[hc_tasks$ci == FALSE, ]
-  expect_identical(nrow(false_rows), nrow(fit_tasks))
-  expect_true(all(is.na(false_rows$nboot)))
-  expect_true(all(is.na(false_rows$ci_method)))
-  expect_true(all(is.na(false_rows$parametric)))
+  # 2 nboot * 1 est_method * 1 ci_method * 1 parametric = 2 per fit task.
+  expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 2L)
+  expect_true(all(hc_tasks$ci == TRUE))
 })
 
 # ---- task ids / foreign keys -----------------------------------------------
@@ -197,7 +214,7 @@ test_that("task-lists: printing a task table is informative", {
         ssddata::ccme_boron,
         nsim = 1L,
         seed = 42L,
-        ci = c(FALSE, TRUE),
+        ci = TRUE,
         nboot = c(10L, 100L)
       )
     )
@@ -213,7 +230,7 @@ test_that("task-lists: ssd_scenario_tasks bundles the three task tables", {
     nrow = c(5L, 10L),
     seed = 42L,
     rescale = c(FALSE, TRUE),
-    ci = c(FALSE, TRUE)
+    ci = TRUE
   )
   tasks <- ssd_scenario_tasks(scenario)
   expect_s3_class(tasks, "ssdsims_task_set")
@@ -232,7 +249,7 @@ test_that("task-lists: printing a task set reports per-step counts", {
         nrow = c(5L, 10L),
         seed = 42L,
         rescale = c(FALSE, TRUE),
-        ci = c(FALSE, TRUE),
+        ci = TRUE,
         nboot = c(10L, 100L)
       )
     )
@@ -437,7 +454,7 @@ test_that("task-lists: task-table column contracts are pinned", {
     nsim = 1L,
     nrow = c(5L, 10L),
     seed = 42L,
-    ci = c(FALSE, TRUE)
+    ci = TRUE
   )
   expect_snapshot({
     names(ssd_scenario_sample_tasks(scenario))
@@ -455,7 +472,7 @@ test_that("scenario-definition: samples = TRUE retains hc draws but keeps estima
     nrow = 6L,
     seed = 42L,
     dists = "lnorm",
-    ci = c(FALSE, TRUE),
+    ci = TRUE,
     nboot = 2L
   )
   out_no <- ssd_run_scenario_baseline(do.call(ssd_define_scenario, args))
@@ -472,7 +489,7 @@ test_that("scenario-definition: samples = TRUE retains hc draws but keeps estima
 test_that("scenario-definition: samples = TRUE works with multiple dists and ci = FALSE", {
   # Regression: `samples = TRUE` retains the *bootstrap* draws, which only exist
   # for `ci = TRUE`. With multiple dists (model averaging), asking ssdtools to
-  # keep a non-existent `samples` column on the `ci = FALSE` rows errored
+  # keep a non-existent `samples` column on the `ci = FALSE` path errored
   # ("Can't select columns that don't exist"). The no-CI path must therefore
   # never request samples, whatever the scenario flag.
   scenario <- ssd_define_scenario(
@@ -481,13 +498,11 @@ test_that("scenario-definition: samples = TRUE works with multiple dists and ci 
     nrow = 6L,
     seed = 42L,
     dists = c("lnorm", "gamma"),
-    ci = c(FALSE, TRUE),
-    nboot = 2L,
+    ci = FALSE,
     samples = TRUE
   )
   expect_no_error(out <- ssd_run_scenario_baseline(scenario))
-  # ci = TRUE rows keep draws; ci = FALSE rows have an empty samples column.
+  # The no-CI path never retains samples, so every samples column is empty.
   lens <- unlist(lapply(out$hc$hc, function(h) lengths(h$samples)))
-  expect_true(any(lens > 0L))
-  expect_true(any(lens == 0L))
+  expect_true(all(lens == 0L))
 })

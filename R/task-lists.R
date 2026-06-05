@@ -79,25 +79,27 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #' Derive the hc Task Table from a Scenario
 #'
 #' Crosses each fit-task identity with each row of the scenario's `hc` argument
-#' grid (`nboot`, `est_method`, `ci_method`, `parametric`). The expansion honours
-#' the construction-time `ci = FALSE` collapse (`TARGETS-DESIGN.md` section 1.2): rows
-#' where `ci = FALSE` are not multiplied across the bootstrap-only knobs
-#' (`nboot`, `ci_method`, `parametric`), which are stored as `NA`, while
-#' `ci = TRUE` rows fan out across the full grid.
+#' grid (`nboot`, `est_method`, `ci_method`, `parametric`). The scenario's
+#' scalar `ci` flag is applied uniformly to every hc row - it is not a cross-join
+#' axis (it is absent from `task_axes("hc")`) and rides as a carried column. When
+#' `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`, `parametric`)
+#' are canonically `NA`, leaving `est_method` as the only fan-out axis; when
+#' `ci = TRUE`, the grid fans out across `nboot x est_method x ci_method x
+#' parametric`.
 #'
 #' Each row carries an `hc_id` primary key and a `fit_id` foreign key
 #' referencing its parent fit task.
 #'
 #' @inheritParams ssd_scenario_sample_tasks
 #' @return An `ssdsims_tasks` object recording the `"hc"` step, with one row per
-#'   fit-task identity crossed with the (collapsed) hc grid.
+#'   fit-task identity crossed with the hc grid.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
 #'   ssddata::ccme_boron,
 #'   nsim = 2L,
 #'   seed = 42L,
-#'   ci = c(FALSE, TRUE),
+#'   ci = TRUE,
 #'   nboot = c(10L, 100L)
 #' )
 #' ssd_scenario_hc_tasks(scenario)
@@ -257,6 +259,8 @@ ssd_run_scenario_baseline <- function(scenario) {
   fit_out <- rlang::set_names(fit_tbl$fits, fit_tbl$fit_id)
 
   # --- hc step: seed then estimate hc for each fit against its hc-grid row ---
+  # `ci` is a carried column (single-valued, not an hc axis), read here just
+  # like the `n_max` carried column on `sample` tasks.
   hc_tbl <- tasks$hc
   hc_args <- hc_tbl[c("ci", "nboot", "est_method", "ci_method", "parametric")]
   hc_args$fits <- fit_out[hc_tbl$fit_id]
@@ -326,21 +330,22 @@ fit_task_table <- function(scenario) {
 
 hc_grid_tbl <- function(scenario) {
   hc <- scenario$hc
-  ci <- hc$ci
-  parts <- list()
-  if (any(ci == FALSE)) {
-    # Bootstrap-only knobs collapse to NA when ci = FALSE (TARGETS-DESIGN.md
-    # section 1.2); est_method stays an axis as it affects the point estimate too.
-    parts$false <- tidyr::expand_grid(
+  # Single grid keyed by the scalar `ci` flag (no `c(FALSE, TRUE)` collapse).
+  # `ci` is emitted as a (single-valued) carried column the runners read, but
+  # it is not an hc axis, so it never enters the per-task primer.
+  if (isFALSE(hc$ci)) {
+    # Bootstrap-only knobs are canonically NA when ci = FALSE so they cannot
+    # enter task identity; est_method stays a fan-out axis as it affects the
+    # point estimate.
+    tidyr::expand_grid(
       ci = FALSE,
       nboot = NA_integer_,
       est_method = hc$est_method,
       ci_method = NA_character_,
       parametric = NA
     )
-  }
-  if (any(ci == TRUE)) {
-    parts$true <- tidyr::expand_grid(
+  } else {
+    tidyr::expand_grid(
       ci = TRUE,
       nboot = as.integer(hc$nboot),
       est_method = hc$est_method,
@@ -348,7 +353,6 @@ hc_grid_tbl <- function(scenario) {
       parametric = hc$parametric
     )
   }
-  dplyr::bind_rows(parts)
 }
 
 # ---- task identity (cross-join axes, ids, foreign keys) --------------------
@@ -368,7 +372,11 @@ task_axes <- function(step) {
     "range_shape1",
     "range_shape2"
   )
-  hc <- c(fit, "ci", "nboot", "est_method", "ci_method", "parametric")
+  # `ci` is a scalar hc flag, not an axis: the point estimate is invariant to
+  # `ci`, so it carries no task-distinguishing information and is excluded from
+  # the hc vocabulary (and thus the primer/partition split). It rides as a
+  # carried column on the hc task table, like `n_max` on `sample` tasks.
+  hc <- c(fit, "nboot", "est_method", "ci_method", "parametric")
   switch(step, sample = sample, fit = fit, hc = hc)
 }
 

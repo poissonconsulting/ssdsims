@@ -101,7 +101,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   dists = c("lnorm", "gamma"),
   proportion = c(0.05, 0.2),
-  ci = c(FALSE, TRUE),
+  ci = TRUE,
   nboot = c(10L, 100L),
   est_method = "multi",
   ci_method = "weighted_samples"
@@ -166,11 +166,18 @@ bodies produce byte-identical task identities --- the split that lets a cluster
 worker resolve `min_pmix` off the transported scenario with no shared
 interactive environment.
 
-### The `ci = FALSE` rule
+### The `ci` flag
 
-When `ci = FALSE` is the *only* confidence-interval value, the bootstrap-only
-knobs (`nboot`, `ci_method`, `parametric`) are meaningless, so passing any of
-them is an error:
+`ci` is a scalar flag, not a cross-join axis. The point estimate is computed
+analytically from the fit and is identical whether `ci` is `TRUE` or `FALSE`,
+so a `ci = TRUE` run is a strict superset of `ci = FALSE` (the same estimate,
+plus the `se`/`lcl`/`ucl` columns). The choice is a scenario-wide either/or:
+`ci = TRUE` for estimates plus bootstrap intervals (as in the scenario above),
+or `ci = FALSE` for cheap, bootstrap-free point estimates only.
+
+When `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`,
+`parametric`) are meaningless, so passing any of them is an error --- set
+`ci = TRUE` to enable the bootstrap, or omit the knob:
 
 ```{r}
 #| label: ci-false-error
@@ -183,12 +190,6 @@ ssd_define_scenario(
   nboot = 1000
 )
 ```
-
-To ask for *both* a point estimate and bootstrap intervals --- the common case
---- set `ci = c(FALSE, TRUE)` (as in the scenario above) rather than a bare
-`ci = TRUE`. This keeps the study symmetric: the `ci = FALSE` row is retained
-and collapses its bootstrap knobs to `NA` at expansion time, while the
-`ci = TRUE` rows fan out across the full bootstrap grid.
 
 ## Stage 3: expand into task tables
 
@@ -219,9 +220,10 @@ joinable:
 tasks$sample
 ```
 
-The `ci = FALSE` collapse is visible in the `hc` table: the `ci = FALSE` rows
-carry `NA` for the bootstrap-only knobs and are not multiplied across them,
-while the `ci = TRUE` rows fan out fully.
+The scalar `ci` is carried uniformly on the `hc` table (it is not an axis). With
+`ci = TRUE` the bootstrap knobs fan out fully; a `ci = FALSE` scenario would
+instead give one row per `est_method`, carrying `NA` for the bootstrap-only
+knobs.
 
 ```{r}
 #| label: hc-table

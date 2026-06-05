@@ -88,8 +88,10 @@ normalize_task_row <- function(row) {
 #'   (`rescale`, `computable`, `at_boundary_ok`, `min_pmix` name,
 #'   `range_shape1`, `range_shape2`). `nrow` IS part of the fit primer: a fit on
 #'   a different truncation is a genuinely different computation.
-#' * **hc** -- the parent `fit` identity plus the hc-grid row (`ci`, `nboot`,
-#'   `est_method`, `ci_method`, `parametric`).
+#' * **hc** -- the parent `fit` identity plus the hc-grid row (`nboot`,
+#'   `est_method`, `ci_method`, `parametric`). `ci` is a scalar hc flag applied
+#'   uniformly, not part of the task identity, so it is a carried column rather
+#'   than a primer field.
 #'
 #' Function-valued parameters (e.g. `min_pmix`) MUST be referenced **by name**,
 #' not by function value, so a recompile or JIT does not move a task's primer.

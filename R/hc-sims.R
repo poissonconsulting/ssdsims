@@ -26,6 +26,10 @@ ssd_hc_sims <- function(
   chk::check_names(x, "fits")
   chk::chk_null_or(save_to, vld = chk::vld_dir)
 
+  # `ci` is a scalar flag (applied uniformly, not part of the factorial
+  # expansion below), so a vector `ci` is rejected here too.
+  chk::chk_flag(ci)
+
   chk::chk_whole_numeric(nboot)
   chk::chk_not_any_na(nboot)
   chk::chk_gt(nboot)

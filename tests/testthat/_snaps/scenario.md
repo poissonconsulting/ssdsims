@@ -83,6 +83,24 @@
       Error in `ssd_define_scenario()`:
       ! `partition_by$sample` names unknown axis '"nboot"'; valid axes for the `sample` step are '"dataset"', '"sim"' and '"replace"'.
 
+# scenario-definition: partition_by rejects ci as an hc axis
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, partition_by = list(
+        hc = c("dataset", "sim", "ci")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"parametric"'.
+
+# scenario-definition: bundle rejects ci as an hc axis
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, bundle = list(
+        hc = "ci"))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `bundle$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"parametric"'.
+
 # scenario-definition: partition_by rejects nrow under the sample step
 
     Code
@@ -173,7 +191,7 @@
       nboot = 500)
     Condition
       Error in `ssd_define_scenario()`:
-      ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
+      ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
 
 # scenario-definition: ci = FALSE rejects ci_method and parametric
 
@@ -182,7 +200,7 @@
       ci_method = "MACL")
     Condition
       Error in `ssd_define_scenario()`:
-      ! Bootstrap-only knob ('ci_method') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
+      ! Bootstrap-only knob ('ci_method') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
 
 ---
 
@@ -191,7 +209,16 @@
       parametric = FALSE)
     Condition
       Error in `ssd_define_scenario()`:
-      ! Bootstrap-only knob ('parametric') cannot be set when `ci = FALSE`. Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob.
+      ! Bootstrap-only knob ('parametric') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
+
+# scenario-definition: a vector ci is rejected
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = c(FALSE,
+        TRUE))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `ci` must be a flag (TRUE or FALSE).
 
 # scenario-definition: seed is required
 
@@ -269,12 +296,12 @@
           range_shape1: {0.05, 20}
           range_shape2: {0.05, 20}
         hc grid:
-          proportion: 0.05
-          ci: FALSE
           nboot: 1000
           est_method: multi
           ci_method: weighted_samples
           parametric: TRUE
+          proportion: 0.05
+          ci: FALSE
           samples: FALSE
         partition_by:
           sample: dataset, sim, replace
@@ -283,7 +310,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -291,9 +318,9 @@
       ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
       nsim = 50L, nrow = c(5L, 6L, 10L), seed = 1L, rescale = c(FALSE, TRUE),
       computable = c(FALSE, TRUE), at_boundary_ok = c(TRUE, FALSE), range_shape1 = list(
-        c(0.05, 20), c(0.1, 10)), proportion = c(0.05, 0.1), ci = c(FALSE, TRUE),
-      nboot = c(100, 1000), est_method = c("multi", "geometric"), ci_method = c(
-        "weighted_samples", "MACL"), parametric = c(TRUE, FALSE))
+        c(0.05, 20), c(0.1, 10)), proportion = c(0.05, 0.1), ci = TRUE, nboot = c(100,
+        1000), est_method = c("multi", "geometric"), ci_method = c("weighted_samples",
+        "MACL"), parametric = c(TRUE, FALSE))
     Output
       <ssdsims_scenario>
         seed:     1
@@ -310,12 +337,12 @@
           range_shape1: {0.05, 20; 0.1, 10}
           range_shape2: {0.05, 20}
         hc grid:
-          proportion: 0.05, 0.1
-          ci: FALSE, TRUE
           nboot: 100, 1000
           est_method: multi, geometric
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
+          proportion: 0.05, 0.1
+          ci: TRUE
           samples: FALSE
         partition_by:
           sample: dataset, sim, replace
@@ -324,7 +351,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
 
 # scenario-definition: samples must be a flag
 
