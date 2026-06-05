@@ -1956,14 +1956,14 @@ already ran end to end (see §4, §6). These steps are therefore
   `_seed` wrappers as a one-release shim. `example-expanded*.R`
   re-runs with byte-equivalence across **every** input form, so it
   **depends on** `scenario-input-types` (the full input surface must
-  exist before the public-API re-run can exercise it). This is otherwise
-  a surface rename over `primer-primitives`, which already establishes the
-  contract — so, **trusting the design**, none of the targets-only
+  exist before the public-API re-run can exercise it) and on
+  `primer-primitives` (the contract it reuses). None of the targets-only
   plumbing (`scenario-accessors`, `manifest`, `task-tables`, …) waits on
-  it. With no dependants of its own, it can land any time after
-  `scenario-input-types`; the DAG shows the solid `scenario-input-types →
-  migrate-public-api` prereq plus a dashed, non-gating edge off
-  `primer-primitives`.
+  it, but it **gates `cleanup-lecuyer`**: the L'Ecuyer-CMRG helpers and
+  `_seed` shims cannot be removed until the public step functions stop
+  calling them. The DAG shows the solid `scenario-input-types →
+  migrate-public-api` and `primer-primitives → migrate-public-api`
+  prereqs and the `migrate-public-api → cleanup-lecuyer` dependant.
 - **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
   on the scenario, accessed by name** — no registry (§1.1). Materialise
   the `min_pmix` functions on the scenario at construction (keyed by
@@ -2117,7 +2117,8 @@ already ran end to end (see §4, §6). These steps are therefore
   of the chosen shards (§8.4). Both recipes have tests.
 - **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
   `_seed` shims; `scripts/experiment-substream-restart.R` becomes
-  a historical reference.
+  a historical reference. **Depends on `migrate-public-api`** (the public
+  step functions must be off the L'Ecuyer path first).
 - **`error-call-origin`** — *Cosmetic, independent of the rest.*
   Audit every user-facing function so its validation errors report the
   **calling function** as the origin (`Error in \`ssd_*()\`:`), never an
@@ -2237,7 +2238,8 @@ flowchart TD
     lockin --> cleanup
 
     inputs --> migrate
-    prims -.-> migrate
+    prims --> migrate
+    migrate --> cleanup
 
     %% --- node status colouring (keep in sync as each change progresses) ---
     %% green = archived, yellow = done (implemented, not yet archived),
@@ -2258,12 +2260,12 @@ flowchart TD
 implemented), unfilled = open (roadmap only). Keep the colouring in sync as
 changes progress.
 
-`migrate-public-api` waits only on `scenario-input-types` (its
-byte-equivalence re-run must exercise the full input surface) and hangs
-off `primer-primitives` with a **dashed, non-gating** edge; it has **no
-dependants**, so trusting the design no targets step waits on it and it
-can land any time once `scenario-input-types` is in. The dashed edge marks
-"follows from, but does not block."
+`migrate-public-api` depends on `scenario-input-types` (its
+byte-equivalence re-run must exercise the full input surface) and on
+`primer-primitives` (the contract it reuses); no targets step waits on
+it, but it **gates `cleanup-lecuyer`** — the L'Ecuyer-CMRG helpers and
+`_seed` shims cannot be removed until the public step functions stop
+calling them.
 
 `shard-runner-baseline` sits off `primer-primitives` + `partition-by`,
 parallel to the `targets`-only plumbing: it proves the Hive
