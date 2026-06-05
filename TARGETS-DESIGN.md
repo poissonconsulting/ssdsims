@@ -2365,7 +2365,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate,cluster proposed
+    class inputs,postcheck,manif,migrate proposed
+    class cluster done
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
@@ -2415,7 +2416,13 @@ Eight further changes were proposed in this round (all `openspec validate
   `path-axis-growth` now **depends on** `step-scenario-slice` (the solid
   `slice --> pathgrow` edge), not merely pairs with it.
 - `cluster-pipeline` — new `cluster-pipeline` capability (crew.cluster SLURM
-  template via the existing factory).
+  template via the existing factory). **Now done (yellow):** the
+  `inst/targets-templates/cluster/` template ships (`_targets.R` with the one
+  editable `crew_controller_slurm()` block, the connectivity + worker-prerequisite
+  probe gating the scenario shards, `scenario.R`/`run.R`/`run-serial.R`, and a
+  "zero to a running cluster job" README). Validated off-cluster via the
+  `crew::crew_controller_local()` smoke path (byte-identical to the single-core
+  oracle); the real-SLURM end-to-end run remains the documented manual/lab step.
 - `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
   (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta)
   — the independent tidy-ups, kept **off** the dependency DAG per convention
