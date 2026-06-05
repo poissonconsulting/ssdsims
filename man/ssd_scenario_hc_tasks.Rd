@@ -11,15 +11,16 @@ ssd_scenario_hc_tasks(scenario)
 }
 \value{
 An \code{ssdsims_tasks} object recording the \code{"hc"} step, with one row per
-fit-task identity crossed with the (collapsed) hc grid.
+fit-task identity crossed with the hc grid.
 }
 \description{
 Crosses each fit-task identity with each row of the scenario's \code{hc} argument
-grid (\code{nboot}, \code{est_method}, \code{ci_method}, \code{parametric}). The expansion honours
-the construction-time \code{ci = FALSE} collapse (\code{TARGETS-DESIGN.md} section 1.2): rows
-where \code{ci = FALSE} are not multiplied across the bootstrap-only knobs
-(\code{nboot}, \code{ci_method}, \code{parametric}), which are stored as \code{NA}, while
-\code{ci = TRUE} rows fan out across the full grid.
+grid (\code{nboot}, \code{est_method}, \code{ci_method}, \code{parametric}). The scenario's
+scalar \code{ci} flag is applied uniformly to every hc row - it is not a cross-join
+axis (it is absent from \code{task_axes("hc")}) and rides as a carried column. When
+\code{ci = FALSE}, the bootstrap-only knobs (\code{nboot}, \code{ci_method}, \code{parametric})
+are canonically \code{NA}, leaving \code{est_method} as the only fan-out axis; when
+\code{ci = TRUE}, the grid fans out across \verb{nboot x est_method x ci_method x parametric}.
 }
 \details{
 Each row carries an \code{hc_id} primary key and a \code{fit_id} foreign key
@@ -30,7 +31,7 @@ scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 2L,
   seed = 42L,
-  ci = c(FALSE, TRUE),
+  ci = TRUE,
   nboot = c(10L, 100L)
 )
 ssd_scenario_hc_tasks(scenario)

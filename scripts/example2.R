@@ -29,9 +29,10 @@ datasets <- ssd_data(
 # --- 2. Declare the scenario ----------------------------------------
 # Purely declarative: stores the seed, the replicate count, the sample sizes,
 # the dataset *names*, and the fit/hc argument grids. `min_pmix` is kept by
-# name only. `ci = c(FALSE, TRUE)` is the deliberate way to ask for both the
-# point estimate and bootstrap intervals -- a bare `ci = FALSE` forbids the
-# bootstrap-only knobs (`nboot`, `ci_method`, `parametric`).
+# name only. `ci` is a scalar flag, an either/or choice: `ci = TRUE` for
+# estimates plus bootstrap intervals, or `ci = FALSE` for cheap point estimates
+# only (which forbids the bootstrap-only knobs `nboot`, `ci_method`,
+# `parametric`). A `ci = TRUE` run is a superset of `ci = FALSE`.
 scenario <- ssd_define_scenario(
   datasets,
   nsim = 3L,
@@ -39,7 +40,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   dists = c("lnorm", "gamma"),
   proportion = c(0.05, 0.2),
-  ci = c(FALSE, TRUE),
+  ci = TRUE,
   nboot = c(10L, 100L),
   est_method = "multi",
   ci_method = "weighted_samples"
@@ -54,8 +55,9 @@ print(scenario)
 tasks <- ssd_scenario_tasks(scenario)
 print(tasks)
 
-# The bootstrap-only knobs collapse to NA on the `ci = FALSE` rows and fan out
-# only on the `ci = TRUE` rows -- inspect the hc table to see the asymmetry.
+# With the scalar `ci = TRUE` the hc grid fans out over the bootstrap knobs
+# (`nboot x est_method x ci_method x parametric`); a `ci = FALSE` scenario would
+# instead give one row per `est_method` with the bootstrap knobs `NA`.
 print(tasks$hc)
 
 # Per-step derivations are also available individually:

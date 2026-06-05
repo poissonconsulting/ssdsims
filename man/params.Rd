@@ -11,7 +11,10 @@
 
 \item{args}{A named list of the argument values.}
 
-\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
+\item{ci}{A scalar flag specifying whether to estimate confidence intervals
+(by bootstrapping). It is not a cross-join axis; the point estimate is
+identical whether \code{TRUE} or \code{FALSE}, so \code{ci = TRUE} is a superset of
+\code{ci = FALSE}.}
 
 \item{ci_method}{A character vector specifying the method to use for estimating the confidence limits.
 \code{ssdtools::ssd_ci_methods()} returns the possible values.}

@@ -8,7 +8,10 @@
 #' A string is a non-missing character scalar.
 #'
 #' @param args A named list of the argument values.
-#' @param ci A flag specifying whether to estimate confidence intervals (by bootstrapping).
+#' @param ci A scalar flag specifying whether to estimate confidence intervals
+#' (by bootstrapping). It is not a cross-join axis; the point estimate is
+#' identical whether `TRUE` or `FALSE`, so `ci = TRUE` is a superset of
+#' `ci = FALSE`.
 #' @param ci_method A character vector specifying the method to use for estimating the confidence limits.
 #' `ssdtools::ssd_ci_methods()` returns the possible values.
 #' @param dist_sim A character vector specifying the distributions in the fitdists object or `"all"``

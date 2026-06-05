@@ -26,7 +26,7 @@ test_that("task-shards: union of a step's shard tasks equals its task table", {
     nsim = 2L,
     nrow = c(5L, 10L),
     seed = 42L,
-    ci = c(FALSE, TRUE),
+    ci = TRUE,
     nboot = 10L
   )
   for (step in c("sample", "fit", "hc")) {
@@ -41,6 +41,23 @@ test_that("task-shards: union of a step's shard tasks equals its task table", {
     union_ids <- sort(unlist(lapply(shards$tasks, function(t) t[[id]])))
     expect_identical(union_ids, sort(tasks[[id]]))
   }
+})
+
+test_that("task-shards: ci rides as a carried column on the hc shards", {
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    seed = 42L,
+    ci = TRUE,
+    nboot = 10L
+  )
+  tasks <- ssd_scenario_hc_shards(scenario)$tasks[[1]]
+  # `ci` is present as a column the runner reads, but it is neither a path nor
+  # an inner axis (it is absent from the hc vocabulary).
+  expect_true("ci" %in% names(tasks))
+  expect_false("ci" %in% task_axes("hc"))
+  expect_false("ci" %in% scenario_partition_axes(scenario, "hc")$path)
+  expect_false("ci" %in% scenario_partition_axes(scenario, "hc")$inner)
 })
 
 test_that("task-shards: a coarser partition_by bundles more tasks per shard", {

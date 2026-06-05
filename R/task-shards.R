@@ -79,7 +79,7 @@ ssd_scenario_fit_shards <- function(scenario) {
 #'   ssddata::ccme_boron,
 #'   nsim = 2L,
 #'   seed = 42L,
-#'   ci = c(FALSE, TRUE)
+#'   ci = TRUE
 #' )
 #' ssd_scenario_hc_shards(scenario)
 ssd_scenario_hc_shards <- function(scenario) {

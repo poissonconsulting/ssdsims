@@ -307,8 +307,9 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #' spans several fit shards), isolates each task's fit by `fit_id`,
 #' deserialises the `fitdists` object, and estimates the hazard concentration
 #' with the per-task `(seed, primer)` through `hc_data_task_primer()`. Each
-#' task's hc tibble (one or more rows - the `proportion` fan-out and the
-#' `ci = FALSE` collapse, section 1.2) is tagged with its `hc_id` and parent
+#' task's hc tibble (one or more rows - the `proportion` fan-out, with the
+#' scalar `ci` applied uniformly and bootstrap-only knobs `NA` when
+#' `ci = FALSE`) is tagged with its `hc_id` and parent
 #' `fit_id`, stacked, and written as one Parquet at the shard's partition path.
 #'
 #' @inheritParams ssd_run_sample_step

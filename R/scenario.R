@@ -32,12 +32,17 @@
 #'
 #' Supplying both a named list and `name=` is an error.
 #'
-#' # `ci = FALSE`
+#' # `ci`
 #'
-#' When `ci = FALSE` is the only confidence-interval value, the bootstrap-only
-#' knobs `nboot`, `ci_method`, and `parametric` are meaningless. Passing any of
-#' them in that case is an error; set `ci = c(FALSE, TRUE)` to enable bootstrap,
-#' or omit the knobs.
+#' `ci` is a scalar flag (not a cross-join axis): the point estimate `est` is
+#' invariant to `ci` - it is computed analytically from the fit, independent of
+#' the bootstrap and RNG - so a single `ci = TRUE` run is a strict superset of
+#' `ci = FALSE` (same `est`, plus the `se`/`lcl`/`ucl` columns). The choice is
+#' scenario-wide either/or: `ci = FALSE` for cheap, bootstrap-free point
+#' estimates, or `ci = TRUE` for estimates plus confidence intervals. When
+#' `ci = FALSE`, the bootstrap-only knobs `nboot`, `ci_method`, and `parametric`
+#' are meaningless; passing any of them in that case is an error, so set
+#' `ci = TRUE` to enable bootstrap, or omit the knobs.
 #'
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
@@ -78,8 +83,9 @@
 #'   columns). Each entry must be unique, non-missing, and a subset of that
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
-#'   `range_shape1`, `range_shape2`; `hc` adds `ci`, `nboot`, `est_method`,
-#'   `ci_method`, `parametric`. `"nrow"` is rejected only for `sample` (the
+#'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `est_method`,
+#'   `ci_method`, `parametric` (`ci` is a scalar hc flag, not an axis).
+#'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
 #'   there is no cross-step constraint; a step may be finer or coarser than its
@@ -120,12 +126,12 @@ ssd_define_scenario <- function(
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
-  proportion = 0.05,
-  ci = FALSE,
   nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  proportion = 0.05,
+  ci = FALSE,
   samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
@@ -211,10 +217,10 @@ ssd_define_scenario <- function(
   chk::chk_range(proportion, c(0, 1))
   chk::chk_unique(proportion)
 
-  chk::chk_logical(ci)
-  chk::chk_not_any_na(ci)
-  chk::chk_unique(ci)
-  chk::chk_length(ci, upper = 2L)
+  # `ci` is a scalar flag (not a grid/task axis): the point estimate is
+  # invariant to `ci`, so `ci = TRUE` is a superset of `ci = FALSE` and the
+  # choice is scenario-wide either/or.
+  chk::chk_flag(ci)
 
   chk::chk_whole_numeric(nboot)
   chk::chk_not_any_na(nboot)
@@ -243,7 +249,7 @@ ssd_define_scenario <- function(
   chk::chk_flag(samples)
 
   # --- ci = FALSE rejects bootstrap-only knobs ---------------------------
-  if (length(ci) == 1L && isFALSE(ci)) {
+  if (isFALSE(ci)) {
     passed <- c(
       if (!missing(nboot)) "nboot",
       if (!missing(ci_method)) "ci_method",
@@ -256,7 +262,7 @@ ssd_define_scenario <- function(
         " (",
         chk::cc(passed, conj = " and "),
         ") cannot be set when `ci = FALSE`. ",
-        "Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob",
+        "Set `ci = TRUE` to enable bootstrap, or omit the knob",
         if (length(passed) > 1L) "s" else "",
         ".",
         call = call
@@ -296,12 +302,12 @@ ssd_define_scenario <- function(
       ),
       min_pmix_fns = min_pmix_spec$fns,
       hc = list(
-        proportion = proportion,
-        ci = ci,
         nboot = nboot,
         est_method = est_method,
         ci_method = ci_method,
         parametric = parametric,
+        proportion = proportion,
+        ci = ci,
         samples = samples
       ),
       partition_by = partition_by,

@@ -57,8 +57,10 @@ excluding \code{nrow} is load-bearing for the sub-truncation property
 (\code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix} name,
 \code{range_shape1}, \code{range_shape2}). \code{nrow} IS part of the fit primer: a fit on
 a different truncation is a genuinely different computation.
-\item \strong{hc} -- the parent \code{fit} identity plus the hc-grid row (\code{ci}, \code{nboot},
-\code{est_method}, \code{ci_method}, \code{parametric}).
+\item \strong{hc} -- the parent \code{fit} identity plus the hc-grid row (\code{nboot},
+\code{est_method}, \code{ci_method}, \code{parametric}). \code{ci} is a scalar hc flag applied
+uniformly, not part of the task identity, so it is a carried column rather
+than a primer field.
 }
 
 Function-valued parameters (e.g. \code{min_pmix}) MUST be referenced \strong{by name},

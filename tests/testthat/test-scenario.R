@@ -75,12 +75,12 @@ test_that("scenario-definition: minimal construction stores declarative fields",
   expect_named(
     s$hc,
     c(
-      "proportion",
-      "ci",
       "nboot",
       "est_method",
       "ci_method",
       "parametric",
+      "proportion",
+      "ci",
       "samples"
     )
   )
@@ -312,6 +312,28 @@ test_that("scenario-definition: partition_by rejects an unknown axis", {
         fit = c("dataset", "sim"),
         hc = c("dataset", "sim")
       )
+    )
+  })
+})
+
+test_that("scenario-definition: partition_by rejects ci as an hc axis", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      partition_by = list(hc = c("dataset", "sim", "ci"))
+    )
+  })
+})
+
+test_that("scenario-definition: bundle rejects ci as an hc axis", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      bundle = list(hc = "ci")
     )
   })
 })
@@ -629,16 +651,27 @@ test_that("scenario-definition: ci = FALSE alone is fine with default knobs", {
   )
 })
 
-test_that("scenario-definition: ci = c(FALSE, TRUE) retains bootstrap knobs", {
+test_that("scenario-definition: a vector ci is rejected", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      ci = c(FALSE, TRUE)
+    )
+  })
+})
+
+test_that("scenario-definition: scalar ci = TRUE retains bootstrap knobs", {
   s <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
     seed = 1L,
-    ci = c(FALSE, TRUE),
+    ci = TRUE,
     nboot = c(100, 1000),
     ci_method = "weighted_samples"
   )
-  expect_identical(s$hc$ci, c(FALSE, TRUE))
+  expect_identical(s$hc$ci, TRUE)
   expect_identical(s$hc$nboot, c(100, 1000))
 })
 
@@ -702,7 +735,7 @@ test_that("scenario-definition: print is stable for multiple datasets and vector
       at_boundary_ok = c(TRUE, FALSE),
       range_shape1 = list(c(0.05, 20), c(0.1, 10)),
       proportion = c(0.05, 0.1),
-      ci = c(FALSE, TRUE),
+      ci = TRUE,
       nboot = c(100, 1000),
       est_method = c("multi", "geometric"),
       ci_method = c("weighted_samples", "MACL"),

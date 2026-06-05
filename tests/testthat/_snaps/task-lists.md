@@ -36,17 +36,16 @@
 
     Code
       ssd_scenario_hc_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L,
-      ci = c(FALSE, TRUE), nboot = c(10L, 100L)))
+      ci = TRUE, nboot = c(10L, 100L)))
     Output
       <ssdsims_tasks: hc>
-        axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
-        tasks: 3
-      # A tibble: 3 x 17
+        axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+        tasks: 2
+      # A tibble: 2 x 17
         dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
         <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
       1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
       2 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-      3 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
       # i 9 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
       #   nboot <int>, est_method <chr>, ci_method <chr>, parametric <lgl>,
       #   hc_id <chr>, fit_id <chr>
@@ -55,13 +54,13 @@
 
     Code
       ssd_scenario_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, nrow = c(
-        5L, 10L), seed = 42L, rescale = c(FALSE, TRUE), ci = c(FALSE, TRUE), nboot = c(
-        10L, 100L)))
+        5L, 10L), seed = 42L, rescale = c(FALSE, TRUE), ci = TRUE, nboot = c(10L,
+        100L)))
     Output
       <ssdsims_task_set>
         sample tasks: 2
         fit    tasks: 8
-        hc     tasks: 24
+        hc     tasks: 16
 
 # task-lists: task-table column contracts are pinned
 
