@@ -88,15 +88,19 @@ Terminology used throughout `ssdsims`.
   the per-task **primer**, or becomes a **shard**/**partition** level.
   Its effect is realised *inside* each task: it either fans out within
   the task’s own output (`proportion` → one HC row per value) or is
-  applied uniformly to every task (`ci`, `samples`). Where an **axis**
-  multiplies the *task graph*, a simulation setting only shapes the
-  *contents* of a task’s result. “Scalar” is a near-synonym but a
-  misnomer for `proportion`, which is vector-valued yet still not an
-  axis. In the
+  applied uniformly to every task (`dists`, `ci`, `samples`). Where an
+  **axis** multiplies the *task graph*, a simulation setting only shapes
+  the *contents* of a task’s result. “Scalar” is a near-synonym but a
+  misnomer for `proportion` (which is vector-valued) and for `dists` (a
+  character vector) — both are non-scalar yet still not axes. Settings
+  attach at different **steps**: `dists` is a **fit**-level setting (the
+  `dists` vector handed to every fit task), while `proportion`, `ci`,
+  and `samples` are **hc**-level. In the
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
-  signature the simulation settings (`proportion`, `ci`, `samples`) are
-  grouped together, after the axes and before the partitioning
-  arguments.
+  signature the simulation settings (`dists`, `proportion`, `ci`,
+  `samples`) are grouped together, after the axes and before the
+  partitioning arguments (moving `dists` out of the fit-axis block lands
+  via the `dists-simulation-setting` change).
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is a
   *read-side* concept — query engines (duckplyr / DuckDB) inspect the
@@ -187,6 +191,12 @@ Terminology used throughout `ssdsims`.
 - **`dists`**: The parametric distributions fit to the SSD data (e.g.
   `lnorm`, `gamma`, `llogis`); see
   [`ssdtools::ssd_fit_dists()`](https://bcgov.github.io/ssdtools/reference/ssd_fit_dists.html).
+  A single character vector defining *one* model-averaged fit, applied
+  uniformly to every fit task — a fit-level **simulation setting**
+  (above), **not** a cross-join **axis**: it is absent from
+  `task_axes("fit")`, so it never fans out, enters a **primer**, or
+  becomes a **partition** level. (Fanning out per-distribution would
+  dissolve the model averaging that defines a fit.)
 - **`fits`**: A `fitdists` object holding one or more fitted
   distributions.
 - **`hc`**: Hazard concentration: a quantile of the SSD at a given
@@ -202,4 +212,10 @@ Terminology used throughout `ssdsims`.
 - **`ci_method`**: The method used to compute confidence intervals (e.g.
   `multi_fixed`, `weighted_samples`).
 - **`nboot`**: The number of bootstrap replicates used when computing
-  confidence intervals.
+  confidence intervals. An hc cross-join **axis** (`task_axes("hc")`):
+  distinct values fan out into separate tasks, primers, and shards, so
+  results can be partitioned by `nboot`. It enters the per-task
+  **primer**, giving each value an independent, reproducible bootstrap
+  draw (the bootstrap is the only RNG consumer in hc estimation; the
+  point estimate is analytic). See TARGETS-DESIGN.md §9 for why it stays
+  in the primer rather than sharing one stream across `nboot` values.
