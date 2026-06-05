@@ -4,7 +4,7 @@ pkgdown_sha: a6abe43ed48e58b1de42eba5e5541a5b6c46b46f
 articles:
   defining-a-scenario: defining-a-scenario.html
   sharded-pipeline: sharded-pipeline.html
-last_built: 2026-06-05T18:08Z
+last_built: 2026-06-05T18:17Z
 urls:
   reference: https://poissonconsulting.github.io/ssdsims/reference
   article: https://poissonconsulting.github.io/ssdsims/articles
