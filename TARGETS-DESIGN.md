@@ -2179,24 +2179,25 @@ Mermaid (renders inline on GitHub):
 
 ```mermaid
 flowchart TD
-    define[ssd-define-scenario]
+    %% Archived (green) nodes live in this box — move a node in here when it
+    %% is archived, so the box always holds exactly the `archived`-class nodes.
+    subgraph archived_box [archived]
+        define[ssd-define-scenario]
+        baseline[task-list-loop-baseline]
+        dqinit[dqrng-init]
+        dqstate[local-dqrng-state]
+        primer[task-primer]
+        prims[primer-primitives]
+        partby[partition-by]
+        acc[scenario-accessors]
+        shardrun[shard-runner-baseline]
+        tt[task-tables]
+    end
+
     inputs[scenario-input-types]
-    baseline[task-list-loop-baseline]
-    dqinit[dqrng-init]
-    dqstate[local-dqrng-state]
-    primer[task-primer]
-    prims[primer-primitives]
     postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
-    partby[partition-by]
-    shardrun[shard-runner-baseline]
-
-    acc[scenario-accessors]
-
-    subgraph targets [targets-only plumbing]
-        tt[task-tables]
-        manif[manifest]
-    end
+    manif[manifest]
 
     hive[hive-partitioning]
     cluster[cluster-pipeline]
@@ -2260,6 +2261,8 @@ flowchart TD
     %% --- node status colouring (keep in sync as each change progresses) ---
     %% green = archived, yellow = done (implemented, not yet archived),
     %% red = proposed (artifacts exist, not implemented), unfilled = open (roadmap only)
+    %% When a node becomes archived, give it the `archived` class AND move its
+    %% declaration into the `archived_box` subgraph above.
     classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
     classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
@@ -2273,7 +2276,9 @@ flowchart TD
 **Node colours track each step's status** — green = archived, yellow = done
 (implemented, not yet archived), red = proposed (artifacts exist, not yet
 implemented), unfilled = open (roadmap only). Keep the colouring in sync as
-changes progress.
+changes progress, and **keep the archived (green) nodes collected inside the
+`archived_box` subgraph** — when a step is archived, move its node declaration
+into that box as well as giving it the `archived` class.
 
 `migrate-public-api` depends on `scenario-input-types` (its
 byte-equivalence re-run must exercise the full input surface) and on
