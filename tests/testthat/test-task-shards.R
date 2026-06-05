@@ -1,19 +1,5 @@
-# Gate the tests that actually drive a `targets` pipeline: they spawn a worker
-# that `library(ssdsims)`, so the package must be installed (true under R CMD
-# check, not under a bare `devtools::test()`), and they are slow.
-skip_targets <- function() {
-  testthat::skip_on_cran()
-  testthat::skip_if_not_installed("targets")
-  testthat::skip_if_not_installed("tarchetypes")
-  testthat::skip_if_not_installed("duckplyr")
-  testthat::skip_if_not_installed("ssdsims")
-}
-
-# A small numeric-only dataset: avoids factor/character columns so a draw
-# round-trips through Parquet byte-identically (the byte-identity oracle).
-numeric_dataset <- function() {
-  data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
-}
+# `skip_targets()` and `numeric_dataset()` live in `helper.R` (shared with
+# test-path-axis-growth.R).
 
 # ---- shard structure (task 7.1) --------------------------------------------
 
@@ -510,4 +496,180 @@ test_that("hive: invalidating one parent shard re-runs only the children that re
   expect_false(any(
     c("sample_step_d_2", "fit_step_d_2", "hc_step_d_2") %in% outdated
   ))
+})
+
+# ---- inner-axis growth: atomic byte-stable rewrite (shard-atomic-rewrite) --
+
+test_that("shard-atomic-rewrite: growing a fit inner axis rewrites the fit shards byte-stably and leaves sample cached", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "inner-growth-targets.R")
+  withr::local_dir(dir)
+
+  # First build: one fit task per shard (min_pmix = loose only).
+  saveRDS(FALSE, "grow.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  # Capture each affected fit shard's Parquet before the growth.
+  fit_shard_dirs <- dirname(list.files(
+    "results/fit",
+    pattern = "part.parquet",
+    recursive = TRUE,
+    full.names = TRUE
+  ))
+  expect_gt(length(fit_shard_dirs), 0L)
+  prior <- lapply(file.path(fit_shard_dirs, "part.parquet"), ssd_read_parquet)
+  names(prior) <- fit_shard_dirs
+  expect_true(all(vapply(prior, nrow, integer(1L)) == 1L))
+
+  # Grow the fit grid by one `min_pmix` (an inner axis) and re-source: tar_make
+  # re-reads `_targets.R`, which now builds the two-value scenario. The layout
+  # is unchanged (min_pmix is not a partition_by axis), so the per-layout root
+  # is identical and the shards are rewritten in place, not re-pathed.
+  saveRDS(TRUE, "grow.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  # Exactly the fit shards (and their hc/summary subtree) are stale; the sample
+  # shards - a step the inner-axis growth does not touch - are not.
+  expect_true(all(c("fit_step_d_1", "fit_step_d_2") %in% outdated))
+  expect_false(any(c("sample_step_d_1", "sample_step_d_2") %in% outdated))
+
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  # The sample shards are reported cached by targets and are NOT rebuilt.
+  progress <- targets::tar_progress()
+  sample_progress <- progress$progress[grepl("^sample_step_", progress$name)]
+  expect_identical(unique(sample_progress), "skipped")
+
+  for (d in fit_shard_dirs) {
+    # Whole-file overwrite: still a single Parquet per shard (no in-place append).
+    expect_length(list.files(d, pattern = "[.]parquet$"), 1L)
+    after <- ssd_read_parquet(file.path(d, "part.parquet"))
+    # The shard now carries the larger task set: loose + strict.
+    expect_identical(nrow(after), 2L)
+
+    prior_tbl <- prior[[d]][order(prior[[d]]$fit_id), ]
+    kept <- after[after$fit_id %in% prior_tbl$fit_id, ]
+    kept <- kept[order(kept$fit_id), ]
+    # The row present before the growth reads back byte-identical to the prior
+    # Parquet (the prior task's (seed, primer) unchanged -> same serialised blob).
+    expect_identical(kept$fit_id, prior_tbl$fit_id)
+    expect_identical(kept$fit_blob, prior_tbl$fit_blob)
+    # The shard differs from the prior Parquet only by the added min_pmix row.
+    expect_identical(nrow(after) - nrow(kept), 1L)
+  }
+})
+
+# ---- per-step minimal scenario slice (step-scenario-slice) -----------------
+
+test_that("task-shards: changing an hc-only knob rebuilds only hc and summary", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "slice-invalidation-targets.R")
+  withr::local_dir(dir)
+  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+
+  # Flip the hc-only `samples` knob: only the hc slice changes, so only the hc
+  # shard's command moves; the sample/fit slices (and commands) are untouched.
+  saveRDS(list(dists = "lnorm", samples = TRUE), "knobs.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(c("hc_step_d_1", "summary") %in% outdated))
+  expect_false(any(c("sample_step_d_1", "fit_step_d_1") %in% outdated))
+})
+
+test_that("task-shards: changing a fit-only knob leaves sample cached", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "slice-invalidation-targets.R")
+  withr::local_dir(dir)
+  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+
+  # Flip the fit-only `dists` knob: the fit slice changes (and cascades into the
+  # hc shard that reads the fit shard, and summary), but the sample slice does
+  # not, so the sample shard stays cached.
+  saveRDS(list(dists = c("lnorm", "gamma"), samples = FALSE), "knobs.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(c("fit_step_d_1", "hc_step_d_1", "summary") %in% outdated))
+  expect_false("sample_step_d_1" %in% outdated)
+})
+
+test_that("task-shards: appending a dataset mints new shards and caches existing ones", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  file.copy(
+    test_path("fixtures", "dataset-growth-targets.R"),
+    file.path(dir, "_targets.R")
+  )
+  withr::local_dir(dir)
+  saveRDS(list(d1 = numeric_dataset()), "datasets.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+
+  # Append a second dataset: its shards are new path cells; the per-dataset
+  # `sample` slice keeps d1's shard commands byte-identical, so only d2's shards
+  # (and `summary`) are outdated while every d1 shard stays cached.
+  saveRDS(list(d1 = numeric_dataset(), d2 = numeric_dataset()), "datasets.rds")
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(
+    c("sample_step_d2_1", "fit_step_d2_1", "hc_step_d2_1", "summary") %in%
+      outdated
+  ))
+  expect_false(any(
+    c("sample_step_d1_1", "fit_step_d1_1", "hc_step_d1_1") %in% outdated
+  ))
+})
+
+test_that("task-shards: factory per-task results equal the baseline (slice drops no field)", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "slice-invalidation-targets.R")
+  withr::local_dir(dir)
+  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  scenario <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = "lnorm",
+    partition_by = list(
+      sample = c("dataset", "sim"),
+      fit = c("dataset", "sim"),
+      hc = c("dataset", "sim")
+    )
+  )
+  base <- ssd_run_scenario_baseline(scenario)
+
+  # fit objects equal the baseline's (so the fit slice dropped no consumed field,
+  # and the sample slice fed the same draw upstream). all.equal ignores the nil
+  # TMB external pointers a deserialised fitdists carries.
+  fit_pipe <- ssd_read_parquet("results/fit/**/part.parquet")
+  for (k in seq_along(base$fit$fit_id)) {
+    fp <- decode_obj(fit_pipe$fit_blob[match(
+      base$fit$fit_id[k],
+      fit_pipe$fit_id
+    )])
+    expect_true(isTRUE(all.equal(fp, base$fit$fits[[k]])))
+  }
+
+  # hc estimates equal the baseline's (the hc slice dropped no consumed field).
+  hc_pipe <- ssd_read_parquet("results/hc/**/part.parquet")
+  hc_pipe <- hc_pipe[order(hc_pipe$hc_id, hc_pipe$dist), ]
+  base_hc <- do.call(
+    rbind,
+    Map(
+      function(tb, id) {
+        tb$hc_id <- id
+        tibble::as_tibble(tb)
+      },
+      base$hc$hc,
+      base$hc$hc_id
+    )
+  )
+  base_hc <- base_hc[order(base_hc$hc_id, base_hc$dist), ]
+  expect_equal(hc_pipe$est, base_hc$est)
 })
