@@ -55,8 +55,12 @@ path cell (the `names` are the step's path axes), and writes every shard
 and the summary under the per-layout
 [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md)
 root (so a changed `partition_by`/`bundle` never mixes shard
-granularities). `scenario` is referenced as a global, so editing it
-invalidates the dependent shards.
+granularities). Each step's command depends only on the **minimal
+scenario slice** its runner consumes (`scenario_step_slice()`) rather
+than the bare `scenario` global, so editing a field a step does not read
+leaves the other steps' shards cached. The `sample` slice is built **per
+shard**, carrying only the dataset(s) that shard reads, so appending a
+dataset mints a new shard and leaves every existing shard cached.
 
 ## Invalidation model
 
@@ -64,9 +68,10 @@ The shard targets use **content-hash invalidation over their
 `format = "file"` Parquet outputs** (TARGETS-DESIGN.md section 8),
 observable as **cache-by-existence**: a shard is up to date iff its
 Parquet exists *and* the inputs its body depends on - its task rows, the
-scenario, and the parent shard target(s) it reads - are unchanged. A
-missing Parquet rebuilds; a recomputed shard whose bytes are
-byte-identical leaves its dependents skipped.
+step's minimal scenario slice (`scenario_step_slice()`), and the parent
+shard target(s) it reads - are unchanged. A missing Parquet rebuilds; a
+recomputed shard whose bytes are byte-identical leaves its dependents
+skipped.
 
 Instead of a coarse `sample -> fit -> hc`
 [`tar_combine()`](https://docs.ropensci.org/tarchetypes/reference/tar_combine.html)

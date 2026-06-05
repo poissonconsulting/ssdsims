@@ -94,8 +94,12 @@ changes). <code>NULL</code> (default) uses <code>targets</code>' standard cue.</
 <code>error = "null"</code> target per <code>partition_by</code> path cell (the <code>names</code> are the
 step's path axes), and writes every shard and the summary under the
 per-layout <code><a href="scenario_results_dir.html">scenario_results_dir()</a></code> root (so a changed <code>partition_by</code>/<code>bundle</code>
-never mixes shard granularities). <code>scenario</code> is referenced as a global, so
-editing it invalidates the dependent shards.</p>
+never mixes shard granularities). Each step's command depends only on the
+<strong>minimal scenario slice</strong> its runner consumes (<code>scenario_step_slice()</code>)
+rather than the bare <code>scenario</code> global, so editing a field a step does not
+read leaves the other steps' shards cached. The <code>sample</code> slice is built
+<strong>per shard</strong>, carrying only the dataset(s) that shard reads, so appending a
+dataset mints a new shard and leaves every existing shard cached.</p>
     </div>
     <div class="section level2">
     <h2 id="invalidation-model">Invalidation model<a class="anchor" aria-label="anchor" href="#invalidation-model"></a></h2>
@@ -103,9 +107,10 @@ editing it invalidates the dependent shards.</p>
 
 <p>The shard targets use <strong>content-hash invalidation over their <code>format = "file"</code> Parquet outputs</strong> (TARGETS-DESIGN.md section 8), observable as
 <strong>cache-by-existence</strong>: a shard is up to date iff its Parquet exists <em>and</em> the
-inputs its body depends on - its task rows, the scenario, and the parent shard
-target(s) it reads - are unchanged. A missing Parquet rebuilds; a recomputed
-shard whose bytes are byte-identical leaves its dependents skipped.</p>
+inputs its body depends on - its task rows, the step's minimal scenario slice
+(<code>scenario_step_slice()</code>), and the parent shard target(s) it reads - are
+unchanged. A missing Parquet rebuilds; a recomputed shard whose bytes are
+byte-identical leaves its dependents skipped.</p>
 <p>Instead of a coarse <code>sample -&gt; fit -&gt; hc</code> <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_combine.html" class="external-link">tar_combine()</a></code> barrier (which marks
 the <em>whole</em> downstream step out of date when any one parent shard changes),
 each child shard target names <strong>only the specific parent shard target(s) its
