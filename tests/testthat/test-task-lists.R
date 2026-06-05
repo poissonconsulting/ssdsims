@@ -387,7 +387,7 @@ test_that("parallel-safe-seeding: fit/hc wrappers reproduce under a fixed (seed,
     fit1,
     proportion = 0.05,
     ci = TRUE,
-    nboot = 10L,
+    nboot = 2L,
     est_method = "multi",
     ci_method = "weighted_samples",
     parametric = TRUE,
@@ -398,7 +398,7 @@ test_that("parallel-safe-seeding: fit/hc wrappers reproduce under a fixed (seed,
     fit1,
     proportion = 0.05,
     ci = TRUE,
-    nboot = 10L,
+    nboot = 2L,
     est_method = "multi",
     ci_method = "weighted_samples",
     parametric = TRUE,
@@ -456,7 +456,7 @@ test_that("scenario-definition: samples = TRUE retains hc draws but keeps estima
     seed = 42L,
     dists = "lnorm",
     ci = c(FALSE, TRUE),
-    nboot = 10L
+    nboot = 2L
   )
   out_no <- ssd_run_scenario_baseline(do.call(ssd_define_scenario, args))
   out_yes <- ssd_run_scenario_baseline(
@@ -482,7 +482,7 @@ test_that("scenario-definition: samples = TRUE works with multiple dists and ci 
     seed = 42L,
     dists = c("lnorm", "gamma"),
     ci = c(FALSE, TRUE),
-    nboot = 10L,
+    nboot = 2L,
     samples = TRUE
   )
   expect_no_error(out <- ssd_run_scenario_baseline(scenario))

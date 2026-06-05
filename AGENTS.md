@@ -214,6 +214,9 @@ See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
 
 ## Pull Requests
 
+- **Always update PR title and description** when opening the PR and after committing.
+  The description must capture the
+change's *current* state, not a revision/process log.
 - **PRs are squash-merged**, so the **PR title becomes the single commit on
   `main`** — and that commit is what `fledge` reads to build `NEWS.md` (see
   *Update package version and news* above). The PR title is therefore the
