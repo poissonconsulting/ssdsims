@@ -2295,8 +2295,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun archived
-    class inputs,postcheck,manif,migrate,hive,cluster,rewrite,pathgrow proposed
-    class slice done
+    class inputs,postcheck,manif,migrate,cluster,rewrite,pathgrow proposed
+    class slice,hive done
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
@@ -2309,11 +2309,13 @@ and **keep the archived (green) nodes collected inside the `archived_box`
 subgraph** — when a step is archived, move its node declaration into that box
 as well as giving it the `archived` class.
 
-**Status snapshot (2026-06-05).** Twelve changes carry artifacts; `step-scenario-slice`
-has since been **implemented** (done/yellow — slice helper + per-dataset `sample`
-slice landed in `R/targets-runner.R`, not yet archived), and the remaining eleven
-stay **proposed but unimplemented** (verified against the source tree, not just the
-task lists). The four original proposals:
+**Status snapshot (2026-06-05).** Twelve changes carry artifacts;
+`hive-partitioning` and `step-scenario-slice` have since been **implemented**
+(done/yellow — `hive-partitioning` pinned the content-hash model + per-child
+Option-3 edges; `step-scenario-slice` landed the slice helper + per-dataset
+`sample` slice in `R/targets-runner.R`; neither is archived yet), and the
+remaining ten stay **proposed but unimplemented** (verified against the source
+tree, not just the task lists). The four original proposals:
 - `task-rng-postcheck` — `dqrng` is still in `Imports` (not `Suggests`); no
   `dqrng_usable()`, no `chk_dqrng_backend_intact()`, no exit-bookend wiring.
 - `scenario-input-types` — `ssd_data()` still rejects non-data-frame input
@@ -2330,7 +2332,10 @@ Eight further changes were proposed in this round (all `openspec validate
 - `hive-partitioning` — **re-scoped** to the caching/invalidation half only
   (pin the content-hash model, per-child Option-3 upstream edges, settle the
   data-step fold); its storage/read half already landed in `task-shards` /
-  `shard-runner`, so it is not re-specified.
+  `shard-runner`, so it is not re-specified. Now **implemented** (done/yellow,
+  about to be archived): the content-hash model and per-child edges are in
+  `R/targets-runner.R`, so the three minimal-rebuild contracts can finalise
+  their cached-vs-rebuilt assertions against it.
 - `shard-atomic-rewrite`, `path-axis-growth`, `step-scenario-slice` — the
   three minimal-rebuild contracts (`task-shards` deltas); each **finalises its
   cached-vs-rebuilt assertion against the invalidation model `hive-partitioning`
