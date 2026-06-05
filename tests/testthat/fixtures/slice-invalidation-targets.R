@@ -13,8 +13,8 @@ knobs <- readRDS("knobs.rds")
 scenario <- ssd_define_scenario(
   ssd_data(d = readRDS("data.rds")),
   nsim = 1L,
-  nrow = 6L,
   seed = 42L,
+  nrow = 6L,
   dists = knobs$dists,
   samples = knobs$samples,
   partition_by = list(
