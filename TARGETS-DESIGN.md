@@ -1898,19 +1898,25 @@ lab, and `cluster-pipeline` ports a crew + SLURM shape the crew labs
 already ran end to end (see §4, §6). These steps are therefore
 *porting* validated behaviour into the package, not discovering it.
 
-- **`scenario-input-types`** — Extend `ssd_define_scenario()` to accept
-  the remaining input types `ssd_run_scenario()` handles today —
-  `fitdists`, `tmbfit`, a generator function, and a function-name string —
-  not just data frames / lists of data frames. Each non-data-frame input
-  is a data *generator*, **materialised once in the constructor** to an
-  inline tibble (datasets are tiny; the scenario transports the realised
-  bytes). Generation is seeded **independently of the scenario** by a
-  dedicated `ssd_data(..., .seed = NULL)`, with the dataset *name* as the
-  dqrng stream, under a dqrng-only contract enforced by a post-hoc
-  RNG-state check (base R aborts; dqrng needs `.seed`; pure needs none);
-  the scoped run leaves global `.Random.seed` unchanged. **Depends on**
-  `task-primer` / `local-dqrng-state` (for the scoped, name-streamed
-  draw). Name-only regeneration and provenance are the deferred
+- **`scenario-input-types`** — Accept the generator inputs
+  `ssd_run_scenario()` handles today — `fitdists`, `tmbfit`, a generator
+  function, and a function-name string — in the declarative path, via a
+  **two-helper** split (reworked during exploration; see the change's
+  `exploration/` notes). A new **`ssd_gen(..., .n, .seed)`** accepts *only*
+  generator-style inputs and **materialises each once** to an inline `Conc`
+  tibble of `.n` rows (datasets are tiny; the scenario transports the
+  realised bytes), seeded **independently of the scenario** with the dataset
+  *name* as the dqrng stream and a **required** `.seed`/`.n`; it returns a
+  classed `ssdsims_gen` spliceable into the collection. `ssd_data()` is
+  **renamed `ssd_scenario_data()`** (escaping the `ssdtools::ssd_data(x)`
+  clash), and `ssd_define_scenario()` accepts **only** that collection (no
+  bare-frame / list / `name=` forms) — so generation happens *before*
+  construction and the constructor stays **RNG-free**. **Depends on**
+  `task-primer` / `local-dqrng-state` (the scoped, name-streamed draw) and
+  **`task-rng-postcheck`** — `ssd_gen()` reuses its `dqrng_usable()` gate and
+  `chk_dqrng_backend_intact()` per-draw witness to enforce the dqrng-only
+  contract (the DAG shows the solid `task-rng-postcheck → scenario-input-types`
+  edge). Name-only regeneration and provenance are the deferred
   `dataset-provenance` step.
 - **`task-rng-postcheck`** — Per-task RNG-backend **postcondition**.
   Each `*_data_task_primer()` wrapper, when the task *ends*, verifies
@@ -1929,7 +1935,10 @@ already ran end to end (see §4, §6). These steps are therefore
   Rides inside the per-task primitives, so it carries into the `targets`
   shard body and §7 `replay-helper` — each shard self-verifies in its own
   process. Depends on `primer-primitives` (**landed**) — so it is
-  unblocked — and is orthogonal to `task-primer`.
+  unblocked — and is orthogonal to `task-primer`. **`scenario-input-types`
+  now depends on it**: `ssd_gen()` reuses the same `dqrng_usable()` gate and
+  `chk_dqrng_backend_intact()` witness (the solid `task-rng-postcheck →
+  scenario-input-types` DAG edge).
 - **`migrate-public-api`** — *Cosmetic, independent of the targets
   work (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
   `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
@@ -2307,6 +2316,9 @@ flowchart TD
     define --> partby
     define --> inputs
     primer --> inputs
+    %% scenario-input-types' ssd_gen() reuses task-rng-postcheck's
+    %% dqrng_usable() gate and chk_dqrng_backend_intact() per-draw witness.
+    postcheck --> inputs
     define --> acc
     dqinit --> dqstate
     dqstate --> primer
@@ -2397,8 +2409,10 @@ scenario slice, all landed in `R/targets-runner.R`), and the remaining ten stay
 task lists). The four original proposals:
 - `task-rng-postcheck` — `dqrng` is still in `Imports` (not `Suggests`); no
   `dqrng_usable()`, no `chk_dqrng_backend_intact()`, no exit-bookend wiring.
-- `scenario-input-types` — `ssd_data()` still rejects non-data-frame input
-  and has no `.seed`; no `classify_input()`.
+- `scenario-input-types` — `ssd_data()` still rejects non-data-frame input;
+  not yet renamed to `ssd_scenario_data()`, no `ssd_gen()`. Now also blocked
+  on `task-rng-postcheck` (the `dqrng_usable()`/`chk_dqrng_backend_intact()`
+  helpers it reuses).
 - `migrate-public-api` — the three public step functions still seed via the
   L'Ecuyer-CMRG lattice; only the prerequisite `*_data_task_primer()` wrappers
   (from the archived `primer-primitives`) exist, so the change itself is
