@@ -32,8 +32,8 @@ scalar \code{ci} applied uniformly and bootstrap-only knobs \code{NA} when
 \code{fit_id}, stacked, and written as one Parquet at the shard's partition path.
 }
 \examples{
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 \donttest{
-library(dqrng)
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 1L,
@@ -60,4 +60,5 @@ ssd_run_hc_step(
   file.path(dir, "hc")
 )
 }
+\dontshow{\}) # examplesIf}
 }

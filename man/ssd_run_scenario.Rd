@@ -227,17 +227,21 @@ Run Scenario
 
 }}
 \examples{
-library(dqrng)
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
-
+\dontshow{\}) # examplesIf}
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
-
+\dontshow{\}) # examplesIf}
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 ssd_run_scenario(fit[[1]], nsim = 3)
-
+\dontshow{\}) # examplesIf}
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 ssd_run_scenario("rlnorm", nsim = 3)
-
+\dontshow{\}) # examplesIf}
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
-
+\dontshow{\}) # examplesIf}
 }

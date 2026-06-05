@@ -258,9 +258,8 @@ user_rng_providers <- function() {
 #'   was a no-op.
 #' @seealso [withr::local_seed()], [dqrng::dqset.seed()].
 #' @export
-#' @examples
+#' @examplesIf requireNamespace("dqrng", quietly = TRUE)
 #'
-#' library(dqrng)
 #' local_dqrng_backend()
 #' dqrng::dqset.seed(42, stream = c(1L, 2L))
 #' runif(3)

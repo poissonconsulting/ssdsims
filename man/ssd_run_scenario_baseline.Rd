@@ -44,7 +44,7 @@ their materialised functions off the scenario via \code{\link[=scenario_min_pmix
 search.
 }
 \examples{
-library(dqrng)
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 1L,
@@ -54,4 +54,5 @@ scenario <- ssd_define_scenario(
 )
 out <- ssd_run_scenario_baseline(scenario)
 out$hc
+\dontshow{\}) # examplesIf}
 }

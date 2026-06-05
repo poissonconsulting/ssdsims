@@ -54,9 +54,8 @@ set_dqrng_state <- function(state) {
 #' @seealso [withr::local_seed()], [local_dqrng_backend()],
 #'   [local_lecuyer_cmrg_state()].
 #' @export
-#' @examples
+#' @examplesIf requireNamespace("dqrng", quietly = TRUE)
 #'
-#' library(dqrng)
 #' local_dqrng_backend()
 #' local_dqrng_state(42, c(1L, 2L))
 #' runif(3)

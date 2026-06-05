@@ -46,13 +46,14 @@ Both require an active dqrng backend: they abort unless a
 seeding base R's Mersenne-Twister.
 }
 \examples{
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 
-library(dqrng)
 local_dqrng_backend()
 local_dqrng_state(42, c(1L, 2L))
 runif(3)
 
 with_dqrng_state(42, c(1L, 2L), runif(3))
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[withr:local_seed]{withr::local_seed()}}, \code{\link[=local_dqrng_backend]{local_dqrng_backend()}},

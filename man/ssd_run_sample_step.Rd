@@ -27,11 +27,12 @@ Hive partition path. Each task's draw is tagged with its \code{sample_id} and a
 \code{.row} order index so a downstream \code{fit} shard can isolate and re-order it.
 }
 \examples{
-library(dqrng)
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()
 ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=ssd_run_fit_step]{ssd_run_fit_step()}}, \code{\link[=ssd_run_hc_step]{ssd_run_hc_step()}}, \code{\link[=ssd_scenario_sample_shards]{ssd_scenario_sample_shards()}}.

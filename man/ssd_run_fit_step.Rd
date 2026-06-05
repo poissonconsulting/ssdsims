@@ -32,8 +32,8 @@ RNG-free, section 5), and fits with the per-task \verb{(seed, primer)} through
 shard's partition path.
 }
 \examples{
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 \donttest{
-library(dqrng)
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 1L,
@@ -54,4 +54,5 @@ ssd_run_fit_step(
   file.path(dir, "fit")
 )
 }
+\dontshow{\}) # examplesIf}
 }

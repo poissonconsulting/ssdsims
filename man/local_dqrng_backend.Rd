@@ -44,11 +44,12 @@ activation requires the caller to have already run \code{library(dqrng)} (\verb{
 rather than loading dqrng or falling back to base R's RNG.
 }
 \examples{
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 
-library(dqrng)
 local_dqrng_backend()
 dqrng::dqset.seed(42, stream = c(1L, 2L))
 runif(3)
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[withr:local_seed]{withr::local_seed()}}, \code{\link[dqrng:dqset.seed]{dqrng::dqset.seed()}}.

@@ -45,7 +45,7 @@ No \code{targets}, \code{crew}, manifest, or cloud upload - this is the plain-R 
 loop only, de-risking \code{hive-partitioning}/\code{task-tables}.
 }
 \examples{
-library(dqrng)
+\dontshow{if (requireNamespace("dqrng", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 1L,
@@ -55,6 +55,7 @@ scenario <- ssd_define_scenario(
 )
 run <- ssd_run_scenario_shards(scenario)
 run$hc
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}} (the in-memory reference oracle),

@@ -191,8 +191,7 @@ ssd_scenario_tasks <- function(scenario, step = NULL) {
 #'   corresponding task table augmented with a list column of per-task results
 #'   (`sample` draws, `fits` objects, and `hc` tibbles).
 #' @export
-#' @examples
-#' library(dqrng)
+#' @examplesIf requireNamespace("dqrng", quietly = TRUE)
 #' scenario <- ssd_define_scenario(
 #'   ssddata::ccme_boron,
 #'   nsim = 1L,
