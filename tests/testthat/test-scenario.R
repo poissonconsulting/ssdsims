@@ -84,6 +84,7 @@ test_that("scenario-definition: minimal construction stores declarative fields",
       "samples"
     )
   )
+  expect_identical(s$hc$ci, FALSE)
 })
 
 test_that("scenario-definition: stores dataset names, not data frames", {
