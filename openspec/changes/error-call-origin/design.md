@@ -38,8 +38,10 @@ land at any time (`TARGETS-DESIGN.md` §12).
 - Apply the reference pattern uniformly: `call <- environment()` at the top of
   the exported function, threaded as `call =` to `abort_chk()` and to private
   validators (default `call = rlang::caller_env()`).
-- Element-wise validation that would otherwise surface a wrapper frame
-  (`chk_all` / `purrr::walk`) uses a plain `for` loop.
+- Anticipated user-input validation that would otherwise surface a wrapper
+  frame (`chk_all` / `purrr::walk`) keeps the functional and wraps it in
+  `rlang::try_fetch()`, re-raising with the public `call`; unexpected errors are
+  left to plain primitives.
 - Regression coverage asserting the origin per audited function.
 
 **Non-Goals:**
@@ -83,18 +85,36 @@ user called it via another wrapper. *Alternative considered:* setting
 to the many independent `chk_*()` sites and loses the per-check message
 locations.
 
-### Decision: plain `for` loops replace `chk_all` / `purrr::walk` in validation paths
+### Decision: distinguish anticipated user errors from unexpected ones
 
-`chk::chk_all(x, chk_fun, ...)` and `purrr::walk(x, chk_fun)` both add their own
-frame, so a failing element reports `Error in \`chk_all()\`:` /
-`Error in \`map()\`:`. Where such a wrapper sits on a validation path of an
-exported function (concretely `chk_all(min_pmix, chk::chk_function, formals = 1L)`
-and the `range_shape1` / `range_shape2` `chk_all` checks in
-`ssd_fit_dists_sims()`), it is rewritten as a plain `for` loop that calls the
-element check with `call = call` (or wraps the failing element in
-`abort_chk(..., call = call)`). This is the explicit exception to the
-"prefer `purrr` functionals" rule recorded in `AGENTS.md`'s coding rules. Loops
-**not** on a user-reachable validation path are left as `purrr` functionals.
+The contract targets **anticipated, legitimate user errors** — validation of
+user input — and not errors we do not expect (internal/programming failures).
+The distinction drives the tool:
+
+- **Anticipated user errors (validation): `rlang::try_fetch()` around a
+  functional.** `chk::chk_all(x, chk_fun, ...)` and `purrr::walk(x, chk_fun)`
+  add their own frame, so a failing element reports `Error in \`chk_all()\`:` /
+  `Error in \`map()\`:`. Rather than abandon the functional for a hand-rolled
+  `for` loop, the validation keeps the `purrr::map()` / `walk()` and wraps it in
+  `rlang::try_fetch()`, catching the condition and re-raising it with the public
+  frame — `chk::abort_chk(msg, call = call)` (or `rlang::abort(..., parent = cnd,
+  call = call)`). The header then names the public function while the iteration
+  stays functional (consistent with the tidyverse/rlang alignment). The concrete
+  cases are `chk_all(min_pmix, chk::chk_function, formals = 1L)` and the
+  `range_shape1` / `range_shape2` `chk_all` checks in `ssd_fit_dists_sims()`:
+  `try_fetch()` around a `map()`, not a `for` loop.
+- **Unexpected errors: plain looping primitives are fine.** Iteration that is
+  not user-input validation — and conditions we do not anticipate — needs no
+  origin handling: an unexpected error surfacing an internal frame is acceptable
+  (it is a bug to fix, not a user-facing validation message), so ordinary
+  functionals or plain loops are used without `try_fetch()`. The contract does
+  not constrain these.
+
+*Alternative considered:* blanket-replacing every `chk_all` / `purrr::walk` on a
+validation path with a plain `for` loop (the earlier draft) — rejected per PR
+review: it discards the functional style unnecessarily and conflates the two
+error classes; `try_fetch()` fixes the origin of *anticipated* errors while
+keeping `map()`.
 
 ### Decision: prefer the validator's own `call` argument; fall back to `abort_chk`
 
@@ -112,13 +132,14 @@ the origin: `testthat::expect_error(..., class = "chk_error")` (or the relevant
 condition class) combined with `testthat::expect_snapshot()` of the rendered
 error so the `Error in \`ssd_*()\`:` header is pinned and a future re-leak of
 an internal frame (`chk_all` / `purrr` / a helper) fails the snapshot. Snapshots
-also pin the per-element message wording changed by dropping `chk_all`.
+also pin the message wording changed by re-raising via `try_fetch()`.
 
 ## Risks / Trade-offs
 
-- **Message wording drift from dropping `chk_all`** → the per-element message
-  text changes when `chk_all` is replaced by a loop; mitigated by snapshotting
-  the rendered errors so the new wording is reviewed once and pinned.
+- **Message wording drift from re-raising `chk_all`** → the message text changes
+  when the raw `chk_all` is wrapped in `try_fetch()` and re-raised with the
+  public `call`; mitigated by snapshotting the rendered errors so the new
+  wording is reviewed once and pinned.
 - **`call <- environment()` vs `rlang::caller_env()` confusion** → standardise
   on `environment()` captured in the *public* function and `caller_env()` as the
   default in *private* validators, exactly as `R/data.R` does; documented in the
@@ -126,9 +147,10 @@ also pin the per-element message wording changed by dropping `chk_all`.
 - **Incomplete audit (a leaked frame slips through)** → the per-function
   snapshot tests are the backstop; the audit list in `tasks.md` enumerates every
   exported function so none is skipped.
-- **Loops where `purrr` reads better** → accepted, narrowly: only validation
-  paths that would surface a wrapper frame are converted; non-validation
-  functionals stay `purrr`.
+- **Over-wrapping with `try_fetch()`** → accepted, narrowly: only *anticipated
+  user-input* validation paths are wrapped (to fix the origin); non-validation
+  functionals and unexpected-error iteration stay plain, so `try_fetch()` does
+  not creep into hot loops or mask genuine bugs.
 
 ## Open Questions
 
