@@ -4,15 +4,17 @@ fit shards the shard's tasks reference (each once - an hc shard typically
 spans several fit shards), isolates each task's fit by fit_id,
 deserialises the fitdists object, and estimates the hazard concentration
 with the per-task (seed, primer) through hc_data_task_primer(). Each
-task's hc tibble (one or more rows - the proportion fan-out and the
-ci = FALSE collapse, section 1.2) is tagged with its hc_id and parent
+task's hc tibble (one or more rows - the proportion fan-out, with the
+scalar ci applied uniformly and bootstrap-only knobs NA when
+ci = FALSE) is tagged with its hc_id and parent
 fit_id, stacked, and written as one Parquet at the shard's partition path."><meta property="og:description" content="Runs the hc tasks bundled into one shard: reads the distinct set of parent
 fit shards the shard's tasks reference (each once - an hc shard typically
 spans several fit shards), isolates each task's fit by fit_id,
 deserialises the fitdists object, and estimates the hazard concentration
 with the per-task (seed, primer) through hc_data_task_primer(). Each
-task's hc tibble (one or more rows - the proportion fan-out and the
-ci = FALSE collapse, section 1.2) is tagged with its hc_id and parent
+task's hc tibble (one or more rows - the proportion fan-out, with the
+scalar ci applied uniformly and bootstrap-only knobs NA when
+ci = FALSE) is tagged with its hc_id and parent
 fit_id, stacked, and written as one Parquet at the shard's partition path."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -58,8 +60,9 @@ fit_id, stacked, and written as one Parquet at the shard's partition path."></he
 spans several fit shards), isolates each task's fit by <code>fit_id</code>,
 deserialises the <code>fitdists</code> object, and estimates the hazard concentration
 with the per-task <code>(seed, primer)</code> through <code>hc_data_task_primer()</code>. Each
-task's hc tibble (one or more rows - the <code>proportion</code> fan-out and the
-<code>ci = FALSE</code> collapse, section 1.2) is tagged with its <code>hc_id</code> and parent
+task's hc tibble (one or more rows - the <code>proportion</code> fan-out, with the
+scalar <code>ci</code> applied uniformly and bootstrap-only knobs <code>NA</code> when
+<code>ci = FALSE</code>) is tagged with its <code>hc_id</code> and parent
 <code>fit_id</code>, stacked, and written as one Parquet at the shard's partition path.</p>
     </div>
 
@@ -111,21 +114,21 @@ parent <code>fit</code> path-axis values and <code>fit_id</code>, <code>seed</co
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKy6uhK/file367c4ea425fe/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmp3RxPfy/file36d8451b40d/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"</span>
 <span class="r-in"><span><span class="fu"><a href="ssd_run_fit_step.html">ssd_run_fit_step</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_fit_shards.html">ssd_scenario_fit_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKy6uhK/file367c4ea425fe/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmp3RxPfy/file36d8451b40d/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
 <span class="r-in"><span><span class="fu">ssd_run_hc_step</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_hc_shards.html">ssd_scenario_hc_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKy6uhK/file367c4ea425fe/hc/dataset=ccme_boron/sim=1/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmp3RxPfy/file36d8451b40d/hc/dataset=ccme_boron/sim=1/part.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

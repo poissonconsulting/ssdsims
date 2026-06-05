@@ -37,12 +37,12 @@ scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 2L,
   seed = 42L,
-  ci = c(FALSE, TRUE)
+  ci = TRUE
 )
 ssd_scenario_hc_shards(scenario)
 #> # A tibble: 2 × 3
 #>   dataset      sim               tasks
 #>   <chr>      <int> <list<tibble[,19]>>
-#> 1 ccme_boron     1            [2 × 19]
-#> 2 ccme_boron     2            [2 × 19]
+#> 1 ccme_boron     1            [1 × 19]
+#> 2 ccme_boron     2            [1 × 19]
 ```

@@ -70,7 +70,7 @@ scenario <- ssd_define_scenario(
 out <- ssd_run_scenario_baseline(scenario)
 out$hc
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
 #>   tasks: 1
 #> # A tibble: 1 × 18
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    

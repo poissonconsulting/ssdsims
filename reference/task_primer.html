@@ -110,8 +110,10 @@ excluding <code>nrow</code> is load-bearing for the sub-truncation property
 (<code>rescale</code>, <code>computable</code>, <code>at_boundary_ok</code>, <code>min_pmix</code> name,
 <code>range_shape1</code>, <code>range_shape2</code>). <code>nrow</code> IS part of the fit primer: a fit on
 a different truncation is a genuinely different computation.</p></li>
-<li><p><strong>hc</strong> – the parent <code>fit</code> identity plus the hc-grid row (<code>ci</code>, <code>nboot</code>,
-<code>est_method</code>, <code>ci_method</code>, <code>parametric</code>).</p></li>
+<li><p><strong>hc</strong> – the parent <code>fit</code> identity plus the hc-grid row (<code>nboot</code>,
+<code>est_method</code>, <code>ci_method</code>, <code>parametric</code>). <code>ci</code> is a scalar hc flag applied
+uniformly, not part of the task identity, so it is a carried column rather
+than a primer field.</p></li>
 </ul><p>Function-valued parameters (e.g. <code>min_pmix</code>) MUST be referenced <strong>by name</strong>,
 not by function value, so a recompile or JIT does not move a task's primer.</p>
     </div>

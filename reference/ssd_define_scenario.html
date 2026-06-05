@@ -74,12 +74,12 @@ and has <strong>no</strong> dependency on <code>targets</code>.</p>
 <span>  min_pmix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span>,</span>
 <span>  range_shape1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  range_shape2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
-<span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  nboot <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>  est_method <span class="op">=</span> <span class="st">"multi"</span>,</span>
 <span>  ci_method <span class="op">=</span> <span class="st">"weighted_samples"</span>,</span>
 <span>  parametric <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
+<span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  samples <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  partition_by <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  bundle <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -165,14 +165,6 @@ upper bounds for the shape1 parameter.</p></dd>
 upper bounds for the shape2 parameter.</p></dd>
 
 
-<dt id="arg-proportion">proportion<a class="anchor" aria-label="anchor" href="#arg-proportion"></a></dt>
-<dd><p>A numeric vector of proportion values to estimate hazard concentrations for.</p></dd>
-
-
-<dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
-<dd><p>A flag specifying whether to estimate confidence intervals (by bootstrapping).</p></dd>
-
-
 <dt id="arg-nboot">nboot<a class="anchor" aria-label="anchor" href="#arg-nboot"></a></dt>
 <dd><p>A count of the number of bootstrap samples to use to estimate the confidence limits. A value of 10,000 is recommended for official guidelines.</p></dd>
 
@@ -211,6 +203,14 @@ calculate the confidence limits (and SE) from the single set of samples.</p></dd
 <dd><p>A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.</p></dd>
 
 
+<dt id="arg-proportion">proportion<a class="anchor" aria-label="anchor" href="#arg-proportion"></a></dt>
+<dd><p>A numeric vector of proportion values to estimate hazard concentrations for.</p></dd>
+
+
+<dt id="arg-ci">ci<a class="anchor" aria-label="anchor" href="#arg-ci"></a></dt>
+<dd><p>A flag specifying whether to estimate confidence intervals (by bootstrapping).</p></dd>
+
+
 <dt id="arg-samples">samples<a class="anchor" aria-label="anchor" href="#arg-samples"></a></dt>
 <dd><p>A logical scalar (default <code>FALSE</code>): retain the bootstrap draws
 in the hc result's <code>samples</code> list-column (passed to <code><a href="https://bcgov.github.io/ssdtools/reference/ssd_hc.html" class="external-link">ssdtools::ssd_hc()</a></code>).
@@ -228,8 +228,9 @@ that step (one shard per path cell; the inner complement rides as Parquet
 columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: <code>sample</code> = <code>dataset</code>, <code>sim</code>, <code>replace</code>; <code>fit</code> adds
 <code>nrow</code>, <code>rescale</code>, <code>computable</code>, <code>at_boundary_ok</code>, <code>min_pmix</code>,
-<code>range_shape1</code>, <code>range_shape2</code>; <code>hc</code> adds <code>ci</code>, <code>nboot</code>, <code>est_method</code>,
-<code>ci_method</code>, <code>parametric</code>. <code>"nrow"</code> is rejected only for <code>sample</code> (the
+<code>range_shape1</code>, <code>range_shape2</code>; <code>hc</code> adds <code>nboot</code>, <code>est_method</code>,
+<code>ci_method</code>, <code>parametric</code> (<code>ci</code> is a scalar hc flag, not an axis).
+<code>"nrow"</code> is rejected only for <code>sample</code> (the
 shared draw carries no <code>nrow</code> axis; the <code>fit</code> step truncates it inline), and
 is a valid path axis for <code>fit</code>/<code>hc</code>. Steps partition <strong>independently</strong> -
 there is no cross-step constraint; a step may be finer or coarser than its
@@ -284,11 +285,16 @@ accepted in four forms (routed through the same <code>Conc</code> validation):</
 </ol><p>Supplying both a named list and <code>name=</code> is an error.</p>
     </div>
     <div class="section level2">
-    <h2 id="ci-false"><code>ci = FALSE</code><a class="anchor" aria-label="anchor" href="#ci-false"></a></h2>
-    <p>When <code>ci = FALSE</code> is the only confidence-interval value, the bootstrap-only
-knobs <code>nboot</code>, <code>ci_method</code>, and <code>parametric</code> are meaningless. Passing any of
-them in that case is an error; set <code>ci = c(FALSE, TRUE)</code> to enable bootstrap,
-or omit the knobs.</p>
+    <h2 id="ci"><code>ci</code><a class="anchor" aria-label="anchor" href="#ci"></a></h2>
+    <p><code>ci</code> is a scalar flag (not a cross-join axis): the point estimate <code>est</code> is
+invariant to <code>ci</code> - it is computed analytically from the fit, independent of
+the bootstrap and RNG - so a single <code>ci = TRUE</code> run is a strict superset of
+<code>ci = FALSE</code> (same <code>est</code>, plus the <code>se</code>/<code>lcl</code>/<code>ucl</code> columns). The choice is
+scenario-wide either/or: <code>ci = FALSE</code> for cheap, bootstrap-free point
+estimates, or <code>ci = TRUE</code> for estimates plus confidence intervals. When
+<code>ci = FALSE</code>, the bootstrap-only knobs <code>nboot</code>, <code>ci_method</code>, and <code>parametric</code>
+are meaningless; passing any of them in that case is an error, so set
+<code>ci = TRUE</code> to enable bootstrap, or omit the knobs.</p>
     </div>
 
     <div class="section level2">
@@ -309,12 +315,12 @@ or omit the knobs.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     range_shape1: {0.05, 20}</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     range_shape2: {0.05, 20}</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   hc grid:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     proportion: 0.05</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     ci: FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     nboot: 1000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     est_method: multi</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     ci_method: weighted_samples</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     parametric: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     proportion: 0.05</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     ci: FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     samples: FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   partition_by:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sample: dataset, sim, replace</span>
@@ -323,7 +329,7 @@ or omit the knobs.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   bundle:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sample: </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

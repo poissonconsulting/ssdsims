@@ -26,12 +26,12 @@ ssd_define_scenario(
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
-  proportion = 0.05,
-  ci = FALSE,
   nboot = 1000,
   est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  proportion = 0.05,
+  ci = FALSE,
   samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
@@ -129,16 +129,6 @@ ssd_define_scenario(
   A list of numeric vectors of length two of the lower and upper bounds
   for the shape2 parameter.
 
-- proportion:
-
-  A numeric vector of proportion values to estimate hazard
-  concentrations for.
-
-- ci:
-
-  A flag specifying whether to estimate confidence intervals (by
-  bootstrapping).
-
 - nboot:
 
   A count of the number of bootstrap samples to use to estimate the
@@ -183,6 +173,16 @@ ssd_define_scenario(
   opposed to non-parametrically resampling the original data with
   replacement.
 
+- proportion:
+
+  A numeric vector of proportion values to estimate hazard
+  concentrations for.
+
+- ci:
+
+  A flag specifying whether to estimate confidence intervals (by
+  bootstrapping).
+
 - samples:
 
   A logical scalar (default `FALSE`): retain the bootstrap draws in the
@@ -204,13 +204,14 @@ ssd_define_scenario(
   a subset of that step's axis vocabulary: `sample` = `dataset`, `sim`,
   `replace`; `fit` adds `nrow`, `rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc`
-  adds `ci`, `nboot`, `est_method`, `ci_method`, `parametric`. `"nrow"`
-  is rejected only for `sample` (the shared draw carries no `nrow` axis;
-  the `fit` step truncates it inline), and is a valid path axis for
-  `fit`/`hc`. Steps partition **independently** - there is no cross-step
-  constraint; a step may be finer or coarser than its neighbour on a
-  shared axis (the m:n parent-shard relationship is resolved at the read
-  layer). Steps left unnamed take their documented defaults
+  adds `nboot`, `est_method`, `ci_method`, `parametric` (`ci` is a
+  scalar hc flag, not an axis). `"nrow"` is rejected only for `sample`
+  (the shared draw carries no `nrow` axis; the `fit` step truncates it
+  inline), and is a valid path axis for `fit`/`hc`. Steps partition
+  **independently** - there is no cross-step constraint; a step may be
+  finer or coarser than its neighbour on a shared axis (the m:n
+  parent-shard relationship is resolved at the read layer). Steps left
+  unnamed take their documented defaults
   (`sample = c("dataset", "sim", "replace")`,
   `fit = c("dataset", "sim", "nrow", "rescale")`,
   `hc = c("dataset", "sim")`; these supersede `TARGETS-DESIGN.md`
@@ -275,12 +276,18 @@ For convenience, bare data frame input is also accepted in four forms
 
 Supplying both a named list and `name=` is an error.
 
-## `ci = FALSE`
+## `ci`
 
-When `ci = FALSE` is the only confidence-interval value, the
-bootstrap-only knobs `nboot`, `ci_method`, and `parametric` are
-meaningless. Passing any of them in that case is an error; set
-`ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knobs.
+`ci` is a scalar flag (not a cross-join axis): the point estimate `est`
+is invariant to `ci` - it is computed analytically from the fit,
+independent of the bootstrap and RNG - so a single `ci = TRUE` run is a
+strict superset of `ci = FALSE` (same `est`, plus the `se`/`lcl`/`ucl`
+columns). The choice is scenario-wide either/or: `ci = FALSE` for cheap,
+bootstrap-free point estimates, or `ci = TRUE` for estimates plus
+confidence intervals. When `ci = FALSE`, the bootstrap-only knobs
+`nboot`, `ci_method`, and `parametric` are meaningless; passing any of
+them in that case is an error, so set `ci = TRUE` to enable bootstrap,
+or omit the knobs.
 
 ## Examples
 
@@ -301,12 +308,12 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
 #>   hc grid:
-#>     proportion: 0.05
-#>     ci: FALSE
 #>     nboot: 1000
 #>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
+#>     proportion: 0.05
+#>     ci: FALSE
 #>     samples: FALSE
 #>   partition_by:
 #>     sample: dataset, sim, replace
@@ -315,5 +322,5 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, nrow = c(5L, 10L), seed = 
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
 ```

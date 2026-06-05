@@ -15,8 +15,10 @@ functions.
 
 - ci:
 
-  A flag specifying whether to estimate confidence intervals (by
-  bootstrapping).
+  A scalar flag specifying whether to estimate confidence intervals (by
+  bootstrapping). It is not a cross-join axis; the point estimate is
+  identical whether `TRUE` or `FALSE`, so `ci = TRUE` is a superset of
+  `ci = FALSE`.
 
 - ci_method:
 

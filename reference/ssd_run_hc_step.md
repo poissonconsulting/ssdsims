@@ -6,9 +6,10 @@ typically spans several fit shards), isolates each task's fit by
 `fit_id`, deserialises the `fitdists` object, and estimates the hazard
 concentration with the per-task `(seed, primer)` through
 `hc_data_task_primer()`. Each task's hc tibble (one or more rows - the
-`proportion` fan-out and the `ci = FALSE` collapse, section 1.2) is
-tagged with its `hc_id` and parent `fit_id`, stacked, and written as one
-Parquet at the shard's partition path.
+`proportion` fan-out, with the scalar `ci` applied uniformly and
+bootstrap-only knobs `NA` when `ci = FALSE`) is tagged with its `hc_id`
+and parent `fit_id`, stacked, and written as one Parquet at the shard's
+partition path.
 
 ## Usage
 
@@ -58,20 +59,20 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/RtmpKy6uhK/file367c4ea425fe/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
+#> [1] "/tmp/Rtmp3RxPfy/file36d8451b40d/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/RtmpKy6uhK/file367c4ea425fe/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/Rtmp3RxPfy/file36d8451b40d/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 ssd_run_hc_step(
   ssd_scenario_hc_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "fit"),
   file.path(dir, "hc")
 )
-#> [1] "/tmp/RtmpKy6uhK/file367c4ea425fe/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/Rtmp3RxPfy/file36d8451b40d/hc/dataset=ccme_boron/sim=1/part.parquet"
 # }
 ```

@@ -47,7 +47,7 @@ tasks
 #>   hc     tasks: 3
 tasks$hc
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
 #>   tasks: 3
 #> # A tibble: 3 × 17
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
@@ -60,7 +60,7 @@ tasks$hc
 #> #   hc_id <chr>, fit_id <chr>
 ssd_scenario_tasks(scenario, "hc")
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
 #>   tasks: 3
 #> # A tibble: 3 × 17
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    

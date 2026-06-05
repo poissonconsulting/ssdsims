@@ -113,12 +113,12 @@
 <span><span class="co">#&gt;     range_shape1: {0.05, 20}</span></span>
 <span><span class="co">#&gt;     range_shape2: {0.05, 20}</span></span>
 <span><span class="co">#&gt;   hc grid:</span></span>
-<span><span class="co">#&gt;     proportion: 0.05</span></span>
-<span><span class="co">#&gt;     ci: FALSE</span></span>
 <span><span class="co">#&gt;     nboot: 1000</span></span>
 <span><span class="co">#&gt;     est_method: multi</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
+<span><span class="co">#&gt;     proportion: 0.05</span></span>
+<span><span class="co">#&gt;     ci: FALSE</span></span>
 <span><span class="co">#&gt;     samples: FALSE</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
 <span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
@@ -127,7 +127,7 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric</span></span></code></pre></div>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric</span></span></code></pre></div>
 </div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows, per step, the <code>partition_by</code> (across-shards) path axes and the <code>bundle</code> (within-shard) inner axes. The default coarsens downstream: <code>fit</code> shards on <code>(dataset, sim, nrow, rescale)</code>, while <code>hc</code> shards only on <code>(dataset, sim)</code>. Steps partition <strong>independently</strong> — there is no cross-step constraint — so an <code>hc</code> shard reads <em>several</em> <code>fit</code> shards and a <code>fit</code> shard can read <em>several</em> <code>sample</code> shards. That <strong>m:n</strong> relationship is resolved when the parent shards are read back, not by restricting <code>partition_by</code>.</p>
 <p>The stored <code>partition_by</code> is the per-step path list (the <code>bundle</code>/inner axes shown in <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> are its complement):</p>
@@ -144,7 +144,7 @@
 <code class="sourceCode R"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">run</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_shard_run&gt;</span></span>
-<span><span class="co">#&gt;   dir: /tmp/Rtmp0fPyNP/ssdsims-shards-3a3650392f10</span></span>
+<span><span class="co">#&gt;   dir: /tmp/Rtmpcbbbk8/ssdsims-shards-3a8c66ce98e9</span></span>
 <span><span class="co">#&gt;   sample shards: 2</span></span>
 <span><span class="co">#&gt;   fit    shards: 8</span></span>
 <span><span class="co">#&gt;   hc     shards: 2</span></span></code></pre></div>

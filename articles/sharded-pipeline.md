@@ -65,12 +65,12 @@ scenario
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
 #>   hc grid:
-#>     proportion: 0.05
-#>     ci: FALSE
 #>     nboot: 1000
 #>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
+#>     proportion: 0.05
+#>     ci: FALSE
 #>     samples: FALSE
 #>   partition_by:
 #>     sample: dataset, sim, replace
@@ -79,7 +79,7 @@ scenario
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, ci, nboot, est_method, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
 ```
 
 The [`print()`](https://rdrr.io/r/base/print.html) shows, per step, the
@@ -114,7 +114,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/Rtmp0fPyNP/ssdsims-shards-3a3650392f10
+#>   dir: /tmp/Rtmpcbbbk8/ssdsims-shards-3a8c66ce98e9
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
