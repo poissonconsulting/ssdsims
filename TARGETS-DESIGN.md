@@ -2419,10 +2419,12 @@ Eight further changes were proposed in this round (all `openspec validate
   template via the existing factory). **Now done (yellow):** the
   `inst/targets-templates/cluster/` template ships (`_targets.R` with the one
   editable `crew_controller_slurm()` block, the connectivity + worker-prerequisite
-  probe gating the scenario shards, `scenario.R`/`run.R`/`run-serial.R`, and a
-  "zero to a running cluster job" README). Validated off-cluster via the
-  `crew::crew_controller_local()` smoke path (byte-identical to the single-core
-  oracle); the real-SLURM end-to-end run remains the documented manual/lab step.
+  probe gating the scenario shards, the probe/gating helpers in a sourced
+  `functions.R`, `scenario.R`/`run.R`/`run-serial.R`, and a "zero to a running
+  cluster job" README). `run.R` aborts cleanly off-cluster (pointing at `large/`
+  for local runs); the probe-gates-the-shards wiring is covered by a scheduler-free
+  `targets`-graph test, and the shape is byte-identical to the `large/` single-core
+  oracle. The real-SLURM end-to-end run remains the documented manual/lab step.
 - `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
   (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta)
   — the independent tidy-ups, kept **off** the dependency DAG per convention

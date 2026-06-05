@@ -13,13 +13,14 @@
 
 - [x] 3.1 Add `inst/targets-templates/cluster/scenario.R` (the scenario object, ingredient C; the same shape as `large/scenario.R`, edited to taste)
 - [x] 3.2 Add `inst/targets-templates/cluster/run.R` mirroring `large/run.R`: source the scenario, `tar_make()`, report the summary path and a peek at the estimates
-- [x] 3.3 Guard `run.R` cleanly when `crew.cluster` is not installed or no SLURM queue is reachable — skip/abort with a clear message, and offer a `crew::crew_controller_local()` smoke path for off-cluster validation (mirroring the labs' local fallback, §4)
+- [x] 3.3 Guard `run.R` cleanly when `crew.cluster` is not installed or no SLURM queue is reachable — abort/skip with a clear message naming the missing prerequisite, and point at the local `large/` template for off-cluster runs (the cluster template carries no local-controller fallback of its own)
+- [x] 3.4 Keep `_targets.R` a readable pipeline definition: put the probe body and the shard-gating helper in a sourced `functions.R` (the same copy-and-source pattern as `scenario.R`), not inline
 
 ## 4. End-to-end SLURM validation
 
 - [ ] 4.1 Run `tar_make()` on a real or sandboxed SLURM queue: the connectivity probe builds first, then the scenario shard targets dispatch across SLURM jobs and run concurrently, each writing one shard Parquet — **pending a SLURM queue** (no scheduler in CI/sandbox; the documented manual/lab validation step, design Risks; the *behaviour* — probe-first, one Parquet per shard — is exercised under the local controller in 4.3)
 - [ ] 4.2 Confirm the cluster run's per-task `sample`/`fit`/`hc` results are byte-identical (read-back, sorted by task-identity key) to the local `large/` pipeline for the same scenario — **pending a SLURM queue** (the byte-identical comparison itself runs green off-cluster: `run-serial.R` reports `single-core vs cluster estimates identical: TRUE` against the local-smoke `run.R`)
-- [x] 4.3 Confirm the off-cluster fallback: with no SLURM queue, `run.R` runs the `crew::crew_controller_local()` smoke path (or skips cleanly) and the graph builds
+- [x] 4.3 Confirm off-cluster behaviour without a scheduler: `run.R` aborts/skips cleanly with a clear message (pointing at `large/`), and a `tests/testthat/test-cluster-pipeline.R` graph test statically asserts the probe gates every entry-step shard (no SLURM jobs dispatched)
 
 ## 5. Docs and reference
 

@@ -49,15 +49,15 @@ The pipeline SHALL dispatch the scenario's per-shard step targets across SLURM j
 - **THEN** the shard-target-to-SLURM-job packing convention SHALL be documented (and read as "many-to-one or one-to-one depending on configuration"), with shards remaining the unit of parallelism either way
 
 ### Requirement: The template guards when crew.cluster or a SLURM queue is unavailable
-`crew.cluster` SHALL be declared in `DESCRIPTION` `Suggests` (the cluster path is opt-in; the package SHALL build and test without a scheduler). The `run.R` driver SHALL guard cleanly when `crew.cluster` is not installed or no SLURM queue is reachable — skipping or aborting with a clear message rather than erroring obscurely — and SHALL offer a `crew::crew_controller_local()` smoke path for off-cluster validation, mirroring the crew labs' local fallback (`TARGETS-DESIGN.md` §4).
+`crew.cluster` SHALL be declared in `DESCRIPTION` `Suggests` (the cluster path is opt-in; the package SHALL build and test without a scheduler). The `run.R` driver SHALL guard cleanly when `crew.cluster` is not installed or no SLURM queue is reachable — aborting (or skipping) with a clear message naming the missing prerequisite rather than erroring obscurely — and SHALL point the user at the local `large/` template (the identical factory + scenario under a `crew::crew_controller_local()` controller) for off-cluster runs. The `cluster/` template SHALL NOT carry its own local-controller fallback: a local run is already served by `large/`, so the cluster template stays focused on the SLURM path.
 
-#### Scenario: Missing crew.cluster skips or aborts cleanly
+#### Scenario: Missing crew.cluster aborts cleanly
 - **WHEN** the `cluster/` driver is run where `crew.cluster` is not installed
-- **THEN** it SHALL skip or abort with a clear message stating `crew.cluster` is required, rather than failing with an obscure error
+- **THEN** it SHALL abort (or skip) with a clear message stating `crew.cluster` is required, rather than failing with an obscure error
 
-#### Scenario: No reachable SLURM queue degrades to a local smoke path
+#### Scenario: No reachable SLURM queue aborts cleanly
 - **WHEN** the driver is run off-cluster with no reachable SLURM queue
-- **THEN** it SHALL fall back to a `crew::crew_controller_local()` smoke path (or skip cleanly), so the pipeline can be validated without a scheduler
+- **THEN** it SHALL abort (or skip) with a clear message naming the missing `sbatch`/queue prerequisite and pointing at the `large/` template for off-cluster runs, rather than erroring obscurely
 
 ### Requirement: Documentation takes a user from zero to a running cluster job
 The package SHALL document the path from a user's own cluster instructions to a running scenario job, and SHALL NOT assume the reader already knows `crew` or `targets`. The documentation SHALL begin from the site's non-R SLURM usage instructions and proceed in four steps: (1) a mapping from each piece of site information — login node, job submission, partition/queue, account/allocation, the module system that provides R, the scratch filesystem, walltime, and cores — to the `crew.cluster::crew_controller_slurm()` argument it sets; (2) running the connectivity-and-prerequisite probe to confirm the mapping; (3) running the built-in `small` scenario end-to-end through the `cluster/` template as the minimal first job; and (4) swapping in the user's own scenario by editing `scenario.R`.

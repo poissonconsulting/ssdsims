@@ -2,12 +2,12 @@
 #
 # The package ships this under
 # `system.file("targets-templates", "cluster", package = "ssdsims")`. Copy the
-# directory's files (`scenario.R`, `_targets.R`, `run.R`, `run-serial.R`) to your
-# project root, edit the controller block in `_targets.R` for your cluster (see
-# the README's "zero to a running cluster job" guide and its mapping table),
-# then run this driver — interactively with `source("run.R")` or from a shell
-# with `Rscript run.R`. (`run-serial.R` runs the same scenario single core,
-# without targets, and compares the results.)
+# directory's files (`scenario.R`, `functions.R`, `_targets.R`, `run.R`,
+# `run-serial.R`) to your project root, edit the controller block in `_targets.R`
+# for your cluster (see the README's "zero to a running cluster job" guide and
+# its mapping table), then run this driver — interactively with `source("run.R")`
+# or from a shell with `Rscript run.R`. (`run-serial.R` runs the same scenario
+# single core, without targets, and compares the results.)
 #
 # `tar_make()` builds the connectivity+prerequisite probe first (one SLURM job),
 # then dispatches the scenario shards across SLURM jobs; each writes one shard
@@ -28,48 +28,35 @@ if (dir.exists("inst/targets-templates/cluster")) {
 
 # ---------------------------------------------------------------------------
 # Guard: the cluster path is opt-in. It needs `crew.cluster` installed AND a
-# reachable SLURM queue (`sbatch` on PATH). If either is missing, fall back to
-# the off-cluster SMOKE PATH — a `crew::crew_controller_local()` controller (set
-# via the `SSDSIMS_CLUSTER_LOCAL` env var that `_targets.R` reads) — so the
-# pipeline SHAPE can be validated without a scheduler (mirroring the crew labs'
-# local fallback, section 4). If even `crew` is unavailable, skip with a clear
-# message rather than erroring obscurely.
+# reachable SLURM queue (`sbatch` on PATH). If either is missing, abort with a
+# clear message naming the missing prerequisite rather than erroring obscurely —
+# `_targets.R` would otherwise fail when it constructs the SLURM controller. To
+# run the same study OFF a cluster (no scheduler), use the `large/` template
+# instead: it builds the identical pipeline under a `crew::crew_controller_local()`
+# controller.
 # ---------------------------------------------------------------------------
-have_crew_cluster <- requireNamespace("crew.cluster", quietly = TRUE)
-have_slurm <- nzchar(Sys.which("sbatch"))
-have_crew <- requireNamespace("crew", quietly = TRUE)
-
-if (have_crew_cluster && have_slurm) {
-  message("Cluster path: crew.cluster + SLURM (`sbatch`) detected.")
-  Sys.unsetenv("SSDSIMS_CLUSTER_LOCAL")
-} else {
-  missing <- c(
-    if (!have_crew_cluster) "`crew.cluster` is not installed",
-    if (!have_slurm) "no SLURM queue is reachable (`sbatch` not on PATH)"
-  )
-  if (!have_crew) {
-    stop(
-      "Cannot run the cluster pipeline: ",
-      paste(missing, collapse = " and "),
-      ". The off-cluster smoke path needs `crew` (install.packages(\"crew\")). ",
-      "On a cluster, install `crew.cluster` and run from a node where `sbatch` ",
-      "is on PATH.",
-      call. = FALSE
-    )
+missing <- c(
+  if (!requireNamespace("crew.cluster", quietly = TRUE)) {
+    "`crew.cluster` is not installed (install.packages(\"crew.cluster\"))"
+  },
+  if (!nzchar(Sys.which("sbatch"))) {
+    "no SLURM queue is reachable (`sbatch` not on PATH)"
   }
-  message(
-    "Cluster prerequisites not met (",
-    paste(missing, collapse = "; "),
-    "). Running the OFF-CLUSTER SMOKE PATH with `crew::crew_controller_local()` ",
-    "to validate the pipeline shape. Install `crew.cluster` and run from a ",
-    "SLURM login node for the real cluster run."
+)
+if (length(missing)) {
+  stop(
+    "Cannot run the cluster pipeline: ",
+    paste(missing, collapse = " and "),
+    ". Run this from a SLURM login node with `crew.cluster` installed. To run ",
+    "the same study off a cluster, use the `large/` template ",
+    "(system.file(\"targets-templates\", \"large\", package = \"ssdsims\")).",
+    call. = FALSE
   )
-  Sys.setenv(SSDSIMS_CLUSTER_LOCAL = "1")
 }
 
-# Build the pipeline. `_targets.R` sets the controller (SLURM or, on the smoke
-# path, local), defines the probe target, and gates the scenario shards on it,
-# so the probe builds first and a probe failure stops the shards.
+# Build the pipeline. `_targets.R` sets the SLURM controller, defines the probe
+# target, and gates the scenario shards on it, so the probe builds first and a
+# probe failure stops the shards.
 tar_make()
 
 # The `summary` target is `format = "file"`, so its value is the path to the

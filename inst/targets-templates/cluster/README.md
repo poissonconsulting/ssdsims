@@ -16,8 +16,10 @@ Three ingredients assemble into `_targets.R`; **only B is cluster-specific**:
 | **B — backend** | the SLURM `crew` controller (queue, modules, scratch, workers, walltime) | the **one editable block** in `_targets.R` |
 | **C — content** | the scenario (seed, datasets, grids) | `scenario.R` |
 
-The files: `_targets.R` (pipeline + controller + probe), `scenario.R` (the
-study), `run.R` (the targets driver), `run-serial.R` (single-core oracle).
+The files: `_targets.R` (pipeline + controller + probe wiring), `functions.R`
+(the probe body + the shard-gating helper, sourced by `_targets.R`),
+`scenario.R` (the study), `run.R` (the targets driver), `run-serial.R`
+(single-core oracle).
 
 Get the template:
 
@@ -126,10 +128,11 @@ shard under `results/layout=<hash>/<step>/...`, unions them into
 at the estimates. That is your first running cluster job, end to end.
 
 > **No cluster handy?** `run.R` guards: if `crew.cluster` is not installed or
-> `sbatch` is not on `PATH`, it falls back to a `crew::crew_controller_local()`
-> **smoke path** (same shape, local workers) so you can validate everything off
-> the cluster, and `run-serial.R` asserts the results are byte-identical. Install
-> `crew.cluster` and run from a login node for the real thing.
+> `sbatch` is not on `PATH`, it aborts with a clear message naming the missing
+> prerequisite. To run the **same study off a cluster** (no scheduler), use the
+> `large/` template — it builds the identical pipeline (same factory + scenario)
+> under a `crew::crew_controller_local()` controller, and `run-serial.R` asserts
+> the results are byte-identical.
 
 ---
 
