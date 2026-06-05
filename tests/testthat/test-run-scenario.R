@@ -51,7 +51,7 @@ test_that("ssd_run_scenario.data.frame errors min_pboot", {
       nrow = 5,
       nsim = 1,
       ci = TRUE,
-      nboot = 3,
+      nboot = 2L,
       min_pboot = 0
     ),
     "`min_pboot` is fixed at 0 in ssdsims and cannot be set by the user\\."
