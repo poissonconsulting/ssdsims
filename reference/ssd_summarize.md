@@ -42,12 +42,12 @@ The summary Parquet path (the `format = "file"` contract).
 ## Details
 
 In a `targets` pipeline a directory read carries no dependency edge, so
-order `summary` after the shards by referencing an upstream barrier in
-its command (see the shipped `_targets.R` template's
-[`tar_combine()`](https://docs.ropensci.org/tarchetypes/reference/tar_combine.html)
-barriers). Reading the directory - rather than the shard target values -
-is what lets it union whatever shards landed (the survivors of a
-partially-failed run, section 6.2).
+[`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
+orders `summary` after the shards by naming every `hc` shard target in
+its command (it re-runs when any `hc` shard's bytes change). Reading the
+directory - rather than the shard target values - is what lets it union
+whatever shards landed (the survivors of a partially-failed run, section
+6.2).
 
 ## Examples
 
@@ -68,6 +68,6 @@ ssd_summarize(
   file.path(run$dir, "hc"),
   file.path(run$dir, "summary.parquet")
 )
-#> [1] "/tmp/RtmpIEdu9b/ssdsims-shards-31772ef26c57/summary.parquet"
+#> [1] "/tmp/RtmpoK98Gt/ssdsims-shards-327e36dbefdf/summary.parquet"
 # }
 ```

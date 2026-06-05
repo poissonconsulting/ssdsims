@@ -97,11 +97,12 @@ summary material, so the combined summary is the <code>hc</code> layer.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>In a <code>targets</code> pipeline a directory read carries no dependency edge, so order
-<code>summary</code> after the shards by referencing an upstream barrier in its command
-(see the shipped <code>_targets.R</code> template's <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_combine.html" class="external-link">tar_combine()</a></code> barriers). Reading
-the directory - rather than the shard target values - is what lets it union
-whatever shards landed (the survivors of a partially-failed run, section 6.2).</p>
+    <p>In a <code>targets</code> pipeline a directory read carries no dependency edge, so
+<code><a href="ssd_scenario_targets.html">ssd_scenario_targets()</a></code> orders <code>summary</code> after the shards by naming every
+<code>hc</code> shard target in its command (it re-runs when any <code>hc</code> shard's bytes
+change). Reading the directory - rather than the shard target values - is what
+lets it union whatever shards landed (the survivors of a partially-failed run,
+section 6.2).</p>
     </div>
 
     <div class="section level2">
@@ -122,7 +123,7 @@ whatever shards landed (the survivors of a partially-failed run, section 6.2).</
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"summary.parquet"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpIEdu9b/ssdsims-shards-31772ef26c57/summary.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpoK98Gt/ssdsims-shards-327e36dbefdf/summary.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
