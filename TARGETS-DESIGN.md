@@ -2365,7 +2365,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate,cluster proposed
+    class inputs,postcheck,migrate,cluster proposed
+    class manif done
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
