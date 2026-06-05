@@ -4,13 +4,21 @@
 \alias{ssd_scenario_targets}
 \title{Build the Targets Pipeline for a Scenario}
 \usage{
-ssd_scenario_targets(scenario, root = scenario_results_dir(scenario))
+ssd_scenario_targets(
+  scenario,
+  root = scenario_results_dir(scenario),
+  cue = NULL
+)
 }
 \arguments{
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 
 \item{root}{The results root the shards and summary are written under;
 defaults to the per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}}.}
+
+\item{cue}{An optional \code{targets::tar_cue()} applied to every shard target
+(e.g. \code{targets::tar_cue(depend = FALSE)} to pin trusted shards against code
+changes). \code{NULL} (default) uses \code{targets}' standard cue.}
 }
 \value{
 A list of \code{targets} target objects, for \verb{_targets.R} to return.
@@ -31,17 +39,55 @@ ssd_scenario_targets(scenario)
 
 For each step it \code{tarchetypes::tar_map()}s one named, \code{format = "file"},
 \code{error = "null"} target per \code{partition_by} path cell (the \code{names} are the
-step's path axes), wires \code{sample -> fit -> hc -> summary} ordering with
-\code{tar_combine()} barriers (a step body reads its parents from disk by partition
-path, so there is no automatic edge), and writes every shard and the summary
-under the per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}} root (so a changed
-\code{partition_by}/\code{bundle} never mixes shard granularities). \code{scenario} is
-referenced as a global, so editing it invalidates the dependent shards.
+step's path axes), and writes every shard and the summary under the
+per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}} root (so a changed \code{partition_by}/\code{bundle}
+never mixes shard granularities). \code{scenario} is referenced as a global, so
+editing it invalidates the dependent shards.
+}
+\section{Invalidation model}{
+
+The shard targets use \strong{content-hash invalidation over their \code{format = "file"} Parquet outputs} (TARGETS-DESIGN.md section 8), observable as
+\strong{cache-by-existence}: a shard is up to date iff its Parquet exists \emph{and} the
+inputs its body depends on - its task rows, the scenario, and the parent shard
+target(s) it reads - are unchanged. A missing Parquet rebuilds; a recomputed
+shard whose bytes are byte-identical leaves its dependents skipped.
+
+Instead of a coarse \code{sample -> fit -> hc} \code{tar_combine()} barrier (which marks
+the \emph{whole} downstream step out of date when any one parent shard changes),
+each child shard target names \strong{only the specific parent shard target(s) its
+tasks read} (the Option-3 per-child upstream edges of section 6), computed at
+sourcing time as \code{unique(path_key(tasks, partition_by[[parent]]))} - the same
+projection the runner uses to read them. So rewriting one parent
+shard re-runs only the child shards that read it. \code{summary} reads the whole
+\code{hc} directory, so it names every \code{hc} shard (it re-runs when any \code{hc} shard's
+bytes change, and unions the survivors of a partially-failed run).
+}
+
+\section{Pinning trusted shards (\code{cue})}{
+
+Pass \code{cue = targets::tar_cue(depend = FALSE)} to \strong{pin} the shard targets
+against upstream dependency/code changes (an edited per-task primitive, a
+bumped \code{ssdtools}), so trusted shards are not rebuilt by a code edit
+(TARGETS-DESIGN.md section 8.3). The carve-outs still hold: a shard rebuilds
+if its \code{format = "file"} Parquet is missing, if its task-table grouping
+changes (the grouping is part of the command, so path-axis and inner-axis
+growth still apply under the pin), or if it previously errored. Force a
+refresh of chosen shards with \code{targets::tar_invalidate()} (or by deleting
+their Parquet), overriding the pin (section 8.4). The default (\code{NULL}) is
+\code{targets}' standard cue.
+
+The \code{head(sample, nrow)} truncation stays folded into the \code{fit} step (no
+materialised \code{data} shard): a \code{fit} shard is keyed by \code{fit_id}, which includes
+\code{nrow}, so extending \code{nrow} mints new \code{fit} shards and caches the rest, and a
+widened \code{max(nrow)} changes the \code{sample} shard's \code{n_max} task row, so its
+bytes change and the per-child edge propagates to exactly the \code{fit} shards
+that read the wider draw - no stale short draw is produced.
 
 To parallelise the shards, set a controller (e.g. a mirai-backed
 \code{crew::crew_controller_local()}) with \code{targets::tar_option_set()} in
 \verb{_targets.R} before calling this - the target set is unchanged.
 }
+
 \examples{
 \dontrun{
 # _targets.R

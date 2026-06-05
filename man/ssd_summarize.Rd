@@ -30,11 +30,12 @@ three result layers; the \code{sample} draws and serialised \code{fit} objects a
 summary material, so the combined summary is the \code{hc} layer.
 }
 \details{
-In a \code{targets} pipeline a directory read carries no dependency edge, so order
-\code{summary} after the shards by referencing an upstream barrier in its command
-(see the shipped \verb{_targets.R} template's \code{tar_combine()} barriers). Reading
-the directory - rather than the shard target values - is what lets it union
-whatever shards landed (the survivors of a partially-failed run, section 6.2).
+In a \code{targets} pipeline a directory read carries no dependency edge, so
+\code{\link[=ssd_scenario_targets]{ssd_scenario_targets()}} orders \code{summary} after the shards by naming every
+\code{hc} shard target in its command (it re-runs when any \code{hc} shard's bytes
+change). Reading the directory - rather than the shard target values - is what
+lets it union whatever shards landed (the survivors of a partially-failed run,
+section 6.2).
 }
 \examples{
 \donttest{

@@ -2172,6 +2172,17 @@ public-API or ergonomics gaps.
   (which already projects the blob column out). Surfaced by the
   `shard-runner-baseline` / `task-tables` verification. Independent tidy-up
   with no dependants; not on the dependency DAG.
+- **`tidyverse-rlang-alignment`** — Align the package's code with the
+  tidyverse design: prefer **rlang** over base-R idioms throughout, especially
+  metaprogramming — `rlang::expr()`/`!!`/`inject()`/`call2()`/`sym()`/`syms()`
+  in place of `bquote()`/`substitute()`/`quote()`/`as.call()`/`as.symbol()`,
+  `rlang::set_names()` for `names<-`, and `purrr` iteration over `*apply()`
+  where it reads more clearly. `ssd_scenario_targets()` (the `targets` factory)
+  was migrated to rlang when `hive-partitioning` landed; this item sweeps the
+  rest of `R/` (e.g. the L'Ecuyer/`do_call_seed()` helpers, `get0()`/`match.fun()`
+  name resolution, remaining `*apply()` loops) for the same convention, so new
+  and existing code read consistently. Surfaced in PR #101 review. Independent
+  tidy-up with no dependants; not on the dependency DAG.
 
 ### Dependency DAG (parallel streams)
 
@@ -2254,31 +2265,82 @@ flowchart TD
     rewrite --> lockin
     lockin --> cleanup
 
+    %% hive-partitioning pins the invalidation model (§8); the three
+    %% minimal-rebuild contracts finalise their cached-vs-rebuilt
+    %% assertions against it, so they depend on it (soft edge, dotted).
+    hive -.-> rewrite
+    hive -.-> pathgrow
+    hive -.-> slice
+
     inputs --> migrate
     prims --> migrate
     migrate --> cleanup
 
     %% --- node status colouring (keep in sync as each change progresses) ---
     %% green = archived, yellow = done (implemented, not yet archived),
-    %% red = proposed (artifacts exist, not implemented), unfilled = open (roadmap only)
+    %% red = proposed (artifacts exist, not implemented),
+    %% blue = ready (no artifacts yet, but every prerequisite has landed — ready to propose),
+    %% unfilled = open (roadmap only, still blocked by an un-landed prerequisite)
     %% When a node becomes archived, give it the `archived` class AND move its
     %% declaration into the `archived_box` subgraph above.
     classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
     classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
+    classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun archived
-    class inputs,manif,migrate proposed
-    class hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open
+    class inputs,postcheck,manif,migrate,hive,cluster,rewrite,pathgrow,slice proposed
+    class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
 **Node colours track each step's status** — green = archived, yellow = done
 (implemented, not yet archived), red = proposed (artifacts exist, not yet
-implemented), unfilled = open (roadmap only). Keep the colouring in sync as
-changes progress, and **keep the archived (green) nodes collected inside the
-`archived_box` subgraph** — when a step is archived, move its node declaration
-into that box as well as giving it the `archived` class.
+implemented), blue = ready (no artifacts yet, but every prerequisite has
+landed — ready to propose), unfilled = open (roadmap only, still blocked by
+an un-landed prerequisite). Keep the colouring in sync as changes progress,
+and **keep the archived (green) nodes collected inside the `archived_box`
+subgraph** — when a step is archived, move its node declaration into that box
+as well as giving it the `archived` class.
+
+**Status snapshot (2026-06-05).** Twelve changes now carry artifacts and are
+**proposed but unimplemented** (none has started against the package code, so
+all remain necessary — verified against the source tree, not just the task
+lists). The four original proposals:
+- `task-rng-postcheck` — `dqrng` is still in `Imports` (not `Suggests`); no
+  `dqrng_usable()`, no `chk_dqrng_backend_intact()`, no exit-bookend wiring.
+- `scenario-input-types` — `ssd_data()` still rejects non-data-frame input
+  and has no `.seed`; no `classify_input()`.
+- `migrate-public-api` — the three public step functions still seed via the
+  L'Ecuyer-CMRG lattice; only the prerequisite `*_data_task_primer()` wrappers
+  (from the archived `primer-primitives`) exist, so the change itself is
+  essentially un-started.
+- `manifest` — no `R/manifest.R`; `jsonlite`/`digest`/`sessioninfo` absent
+  from `Imports`.
+
+Eight further changes were proposed in this round (all `openspec validate
+--strict`-clean):
+- `hive-partitioning` — **re-scoped** to the caching/invalidation half only
+  (pin the content-hash model, per-child Option-3 upstream edges, settle the
+  data-step fold); its storage/read half already landed in `task-shards` /
+  `shard-runner`, so it is not re-specified.
+- `shard-atomic-rewrite`, `path-axis-growth`, `step-scenario-slice` — the
+  three minimal-rebuild contracts (`task-shards` deltas); each **finalises its
+  cached-vs-rebuilt assertion against the invalidation model `hive-partitioning`
+  pins**, shown as the dotted `hive -.-> {rewrite, pathgrow, slice}` edges.
+- `cluster-pipeline` — new `cluster-pipeline` capability (crew.cluster SLURM
+  template via the existing factory).
+- `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
+  (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta)
+  — the independent tidy-ups, kept **off** the dependency DAG per convention
+  (no prerequisites, no dependants).
+
+The remaining open nodes stay blocked: `cloud-upload`/`replay-helper` wait on
+`manifest` landing, `shard-failure-survival` on `cluster-pipeline`,
+`shard-completeness-assert` on both `manifest` and `shard-failure-survival`,
+`mixed-code-lockin` on `shard-atomic-rewrite`, and `cleanup-lecuyer` on
+`migrate-public-api` + `mixed-code-lockin`. (`dataset-provenance` remains
+roadmap-only, deliberately deferred.)
 
 `migrate-public-api` depends on `scenario-input-types` (its
 byte-equivalence re-run must exercise the full input surface) and on

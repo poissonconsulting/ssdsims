@@ -354,3 +354,160 @@ test_that("task-shards: ssd_scenario_targets returns a target list", {
   expect_type(tg, "list")
   expect_gt(length(tg), 0L)
 })
+
+# ---- invalidation model: per-child Option-3 edges (hive-partitioning) ------
+
+# The target names a command references that match a vector of candidate names -
+# the upstream shard edges `targets` records for that command.
+shard_target_names <- function(mapped, step) {
+  vapply(
+    mapped[[paste0(step, "_step")]],
+    function(t) t$settings$name,
+    character(1)
+  )
+}
+declared_edges <- function(target, candidates) {
+  intersect(all.names(target$command$expr), candidates)
+}
+
+test_that("hive: each child shard names exactly the parent shards it reads (m:n)", {
+  # sample/fit per-sim; hc coarse (dataset only) so its one shard reads BOTH fits.
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    nrow = 6L,
+    seed = 42L,
+    dists = "lnorm",
+    partition_by = list(
+      sample = c("dataset", "sim"),
+      fit = c("dataset", "sim"),
+      hc = "dataset"
+    )
+  )
+  tg <- ssd_scenario_targets(scenario)
+  sample_names <- shard_target_names(tg[[1L]], "sample")
+  fit_inner <- tg[[2L]][["fit_step"]]
+  fit_names <- shard_target_names(tg[[2L]], "fit")
+  hc_inner <- tg[[3L]][["hc_step"]]
+
+  cell_names <- shard_cell_names(
+    tg[[1L]],
+    ssd_scenario_sample_shards(scenario),
+    scenario,
+    "sample"
+  )
+  fsh <- ssd_scenario_fit_shards(scenario)
+  # Each fit shard declares an edge to exactly the sample target(s) it reads -
+  # the same projection read_parent_shards() uses (graph == read, task 4.3).
+  for (i in seq_along(fit_inner)) {
+    read_cells <- unique(path_key(
+      fsh$tasks[[i]],
+      scenario$partition_by[["sample"]]
+    ))
+    expect_setequal(
+      declared_edges(fit_inner[[i]], sample_names),
+      unname(cell_names[read_cells])
+    )
+  }
+  # m:n fan-in: the coarse hc shard reads (and declares) every fit shard.
+  expect_setequal(declared_edges(hc_inner[[1L]], fit_names), fit_names)
+  # summary names every hc shard.
+  hc_names <- shard_target_names(tg[[3L]], "hc")
+  expect_setequal(declared_edges(tg[[4L]], hc_names), hc_names)
+})
+
+all_target_names <- function(x) {
+  if (inherits(x, "tar_target")) {
+    return(x$settings$name)
+  }
+  if (is.list(x)) {
+    return(unlist(lapply(x, all_target_names), use.names = FALSE))
+  }
+  character(0L)
+}
+
+test_that("hive: per-child edges replace the coarse step barrier; no data step", {
+  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+  tg <- ssd_scenario_targets(scenario)
+  all_names <- all_target_names(tg)
+  # No step-wide tar_combine() barrier targets, and the fold is kept (no data step).
+  expect_false(any(c("sample_done", "fit_done", "hc_done") %in% all_names))
+  expect_false(any(grepl("^data_step", all_names)))
+  expect_true(all(grepl("^(sample_step|fit_step|hc_step|summary)", all_names)))
+})
+
+test_that("hive: cue is threaded onto every shard target", {
+  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+  tg <- ssd_scenario_targets(scenario, cue = targets::tar_cue(depend = FALSE))
+  shard_targets <- c(
+    tg[[1L]][["sample_step"]],
+    tg[[2L]][["fit_step"]],
+    tg[[3L]][["hc_step"]]
+  )
+  for (t in shard_targets) {
+    expect_false(t$cue$depend)
+  }
+  # default (no cue) leaves the standard cue (depend = TRUE)
+  tg0 <- ssd_scenario_targets(scenario)
+  expect_true(tg0[[1L]][["sample_step"]][[1L]]$cue$depend)
+})
+
+test_that("hive: widening max(nrow) changes the sample shard command (rewrite trigger)", {
+  # The sample draw's n_max = max(nrow) is a sample task column, so widening nrow
+  # changes the (inlined) sample shard command -> the sample shard rebuilds and
+  # the per-child edge propagates to the fit shards that read it (task 4.5). The
+  # byte-level multi-run assertion lives in shard-atomic-rewrite / path-axis-growth.
+  base <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = "lnorm"
+  )
+  wide <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    nrow = c(6L, 12L),
+    seed = 42L,
+    dists = "lnorm"
+  )
+  s1 <- ssd_scenario_targets(base)[[1L]][["sample_step"]][[1L]]$command$expr
+  s2 <- ssd_scenario_targets(wide)[[1L]][["sample_step"]][[1L]]$command$expr
+  expect_false(identical(s1, s2))
+})
+
+test_that("hive: re-make is a full cache hit; a missing Parquet rebuilds only its subtree", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "factory-invalidation-targets.R")
+  withr::local_dir(dir)
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  # cache-by-existence: a second make with nothing changed is a full hit.
+  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+  # delete the sim=1 sample shard's Parquet -> only its subtree (+ summary) rebuilds.
+  unlink(file.path("results", "sample", "dataset=d", "sim=1", "part.parquet"))
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(
+    c("sample_step_d_1", "fit_step_d_1", "hc_step_d_1", "summary") %in% outdated
+  ))
+  expect_false(any(
+    c("sample_step_d_2", "fit_step_d_2", "hc_step_d_2") %in% outdated
+  ))
+})
+
+test_that("hive: invalidating one parent shard re-runs only the children that read it", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  setup_targets_fixture(dir, "factory-invalidation-targets.R")
+  withr::local_dir(dir)
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+  # invalidate the sim=1 sample shard; its subtree is outdated, sim=2 stays cached.
+  targets::tar_invalidate(tidyselect::any_of("sample_step_d_1"))
+  outdated <- targets::tar_outdated(reporter = "silent")
+  expect_true(all(
+    c("sample_step_d_1", "fit_step_d_1", "hc_step_d_1", "summary") %in% outdated
+  ))
+  expect_false(any(
+    c("sample_step_d_2", "fit_step_d_2", "hc_step_d_2") %in% outdated
+  ))
+})

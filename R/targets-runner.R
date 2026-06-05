@@ -351,11 +351,12 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' @param path The output Parquet path for the combined summary.
 #' @return The summary Parquet path (the `format = "file"` contract).
 #' @details
-#' In a `targets` pipeline a directory read carries no dependency edge, so order
-#' `summary` after the shards by referencing an upstream barrier in its command
-#' (see the shipped `_targets.R` template's `tar_combine()` barriers). Reading
-#' the directory - rather than the shard target values - is what lets it union
-#' whatever shards landed (the survivors of a partially-failed run, section 6.2).
+#' In a `targets` pipeline a directory read carries no dependency edge, so
+#' [ssd_scenario_targets()] orders `summary` after the shards by naming every
+#' `hc` shard target in its command (it re-runs when any `hc` shard's bytes
+#' change). Reading the directory - rather than the shard target values - is what
+#' lets it union whatever shards landed (the survivors of a partially-failed run,
+#' section 6.2).
 #' @export
 #' @examples
 #' \donttest{
@@ -392,6 +393,71 @@ ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
   ssd_write_parquet(hc, path)
 }
 
+# ---- per-child upstream edges (Option 3, TARGETS-DESIGN.md sections 6, 8) ---
+#
+# The shard invalidation model is content-hash over the `format = "file"`
+# Parquet outputs, read observably as cache-by-existence: a shard is up to date
+# iff its Parquet exists and the bytes its body depends on (its task rows, the
+# scenario, and the *named* parent shard targets it reads) are unchanged. To
+# make that precise across the m:n child<-parent fan-in, each child shard target
+# names only the specific parent shard target(s) its tasks read - not a coarse
+# step-wide barrier - so rewriting one parent shard invalidates only the child
+# shards that read it.
+
+# The tar_map() target names minted for a step's shards, keyed by the shard's
+# Hive partition path cell. `mapped` is the tar_map() return
+# (`list(<step>_step = list(<target per shard, in `shards` row order>))`); the
+# path cells are computed from `shards` in the same row order, so the result is
+# one source of truth mapping cell -> target name.
+shard_cell_names <- function(mapped, shards, scenario, step) {
+  in_order <- mapped[[paste0(step, "_step")]]
+  nms <- purrr::map_chr(in_order, function(t) t$settings$name)
+  # All rows of a shard share its path cell (it is the grouping key), so the
+  # first row gives the cell - mirrors `shard_path()`.
+  cells <- purrr::map_chr(
+    shards$tasks,
+    function(tasks) {
+      path_key(tasks[1L, , drop = FALSE], scenario$partition_by[[step]])
+    }
+  )
+  rlang::set_names(nms, cells)
+}
+
+# For each child shard, the language block that names the parent shard target(s)
+# its tasks read - the per-child upstream edge spliced into the child's command
+# so `targets` records the dependency. The parent cell set is
+# `unique(path_key(tasks, partition_by[[parent]]))`, the *same* projection
+# `read_parent_shards()` uses to read them, so the dependency graph and the read
+# agree (one source of truth).
+child_parent_edges <- function(
+  child_shards,
+  scenario,
+  parent,
+  parent_cell_names
+) {
+  purrr::map(child_shards$tasks, function(tasks) {
+    cells <- unique(path_key(tasks, scenario$partition_by[[parent]]))
+    nms <- parent_cell_names[cells]
+    if (anyNA(nms)) {
+      chk::abort_chk(
+        "A ",
+        parent,
+        " parent shard has no target for: ",
+        paste(cells[is.na(nms)], collapse = ", "),
+        "."
+      )
+    }
+    edge_block(unname(nms))
+  })
+}
+
+# A `{ a; b; ... }` block of bare target-name symbols. Referenced (and discarded)
+# in a command purely so `targets` records the upstream edges; the values are the
+# parents' `format = "file"` paths (cheap strings).
+edge_block <- function(names) {
+  rlang::call2("{", !!!rlang::syms(names))
+}
+
 #' Build the Targets Pipeline for a Scenario
 #'
 #' A **target factory**: returns the list of `targets` objects that runs a
@@ -409,12 +475,47 @@ ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
 #'
 #' For each step it `tarchetypes::tar_map()`s one named, `format = "file"`,
 #' `error = "null"` target per `partition_by` path cell (the `names` are the
-#' step's path axes), wires `sample -> fit -> hc -> summary` ordering with
-#' `tar_combine()` barriers (a step body reads its parents from disk by partition
-#' path, so there is no automatic edge), and writes every shard and the summary
-#' under the per-layout [scenario_results_dir()] root (so a changed
-#' `partition_by`/`bundle` never mixes shard granularities). `scenario` is
-#' referenced as a global, so editing it invalidates the dependent shards.
+#' step's path axes), and writes every shard and the summary under the
+#' per-layout [scenario_results_dir()] root (so a changed `partition_by`/`bundle`
+#' never mixes shard granularities). `scenario` is referenced as a global, so
+#' editing it invalidates the dependent shards.
+#'
+#' @section Invalidation model:
+#' The shard targets use **content-hash invalidation over their `format =
+#' "file"` Parquet outputs** (TARGETS-DESIGN.md section 8), observable as
+#' **cache-by-existence**: a shard is up to date iff its Parquet exists *and* the
+#' inputs its body depends on - its task rows, the scenario, and the parent shard
+#' target(s) it reads - are unchanged. A missing Parquet rebuilds; a recomputed
+#' shard whose bytes are byte-identical leaves its dependents skipped.
+#'
+#' Instead of a coarse `sample -> fit -> hc` `tar_combine()` barrier (which marks
+#' the *whole* downstream step out of date when any one parent shard changes),
+#' each child shard target names **only the specific parent shard target(s) its
+#' tasks read** (the Option-3 per-child upstream edges of section 6), computed at
+#' sourcing time as `unique(path_key(tasks, partition_by[[parent]]))` - the same
+#' projection the runner uses to read them. So rewriting one parent
+#' shard re-runs only the child shards that read it. `summary` reads the whole
+#' `hc` directory, so it names every `hc` shard (it re-runs when any `hc` shard's
+#' bytes change, and unions the survivors of a partially-failed run).
+#'
+#' @section Pinning trusted shards (`cue`):
+#' Pass `cue = targets::tar_cue(depend = FALSE)` to **pin** the shard targets
+#' against upstream dependency/code changes (an edited per-task primitive, a
+#' bumped `ssdtools`), so trusted shards are not rebuilt by a code edit
+#' (TARGETS-DESIGN.md section 8.3). The carve-outs still hold: a shard rebuilds
+#' if its `format = "file"` Parquet is missing, if its task-table grouping
+#' changes (the grouping is part of the command, so path-axis and inner-axis
+#' growth still apply under the pin), or if it previously errored. Force a
+#' refresh of chosen shards with `targets::tar_invalidate()` (or by deleting
+#' their Parquet), overriding the pin (section 8.4). The default (`NULL`) is
+#' `targets`' standard cue.
+#'
+#' The `head(sample, nrow)` truncation stays folded into the `fit` step (no
+#' materialised `data` shard): a `fit` shard is keyed by `fit_id`, which includes
+#' `nrow`, so extending `nrow` mints new `fit` shards and caches the rest, and a
+#' widened `max(nrow)` changes the `sample` shard's `n_max` task row, so its
+#' bytes change and the per-child edge propagates to exactly the `fit` shards
+#' that read the wider draw - no stale short draw is produced.
 #'
 #' To parallelise the shards, set a controller (e.g. a mirai-backed
 #' `crew::crew_controller_local()`) with `targets::tar_option_set()` in
@@ -423,6 +524,9 @@ ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
 #' @inheritParams scenario_dataset
 #' @param root The results root the shards and summary are written under;
 #'   defaults to the per-layout [scenario_results_dir()].
+#' @param cue An optional `targets::tar_cue()` applied to every shard target
+#'   (e.g. `targets::tar_cue(depend = FALSE)` to pin trusted shards against code
+#'   changes). `NULL` (default) uses `targets`' standard cue.
 #' @return A list of `targets` target objects, for `_targets.R` to return.
 #' @seealso [scenario_results_dir()], [ssd_run_scenario_shards()] (the
 #'   single-core, `targets`-free equivalent).
@@ -439,7 +543,8 @@ ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
 #' }
 ssd_scenario_targets <- function(
   scenario,
-  root = scenario_results_dir(scenario)
+  root = scenario_results_dir(scenario),
+  cue = NULL
 ) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   chk::chk_string(root)
@@ -450,17 +555,15 @@ ssd_scenario_targets <- function(
   hc_dir <- file.path(root, "hc")
   summary_path <- file.path(root, "summary.parquet")
 
+  sample_shards <- ssd_scenario_sample_shards(scenario)
+  fit_shards <- ssd_scenario_fit_shards(scenario)
+  hc_shards <- ssd_scenario_hc_shards(scenario)
+
   # One `tar_map` per step: a named, format="file", error="null" target per
-  # `partition_by` path cell. `tar_target_raw()` + `bquote()` injects the result
-  # dirs as literals while leaving `scenario`/`tasks`/the step barriers as
-  # symbols (resolved as targets globals / mapped values).
-  step_map <- function(step, command) {
-    shards <- switch(
-      step,
-      sample = ssd_scenario_sample_shards(scenario),
-      fit = ssd_scenario_fit_shards(scenario),
-      hc = ssd_scenario_hc_shards(scenario)
-    )
+  # `partition_by` path cell. `tar_target_raw()` + `rlang::expr()` injects the
+  # result dirs as literals (`!!`) while leaving `scenario`/`tasks`/the per-child
+  # `.parents` edge block as symbols (resolved as targets globals / mapped values).
+  step_map <- function(step, shards, command) {
     tarchetypes::tar_map(
       values = shards,
       names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
@@ -468,46 +571,70 @@ ssd_scenario_targets <- function(
         paste0(step, "_step"),
         command,
         format = "file",
-        error = "null"
+        error = "null",
+        cue = cue
       )
     )
   }
 
+  # sample: a leaf step, no upstream shards.
   sample_targets <- step_map(
     "sample",
-    bquote(ssd_run_sample_step(tasks, scenario, .(sample_dir)))
+    sample_shards,
+    rlang::expr(ssd_run_sample_step(tasks, scenario, !!sample_dir))
+  )
+  sample_names <- shard_cell_names(
+    sample_targets,
+    sample_shards,
+    scenario,
+    "sample"
+  )
+
+  # fit: each shard names only the sample shard(s) its tasks read.
+  fit_shards$.parents <- child_parent_edges(
+    fit_shards,
+    scenario,
+    "sample",
+    sample_names
   )
   fit_targets <- step_map(
     "fit",
-    bquote({
-      sample_done # order after all sample shards (read by partition path)
-      ssd_run_fit_step(tasks, scenario, .(sample_dir), .(fit_dir))
+    fit_shards,
+    rlang::expr({
+      .parents # per-child edges to the sample shards this fit shard reads
+      ssd_run_fit_step(tasks, scenario, !!sample_dir, !!fit_dir)
     })
+  )
+  fit_names <- shard_cell_names(fit_targets, fit_shards, scenario, "fit")
+
+  # hc: each shard names only the fit shard(s) its tasks read.
+  hc_shards$.parents <- child_parent_edges(
+    hc_shards,
+    scenario,
+    "fit",
+    fit_names
   )
   hc_targets <- step_map(
     "hc",
-    bquote({
-      fit_done # order after all fit shards (read by partition path)
-      ssd_run_hc_step(tasks, scenario, .(fit_dir), .(hc_dir))
+    hc_shards,
+    rlang::expr({
+      .parents # per-child edges to the fit shards this hc shard reads
+      ssd_run_hc_step(tasks, scenario, !!fit_dir, !!hc_dir)
     })
   )
+  hc_names <- shard_cell_names(hc_targets, hc_shards, scenario, "hc")
 
-  list(
-    sample_targets,
-    tarchetypes::tar_combine(sample_done, sample_targets),
-    fit_targets,
-    tarchetypes::tar_combine(fit_done, fit_targets),
-    hc_targets,
-    tarchetypes::tar_combine(hc_done, hc_targets),
-    # `summary` reads the hc directory (unions whatever landed); `hc_done` orders
-    # it after the hc shards.
-    targets::tar_target_raw(
-      "summary",
-      bquote({
-        hc_done
-        ssd_summarize(.(sample_dir), .(fit_dir), .(hc_dir), .(summary_path))
-      }),
-      format = "file"
-    )
+  # `summary` reads the whole hc directory (unions whatever landed), so it names
+  # every hc shard: it re-runs when any hc shard's bytes change, and survives a
+  # partially-failed run (`error = "null"`).
+  summary_target <- targets::tar_target_raw(
+    "summary",
+    rlang::expr({
+      !!edge_block(unname(hc_names)) # order/value-depend on every hc shard
+      ssd_summarize(!!sample_dir, !!fit_dir, !!hc_dir, !!summary_path)
+    }),
+    format = "file"
   )
+
+  list(sample_targets, fit_targets, hc_targets, summary_target)
 }
