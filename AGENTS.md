@@ -367,7 +367,10 @@ is proposed, and update each node’s status colour as it progresses:
 **green = archived, yellow = done** (implemented, not yet archived),
 **red = proposed** (artifacts exist, not implemented), **unfilled =
 open** (roadmap only). The colours are Mermaid `classDef`s applied via
-`class` lines at the foot of the graph.
+`class` lines at the foot of the graph. **Archived (green) nodes are
+collected in the `archived_box` subgraph** — when a step is archived,
+move its node declaration into that subgraph as well as giving it the
+`archived` class, so the box always holds exactly the archived nodes.
 
 ## Contact & Contribution
 

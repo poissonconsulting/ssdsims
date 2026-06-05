@@ -1100,29 +1100,32 @@
 <p>Independent tidy-ups with no dependants — each can land at any time and is <strong>not</strong> on the dependency DAG. Grown as review turns up small public-API or ergonomics gaps.</p>
 <ul><li>
 <strong><code>cleanup-as-ssd-data</code></strong> — Add a public <code>as_ssd_data()</code> that coerces the already-named input forms (an <code><a href="reference/ssd_data.html">ssd_data()</a></code> collection passthrough, a named list, or a single data frame with an explicit <code>name=</code>) into a validated <code><a href="reference/ssd_data.html">ssd_data()</a></code> collection. The scenario’s internal <code>scenario_datasets()</code> does this coercion today, but it cannot simply delegate to a public <code>as_ssd_data()</code> because the bare-data-frame and unnamed-list forms derive names by <strong>symbol capture</strong>, which must happen in the <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> frame. Surfaced in PR #80.</li>
+<li>
+<strong><code>blob-storage-format</code></strong> — Review how per-task non-tabular results (the <code>fit</code> step’s <code>fitdists</code> objects) are stored in their shard Parquet. <code>shard-runner-baseline</code> ships an interim <code>encode_obj()</code>/<code>decode_obj()</code> pair (<code>R/targets-runner.R</code>) that <code>serialize(ascii = TRUE)</code>s the object to an <strong>ASCII string</strong> carried in a Parquet <code>VARCHAR</code> column, chosen because duckplyr cannot store a raw/list column and an ASCII serialisation round-trips losslessly. ASCII serialisation is ~2× the size of the binary form and is CPU-heavier to encode/decode, so for many or large fits the blob layer dominates shard size. Evaluate alternatives — a binary <code>serialize(ascii = FALSE)</code> in a base64/BLOB column, an Arrow-native nested representation, or writing the fit objects to a sidecar store keyed by <code>fit_id</code> rather than inline — against the byte-identity oracle, the duckplyr/Parquet column-type constraints, and the §6 summary read path (which already projects the blob column out). Surfaced by the <code>shard-runner-baseline</code> / <code>task-tables</code> verification. Independent tidy-up with no dependants; not on the dependency DAG.</li>
 </ul></div>
 <div class="section level3">
 <h3 id="dependency-dag-parallel-streams">Dependency DAG (parallel streams)<a class="anchor" aria-label="anchor" href="#dependency-dag-parallel-streams"></a></h3>
 <p>Mermaid (renders inline on GitHub):</p>
 <pre class="mermaid"><code>flowchart TD
-    define[ssd-define-scenario]
+    %% Archived (green) nodes live in this box — move a node in here when it
+    %% is archived, so the box always holds exactly the `archived`-class nodes.
+    subgraph archived_box [archived]
+        define[ssd-define-scenario]
+        baseline[task-list-loop-baseline]
+        dqinit[dqrng-init]
+        dqstate[local-dqrng-state]
+        primer[task-primer]
+        prims[primer-primitives]
+        partby[partition-by]
+        acc[scenario-accessors]
+        shardrun[shard-runner-baseline]
+        tt[task-tables]
+    end
+
     inputs[scenario-input-types]
-    baseline[task-list-loop-baseline]
-    dqinit[dqrng-init]
-    dqstate[local-dqrng-state]
-    primer[task-primer]
-    prims[primer-primitives]
     postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
-    partby[partition-by]
-    shardrun[shard-runner-baseline]
-
-    acc[scenario-accessors]
-
-    subgraph targets [targets-only plumbing]
-        tt[task-tables]
-        manif[manifest]
-    end
+    manif[manifest]
 
     hive[hive-partitioning]
     cluster[cluster-pipeline]
@@ -1186,16 +1189,17 @@
     %% --- node status colouring (keep in sync as each change progresses) ---
     %% green = archived, yellow = done (implemented, not yet archived),
     %% red = proposed (artifacts exist, not implemented), unfilled = open (roadmap only)
+    %% When a node becomes archived, give it the `archived` class AND move its
+    %% declaration into the `archived_box` subgraph above.
     classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
     classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims archived
-    class acc,partby,tt,shardrun done
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun archived
     class inputs,manif,migrate proposed
     class hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open</code></pre>
-<p><strong>Node colours track each step’s status</strong> — green = archived, yellow = done (implemented, not yet archived), red = proposed (artifacts exist, not yet implemented), unfilled = open (roadmap only). Keep the colouring in sync as changes progress.</p>
+<p><strong>Node colours track each step’s status</strong> — green = archived, yellow = done (implemented, not yet archived), red = proposed (artifacts exist, not yet implemented), unfilled = open (roadmap only). Keep the colouring in sync as changes progress, and <strong>keep the archived (green) nodes collected inside the <code>archived_box</code> subgraph</strong> — when a step is archived, move its node declaration into that box as well as giving it the <code>archived</code> class.</p>
 <p><code>migrate-public-api</code> depends on <code>scenario-input-types</code> (its byte-equivalence re-run must exercise the full input surface) and on <code>primer-primitives</code> (the contract it reuses); no targets step waits on it, but it <strong>gates <code>cleanup-lecuyer</code></strong> — the L’Ecuyer-CMRG helpers and <code>_seed</code> shims cannot be removed until the public step functions stop calling them.</p>
 <p><code>shard-runner-baseline</code> sits off <code>primer-primitives</code> + <code>partition-by</code>, parallel to the <code>targets</code>-only plumbing: it proves the Hive write/read + m:n loop in plain R, then feeds <code>hive-partitioning</code> (which keeps the <code>targets</code>-integration + invalidation half). The <code>baseline → partby</code> edge is the previously-latent reuse dependency — <code>partition-by</code> reads <code>task_axes()</code>/<code>task_parent()</code> from <code>task-list-loop-baseline</code>.</p>
 <p>Three “wait points” (<code>primer-primitives</code>, <code>task-tables</code>, <code>mixed-code-lockin</code>) gate the layers in between; anything not chained by an arrow can be worked on in parallel.</p>

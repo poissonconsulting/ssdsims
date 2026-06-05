@@ -2226,6 +2226,23 @@ public-API or ergonomics gaps.
   derive names by **symbol capture**, which must happen in the
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   frame. Surfaced in PR \#80.
+- **`blob-storage-format`** — Review how per-task non-tabular results
+  (the `fit` step’s `fitdists` objects) are stored in their shard
+  Parquet. `shard-runner-baseline` ships an interim
+  `encode_obj()`/`decode_obj()` pair (`R/targets-runner.R`) that
+  `serialize(ascii = TRUE)`s the object to an **ASCII string** carried
+  in a Parquet `VARCHAR` column, chosen because duckplyr cannot store a
+  raw/list column and an ASCII serialisation round-trips losslessly.
+  ASCII serialisation is ~2× the size of the binary form and is
+  CPU-heavier to encode/decode, so for many or large fits the blob layer
+  dominates shard size. Evaluate alternatives — a binary
+  `serialize(ascii = FALSE)` in a base64/BLOB column, an Arrow-native
+  nested representation, or writing the fit objects to a sidecar store
+  keyed by `fit_id` rather than inline — against the byte-identity
+  oracle, the duckplyr/Parquet column-type constraints, and the §6
+  summary read path (which already projects the blob column out).
+  Surfaced by the `shard-runner-baseline` / `task-tables` verification.
+  Independent tidy-up with no dependants; not on the dependency DAG.
 
 ### Dependency DAG (parallel streams)
 
@@ -2233,24 +2250,25 @@ Mermaid (renders inline on GitHub):
 
 ``` mermaid
 flowchart TD
-    define[ssd-define-scenario]
+    %% Archived (green) nodes live in this box — move a node in here when it
+    %% is archived, so the box always holds exactly the `archived`-class nodes.
+    subgraph archived_box [archived]
+        define[ssd-define-scenario]
+        baseline[task-list-loop-baseline]
+        dqinit[dqrng-init]
+        dqstate[local-dqrng-state]
+        primer[task-primer]
+        prims[primer-primitives]
+        partby[partition-by]
+        acc[scenario-accessors]
+        shardrun[shard-runner-baseline]
+        tt[task-tables]
+    end
+
     inputs[scenario-input-types]
-    baseline[task-list-loop-baseline]
-    dqinit[dqrng-init]
-    dqstate[local-dqrng-state]
-    primer[task-primer]
-    prims[primer-primitives]
     postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
-    partby[partition-by]
-    shardrun[shard-runner-baseline]
-
-    acc[scenario-accessors]
-
-    subgraph targets [targets-only plumbing]
-        tt[task-tables]
-        manif[manifest]
-    end
+    manif[manifest]
 
     hive[hive-partitioning]
     cluster[cluster-pipeline]
@@ -2314,13 +2332,14 @@ flowchart TD
     %% --- node status colouring (keep in sync as each change progresses) ---
     %% green = archived, yellow = done (implemented, not yet archived),
     %% red = proposed (artifacts exist, not implemented), unfilled = open (roadmap only)
+    %% When a node becomes archived, give it the `archived` class AND move its
+    %% declaration into the `archived_box` subgraph above.
     classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
     classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims archived
-    class acc,partby,tt,shardrun done
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun archived
     class inputs,manif,migrate proposed
     class hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open
 ```
@@ -2328,7 +2347,10 @@ flowchart TD
 **Node colours track each step’s status** — green = archived, yellow =
 done (implemented, not yet archived), red = proposed (artifacts exist,
 not yet implemented), unfilled = open (roadmap only). Keep the colouring
-in sync as changes progress.
+in sync as changes progress, and **keep the archived (green) nodes
+collected inside the `archived_box` subgraph** — when a step is
+archived, move its node declaration into that box as well as giving it
+the `archived` class.
 
 `migrate-public-api` depends on `scenario-input-types` (its
 byte-equivalence re-run must exercise the full input surface) and on
