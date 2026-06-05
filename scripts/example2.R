@@ -36,8 +36,8 @@ datasets <- ssd_data(
 scenario <- ssd_define_scenario(
   datasets,
   nsim = 3L,
-  nrow = c(5L, 10L, 20L),
   seed = 42L,
+  nrow = c(5L, 10L, 20L),
   dists = c("lnorm", "gamma"),
   proportion = c(0.05, 0.2),
   ci = TRUE,

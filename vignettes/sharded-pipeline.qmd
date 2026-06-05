@@ -60,8 +60,8 @@ per step, with at most one of `partition_by`/`bundle` naming a given step.
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 2L,
-  nrow = c(5L, 10L),
   seed = 42L,
+  nrow = c(5L, 10L),
   rescale = c(FALSE, TRUE),
   dists = c("lnorm", "gamma")
 )
