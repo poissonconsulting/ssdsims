@@ -44,7 +44,7 @@ Add an internal `scenario_step_slice(scenario, step)` that returns the minimal `
 
 The slice for each step:
 
-- `sample` → the dataset(s) the shard reads (the helper's `datasets` argument), `partition_by[c("sample")]`.
+- `sample` → the dataset(s) the shard reads (the helper's `datasets` argument), `partition_by[c("sample")]`. Each task reads exactly one dataset, so a shard carries `unique(tasks$dataset)` — one dataset when `dataset` is a path axis (the default), or several only if `dataset` is bundled into the shard as an inner axis.
 - `fit` → `fit$dists` (and the fit fields the primer needs), `min_pmix_fns`, `partition_by[c("sample", "fit")]`.
 - `hc` → `hc$proportion`, `hc$samples`, `partition_by[c("fit", "hc")]`.
 

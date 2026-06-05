@@ -2272,6 +2272,11 @@ flowchart TD
     hive -.-> pathgrow
     hive -.-> slice
 
+    %% step-scenario-slice's per-dataset `sample` slice is what makes appending
+    %% a dataset leave the existing shards cached; path-axis-growth's
+    %% dataset-growth contract therefore depends on the slice landing (hard edge).
+    slice --> pathgrow
+
     inputs --> migrate
     prims --> migrate
     migrate --> cleanup
@@ -2290,7 +2295,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun archived
-    class inputs,postcheck,manif,migrate,hive,cluster,rewrite,pathgrow,slice proposed
+    class inputs,postcheck,manif,migrate,hive,cluster,rewrite,pathgrow proposed
+    class slice done
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
@@ -2303,10 +2309,11 @@ and **keep the archived (green) nodes collected inside the `archived_box`
 subgraph** — when a step is archived, move its node declaration into that box
 as well as giving it the `archived` class.
 
-**Status snapshot (2026-06-05).** Twelve changes now carry artifacts and are
-**proposed but unimplemented** (none has started against the package code, so
-all remain necessary — verified against the source tree, not just the task
-lists). The four original proposals:
+**Status snapshot (2026-06-05).** Twelve changes carry artifacts; `step-scenario-slice`
+has since been **implemented** (done/yellow — slice helper + per-dataset `sample`
+slice landed in `R/targets-runner.R`, not yet archived), and the remaining eleven
+stay **proposed but unimplemented** (verified against the source tree, not just the
+task lists). The four original proposals:
 - `task-rng-postcheck` — `dqrng` is still in `Imports` (not `Suggests`); no
   `dqrng_usable()`, no `chk_dqrng_backend_intact()`, no exit-bookend wiring.
 - `scenario-input-types` — `ssd_data()` still rejects non-data-frame input
@@ -2328,6 +2335,12 @@ Eight further changes were proposed in this round (all `openspec validate
   three minimal-rebuild contracts (`task-shards` deltas); each **finalises its
   cached-vs-rebuilt assertion against the invalidation model `hive-partitioning`
   pins**, shown as the dotted `hive -.-> {rewrite, pathgrow, slice}` edges.
+  `step-scenario-slice` is now **implemented** (done/yellow): besides the
+  per-step slice, it builds the `sample` slice **per dataset** (per shard), so
+  appending a dataset leaves the existing shards cached. That per-dataset slice
+  is precisely what makes `path-axis-growth`'s dataset-growth contract hold, so
+  `path-axis-growth` now **depends on** `step-scenario-slice` (the solid
+  `slice --> pathgrow` edge), not merely pairs with it.
 - `cluster-pipeline` — new `cluster-pipeline` capability (crew.cluster SLURM
   template via the existing factory).
 - `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
