@@ -6,12 +6,12 @@
 ## 2. `R/fit-dists-sims.R` — replace `chk_all`, thread `call`
 
 - [ ] 2.1 Capture `call <- environment()` at the top of `ssd_fit_dists_sims()` and pass `call = call` to its `chk::chk_*()` / `chk::abort_chk()` validators
-- [ ] 2.2 Replace `chk::chk_all(min_pmix, chk::chk_function, formals = 1L)` with a plain `for` loop that validates each element with the public `call` (guard + `chk::abort_chk(..., call = call)` where the element check has no `call` argument)
-- [ ] 2.3 Replace the `chk::chk_all(range_shape1, ...)` and `chk::chk_all(range_shape2, ...)` element checks with plain `for` loops threading the public `call`
+- [ ] 2.2 Wrap the `min_pmix` element validation (a `purrr::map()`/`walk()` over `chk::chk_function(..., formals = 1L)`) in `rlang::try_fetch()`, re-raising the caught condition with the public frame via `chk::abort_chk(..., call = call)` (or `rlang::abort(..., parent = cnd, call = call)`) — keep the functional, fix the origin; do **not** hand-roll a `for` loop
+- [ ] 2.3 Do the same for the `range_shape1` / `range_shape2` element checks: `rlang::try_fetch()` around the functional, re-raised with the public `call`
 
 ## 3. `R/hc-sims.R` and `R/simulate-data.R`
 
-- [ ] 3.1 `ssd_hc_sims()`: capture `call <- environment()` and thread `call = call` into its validators and any private helper; replace any `chk_all` / `purrr::walk` on a validation path with a plain loop
+- [ ] 3.1 `ssd_hc_sims()`: capture `call <- environment()` and thread `call = call` into its validators and any private helper; wrap any anticipated-validation `chk_all` / `purrr::walk` in `rlang::try_fetch()` re-raised with the public `call` (leave unexpected-error iteration as plain primitives)
 - [ ] 3.2 `ssd_sim_data()`: capture and thread the public frame into its validators and helpers so a bad argument names `ssd_sim_data()`
 
 ## 4. Scenario task/shard builders and accessors
@@ -29,7 +29,7 @@
 ## 6. Regression tests
 
 - [ ] 6.1 Add per-function origin tests: trigger a validation failure and assert the origin with `testthat::expect_error(..., class = ...)` plus `testthat::expect_snapshot()` of the rendered error, asserting the `Error in \`ssd_*()\`:` header names the public function and not `chk_all` / `purrr` / a helper
-- [ ] 6.2 Cover `ssd_fit_dists_sims()` (the `chk_all` → loop cases on `min_pmix` / `range_shape*`) explicitly, pinning the new per-element message wording in a snapshot
+- [ ] 6.2 Cover `ssd_fit_dists_sims()` (the `chk_all` → `try_fetch()`-around-`map()` cases on `min_pmix` / `range_shape*`) explicitly, pinning the re-raised message wording in a snapshot
 - [ ] 6.3 Add a cross-cutting test iterating the exported surface (or one test per function) asserting no validation error reports an internal frame as origin
 
 ## 7. Document, format, and validate
