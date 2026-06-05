@@ -1,5 +1,47 @@
 # Changelog
 
+## ssdsims 0.0.0.9012
+
+### Features
+
+- Scenario accessors, configurable partition_by/bundle, and shard
+  runners (single-core + targets)
+  ([\#94](https://github.com/poissonconsulting/ssdsims/issues/94)).
+
+- Per-task dqrng primer derivation and a reproducible baseline runner
+  ([\#88](https://github.com/poissonconsulting/ssdsims/issues/88)).
+
+### Chore
+
+- Sync parallel-safe-seeding spec and archive task-primer +
+  primer-primitives
+  ([\#90](https://github.com/poissonconsulting/ssdsims/issues/90)).
+
+### Documentation
+
+#### openspec
+
+- Propose `task-rng-postcheck` — per-task dqrng RNG-backend
+  postcondition
+  ([\#91](https://github.com/poissonconsulting/ssdsims/issues/91)).
+
+- Propose shard-runner-baseline change
+  ([\#95](https://github.com/poissonconsulting/ssdsims/issues/95)).
+
+#### openspec
+
+- Propose registry, manifest, and task-tables changes
+  ([\#92](https://github.com/poissonconsulting/ssdsims/issues/92)).
+
+- Targets-design + roadmap revisions, and explore-captured decisions for
+  `scenario-input-types` / `partition-by`
+  ([\#87](https://github.com/poissonconsulting/ssdsims/issues/87)).
+
+### Roadmap
+
+- Add a step that tests incremental rebuilds when a scenario grows
+  ([\#93](https://github.com/poissonconsulting/ssdsims/issues/93)).
+
 ## ssdsims 0.0.0.9011
 
 ### Features

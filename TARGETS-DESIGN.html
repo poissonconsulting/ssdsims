@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9011</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9012</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -1058,7 +1058,7 @@
 <li>
 <strong><code>task-rng-postcheck</code></strong> — Per-task RNG-backend <strong>postcondition</strong>. Each <code>*_data_task_primer()</code> wrapper, when the task <em>ends</em>, verifies that dqrng (not merely <em>some</em> user-supplied RNG) still held base R’s <code>user_unif_rand</code> slot for the whole body, via a non-destructive state-advance witness (<code>dqrng_get_state()</code> → base draw → <code>dqrng_get_state()</code> → <code>dqrng_set_state()</code> restore); a frozen state means a foreign RNG hijacked the slot, so it <strong>aborts</strong> (chk-style), symmetric with the <code><a href="reference/local_dqrng_state.html">local_dqrng_state()</a></code> entry guard. Closes the gap that the <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">RNGkind()</a></code> probe (<code>dqrng_backend_active()</code>) is satisfied by a <em>foreign</em> user-supplied RNG: a second user-RNG package (e.g. <code>randtoolbox</code>) loaded in the session takes the single global slot while <code>RNGkind()[1]</code> still reads <code>"user-supplied"</code>. Validated (and the threat reproduced, dqrng vs <code>randtoolbox</code>) in <code>openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/</code>. Rides inside the per-task primitives, so it carries into the <code>targets</code> shard body and §7 <code>replay-helper</code> — each shard self-verifies in its own process. Depends on <code>primer-primitives</code> (<strong>landed</strong>) — so it is unblocked — and is orthogonal to <code>task-primer</code>.</li>
 <li>
-<strong><code>migrate-public-api</code></strong> — <em>Cosmetic, independent of the targets work (like <code>error-call-origin</code>).</em> Migrate <code>ssd_sim_data.data.frame</code>, <code>ssd_fit_dists_sims</code>, <code>ssd_hc_sims</code> to the new contract; keep the <code>_seed</code> wrappers as a one-release shim. <code>example-expanded*.R</code> re-runs with byte-equivalence across <strong>every</strong> input form, so it <strong>depends on</strong> <code>scenario-input-types</code> (the full input surface must exist before the public-API re-run can exercise it). This is otherwise a surface rename over <code>primer-primitives</code>, which already establishes the contract — so, <strong>trusting the design</strong>, none of the targets-only plumbing (<code>scenario-accessors</code>, <code>manifest</code>, <code>task-tables</code>, …) waits on it. With no dependants of its own, it can land any time after <code>scenario-input-types</code>; the DAG shows the solid <code>scenario-input-types → migrate-public-api</code> prereq plus a dashed, non-gating edge off <code>primer-primitives</code>.</li>
+<strong><code>migrate-public-api</code></strong> — <em>Cosmetic, independent of the targets work (like <code>error-call-origin</code>).</em> Migrate <code>ssd_sim_data.data.frame</code>, <code>ssd_fit_dists_sims</code>, <code>ssd_hc_sims</code> to the new contract; keep the <code>_seed</code> wrappers as a one-release shim. <code>example-expanded*.R</code> re-runs with byte-equivalence across <strong>every</strong> input form, so it <strong>depends on</strong> <code>scenario-input-types</code> (the full input surface must exist before the public-API re-run can exercise it) and on <code>primer-primitives</code> (the contract it reuses). None of the targets-only plumbing (<code>scenario-accessors</code>, <code>manifest</code>, <code>task-tables</code>, …) waits on it, but it <strong>gates <code>cleanup-lecuyer</code></strong>: the L’Ecuyer-CMRG helpers and <code>_seed</code> shims cannot be removed until the public step functions stop calling them. The DAG shows the solid <code>scenario-input-types → migrate-public-api</code> and <code>primer-primitives → migrate-public-api</code> prereqs and the <code>migrate-public-api → cleanup-lecuyer</code> dependant.</li>
 <li>
 <strong><code>scenario-accessors</code></strong> — Datasets and <code>min_pmix</code> are <strong>materialised on the scenario, accessed by name</strong> — no registry (§1.1). Materialise the <code>min_pmix</code> functions on the scenario at construction (keyed by name, resolving name-strings then), and add <code>scenario_dataset(scenario, name)</code> / <code>scenario_min_pmix(scenario, name)</code> accessors; <code>resolve_min_pmix()</code> becomes the accessor. Hashing stays name-only, so a function-body edit does not move any cached fit branch (regression test). Adds no dependency (no Parquet here — that is <code>task-tables</code>). Persisting a <em>large</em> dataset to disk instead of carrying it inline is the deferred <code>dataset-provenance</code> step.</li>
 <li>
@@ -1090,7 +1090,7 @@
 <li>
 <strong><code>mixed-code-lockin</code></strong> — §8.3 — <code>tar_cue(depend = FALSE)</code> on the step targets to pin shards against a code change (in-project, no child project); <code><a href="https://docs.ropensci.org/targets/reference/tar_invalidate.html" class="external-link">tar_invalidate()</a></code> / <code><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink()</a></code> for forced re-runs of the chosen shards (§8.4). Both recipes have tests.</li>
 <li>
-<strong><code>cleanup-lecuyer</code></strong> — Remove the L’Ecuyer-CMRG helpers and the <code>_seed</code> shims; <code>scripts/experiment-substream-restart.R</code> becomes a historical reference.</li>
+<strong><code>cleanup-lecuyer</code></strong> — Remove the L’Ecuyer-CMRG helpers and the <code>_seed</code> shims; <code>scripts/experiment-substream-restart.R</code> becomes a historical reference. <strong>Depends on <code>migrate-public-api</code></strong> (the public step functions must be off the L’Ecuyer path first).</li>
 <li>
 <strong><code>error-call-origin</code></strong> — <em>Cosmetic, independent of the rest.</em> Audit every user-facing function so its validation errors report the <strong>calling function</strong> as the origin (<code>Error in \</code>ssd_<em>()`:<code>), never an internal frame (</code>purrr::map()<code>,</code>lapply()<code>, a private helper). Thread the public frame into validators (</code>chk::abort_chk(…, call = call)<code>with</code>call = environment()<code>), and prefer plain loops over</code>purrr::walk<code>/</code>chk::chk_all<code>where those wrappers would surface in the error header. May need upstream</code>chk<code>changes (e.g. a</code>call<code>/</code>error_call<code>argument on</code>chk_</em>()<code>so the origin can be set without hand-rolling each check). Not on the dependency DAG — it can land at any time; the</code>ssd-define-scenario<code>work already follows the convention (see the repo</code>AGENTS.md` “Error origin” note).</li>
 <li>
@@ -1180,7 +1180,8 @@
     lockin --&gt; cleanup
 
     inputs --&gt; migrate
-    prims -.-&gt; migrate
+    prims --&gt; migrate
+    migrate --&gt; cleanup
 
     %% --- node status colouring (keep in sync as each change progresses) ---
     %% green = archived, yellow = done (implemented, not yet archived),
@@ -1192,10 +1193,10 @@
 
     class define,baseline,dqinit,dqstate,primer,prims archived
     class acc,partby,tt,shardrun done
-    class inputs,manif proposed
-    class migrate,hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open</code></pre>
+    class inputs,manif,migrate proposed
+    class hive,cluster,survive,assert,cloud,replay,rewrite,pathgrow,slice,lockin,cleanup open</code></pre>
 <p><strong>Node colours track each step’s status</strong> — green = archived, yellow = done (implemented, not yet archived), red = proposed (artifacts exist, not yet implemented), unfilled = open (roadmap only). Keep the colouring in sync as changes progress.</p>
-<p><code>migrate-public-api</code> waits only on <code>scenario-input-types</code> (its byte-equivalence re-run must exercise the full input surface) and hangs off <code>primer-primitives</code> with a <strong>dashed, non-gating</strong> edge; it has <strong>no dependants</strong>, so trusting the design no targets step waits on it and it can land any time once <code>scenario-input-types</code> is in. The dashed edge marks “follows from, but does not block.”</p>
+<p><code>migrate-public-api</code> depends on <code>scenario-input-types</code> (its byte-equivalence re-run must exercise the full input surface) and on <code>primer-primitives</code> (the contract it reuses); no targets step waits on it, but it <strong>gates <code>cleanup-lecuyer</code></strong> — the L’Ecuyer-CMRG helpers and <code>_seed</code> shims cannot be removed until the public step functions stop calling them.</p>
 <p><code>shard-runner-baseline</code> sits off <code>primer-primitives</code> + <code>partition-by</code>, parallel to the <code>targets</code>-only plumbing: it proves the Hive write/read + m:n loop in plain R, then feeds <code>hive-partitioning</code> (which keeps the <code>targets</code>-integration + invalidation half). The <code>baseline → partby</code> edge is the previously-latent reuse dependency — <code>partition-by</code> reads <code>task_axes()</code>/<code>task_parent()</code> from <code>task-list-loop-baseline</code>.</p>
 <p>Three “wait points” (<code>primer-primitives</code>, <code>task-tables</code>, <code>mixed-code-lockin</code>) gate the layers in between; anything not chained by an arrow can be worked on in parallel.</p>
 </div>
