@@ -2265,6 +2265,8 @@ flowchart TD
         tt[task-tables]
         hive[hive-partitioning]
         slice[step-scenario-slice]
+        rewrite[shard-atomic-rewrite]
+        pathgrow[path-axis-growth]
     end
 
     inputs[scenario-input-types]
@@ -2277,8 +2279,6 @@ flowchart TD
     assert[shard-completeness-assert]
     cloud[cloud-upload]
     replay[replay-helper]
-    rewrite[shard-atomic-rewrite]
-    pathgrow[path-axis-growth]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -2354,8 +2354,8 @@ flowchart TD
     classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice archived
-    class inputs,postcheck,manif,migrate,cluster,rewrite,pathgrow proposed
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
+    class inputs,postcheck,manif,migrate,cluster proposed
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
