@@ -1,7 +1,7 @@
 ## 1. Spec contract
 
-- [ ] 1.1 Confirm the `task-shards` delta (`specs/task-shards/spec.md`) adds the requirement "Inner-axis growth atomically rewrites the affected shards byte-stably" with a `#### Scenario:` pinning: affected `fit` shards rebuilt and overwritten (whole-file, no append), prior rows byte-identical to the prior Parquet, the added task row present, untouched `sample` shards cached
-- [ ] 1.2 State in the requirement/design the byte-stability dependency on deterministic Parquet writes (fixed column order, pinned `duckplyr`/DuckDB) and the downstream dependency on `hive-partitioning`'s invalidation model for the precise cached-vs-rebuilt set
+- [x] 1.1 Confirm the `task-shards` delta (`specs/task-shards/spec.md`) adds the requirement "Inner-axis growth atomically rewrites the affected shards byte-stably" with a `#### Scenario:` pinning: affected `fit` shards rebuilt and overwritten (whole-file, no append), prior rows byte-identical to the prior Parquet, the added task row present, untouched `sample` shards cached
+- [x] 1.2 State in the requirement/design the byte-stability dependency on deterministic Parquet writes (fixed column order, pinned `duckplyr`/DuckDB) and the downstream dependency on `hive-partitioning`'s invalidation model for the precise cached-vs-rebuilt set
 
 ## 2. Regression test (no new code)
 
