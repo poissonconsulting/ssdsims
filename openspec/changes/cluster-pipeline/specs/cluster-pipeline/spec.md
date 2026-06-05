@@ -22,16 +22,20 @@ The `cluster/` template SHALL set `tar_option_set(controller = crew.cluster::cre
 - **WHEN** a user moves the template to a different SLURM cluster
 - **THEN** the only file region they need to edit SHALL be the controller block (queue, `script_lines`, scratch, workers, walltime); the scenario and the `ssd_scenario_targets()` call SHALL remain unchanged
 
-### Requirement: Cluster connectivity is validated before scenario logic
-The template SHALL validate cluster connectivity **before** any scenario logic runs, by building a trivial no-op probe target (the bare shape of ingredient A) that submits and reclaims one SLURM job. `tar_make()` SHALL build this probe first; if the probe fails, the scenario shard targets SHALL NOT run (`TARGETS-DESIGN.md` §4 ingredient B — "validated by submitting one trivial job end-to-end before any ssdsims logic is involved").
+### Requirement: Cluster connectivity and worker prerequisites are validated before scenario logic
+The template SHALL validate, before any scenario logic runs, both that the controller can dispatch a SLURM job and that a worker can actually run ssdsims. It SHALL do this with a probe target that (a) submits and reclaims one SLURM job through the controller and (b) inside that job verifies the worker prerequisites: R resolves at the expected version, `library(ssdsims)` loads (the ManyLinux binary install path), and the scratch/`tempdir` is writable. The probe SHALL return a small witness (e.g. the worker R version and node id). `tar_make()` SHALL build the probe first, and the first scenario shard target SHALL name the probe as an explicit upstream dependency, so a probe failure SHALL prevent the scenario shard targets from running (`TARGETS-DESIGN.md` §4 ingredient B). On failure the probe SHALL abort with an actionable message naming which check failed (no job dispatched, R or ssdsims unavailable on the worker, or scratch not writable), so the user fixes the wiring or prerequisite rather than debugging a scenario error.
 
 #### Scenario: The probe is the first target built
 - **WHEN** `tar_make()` is run on the `cluster/` template
-- **THEN** a trivial no-op probe target SHALL be submitted to and reclaimed from one SLURM job before any scenario shard target runs
+- **THEN** the probe target SHALL be submitted to and reclaimed from one SLURM job before any scenario shard target runs, and the first scenario shard SHALL depend on it
+
+#### Scenario: The probe verifies worker prerequisites, not just dispatch
+- **WHEN** a SLURM job can be dispatched but the worker cannot load `ssdsims` (e.g. the R module is not loaded or the binary path is missing) or cannot write scratch
+- **THEN** the probe SHALL fail with a message identifying the missing prerequisite, rather than passing on dispatch alone and letting the first shard fail obscurely
 
 #### Scenario: A failed probe blocks the scenario shards
-- **WHEN** the connectivity probe fails (no SLURM job can be submitted or reclaimed)
-- **THEN** the scenario shard targets SHALL NOT run, and the failure SHALL surface the cluster-wiring problem rather than a scenario error
+- **WHEN** the probe fails (no SLURM job can be submitted or reclaimed, or a worker prerequisite is missing)
+- **THEN** the scenario shard targets SHALL NOT run, and the failure SHALL surface the cluster-wiring or prerequisite problem rather than a scenario error
 
 ### Requirement: Shards are the unit of parallelism dispatched to SLURM jobs
 The pipeline SHALL dispatch the scenario's per-shard step targets across SLURM jobs as the unit of parallelism: independent shard targets SHALL run concurrently under the SLURM controller, regardless of how the underlying `crew`/`targets` configuration packs shard targets into jobs (one shard target per job or several packed into one). The template SHALL document the chosen shard-target-to-job packing convention (`TARGETS-DESIGN.md` §11 Q6).
@@ -54,3 +58,18 @@ The pipeline SHALL dispatch the scenario's per-shard step targets across SLURM j
 #### Scenario: No reachable SLURM queue degrades to a local smoke path
 - **WHEN** the driver is run off-cluster with no reachable SLURM queue
 - **THEN** it SHALL fall back to a `crew::crew_controller_local()` smoke path (or skip cleanly), so the pipeline can be validated without a scheduler
+
+### Requirement: Documentation takes a user from zero to a running cluster job
+The package SHALL document the path from a user's own cluster instructions to a running scenario job, and SHALL NOT assume the reader already knows `crew` or `targets`. The documentation SHALL begin from the site's non-R SLURM usage instructions and proceed in four steps: (1) a mapping from each piece of site information — login node, job submission, partition/queue, account/allocation, the module system that provides R, the scratch filesystem, walltime, and cores — to the `crew.cluster::crew_controller_slurm()` argument it sets; (2) running the connectivity-and-prerequisite probe to confirm the mapping; (3) running the built-in `small` scenario end-to-end through the `cluster/` template as the minimal first job; and (4) swapping in the user's own scenario by editing `scenario.R`.
+
+#### Scenario: Site instructions map to controller arguments
+- **WHEN** a user has their cluster's own (non-R) instructions for partition/queue, account, module loads for R, scratch path, and walltime
+- **THEN** the documentation SHALL show which `crew.cluster::crew_controller_slurm()` argument each piece maps to, so the user can fill the controller block without prior `crew` knowledge
+
+#### Scenario: The minimal first job uses the built-in small scenario
+- **WHEN** a user follows the guide after configuring the controller and passing the probe
+- **THEN** the guide SHALL have them run the built-in `small` scenario end-to-end through the `cluster/` template as the minimal first job, before adapting their own scenario
+
+#### Scenario: Adapting to the user's own scenario is the final step
+- **WHEN** the minimal `small` run has succeeded
+- **THEN** the guide SHALL show the user editing `scenario.R` to their own study, with the controller block and the `ssd_scenario_targets()` call unchanged

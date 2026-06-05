@@ -10,7 +10,8 @@ Today the package ships `inst/targets-templates/small/` and `large/`. The `large
 
 - An editable `inst/targets-templates/cluster/` whose `_targets.R` builds the scenario via the existing `ssd_scenario_targets()` factory, with the SLURM controller as the only cluster-specific code (ingredient A's shape + B's backend + C's scenario, assembled).
 - A SLURM `crew.cluster::crew_controller_slurm()` block (queue/partition, `script_lines`, scratch, workers, walltime) drafted from the labs' validated block, editable in one place to retarget another cluster.
-- A connectivity probe that submits and reclaims one trivial SLURM job **before** any scenario shard runs.
+- A probe that, **before** any scenario shard runs, both proves connectivity (submit + reclaim one SLURM job) and verifies worker prerequisites (R resolves, `library(ssdsims)` loads via the ManyLinux binary path, scratch/`tempdir` writable), as an explicit upstream dependency of the first shard, aborting with an actionable message that names which check failed.
+- A "zero to a running cluster job" guide that bridges the cluster's own (non-R) SLURM usage instructions to the `crew_controller_slurm()` arguments, then runs the built-in `small` scenario as the minimal first job, then adapts to the user's own scenario.
 - A `run.R` driver mirroring `large/run.R`, with a clean guard/fallback when `crew.cluster` or a SLURM queue is unavailable.
 - End-to-end validation: `tar_make()` on a real or sandboxed SLURM queue builds the probe then the scenario shards, byte-identical to the local pipeline.
 
@@ -18,7 +19,7 @@ Today the package ships `inst/targets-templates/small/` and `large/`. The `large
 
 - Changing the pipeline shape, the per-shard runners, or the `ssd_scenario_targets()` factory (that is `task-shards`); the factory is reused verbatim and scheduler-independent (§4).
 - Discovering the crew + SLURM wiring (the crew labs already validated it — this is a port).
-- The ManyLinux binary install path and login-node prerequisite checker as *package* code (operational backend B; the template documents/links them, it does not own them).
+- *Owning* the ManyLinux binary install path as package code (operational backend B; the template documents/links it, it does not provide it). The probe *verifies* the worker prerequisites at run time (folding in the labs' login-node prerequisite checker), but it does not install or own the binary path itself.
 - Finer per-task failure survival on the cluster (`shard-failure-survival`, which depends on this step) and provenance recording (`manifest` / `cloud-upload`).
 - Editing R code, `DESCRIPTION`, or live specs in this proposal — it *describes* adding `crew.cluster` to `Suggests`; the implementing change applies it (see tasks).
 
@@ -32,9 +33,20 @@ Today the package ships `inst/targets-templates/small/` and `large/`. The `large
 
 Per §4, only the controller and resource specs change between clusters; pipeline shape (A) and content + RNG (C) are scheduler-independent. So `cluster/_targets.R` is `large/_targets.R` with the `crew::crew_controller_local(...)` line replaced by a `crew.cluster::crew_controller_slurm(...)` block, plus the probe target. `source("scenario.R")` and `ssd_scenario_targets(scenario)` are byte-for-byte the same as `large/`. This keeps the per-task results byte-identical to the local pipeline (validated against the `task-shards` baseline oracle) and means a future scheduler change touches one block.
 
-### Decision: a connectivity probe is the first target, before any scenario logic (ingredient B)
+### Decision: the probe validates connectivity AND worker prerequisites, before any scenario logic (ingredient B)
 
-§4 ingredient B is validated by "submitting one trivial job end-to-end **before any ssdsims logic is involved**." The template encodes this as a no-op probe target (e.g. a target returning a constant computed on a worker) that `tar_make()` builds first; the scenario shard targets depend on the run reaching them, so a probe failure surfaces the cluster-wiring problem rather than a scenario error. This is the bare shape (A) used as a guard, not just a lab artifact.
+§4 ingredient B is validated by "submitting one trivial job end-to-end **before any ssdsims logic is involved**." The template encodes this as a probe target that `tar_make()` builds first and that the first scenario shard target names as an **explicit upstream dependency** (so a probe failure blocks the shards rather than surfacing later as a scenario error). The probe does two things, not one: **(1) connectivity** — it submits and reclaims one SLURM job through the controller; **(2) worker prerequisites** — inside that job it verifies the operational backend the labs pinned (ingredient B): R resolves at the expected version, `library(ssdsims)` loads from the ManyLinux binary path, and the scratch/`tempdir` is writable. It returns a small witness (e.g. the worker's R version and node id). On failure it aborts with an **actionable message naming which check failed** — no job submitted → controller/queue/account wiring; job ran but R or ssdsims missing → module-load / install-path; scratch not writable → storage config — so the user fixes the wiring or prerequisite, not a scenario bug. A bare no-op job would prove dispatch but not that a worker can actually load ssdsims and write a shard (the most common real failure), so the prerequisite checks are part of the probe, folding in the labs' login-node prerequisite checker. *Alternative considered:* a bare no-op probe with prerequisites left to a separate manual preflight — rejected; the prerequisite failure is exactly what the probe should catch before the expensive shards run.
+
+### Decision: documentation bridges the cluster's non-R instructions to the controller, then to a minimal run
+
+A user's real starting point is their **site's own cluster instructions** — how to log in, submit an `sbatch` job, which partition/queue and account/allocation to use, the `module` system that provides R, the scratch filesystem, and walltime/core limits — none of it about R, `crew`, or `targets`. The template's documentation SHALL outline the path from those non-R instructions to a running job:
+
+1. **Map the site information to the controller** — a table from each piece of site instruction to the `crew.cluster::crew_controller_slurm()` argument it sets: partition/queue → `slurm_partition`, `module load R/4.x …` → `script_lines`, account/allocation → the controller's options, scratch path → the worker `tempdir`/storage, walltime and cores → the resource arguments.
+2. **Confirm the mapping with the probe** (connectivity + worker prerequisites, above): a green probe means the controller block matches the site.
+3. **Run the built-in `small` scenario end-to-end** through the `cluster/` template as the minimal first job.
+4. **Swap in the user's own scenario** (edit `scenario.R`).
+
+The three journeys the review asks for map onto these steps: the *built-in cluster + targets example* is step 3 (the `small` scenario through the `cluster/` template); the *non-targets instructions for their cluster* are step 1 (reading the site's own, non-R job-submission instructions into the controller block); the *particular scenario* is step 4. *Alternative considered:* documenting only a finished controller block — rejected; users cannot reach a finished block without the site-instruction → argument mapping, which is the actual gap.
 
 ### Decision: shards are the unit of parallelism; the shard-target-to-job packing is a documented knob (resolves §11 Q6)
 
