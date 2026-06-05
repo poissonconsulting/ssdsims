@@ -2,12 +2,11 @@
 #
 # The package ships this under
 # `system.file("targets-templates", "cluster", package = "ssdsims")`. Copy the
-# directory's files (`controller.R`, `functions.R`, `scenario.R`, `preflight.R`,
-# `_targets.R`, `run.R`, `run-serial.R`) to your project root, edit
-# `controller.R` for your cluster (see the README's "zero to a running cluster
-# job" guide and its mapping table), then run this driver — interactively with
-# `source("run.R")` or from a shell with `Rscript run.R`. (`run-serial.R` runs
-# the same scenario single core, without targets, and compares the results.)
+# directory's files (`controller.R`, `preflight.R`, `_targets.R`, `run.R`) to
+# your project root, edit `controller.R` for your cluster (see the README's
+# "zero to a running cluster job" guide and its mapping table), then run this
+# driver — interactively with `source("run.R")` or from a shell with
+# `Rscript run.R`.
 #
 # It first runs the connectivity+prerequisite PREFLIGHT (`preflight.R`: one
 # SLURM job that checks a worker can run ssdsims) so a wiring problem surfaces

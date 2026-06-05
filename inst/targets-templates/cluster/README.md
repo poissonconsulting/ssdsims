@@ -14,14 +14,13 @@ Three ingredients assemble into the cluster run; **only B is cluster-specific**:
 |---|---|---|
 | **A — shape** | the per-shard target graph | `ssd_scenario_targets()` in `_targets.R` (reused verbatim) |
 | **B — backend** | the SLURM `crew` controller (queue, modules, scratch, workers, walltime) | the **one editable block** in `controller.R` |
-| **C — content** | the scenario (seed, datasets, grids) | `scenario.R` |
+| **C — content** | the scenario (seed, datasets, grids) | the inline `scenario` block in `_targets.R` |
 
-The files: `controller.R` (the **one editable controller block**, sourced by
-both the pipeline and the preflight), `_targets.R` (the clean pipeline:
-controller + scenario + factory), `preflight.R` (the standalone
-connectivity/prerequisite check, kept out of the pipeline), `functions.R` (the
-probe body, sourced by `preflight.R`), `scenario.R` (the study), `run.R` (the
-driver: preflight then `tar_make()`), `run-serial.R` (single-core oracle).
+Just four files: `controller.R` (the **one editable controller block**, sourced
+by both the pipeline and the preflight), `_targets.R` (the clean pipeline:
+controller + the inline scenario + factory), `preflight.R` (the standalone
+connectivity/prerequisite check, kept out of the pipeline), and `run.R` (the
+driver: preflight then `tar_make()`).
 
 Get the template:
 
@@ -110,17 +109,18 @@ expensive scenario shards.
 
 ---
 
-## Step 3 — Run the built-in `small` scenario (minimal first job)
+## Step 3 — Run a minimal first job
 
 For your first job, make the scenario tiny and cheap so you are testing the
-**wiring**, not waiting on a big study. Replace `scenario.R` with the built-in
-`small` scenario:
+**wiring**, not waiting on a big study. Temporarily shrink the `scenario` block
+near the top of `_targets.R` to a single cheap cell, e.g.:
 
 ```r
-file.copy(
-  system.file("targets-templates", "small", "scenario.R", package = "ssdsims"),
-  "scenario.R",
-  overwrite = TRUE
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  nrow = 5L,
+  seed = 42L
 )
 ```
 
@@ -130,9 +130,9 @@ Then run the pipeline:
 source("run.R") # or, from a shell on the login node:  Rscript run.R
 ```
 
-`run.R` runs the preflight first, then dispatches the `small` scenario's shards
-across SLURM jobs (independent shards run concurrently), writes one Parquet per
-shard under `results/layout=<hash>/<step>/...`, unions them into
+`run.R` runs the preflight first, then dispatches the scenario's shards across
+SLURM jobs (independent shards run concurrently), writes one Parquet per shard
+under `results/layout=<hash>/<step>/...`, unions them into
 `results/layout=<hash>/summary.parquet`, and prints a peek at the estimates. That
 is your first running cluster job, end to end.
 
@@ -140,17 +140,18 @@ is your first running cluster job, end to end.
 > `sbatch` is not on `PATH`, it aborts with a clear message naming the missing
 > prerequisite. To run the **same study off a cluster** (no scheduler), use the
 > `large/` template — it builds the identical pipeline (same factory + scenario)
-> under a `crew::crew_controller_local()` controller, and `run-serial.R` asserts
-> the results are byte-identical.
+> under a `crew::crew_controller_local()` controller, and its `run-serial.R`
+> asserts the results are byte-identical.
 
 ---
 
 ## Step 4 — Swap in your own scenario
 
-Once the minimal job succeeds, edit `scenario.R` to your own study (start from
-the wider sweep this template ships, or `large/scenario.R`). **Leave
-`controller.R` and `_targets.R` unchanged** — the scenario and the
-`ssd_scenario_targets()` call are scheduler-independent. Run `run.R` again.
+Once the minimal job succeeds, expand the `scenario` block in `_targets.R` back
+to the full sweep this template ships (or to your own study; see
+`large/scenario.R`). **Leave `controller.R` and the `ssd_scenario_targets()`
+call unchanged** — the scenario and the factory call are scheduler-independent.
+Run `run.R` again.
 
 ---
 

@@ -1,10 +1,14 @@
 # The cluster template's connectivity/prerequisite check is a standalone
-# preflight (`preflight.R` + `functions.R`), kept OUT of the main pipeline so
-# `_targets.R` stays a clean scenario-and-factory definition. We test the probe
-# function directly (no scheduler) and assert the shipped `_targets.R` graph
-# carries no probe target.
+# preflight (`preflight.R`, which carries the probe body), kept OUT of the main
+# pipeline so `_targets.R` stays a clean scenario-and-factory definition. We test
+# the probe function directly (no scheduler) and assert the shipped `_targets.R`
+# graph carries no probe target.
 
-# Source the shipped template's `functions.R` and return its probe function.
+# Source the shipped `preflight.R` up to (not including) the controller calls and
+# return its probe function. `preflight.R` sources `controller.R` (which builds a
+# SLURM controller) and then submits a job, so we cannot source it wholesale off
+# a cluster; instead we read it and evaluate just the `ssdsims_cluster_probe`
+# definition.
 cluster_probe_fun <- function() {
   template_dir <- system.file(
     "targets-templates",
@@ -12,8 +16,12 @@ cluster_probe_fun <- function() {
     package = "ssdsims"
   )
   testthat::skip_if(!nzchar(template_dir))
+  lines <- readLines(file.path(template_dir, "preflight.R"))
+  start <- grep("^ssdsims_cluster_probe <- function", lines)
+  end <- grep("^\\}", lines)
+  end <- min(end[end > start])
   env <- new.env()
-  sys.source(file.path(template_dir, "functions.R"), envir = env)
+  eval(parse(text = lines[start:end]), envir = env)
   env$ssdsims_cluster_probe
 }
 
@@ -48,11 +56,8 @@ test_that("cluster-pipeline: the main pipeline carries no probe target", {
   )
   skip_if(!nzchar(template_dir))
   dir <- withr::local_tempdir()
-  # `_targets.R` sources `controller.R` and `scenario.R`.
-  file.copy(
-    file.path(template_dir, c("_targets.R", "controller.R", "scenario.R")),
-    dir
-  )
+  # `_targets.R` sources only `controller.R` (the scenario is inline).
+  file.copy(file.path(template_dir, c("_targets.R", "controller.R")), dir)
   withr::local_dir(dir)
   net <- targets::tar_network(targets_only = TRUE, callr_function = NULL)
   vertices <- net$vertices$name

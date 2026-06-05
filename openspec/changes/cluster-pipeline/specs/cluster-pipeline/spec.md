@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: A cluster targets template builds a scenario via the shared factory
-The package SHALL ship an editable cluster template at `inst/targets-templates/cluster/` whose `_targets.R` builds a scenario's whole pipeline via the existing `ssd_scenario_targets()` factory (the `task-shards` capability), reusing the scenario object and factory call **verbatim** from the `large/` template. `_targets.R` SHALL stay a clean scenario-and-factory definition: it SHALL reduce to setting the controller (sourced from the separate `controller.R`), sourcing the scenario, and calling the factory, carrying no probe/preflight code of its own; the pipeline shape and the per-task content/RNG SHALL be scheduler-independent and unchanged (`TARGETS-DESIGN.md` §4). The template SHALL include a `run.R` driver mirroring `large/run.R` (run the preflight, `tar_make()`, report the summary path and a peek at the estimates).
+The package SHALL ship an editable cluster template at `inst/targets-templates/cluster/` whose `_targets.R` builds a scenario's whole pipeline via the existing `ssd_scenario_targets()` factory (the `task-shards` capability), reusing the scenario shape and factory call **verbatim** from the `large/` template. `_targets.R` SHALL stay a clean scenario-and-factory definition: it SHALL reduce to setting the controller (sourced from the separate `controller.R`), defining the scenario object inline, and calling the factory, carrying no probe/preflight code of its own; the pipeline shape and the per-task content/RNG SHALL be scheduler-independent and unchanged (`TARGETS-DESIGN.md` §4). The template SHALL be minimal — only the files that cannot be inlined are separate (`controller.R`, shared by the pipeline and the preflight; `preflight.R`; `run.R`) — and SHALL include a `run.R` driver mirroring `large/run.R` (run the preflight, `tar_make()`, report the summary path and a peek at the estimates).
 
 #### Scenario: The cluster _targets.R reduces to a scenario plus the factory call
 - **WHEN** the `cluster/` template's `_targets.R` is sourced for a scenario
-- **THEN** the pipeline SHALL be assembled by `ssd_scenario_targets(scenario)` (the same factory the `large/` template uses), the only cluster-specific code SHALL be the controller block sourced from `controller.R`, and `_targets.R` SHALL contain no probe/preflight target (the connectivity check is the standalone `preflight.R`)
+- **THEN** the pipeline SHALL be assembled by `ssd_scenario_targets(scenario)` (the same factory the `large/` template uses) over an inline scenario object, the only cluster-specific code SHALL be the controller block sourced from `controller.R`, and `_targets.R` SHALL contain no probe/preflight target (the connectivity check is the standalone `preflight.R`)
 
 #### Scenario: Per-task results are scheduler-independent
 - **WHEN** the same scenario is built through the `cluster/` template and through the `large/` (local) template
@@ -60,16 +60,16 @@ The pipeline SHALL dispatch the scenario's per-shard step targets across SLURM j
 - **THEN** it SHALL abort (or skip) with a clear message naming the missing `sbatch`/queue prerequisite and pointing at the `large/` template for off-cluster runs, rather than erroring obscurely
 
 ### Requirement: Documentation takes a user from zero to a running cluster job
-The package SHALL document the path from a user's own cluster instructions to a running scenario job, and SHALL NOT assume the reader already knows `crew` or `targets`. The documentation SHALL begin from the site's non-R SLURM usage instructions and proceed in four steps: (1) a mapping from each piece of site information — login node, job submission, partition/queue, account/allocation, the module system that provides R, the scratch filesystem, walltime, and cores — to the `crew.cluster::crew_controller_slurm()` argument it sets; (2) running the connectivity-and-prerequisite probe to confirm the mapping; (3) running the built-in `small` scenario end-to-end through the `cluster/` template as the minimal first job; and (4) swapping in the user's own scenario by editing `scenario.R`.
+The package SHALL document the path from a user's own cluster instructions to a running scenario job, and SHALL NOT assume the reader already knows `crew` or `targets`. The documentation SHALL begin from the site's non-R SLURM usage instructions and proceed in four steps: (1) a mapping from each piece of site information — login node, job submission, partition/queue, account/allocation, the module system that provides R, the scratch filesystem, walltime, and cores — to the `crew.cluster::crew_controller_slurm()` argument it sets; (2) running the standalone connectivity-and-prerequisite preflight to confirm the mapping; (3) running a minimal (shrunken) scenario end-to-end through the `cluster/` template as the first job; and (4) swapping in the user's own scenario by editing the inline scenario block in `_targets.R`.
 
 #### Scenario: Site instructions map to controller arguments
 - **WHEN** a user has their cluster's own (non-R) instructions for partition/queue, account, module loads for R, scratch path, and walltime
 - **THEN** the documentation SHALL show which `crew.cluster::crew_controller_slurm()` argument each piece maps to, so the user can fill the controller block without prior `crew` knowledge
 
-#### Scenario: The minimal first job uses the built-in small scenario
-- **WHEN** a user follows the guide after configuring the controller and passing the probe
-- **THEN** the guide SHALL have them run the built-in `small` scenario end-to-end through the `cluster/` template as the minimal first job, before adapting their own scenario
+#### Scenario: The minimal first job uses a shrunken scenario
+- **WHEN** a user follows the guide after configuring the controller and passing the preflight
+- **THEN** the guide SHALL have them shrink the inline scenario block to a minimal cheap job and run it end-to-end through the `cluster/` template, before adapting their own scenario
 
 #### Scenario: Adapting to the user's own scenario is the final step
-- **WHEN** the minimal `small` run has succeeded
-- **THEN** the guide SHALL show the user editing `scenario.R` to their own study, with the controller block and the `ssd_scenario_targets()` call unchanged
+- **WHEN** the minimal run has succeeded
+- **THEN** the guide SHALL show the user editing the inline scenario block in `_targets.R` to their own study, with the controller block and the `ssd_scenario_targets()` call unchanged
