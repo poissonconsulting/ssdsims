@@ -2,6 +2,7 @@
 
 utils::globalVariables(c(
   "tasks", # <ssd_scenario_targets>
+  ".slice", # <ssd_scenario_targets>
   ".parents", # <ssd_scenario_targets>
   NULL
 ))
