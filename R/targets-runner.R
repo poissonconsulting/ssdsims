@@ -187,6 +187,7 @@ scenario_step_slice <- function(
 #' @seealso [ssd_run_fit_step()], [ssd_run_hc_step()], [ssd_scenario_sample_shards()].
 #' @export
 #' @examples
+#' library(dqrng)
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 #' shards <- ssd_scenario_sample_shards(scenario)
 #' dir <- tempfile()
@@ -240,6 +241,7 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
+#' library(dqrng)
 #' scenario <- ssd_define_scenario(
 #'   ssddata::ccme_boron,
 #'   nsim = 1L,
@@ -322,6 +324,7 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
+#' library(dqrng)
 #' scenario <- ssd_define_scenario(
 #'   ssddata::ccme_boron,
 #'   nsim = 1L,

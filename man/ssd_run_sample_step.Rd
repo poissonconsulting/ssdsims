@@ -27,6 +27,7 @@ Hive partition path. Each task's draw is tagged with its \code{sample_id} and a
 \code{.row} order index so a downstream \code{fit} shard can isolate and re-order it.
 }
 \examples{
+library(dqrng)
 scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()

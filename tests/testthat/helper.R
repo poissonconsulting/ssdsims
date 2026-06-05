@@ -57,6 +57,36 @@ numeric_dataset <- function() {
   data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
 }
 
+# Gate the dqrng-backend tests that spawn a fresh R process via `callr` and
+# `library(ssdsims)` (to exercise the conditional-dependency / RNG-slot paths in
+# isolation). They need ssdsims installed -- true under R CMD check, but NOT
+# under a bare `devtools::test()` where the package is only `load_all()`ed.
+# `skip_if_not_installed("ssdsims")` is insufficient: under `load_all()` the
+# namespace is loaded, so `requireNamespace()` succeeds even though there is no
+# on-disk package for the subprocess to load. Check `installed.packages()`
+# instead, which only lists genuinely installed packages.
+skip_if_ssdsims_not_installed <- function() {
+  testthat::skip_if_not_installed("callr")
+  testthat::skip_if_not(
+    "ssdsims" %in% rownames(utils::installed.packages()),
+    "ssdsims is not installed (run under R CMD check, not devtools::test())"
+  )
+}
+
+# Skip a randtoolbox-dependent test UNLESS randtoolbox is installed -- checked
+# via `installed.packages()`, NOT `skip_if_not_installed()`/`requireNamespace()`.
+# The latter would *load* randtoolbox into the test process, co-loading a second
+# user-supplied RNG alongside dqrng. That is the exact process-global hazard this
+# change guards against: it places randtoolbox's (uninitialised) `user_unif_rand`
+# in the slot, so a later `dqrng::register_methods()` segfaults (case3). The
+# foreign-hijack test loads randtoolbox only inside its `callr` subprocess.
+skip_if_randtoolbox_not_installed <- function() {
+  testthat::skip_if_not(
+    "randtoolbox" %in% rownames(utils::installed.packages()),
+    "randtoolbox is not installed"
+  )
+}
+
 # A snapshot of a completed run for the path-axis-growth test: the shard target
 # names the pipeline minted (one per shard, derived from the shard tables, not
 # hard-coded), each shard Parquet's md5, and the summary row count. Captured

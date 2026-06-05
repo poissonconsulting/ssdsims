@@ -227,6 +227,7 @@ Run Scenario
 
 }}
 \examples{
+library(dqrng)
 ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)

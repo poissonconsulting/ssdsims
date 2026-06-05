@@ -47,6 +47,7 @@ seeding base R's Mersenne-Twister.
 }
 \examples{
 
+library(dqrng)
 local_dqrng_backend()
 local_dqrng_state(42, c(1L, 2L))
 runif(3)

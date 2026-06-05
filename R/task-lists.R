@@ -192,6 +192,7 @@ ssd_scenario_tasks <- function(scenario, step = NULL) {
 #'   (`sample` draws, `fits` objects, and `hc` tibbles).
 #' @export
 #' @examples
+#' library(dqrng)
 #' scenario <- ssd_define_scenario(
 #'   ssddata::ccme_boron,
 #'   nsim = 1L,
@@ -520,10 +521,22 @@ hc_data_task <- function(
 # the wrappers are schema-agnostic. `local_dqrng_state()`'s second argument is
 # still named `state` (a leftover, renamed in a separate change); it carries
 # the primer.
+#
+# Entry (`local_dqrng_state()` -> `chk_dqrng_backend_active()`) and exit
+# (`chk_dqrng_backend_intact()`) guards bracket every task's draws: the exit
+# bookend runs after the op returns, before the wrapper returns, so a mid-task
+# teardown of the dqrng backend or a foreign user-RNG hijack aborts the task
+# instead of silently returning non-dqrng draws. Placed in the per-task wrapper
+# (not in `ssd_run_scenario_baseline()`) so it rides into the `targets` shard
+# body and the §7 replay helper, and each task/shard self-verifies in its own
+# process. Each wrapper captures the op's result, runs the witness, then returns
+# -- the witness is non-destructive, so the result is unaffected.
 
 sample_data_task_primer <- function(data, n_max, replace, seed, primer) {
   local_dqrng_state(seed, primer = primer)
-  sample_data_task(data, n_max, replace)
+  out <- sample_data_task(data, n_max, replace)
+  chk_dqrng_backend_intact()
+  out
 }
 
 fit_data_task_primer <- function(
@@ -540,7 +553,7 @@ fit_data_task_primer <- function(
   primer
 ) {
   local_dqrng_state(seed, primer = primer)
-  fit_data_task(
+  out <- fit_data_task(
     data,
     scenario = scenario,
     dists = dists,
@@ -551,6 +564,8 @@ fit_data_task_primer <- function(
     range_shape1 = range_shape1,
     range_shape2 = range_shape2
   )
+  chk_dqrng_backend_intact()
+  out
 }
 
 hc_data_task_primer <- function(
@@ -566,7 +581,7 @@ hc_data_task_primer <- function(
   samples = FALSE
 ) {
   local_dqrng_state(seed, primer = primer)
-  hc_data_task(
+  out <- hc_data_task(
     fits,
     proportion = proportion,
     ci = ci,
@@ -576,6 +591,8 @@ hc_data_task_primer <- function(
     parametric = parametric,
     samples = samples
   )
+  chk_dqrng_backend_intact()
+  out
 }
 
 # ---- ssdsims_tasks S3 class ------------------------------------------------

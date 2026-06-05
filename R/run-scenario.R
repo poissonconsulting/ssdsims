@@ -12,6 +12,7 @@ ssd_run_scenario <- function(x, ...) UseMethod("ssd_run_scenario")
 #' @describeIn ssd_run_scenario Run scenario using data.frame to sample data
 #' @export
 #' @examples
+#' library(dqrng)
 #' ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
 #'
 ssd_run_scenario.data.frame <- function(

@@ -17,13 +17,17 @@ knitr:
 # dependencies. Skip evaluation gracefully if they are unavailable (e.g. on a
 # minimal CI runner) rather than failing the build.
 evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
-  requireNamespace("ssdtools", quietly = TRUE)
+  requireNamespace("ssdtools", quietly = TRUE) &&
+  requireNamespace("dqrng", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```
 
 ```{r}
 #| label: library
 library(ssdsims)
+# dqrng is a Suggested dependency that ssdsims never loads itself; load it
+# explicitly so the per-task dqrng backend can be activated by the runners.
+library(dqrng)
 ```
 
 ## Why a declarative scenario?

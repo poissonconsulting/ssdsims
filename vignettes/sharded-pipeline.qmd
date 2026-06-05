@@ -17,13 +17,17 @@ knitr:
 # duckplyr. Skip evaluation gracefully on a minimal runner rather than failing.
 evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE) &&
-  requireNamespace("duckplyr", quietly = TRUE)
+  requireNamespace("duckplyr", quietly = TRUE) &&
+  requireNamespace("dqrng", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```
 
 ```{r}
 #| label: library
 library(ssdsims)
+# dqrng is a Suggested dependency that ssdsims never loads itself; load it
+# explicitly so the shard and baseline runners can activate the dqrng backend.
+library(dqrng)
 ```
 
 The ["Defining a Scenario"](defining-a-scenario.html) vignette ends with the

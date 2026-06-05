@@ -44,6 +44,7 @@ their materialised functions off the scenario via \code{\link[=scenario_min_pmix
 search.
 }
 \examples{
+library(dqrng)
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 1L,

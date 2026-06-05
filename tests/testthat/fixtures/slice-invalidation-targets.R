@@ -7,6 +7,7 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
+library(dqrng)
 
 knobs <- readRDS("knobs.rds")
 

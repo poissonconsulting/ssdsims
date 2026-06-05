@@ -9,6 +9,7 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
+library(dqrng)
 
 datasets <- readRDS("datasets.rds")
 

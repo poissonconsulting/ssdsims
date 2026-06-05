@@ -38,9 +38,14 @@ active is a no-op: it does not re-activate the backend and schedules no
 further reset. Only the outermost call activates the backend on entry and
 resets it on exit, so the RNG stream is identical whether or not a nested
 call occurs.
+
+dqrng is a Suggested dependency that ssdsims never loads implicitly:
+activation requires the caller to have already run \code{library(dqrng)} (\verb{>= 0.4.1}). When dqrng is not loaded, the call aborts with actionable guidance
+rather than loading dqrng or falling back to base R's RNG.
 }
 \examples{
 
+library(dqrng)
 local_dqrng_backend()
 dqrng::dqset.seed(42, stream = c(1L, 2L))
 runif(3)
