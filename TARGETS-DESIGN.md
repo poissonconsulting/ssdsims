@@ -1885,6 +1885,11 @@ has no downstream dependencies, so breaking-change steps are fine.
 **Parallel work streams are preferred** — the dependency DAG below
 shows where branches open and close.
 
+The bullets below are the **pending** steps (the dependency-ordered
+backlog, then the independent `### Cleanup` tidy-ups). Steps that have
+landed and been archived are collected under `### Archived`, and the
+dependency DAG colours every node by status (green = archived).
+
 **De-risked by the labs.** The targets-mechanics steps —
 `shard-failure-survival`, `hive-partitioning`, `cloud-upload`,
 `mixed-code-lockin`, and the `format = "file"` choice underneath them —
@@ -1893,17 +1898,6 @@ lab, and `cluster-pipeline` ports a crew + SLURM shape the crew labs
 already ran end to end (see §4, §6). These steps are therefore
 *porting* validated behaviour into the package, not discovering it.
 
-- **`ssd-define-scenario`** — Public constructor for the scenario
-  object (S3); replaces the PoC's `data2`-prefixed names. Signature
-  along the lines of `ssd_define_scenario(data, ..., nsim, nrow,
-  rescale, est_method, nboot, ci, ...)`, forwarding the input data
-  through `ssd_data()` (a tiny normaliser that validates the `Conc`
-  column and tibble shape). Stores only declarative fields (seed,
-  knobs, dataset names — the datasets themselves are materialised on the
-  scenario, reached by name via `scenario-accessors`). No RNG, no tasks,
-  no targets yet. **Scoped to
-  data-frame input only** (single or list); the other generator inputs
-  are `scenario-input-types`, below.
 - **`scenario-input-types`** — Extend `ssd_define_scenario()` to accept
   the remaining input types `ssd_run_scenario()` handles today —
   `fitdists`, `tmbfit`, a generator function, and a function-name string —
@@ -1918,36 +1912,6 @@ already ran end to end (see §4, §6). These steps are therefore
   `task-primer` / `local-dqrng-state` (for the scoped, name-streamed
   draw). Name-only regeneration and provenance are the deferred
   `dataset-provenance` step.
-- **`task-list-loop-baseline`** — Derive three task lists (data,
-  fit, hc rows; one column per cross-join axis; no RNG, no shards,
-  no targets) from a scenario, and a runner that is just three
-  `purrr::pmap()` loops. Establishes the data shape and a working
-  baseline that subsequent steps swap pieces of, one at a time.
-  *Expanded by `task-list-loop-baseline-fold`* (applied; not a new DAG
-  node): the steps are `sample`/`fit`/`hc` — `fit` truncates
-  `head(sample, nrow)` inline rather than via a separate `data` step.
-- **`dqrng-init`** — Add `dqrng` to `Imports`; `dqRNGkind("pcg64")`
-  + `register_methods()` on package load, `restore_methods()` on
-  unload. Verifies: `scripts/experiment-dqrng-hash.R` still passes.
-- **`local-dqrng-state`** — `local_dqrng_state(seed, state,
-  .local_envir = parent.frame())` thin wrapper around `dqset.seed(seed,
-  stream = state)` with a `withr`-style restore on exit. Prefer
-  `local_*` over `with_*` when touching code. Replaces
-  `local_lecuyer_cmrg_state()` for the dqrng path.
-- **`task-primer`** — `task_primer(params)` per §2 (64-bit hash,
-  NA-as-INT_MIN encoding). Unit tests verify reproducibility and
-  collision-resistance on the validated examples from
-  `scripts/experiment-dqrng-hash.R`.
-- **`primer-primitives`** — Refactor `slice_sample_state`,
-  `fit_dists_state`, `hc_state` around the new contract: **each
-  per-task body calls `local_dqrng_state(seed, primer)` exactly
-  once**, then invokes the (state-less) operation against the
-  ambient RNG. The `_state` suffix marks the wrapper that installs
-  the primer; the inner ssdtools / dplyr calls consume RNG from the
-  now-set state. No `state =` argument on the inner ops. (The seeded
-  `n_max` draw lives here as `slice_sample_state`; the
-  `head(sample, nrow)` truncation is the `fit` step's inline, RNG-free
-  step — there is no separate sub-truncation step.)
 - **`task-rng-postcheck`** — Per-task RNG-backend **postcondition**.
   Each `*_data_task_primer()` wrapper, when the task *ends*, verifies
   that dqrng (not merely *some* user-supplied RNG) still held base R's
@@ -1980,16 +1944,6 @@ already ran end to end (see §4, §6). These steps are therefore
   calling them. The DAG shows the solid `scenario-input-types →
   migrate-public-api` and `primer-primitives → migrate-public-api`
   prereqs and the `migrate-public-api → cleanup-lecuyer` dependant.
-- **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
-  on the scenario, accessed by name** — no registry (§1.1). Materialise
-  the `min_pmix` functions on the scenario at construction (keyed by
-  name, resolving name-strings then), and add `scenario_dataset(scenario,
-  name)` / `scenario_min_pmix(scenario, name)` accessors;
-  `resolve_min_pmix()` becomes the accessor. Hashing stays name-only, so
-  a function-body edit does not move any cached fit branch (regression
-  test). Adds no dependency (no Parquet here — that is `task-tables`).
-  Persisting a *large* dataset to disk instead of carrying it inline is
-  the deferred `dataset-provenance` step.
 - **`manifest`** — Per-scenario manifest writer/reader with the
   §8.5 field set (the head records **complete session info**, not just
   the three named version pins). **Not on the `task-tables` critical
@@ -2005,52 +1959,6 @@ already ran end to end (see §4, §6). These steps are therefore
   `shard-completeness-assert`), and operationally before the first
   expensive cluster run whose results you intend to trust/reproduce;
   it does not gate `task-tables`.
-- **`task-tables`** — `ssd_scenario_data_tasks` /
-  `_fit_tasks` / `_hc_tasks` returning the per-step task tables
-  with `(seed, primer)` on each row, plus the `ssd_scenario_*_shards`
-  wrappers that group those rows by `partition_by` into one row per
-  shard (a `tasks` list-column) for `tar_map`'s `values`. The §6
-  sketch compiles and `tar_make()`s a tiny scenario. **Static
-  branching**: the scenario is a plain construction-time object and
-  `tar_map` mints one named target per shard (§6) — no
-  `pattern = map` over a runtime target.
-- **`path-axis-growth`** — §8.1 — assert **end-to-end that a minimal
-  scenario change on a path axis rebuilds only the necessary shards**.
-  Appending a dataset (or growing `nsim`) to a working, already-
-  `tar_make()`-d scenario mints new shard targets and leaves every
-  existing shard cached — the cheap-extension payoff the extensibility
-  goal leans on, validated in the targets lab's `static-extend` axis
-  (§6) and ported here into the package's own
-  `ssd_scenario → ssd_scenario_*_shards → tar_map → tar_make` path.
-  Split out of `task-tables` so that step stays a build-and-compile
-  checkpoint while this one owns the incremental-rebuild contract; it is
-  the path-axis counterpart to `shard-atomic-rewrite`'s inner-axis test.
-  **Depends on** `task-tables`. Note: the precise expected-cached set
-  follows the invalidation model pinned by `hive-partitioning` (the §8
-  cache-by-existence vs. content-hash fork), so the assertion is
-  finalised once that decision lands. Test: run a tiny scenario to
-  completion; append a dataset (a path axis for all three steps),
-  `tar_make()` again, and assert only the new dataset's shards build
-  while the original dataset's shard targets are skipped (and `summary`
-  re-runs); repeat for `nsim` growth.
-- **`step-scenario-slice`** — *Caveat (pre-existing) that this step
-  closes.* The `ssd_scenario_targets()` factory leaves `scenario` as a
-  bare symbol in every step command (`ssd_run_<step>_step(tasks, scenario,
-  …)`), so the **whole scenario object is a dependency of every shard
-  target** across all three steps. Editing *any* scenario field — even a
-  knob that feeds only one step, or only the output layer (e.g. `samples`,
-  which is `hc`-only) — therefore invalidates and rebuilds **all** shards,
-  not just the affected step's. Project each step's command onto the
-  **minimal slice** of the scenario it actually consumes (the resolved
-  per-step inputs / the fields that reach that step's per-task body and
-  primer), so a change to a step-irrelevant field leaves the other steps'
-  shards cached. Test: change an `hc`-only knob on a `tar_make()`-d
-  scenario and assert only `hc` (and `summary`) rebuild while `sample`/`fit`
-  shards are skipped; change a `fit`-only knob and assert `sample` stays
-  cached. **Depends on** `task-tables` (the factory it refines); pairs with
-  `path-axis-growth` (the path-axis counterpart of the same minimal-rebuild
-  contract) and is finalised against the invalidation model pinned by
-  `hive-partitioning` (§8).
 - **`shard-failure-survival`** — §6.2 — the shard body writes as many
   rows as ran successfully (a bad task yields a shorter shard, not an
   abort); the step target carries `error = "null"` only for the
@@ -2072,37 +1980,6 @@ already ran end to end (see §4, §6). These steps are therefore
   through a §8.3 pin. Depends on `task-tables` (for the expected count);
   pairs with `cloud-upload` (same sibling-target shape) and `manifest`
   (records expected-vs-actual per shard).
-- **`shard-runner-baseline`** — §5 / §6 — a **single-core** runner
-  that materialises each step as Hive-partitioned Parquet shards (one
-  per `partition_by` path cell) and links steps by reading parent
-  shards back with duckplyr predicate pushdown, resolving the **m:n**
-  child-shard ← parent-shards dependency *at run time* (the distinct
-  set of parent shard paths over a child shard's tasks). "Shards
-  without `targets`", mirroring `task-list-loop-baseline`'s "tasks
-  without shards". First consumer of `partition-by`'s
-  `scenario_partition_axes()`; owns the Hive path/read helpers and
-  proves the write→glob-read→filter loop + m:n resolution in plain R.
-  Makes `partition-by`'s deferred acceptance test (changing
-  `partition_by` shifts paths, per-task results byte-identical)
-  landable here, **without `targets`**, against the in-memory baseline
-  as oracle. Adds `duckplyr` to `Imports` (the same engine the targets
-  read path uses, so this de-risks `hive-partitioning` directly).
-  Depends on `primer-primitives` + `partition-by`.
-- **`hive-partitioning`** — §6 / §8 — wire the (now-validated) Hive
-  write/read into the `targets` `task-tables` branches as
-  `format = "file"` outputs and **pin the invalidation model**
-  (`tar_cue` / content-hash, §8), so it also settles the deferred
-  `data`-step-vs-fold decision recorded in §8. Because the
-  child↔parent shard relationship is **m:n**, the invalidation model
-  must propagate over the fan-in: rewriting one parent shard
-  invalidates the **set** of child shards that read it — which rides on
-  `task-tables`' per-child upstream edges (Option 3, computed at
-  sourcing time), not on a single named edge. Reuses
-  `shard-runner-baseline`'s path/read helpers — the layout and
-  predicate-pushdown read are already proven there, so this step is the
-  `targets`-integration + caching half only (its smoke test moves to
-  `shard-runner-baseline`). Depends on `task-tables` and
-  `shard-runner-baseline`.
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
   `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
   on a real (or sandboxed) Slurm queue.
@@ -2116,17 +1993,6 @@ already ran end to end (see §4, §6). These steps are therefore
 - **`replay-helper`** — `ssd_replay_task()` (§7) and
   `ssd_input_hash()` for the lightweight recipe. Tests simulate a
   branch failure and reproduce locally.
-- **`partition-by`** — §5 / §1 — scenario knob `partition_by`
-  (named list per step) picks which task-table columns become
-  Hive path levels and which become Parquet columns. Default per
-  step ships as documented in §5. Test: changing `partition_by`
-  for a step shifts shards (file paths) but per-task results
-  inside are byte-identical.
-- **`shard-atomic-rewrite`** — §8.2 — inner-axis growth rewrites
-  affected shards. Test: adding a new `min_pmix` to the scenario
-  causes targets to re-run the affected fit branches and overwrite
-  the shards' Parquets; rows that were there before come out
-  byte-identical to the previous Parquet.
 - **`mixed-code-lockin`** — §8.3 — `tar_cue(depend = FALSE)` on the
   step targets to pin shards against a code change (in-project, no
   child project); `tar_invalidate()` / `unlink()` for forced re-runs
@@ -2225,6 +2091,150 @@ public-API or ergonomics gaps.
   name resolution, remaining `*apply()` loops) for the same convention, so new
   and existing code read consistently. Surfaced in PR #101 review. Independent
   tidy-up with no dependants; not on the dependency DAG.
+
+### Archived
+
+Completed steps that have landed and been archived (full artifacts under `openspec/changes/archive/`; their requirements are synced into `openspec/specs/`). Listed in the dependency order they were implemented; the Mermaid graph below colours these nodes green inside `archived_box`.
+
+- **`ssd-define-scenario`** — Public constructor for the scenario
+  object (S3); replaces the PoC's `data2`-prefixed names. Signature
+  along the lines of `ssd_define_scenario(data, ..., nsim, nrow,
+  rescale, est_method, nboot, ci, ...)`, forwarding the input data
+  through `ssd_data()` (a tiny normaliser that validates the `Conc`
+  column and tibble shape). Stores only declarative fields (seed,
+  knobs, dataset names — the datasets themselves are materialised on the
+  scenario, reached by name via `scenario-accessors`). No RNG, no tasks,
+  no targets yet. **Scoped to
+  data-frame input only** (single or list); the other generator inputs
+  are `scenario-input-types`, below.
+- **`task-list-loop-baseline`** — Derive three task lists (data,
+  fit, hc rows; one column per cross-join axis; no RNG, no shards,
+  no targets) from a scenario, and a runner that is just three
+  `purrr::pmap()` loops. Establishes the data shape and a working
+  baseline that subsequent steps swap pieces of, one at a time.
+  *Expanded by `task-list-loop-baseline-fold`* (applied; not a new DAG
+  node): the steps are `sample`/`fit`/`hc` — `fit` truncates
+  `head(sample, nrow)` inline rather than via a separate `data` step.
+- **`dqrng-init`** — Add `dqrng` to `Imports`; `dqRNGkind("pcg64")`
+  + `register_methods()` on package load, `restore_methods()` on
+  unload. Verifies: `scripts/experiment-dqrng-hash.R` still passes.
+- **`local-dqrng-state`** — `local_dqrng_state(seed, state,
+  .local_envir = parent.frame())` thin wrapper around `dqset.seed(seed,
+  stream = state)` with a `withr`-style restore on exit. Prefer
+  `local_*` over `with_*` when touching code. Replaces
+  `local_lecuyer_cmrg_state()` for the dqrng path.
+- **`task-primer`** — `task_primer(params)` per §2 (64-bit hash,
+  NA-as-INT_MIN encoding). Unit tests verify reproducibility and
+  collision-resistance on the validated examples from
+  `scripts/experiment-dqrng-hash.R`.
+- **`primer-primitives`** — Refactor `slice_sample_state`,
+  `fit_dists_state`, `hc_state` around the new contract: **each
+  per-task body calls `local_dqrng_state(seed, primer)` exactly
+  once**, then invokes the (state-less) operation against the
+  ambient RNG. The `_state` suffix marks the wrapper that installs
+  the primer; the inner ssdtools / dplyr calls consume RNG from the
+  now-set state. No `state =` argument on the inner ops. (The seeded
+  `n_max` draw lives here as `slice_sample_state`; the
+  `head(sample, nrow)` truncation is the `fit` step's inline, RNG-free
+  step — there is no separate sub-truncation step.)
+- **`scenario-accessors`** — Datasets and `min_pmix` are **materialised
+  on the scenario, accessed by name** — no registry (§1.1). Materialise
+  the `min_pmix` functions on the scenario at construction (keyed by
+  name, resolving name-strings then), and add `scenario_dataset(scenario,
+  name)` / `scenario_min_pmix(scenario, name)` accessors;
+  `resolve_min_pmix()` becomes the accessor. Hashing stays name-only, so
+  a function-body edit does not move any cached fit branch (regression
+  test). Adds no dependency (no Parquet here — that is `task-tables`).
+  Persisting a *large* dataset to disk instead of carrying it inline is
+  the deferred `dataset-provenance` step.
+- **`task-tables`** — `ssd_scenario_data_tasks` /
+  `_fit_tasks` / `_hc_tasks` returning the per-step task tables
+  with `(seed, primer)` on each row, plus the `ssd_scenario_*_shards`
+  wrappers that group those rows by `partition_by` into one row per
+  shard (a `tasks` list-column) for `tar_map`'s `values`. The §6
+  sketch compiles and `tar_make()`s a tiny scenario. **Static
+  branching**: the scenario is a plain construction-time object and
+  `tar_map` mints one named target per shard (§6) — no
+  `pattern = map` over a runtime target.
+- **`path-axis-growth`** — §8.1 — assert **end-to-end that a minimal
+  scenario change on a path axis rebuilds only the necessary shards**.
+  Appending a dataset (or growing `nsim`) to a working, already-
+  `tar_make()`-d scenario mints new shard targets and leaves every
+  existing shard cached — the cheap-extension payoff the extensibility
+  goal leans on, validated in the targets lab's `static-extend` axis
+  (§6) and ported here into the package's own
+  `ssd_scenario → ssd_scenario_*_shards → tar_map → tar_make` path.
+  Split out of `task-tables` so that step stays a build-and-compile
+  checkpoint while this one owns the incremental-rebuild contract; it is
+  the path-axis counterpart to `shard-atomic-rewrite`'s inner-axis test.
+  **Depends on** `task-tables`. Note: the precise expected-cached set
+  follows the invalidation model pinned by `hive-partitioning` (the §8
+  cache-by-existence vs. content-hash fork), so the assertion is
+  finalised once that decision lands. Test: run a tiny scenario to
+  completion; append a dataset (a path axis for all three steps),
+  `tar_make()` again, and assert only the new dataset's shards build
+  while the original dataset's shard targets are skipped (and `summary`
+  re-runs); repeat for `nsim` growth.
+- **`step-scenario-slice`** — *Caveat (pre-existing) that this step
+  closes.* The `ssd_scenario_targets()` factory leaves `scenario` as a
+  bare symbol in every step command (`ssd_run_<step>_step(tasks, scenario,
+  …)`), so the **whole scenario object is a dependency of every shard
+  target** across all three steps. Editing *any* scenario field — even a
+  knob that feeds only one step, or only the output layer (e.g. `samples`,
+  which is `hc`-only) — therefore invalidates and rebuilds **all** shards,
+  not just the affected step's. Project each step's command onto the
+  **minimal slice** of the scenario it actually consumes (the resolved
+  per-step inputs / the fields that reach that step's per-task body and
+  primer), so a change to a step-irrelevant field leaves the other steps'
+  shards cached. Test: change an `hc`-only knob on a `tar_make()`-d
+  scenario and assert only `hc` (and `summary`) rebuild while `sample`/`fit`
+  shards are skipped; change a `fit`-only knob and assert `sample` stays
+  cached. **Depends on** `task-tables` (the factory it refines); pairs with
+  `path-axis-growth` (the path-axis counterpart of the same minimal-rebuild
+  contract) and is finalised against the invalidation model pinned by
+  `hive-partitioning` (§8).
+- **`shard-runner-baseline`** — §5 / §6 — a **single-core** runner
+  that materialises each step as Hive-partitioned Parquet shards (one
+  per `partition_by` path cell) and links steps by reading parent
+  shards back with duckplyr predicate pushdown, resolving the **m:n**
+  child-shard ← parent-shards dependency *at run time* (the distinct
+  set of parent shard paths over a child shard's tasks). "Shards
+  without `targets`", mirroring `task-list-loop-baseline`'s "tasks
+  without shards". First consumer of `partition-by`'s
+  `scenario_partition_axes()`; owns the Hive path/read helpers and
+  proves the write→glob-read→filter loop + m:n resolution in plain R.
+  Makes `partition-by`'s deferred acceptance test (changing
+  `partition_by` shifts paths, per-task results byte-identical)
+  landable here, **without `targets`**, against the in-memory baseline
+  as oracle. Adds `duckplyr` to `Imports` (the same engine the targets
+  read path uses, so this de-risks `hive-partitioning` directly).
+  Depends on `primer-primitives` + `partition-by`.
+- **`hive-partitioning`** — §6 / §8 — wire the (now-validated) Hive
+  write/read into the `targets` `task-tables` branches as
+  `format = "file"` outputs and **pin the invalidation model**
+  (`tar_cue` / content-hash, §8), so it also settles the deferred
+  `data`-step-vs-fold decision recorded in §8. Because the
+  child↔parent shard relationship is **m:n**, the invalidation model
+  must propagate over the fan-in: rewriting one parent shard
+  invalidates the **set** of child shards that read it — which rides on
+  `task-tables`' per-child upstream edges (Option 3, computed at
+  sourcing time), not on a single named edge. Reuses
+  `shard-runner-baseline`'s path/read helpers — the layout and
+  predicate-pushdown read are already proven there, so this step is the
+  `targets`-integration + caching half only (its smoke test moves to
+  `shard-runner-baseline`). Depends on `task-tables` and
+  `shard-runner-baseline`.
+- **`partition-by`** — §5 / §1 — scenario knob `partition_by`
+  (named list per step) picks which task-table columns become
+  Hive path levels and which become Parquet columns. Default per
+  step ships as documented in §5. Test: changing `partition_by`
+  for a step shifts shards (file paths) but per-task results
+  inside are byte-identical.
+- **`shard-atomic-rewrite`** — §8.2 — inner-axis growth rewrites
+  affected shards. Test: adding a new `min_pmix` to the scenario
+  causes targets to re-run the affected fit branches and overwrite
+  the shards' Parquets; rows that were there before come out
+  byte-identical to the previous Parquet.
 - **`scalar-ci-flag`** — Demote `ci` from a grid/task axis to a **scalar
   flag** (`chk_flag`, default `FALSE`), mirroring `samples`. The point
   estimate `est` is byte-identical whether `ci = TRUE` or `ci = FALSE`
@@ -2413,7 +2423,10 @@ Eight further changes were proposed in this round (all `openspec validate
 
 A later independent tidy-up, `scalar-ci-flag` (`scenario-definition` +
 `task-lists` + `hazard-concentrations` deltas), demotes `ci` to a scalar flag
-and retires the §1.2 collapse; also off the dependency DAG.
+and retires the §1.2 collapse; also off the dependency DAG. It has since been
+**implemented, synced, and archived** — its deltas are folded into the three
+main specs and the change now lives in `openspec/changes/archive/`, so it
+appears under `### Archived` above rather than among the active changes.
 
 The remaining open nodes stay blocked: `cloud-upload`/`replay-helper` wait on
 `manifest` landing, `shard-failure-survival` on `cluster-pipeline`,
