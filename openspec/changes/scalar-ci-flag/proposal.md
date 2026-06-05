@@ -13,6 +13,7 @@ This is precisely the *"a single `TRUE` is a superset of `FALSE`"* property the 
 - **The `ci = FALSE` collapse machinery is retired.** `hc_grid_tbl()` (`R/task-lists.R`) loses the `any(ci == FALSE)` / `any(ci == TRUE)` `bind_rows` branching and becomes a single grid: `ci = FALSE` yields one row per `est_method` with the bootstrap-only knobs (`nboot`/`ci_method`/`parametric`) canonically `NA` (so they cannot leak into task identity); `ci = TRUE` fans out over `nboot × est_method × ci_method × parametric` as today.
 - **The bootstrap-knob guard stays, simplified.** When the scalar `ci = FALSE`, supplying `nboot`/`ci_method`/`parametric` is still an error — but the escape hatch becomes `ci = TRUE` (not `ci = c(FALSE, TRUE)`).
 - **`ssd_hc_sims()` validates `ci` as a flag** so the low-level entry point rejects a vector `ci` too (it already applies `ci` as a scalar — it is not in that function's factorial expansion).
+- **The constructor signature is regrouped by role** so the scalar flags are contiguous: data inputs, then the cross-join axes, then the scalar simulation flags (`ci`, `samples`), then partitioning/other (`partition_by`, `bundle`, `upload`). `ci` moves from between `proportion`/`nboot` to immediately before `samples`; the stored `scenario$hc` order and `print` follow suit.
 
 ## Capabilities
 

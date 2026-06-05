@@ -57,6 +57,12 @@ The constructor still aborts when `ci = FALSE` *and* any of `nboot`/`ci_method`/
 
 *Alternative considered — thread `ci` from the scenario slice* (like `proportion`/`samples`, which are *not* task columns). Rejected as more churn for no gain: it would edit both runners and `hc_grid_tbl()`, whereas the carried-column route matches the existing `n_max` precedent and leaves the runners untouched. (`proportion`/`samples` are scenario-threaded for historical reasons; `ci` follows the closer `n_max` analogue.)
 
+### Decision: regroup the signature so the scalar flags are contiguous
+
+Today `ci` sits *inside* the hc axes (between `proportion` and `nboot`) while `samples` sits after them, so the two scalar flags are not adjacent. Once `ci` is no longer an axis, it belongs with `samples`. The constructor signature is reordered by role: data/`seed`/`nsim`/`name`, then the cross-join axes (`nrow` … `parametric`), then the scalar simulation flags (`ci`, `samples`), then partitioning and the rest (`partition_by`, `bundle`, `upload`). `ci` moves from between `proportion`/`nboot` to immediately before `samples`. The stored `scenario$hc` list and `print_grid()` order follow the same role grouping (axes, then `ci`/`samples`), so the print snapshot reads coherently.
+
+This is a pure argument-reordering: `ci`'s default (`FALSE`) is unchanged and all call sites in the repo pass `ci` by name, so the move is safe. `proportion` stays in the axes group — it is a vector-valued grid knob (its fan-out happens inside `ssdtools::ssd_hc()` rather than via task expansion), not a scalar flag.
+
 ### Decision: `ci` leaves the per-task primer — bootstrap CIs shift, estimates do not
 
 Dropping `"ci"` from `task_axes("hc")` changes the hash fed to `task_primer()` for hc tasks (a constant term is removed), which shifts the per-task dqrng stream and therefore the bootstrap draws. Consequently `lcl`/`ucl`/`se` change value for a given seed; `est` does not (it is RNG-independent). This is a one-time re-baseline, acceptable for an unreleased package with no downstream dependants (`TARGETS-DESIGN.md` §12 — "breaking-change steps are fine"). Snapshot fixtures re-record.

@@ -3,7 +3,9 @@
 - [ ] 1.1 Replace the `ci` validation (`chk_logical` + `chk_not_any_na` + `chk_unique` + `chk_length(ci, upper = 2L)`) with `chk::chk_flag(ci)`; keep the default `ci = FALSE`
 - [ ] 1.2 Simplify the bootstrap-knob guard from `if (length(ci) == 1L && isFALSE(ci))` to `if (isFALSE(ci))`, and change the message escape hatch from "Set `ci = c(FALSE, TRUE)` to enable bootstrap" to "Set `ci = TRUE` to enable bootstrap"
 - [ ] 1.3 Update the `ssd_define_scenario()` roxygen: the *"# `ci = FALSE`"* section (scalar flag; estimate invariant; `ci = TRUE` superset; `ci = FALSE` cheap/bootstrap-free) **and** the `@param partition_by` line that enumerates the hc vocabulary (`hc` adds `ci`, `nboot`, …) — drop `ci` there
-- [ ] 1.4 Confirm `print.ssdsims_scenario()` still renders `ci` among the hc knobs as a scalar (no code change expected; covered by the print snapshot in §9)
+- [ ] 1.4 Reorder the `ssd_define_scenario()` signature by role so the scalar flags are contiguous: keep data/`seed`/`nsim`/`name` first, then the cross-join axes (`nrow` … `parametric`), then the scalar simulation flags (`ci`, `samples`), then `partition_by`, `bundle`, `upload`. Concretely, move `ci = FALSE` from between `proportion`/`nboot` to immediately before `samples = FALSE`
+- [ ] 1.5 Mirror the role order in the stored `hc` list (`scenario$hc <- list(proportion, nboot, est_method, ci_method, parametric, ci, samples)`) and reorder the roxygen `@param`/`@inheritParams` so the generated `man/` lists `ci` next to `samples`
+- [ ] 1.6 Confirm `print.ssdsims_scenario()` renders `ci` (scalar) among the hc knobs in the new role order — axes first, then `ci`/`samples` (covered by the print snapshot in §9)
 
 ## 2. Task axes and hc grid (`R/task-lists.R`)
 
