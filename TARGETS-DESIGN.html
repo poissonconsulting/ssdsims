@@ -1129,6 +1129,8 @@
         tt[task-tables]
         hive[hive-partitioning]
         slice[step-scenario-slice]
+        rewrite[shard-atomic-rewrite]
+        pathgrow[path-axis-growth]
     end
 
     inputs[scenario-input-types]
@@ -1141,8 +1143,6 @@
     assert[shard-completeness-assert]
     cloud[cloud-upload]
     replay[replay-helper]
-    rewrite[shard-atomic-rewrite]
-    pathgrow[path-axis-growth]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
 
@@ -1218,8 +1218,8 @@
     classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice archived
-    class inputs,postcheck,manif,migrate,cluster,rewrite,pathgrow proposed
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
+    class inputs,postcheck,manif,migrate,cluster proposed
     class survive,assert,cloud,replay,lockin,cleanup open</code></pre>
 <p><strong>Node colours track each step’s status</strong> — green = archived, yellow = done (implemented, not yet archived), red = proposed (artifacts exist, not yet implemented), blue = ready (no artifacts yet, but every prerequisite has landed — ready to propose), unfilled = open (roadmap only, still blocked by an un-landed prerequisite). Keep the colouring in sync as changes progress, and <strong>keep the archived (green) nodes collected inside the <code>archived_box</code> subgraph</strong> — when a step is archived, move its node declaration into that box as well as giving it the <code>archived</code> class.</p>
 <p><strong>Status snapshot (2026-06-05).</strong> Twelve changes carry artifacts; <code>hive-partitioning</code> and <code>step-scenario-slice</code> are now both <strong>archived</strong> (green — the content-hash model + per-child Option-3 edges, and the per-step/per-dataset scenario slice, all landed in <code>R/targets-runner.R</code>), and the remaining ten stay <strong>proposed but unimplemented</strong> (verified against the source tree, not just the task lists). The four original proposals: - <code>task-rng-postcheck</code> — <code>dqrng</code> is still in <code>Imports</code> (not <code>Suggests</code>); no <code>dqrng_usable()</code>, no <code>chk_dqrng_backend_intact()</code>, no exit-bookend wiring. - <code>scenario-input-types</code> — <code><a href="reference/ssd_data.html">ssd_data()</a></code> still rejects non-data-frame input and has no <code>.seed</code>; no <code>classify_input()</code>. - <code>migrate-public-api</code> — the three public step functions still seed via the L’Ecuyer-CMRG lattice; only the prerequisite <code>*_data_task_primer()</code> wrappers (from the archived <code>primer-primitives</code>) exist, so the change itself is essentially un-started. - <code>manifest</code> — no <code>R/manifest.R</code>; <code>jsonlite</code>/<code>digest</code>/<code>sessioninfo</code> absent from <code>Imports</code>.</p>
