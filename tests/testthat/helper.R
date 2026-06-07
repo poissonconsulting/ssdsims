@@ -38,6 +38,18 @@ expect_snapshot_data <- function(x, name, digits = 6) {
   )
 }
 
+# withr <= 3.0.2 has a bug (withr #286/#287) where `local_seed()` fails to
+# restore `.Random.seed` on exit. `ssd_hc_sims(seed = NULL)` derives its
+# bootstrap stream from the ambient RNG, so a leaked (CRAN) vs restored (dev)
+# state changes the interval. Tests that pin those CI values therefore require
+# the fixed withr; skip them otherwise.
+skip_if_withr_seed_leak <- function() {
+  testthat::skip_if(
+    utils::packageVersion("withr") <= "3.0.2",
+    "requires withr with the local_seed() restore fix (> 3.0.2)"
+  )
+}
+
 # ---- targets-pipeline helpers (test-task-shards.R, test-path-axis-growth.R) --
 
 # Gate the tests that actually drive a `targets` pipeline: they spawn a worker
