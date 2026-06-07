@@ -39,10 +39,10 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = c(5L, 10L, 20L),
   dists = c("lnorm", "gamma"),
+  est_method = "multi",
   proportion = c(0.05, 0.2),
   ci = TRUE,
   nboot = c(10L, 100L),
-  est_method = "multi",
   ci_method = "weighted_samples"
 )
 print(scenario)

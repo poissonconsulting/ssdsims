@@ -9,6 +9,13 @@ context: |
   Conventional Commits — the squash-merge PR title is what `fledge` reads to
   build NEWS.md, so it is the load-bearing message.
 
+  A change's proof-of-work / exploration scripts live in its own
+  `changes/<name>/exploration/` directory — never at the repo top level. They
+  travel with the change (and into `changes/archive/` on archive) and are
+  already excluded from the package build by the root `^openspec$`
+  `.Rbuildignore` entry, so no separate top-level ignore is needed. See the
+  "Explorations live with their change" section of `openspec/AGENTS.md`.
+
   Roadmap upkeep spans a change's whole lifecycle. Whenever a change is created,
   applied, or archived, reflect it in TARGETS-DESIGN.md §12 and keep its node
   status colour in sync (red = proposed, yellow = done/implemented, green =

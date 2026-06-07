@@ -126,11 +126,23 @@ exploration record:
 - **Snapshot / row-count churn** → hc task-count and printed-scenario snapshots
   that assumed an `est_method` fan-out must be re-recorded; `hc` *tibble* row
   counts (one row per method) are unchanged.
-- **Two pending changes touch the role-grouping requirement**
-  (`dists-simulation-setting` and this one) → both edit
-  `scenario-definition`'s "Constructor arguments are grouped by role". Archive
-  order may need a manual merge; this delta is written against current `main`
-  (with `dists` still in the axes clause).
+- **Ships with `dists-simulation-setting` in one PR (rebased, ordered).** Both
+  changes edit `scenario-definition`'s "Constructor arguments are grouped by
+  role" and the `ssd_define_scenario()` signature. Rather than collide at
+  archive time, this delta is **rebased onto the `dists` end-state**: its
+  role-grouping requirement already has `dists` removed from the axes clause and
+  named in the settings block, so the two deltas **compose**. (Per PR review the
+  non-`ci`-gated settings `dists`/`est_method`/`proportion` — valid when
+  `ci = FALSE` — precede `ci`, and the knobs `ci` gates follow it (the bootstrap
+  axes `nboot`/`ci_method`/`parametric` and `samples`):
+  `… range_shape2, dists, est_method, proportion, ci, nboot, ci_method,
+  parametric, samples, partition_by …`.) `dists-simulation-setting`
+  **owns** the behaviour-preserving signature reorder + call-site sweep
+  groundwork (it establishes the contiguous settings block); this change only
+  slots `est_method` into that block on top of the real bootstrap-collapse work.
+  **Archive order: `dists-simulation-setting` first, then this change** — the
+  last-synced delta wins the requirement text, and only this (rebased) delta
+  carries both knobs moved.
 
 ## Migration Plan
 
