@@ -6,9 +6,10 @@
 #
 #   time = (base + slope * max(nboot, n0)) * nrow_factor(nrow)
 #
-# `proportion` and `est_method` are *free* axes - one bootstrap per
-# `nboot x ci_method x parametric` cell serves every `proportion`/`est_method`,
-# so they never multiply the estimate. The coefficients are architecture-
+# `proportion` and `est_method` are *free* - one bootstrap per
+# `nboot x ci_method x parametric` cell serves every `proportion`/`est_method`
+# (both are hc settings, not task axes, since `est-method-setting`), so they
+# never multiply the estimate. The coefficients are architecture-
 # specific, so the package ships both a *method* to re-measure them
 # (`ssd_calibrate_cost()`) and a *default* fitted during development
 # (`ssd_cost_calibration()`). `ssd_estimate_cost()` only *reads* the scenario's
@@ -352,12 +353,14 @@ ssd_estimate_cost <- function(scenario, calibration = ssd_cost_calibration()) {
 
   hc <- ssd_scenario_hc_tasks(scenario)
 
-  # One bootstrap per cost-bearing cell: drop `est_method` (a free axis, after
-  # est-method-setting) so it never multiplies the estimate; `proportion` is not
-  # an hc task axis at all (it is vectorised into one ssd_hc() call), so it is
-  # free for free. `ci` rides as a carried column and selects bootstrap vs the
-  # cheap analytical addend.
-  cost_axes <- setdiff(task_axes("hc"), "est_method")
+  # One bootstrap per cost-bearing cell. Since `est-method-setting`, neither
+  # `est_method` nor `proportion` is an hc task axis - `est_method` is an hc
+  # *setting* summarised within a task from its single bootstrap sample set, and
+  # `proportion` is vectorised into one `ssd_hc()` call - so the task expansion
+  # already carries "one bootstrap per `nboot x ci_method x parametric` cell" and
+  # neither axis multiplies the estimate. `ci` rides as a carried column and
+  # selects bootstrap vs the cheap analytical addend.
+  cost_axes <- task_axes("hc")
   tasks <- dplyr::distinct(hc[c(cost_axes, "ci")])
   tasks$seconds <- cost_task_seconds(tasks, calibration)
 
