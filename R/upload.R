@@ -2,12 +2,13 @@
 # that ship, probe, and read back shards (TARGETS-DESIGN.md section 6.1). An
 # upload object is a plain, serialisable value carrying only the destination
 # (never credentials), so it rides on the `upload` argument to `crew` workers
-# and through `targets` unchanged. Three (plus construction) generics dispatch
+# and through `targets` unchanged. Four (plus construction) generics dispatch
 # on its class: `ssd_test_upload()` (the front-door creds/connectivity probe),
-# `ssd_upload_shard()` (ship one shard), and `ssd_open_uploaded()` (read the
-# uploaded results back in place). Azure with absent credentials is a hard
-# error, never a silent no-op; the only way to skip the network is to pass
-# `ssd_upload_dryrun()`.
+# `ssd_upload_shard()` (ship one shard), `ssd_open_uploaded()` (read the
+# uploaded results back in place), and `ssd_summarise_uploaded()` (the in-place
+# fan-in summary, the cloud `ssd_summarise()`). Azure with absent credentials is
+# a hard error, never a silent no-op; the only way to skip the network is to
+# pass `ssd_upload_dryrun()`.
 
 #' Upload Destinations for a Scenario's Shards
 #'
@@ -143,11 +144,12 @@ ssd_test_upload <- function(upload) {
 #'    `c("ssdsims_upload_<backend>", "ssdsims_upload")` that validates its
 #'    destination at construction (as [ssd_upload_azure()] validates its `url`
 #'    and `container`) and carries no credentials.
-#' 2. Implement the three generic methods for that class:
+#' 2. Implement the generic methods for that class:
 #'    `ssd_upload_shard()` (ship one shard, return the local path),
 #'    [ssd_test_upload()] (the credentials/connectivity probe, failing loud on a
-#'    missing credential), and [ssd_open_uploaded()] (read the uploaded results
-#'    back in place).
+#'    missing credential), [ssd_open_uploaded()] (read the uploaded results
+#'    back in place), and [ssd_summarise_uploaded()] (the in-place fan-in
+#'    summary).
 #'
 #' The package ships only the Azure and dry-run backends; no speculative
 #' backends are added.
@@ -201,6 +203,38 @@ ssd_open_uploaded <- function(upload, step) {
   UseMethod("ssd_open_uploaded")
 }
 
+#' Summarise Uploaded Results, In Place (the cloud `ssd_summarise()`)
+#'
+#' The cloud counterpart of [ssd_summarise()]: a generic, dispatched on the
+#' upload object's class, that fans a step's **uploaded** shards into a single
+#' analysis-ready tibble read **in place** (no download). For an Azure
+#' destination it reads the `<container>[/<prefix>]/<step>/**/part.parquet` Hive
+#' glob via DuckDB's `azure` extension - resolving the **same** front-end
+#' `SSDSIMS_AZURE_*` credentials as the write path and remapping them into a
+#' DuckDB `azure` secret - and collects the union into a tibble. By default it
+#' projects away the heavy `dists`/`samples` list-columns (the analysis-ready
+#' summary, mirroring [ssd_summarise()]); pass `drop_samples = FALSE` to keep
+#' them when the in-flight bootstrap `samples` are needed. The default method
+#' (an unknown destination) and the dry-run method both abort.
+#'
+#' @inheritParams ssd_open_uploaded
+#' @param drop_samples Flag (default `TRUE`): project away the heavy
+#'   `dists`/`samples` list-columns for the analysis-ready summary. Pass `FALSE`
+#'   to keep them (e.g. when the in-flight bootstrap `samples` are needed).
+#' @return A tibble: the unioned, collected summary of the uploaded `step`
+#'   layer.
+#' @seealso [ssd_open_uploaded()], [ssd_summarise()], [ssd_upload_shard()].
+#' @export
+#' @examples
+#' \dontrun{
+#' upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+#' ssd_summarise_uploaded(upload, "hc")
+#' ssd_summarise_uploaded(upload, "hc", drop_samples = FALSE) # keep samples
+#' }
+ssd_summarise_uploaded <- function(upload, step = "hc", drop_samples = TRUE) {
+  UseMethod("ssd_summarise_uploaded")
+}
+
 # ---- default methods (unknown class) ---------------------------------------
 
 #' @export
@@ -215,6 +249,15 @@ ssd_upload_shard.default <- function(path, upload) {
 
 #' @export
 ssd_open_uploaded.default <- function(upload, step) {
+  abort_unknown_upload(upload, call = rlang::caller_env())
+}
+
+#' @export
+ssd_summarise_uploaded.default <- function(
+  upload,
+  step = "hc",
+  drop_samples = TRUE
+) {
   abort_unknown_upload(upload, call = rlang::caller_env())
 }
 
@@ -241,6 +284,19 @@ ssd_open_uploaded.ssdsims_upload_dryrun <- function(upload, step) {
     "A dry-run upload ships nothing, so there is nothing to read back. ",
     "Read the local shards directly (e.g. with `ssd_summarise()` or ",
     "`duckplyr::read_parquet_duckdb()` under the results root).",
+    call = rlang::caller_env()
+  )
+}
+
+#' @export
+ssd_summarise_uploaded.ssdsims_upload_dryrun <- function(
+  upload,
+  step = "hc",
+  drop_samples = TRUE
+) {
+  chk::abort_chk(
+    "A dry-run upload ships nothing, so there is nothing to summarise. ",
+    "Summarise the local shards directly with `ssd_summarise()`.",
     call = rlang::caller_env()
   )
 }
@@ -291,6 +347,36 @@ ssd_open_uploaded.ssdsims_upload_azure_blob <- function(upload, step) {
     azure_glob(upload, step),
     options = list(hive_partitioning = FALSE)
   )
+}
+
+#' @export
+ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
+  upload,
+  step = "hc",
+  drop_samples = TRUE
+) {
+  step <- rlang::arg_match0(step, c("sample", "fit", "hc", "summary"))
+  chk::chk_flag(drop_samples)
+  rlang::check_installed("duckplyr")
+  # Fetch the SAME credentials used for uploading and remap them into a DuckDB
+  # `azure` secret (shared with `ssd_upload_shard()`/`ssd_open_uploaded()` - one
+  # credential source, translated for the backend, never a second source).
+  creds <- resolve_azure_credentials(call = rlang::caller_env())
+  azure_load_duckdb_extension(creds, call = rlang::caller_env())
+
+  # --- duckplyr query: read the uploaded shards in place and union them -------
+  # SKETCH - drop-in point for the working implementation. Reads the step's Hive
+  # glob via the `azure` extension (predicate pushdown, no download), optionally
+  # projects away the heavy `dists`/`samples` list-columns (the analysis-ready
+  # summary, mirroring `ssd_summarise()`), and collects the union into a tibble.
+  tbl <- duckplyr::read_parquet_duckdb(
+    azure_glob(upload, step),
+    options = list(hive_partitioning = FALSE)
+  )
+  if (drop_samples) {
+    tbl <- dplyr::select(tbl, -dplyr::any_of(c("dists", "samples")))
+  }
+  tibble::as_tibble(dplyr::collect(tbl))
 }
 
 # ---- internals -------------------------------------------------------------

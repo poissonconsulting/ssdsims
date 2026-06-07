@@ -99,6 +99,38 @@
       Error:
       ! A dry-run upload ships nothing, so there is nothing to read back. Read the local shards directly (e.g. with `ssd_summarise()` or `duckplyr::read_parquet_duckdb()` under the results root).
 
+# cloud-upload: ssd_summarise_uploaded() on a dry run has nothing to summarise
+
+    Code
+      ssd_summarise_uploaded(ssd_upload_dryrun())
+    Condition
+      Error:
+      ! A dry-run upload ships nothing, so there is nothing to summarise. Summarise the local shards directly with `ssd_summarise()`.
+
+# cloud-upload: ssd_summarise_uploaded() aborts for an unknown destination
+
+    Code
+      ssd_summarise_uploaded(list())
+    Condition
+      Error:
+      ! `upload` must be an upload destination from `ssd_upload_azure()` or `ssd_upload_dryrun()`, not an object of class "list".
+
+# cloud-upload: ssd_summarise_uploaded() validates step and drop_samples first
+
+    Code
+      ssd_summarise_uploaded(upload, step = "nope")
+    Condition
+      Error in `ssd_summarise_uploaded()`:
+      ! `step` must be one of "sample", "fit", "hc", or "summary", not "nope".
+
+---
+
+    Code
+      ssd_summarise_uploaded(upload, drop_samples = "yes")
+    Condition
+      Error in `ssd_summarise_uploaded.ssdsims_upload_azure_blob()`:
+      ! `drop_samples` must be a flag (TRUE or FALSE).
+
 # cloud-upload: root, upload, and cue must be passed by name
 
     Code

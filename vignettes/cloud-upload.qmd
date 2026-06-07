@@ -217,6 +217,18 @@ shard verifies the transfer. (A dry-run destination has nothing to read back:
 `ssd_open_uploaded(ssd_upload_dryrun(), ...)` aborts and points you at the local
 shards.)
 
+For the analysis-ready table, `ssd_summarise_uploaded()` is the cloud
+counterpart of `ssd_summarise()`: it unions a step's uploaded shards in place and
+collects them, dropping the heavy `dists`/`samples` list-columns by default. Pass
+`drop_samples = FALSE` when you need the in-flight bootstrap `samples`:
+
+```{r}
+#| label: summarise-uploaded
+#| eval: false
+ssd_summarise_uploaded(upload, step = "hc") # analysis-ready summary tibble
+ssd_summarise_uploaded(upload, step = "hc", drop_samples = FALSE) # keep samples
+```
+
 ## What to pay attention to
 
 ::: {.callout-important}

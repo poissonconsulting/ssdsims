@@ -40,11 +40,12 @@ backend:
 \code{c("ssdsims_upload_<backend>", "ssdsims_upload")} that validates its
 destination at construction (as \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} validates its \code{url}
 and \code{container}) and carries no credentials.
-\item Implement the three generic methods for that class:
+\item Implement the generic methods for that class:
 \code{ssd_upload_shard()} (ship one shard, return the local path),
 \code{\link[=ssd_test_upload]{ssd_test_upload()}} (the credentials/connectivity probe, failing loud on a
-missing credential), and \code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}} (read the uploaded results
-back in place).
+missing credential), \code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}} (read the uploaded results
+back in place), and \code{\link[=ssd_summarise_uploaded]{ssd_summarise_uploaded()}} (the in-place fan-in
+summary).
 }
 
 The package ships only the Azure and dry-run backends; no speculative

@@ -227,6 +227,32 @@ test_that("cloud-upload: ssd_open_uploaded() on a dry run has nothing to read ba
   })
 })
 
+# ---- ssd_summarise_uploaded() ----------------------------------------------
+
+test_that("cloud-upload: ssd_summarise_uploaded() on a dry run has nothing to summarise", {
+  expect_snapshot(error = TRUE, {
+    ssd_summarise_uploaded(ssd_upload_dryrun())
+  })
+})
+
+test_that("cloud-upload: ssd_summarise_uploaded() aborts for an unknown destination", {
+  expect_snapshot(error = TRUE, {
+    ssd_summarise_uploaded(list())
+  })
+})
+
+test_that("cloud-upload: ssd_summarise_uploaded() validates step and drop_samples first", {
+  # validation runs before any credential/network work, so these abort with no
+  # `SSDSIMS_AZURE_*` set (the live Azure round-trip is a manual/lab step)
+  upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+  expect_snapshot(error = TRUE, {
+    ssd_summarise_uploaded(upload, step = "nope")
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_summarise_uploaded(upload, drop_samples = "yes")
+  })
+})
+
 # ---- the factory wiring (task 4.4) -----------------------------------------
 
 all_target_names <- function(x) {

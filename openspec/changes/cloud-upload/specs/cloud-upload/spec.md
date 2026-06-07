@@ -102,12 +102,27 @@ The package SHALL provide `ssd_open_uploaded(upload, step)`, a generic dispatchi
 - **WHEN** `ssd_open_uploaded(ssd_upload_dryrun(), ...)` is called
 - **THEN** it SHALL abort stating that a dry run uploads nothing and that the local shards should be read directly
 
+### Requirement: Uploaded results are summarisable in place via a destination-dispatched generic
+The package SHALL provide `ssd_summarise_uploaded(upload, step = "hc", drop_samples = TRUE)`, a generic dispatching on the upload object's class — the cloud counterpart of `ssd_summarise()` — that fans a step's **uploaded** shards into a single analysis-ready tibble read **in place** (no download). For an Azure destination it SHALL read the `<container>[/<prefix>]/<step>/**/part.parquet` Hive glob via DuckDB's `azure` extension, resolving the **same** front-end `SSDSIMS_AZURE_*` credentials as the write path and remapping them into a DuckDB `azure` secret (as `ssd_open_uploaded()` does), and SHALL collect the union into a tibble. The `drop_samples` flag SHALL default to `TRUE`, projecting away the heavy `dists`/`samples` list-columns (mirroring `ssd_summarise()`); when `FALSE` it SHALL retain them (so the in-flight bootstrap `samples` are available). The default method (an unknown destination) and the dry-run method SHALL abort with an informative error rather than returning an empty or local table.
+
+#### Scenario: Azure summary unioned in place, samples projected away by default
+- **WHEN** `ssd_summarise_uploaded(ssd_upload_azure(...), step = "hc")` is called with valid credentials
+- **THEN** it SHALL return a tibble unioning `<container>[/<prefix>]/hc/**/part.parquet` read in place via the DuckDB `azure` extension, with the `dists`/`samples` list-columns projected away
+
+#### Scenario: drop_samples = FALSE keeps the in-flight samples
+- **WHEN** `ssd_summarise_uploaded(upload, step, drop_samples = FALSE)` is called
+- **THEN** the returned tibble SHALL retain the `samples` (and `dists`) list-columns
+
+#### Scenario: Dry-run has nothing to summarise
+- **WHEN** `ssd_summarise_uploaded(ssd_upload_dryrun(), ...)` is called
+- **THEN** it SHALL abort stating that a dry run uploads nothing and that the local shards should be summarised directly with `ssd_summarise()`
+
 ### Requirement: The backend set is extensible by a documented constructor-plus-methods contract
-The package SHALL document, on the `ssd_upload_shard()` generic's help page, the contract for adding a new destination backend (e.g. S3, GCS): provide a constructor returning an object of class `c("ssdsims_upload_<backend>", "ssdsims_upload")` (validating its destination at construction) and implement the three generic methods — `ssd_upload_shard()`, `ssd_test_upload()`, and `ssd_open_uploaded()` — for it. The package SHALL NOT ship speculative backends beyond Azure and dry-run; the dispatch SHALL be open so a new backend is added without editing the existing methods.
+The package SHALL document, on the `ssd_upload_shard()` generic's help page, the contract for adding a new destination backend (e.g. S3, GCS): provide a constructor returning an object of class `c("ssdsims_upload_<backend>", "ssdsims_upload")` (validating its destination at construction) and implement the generic methods — `ssd_upload_shard()`, `ssd_test_upload()`, `ssd_open_uploaded()`, and `ssd_summarise_uploaded()` — for it. The package SHALL NOT ship speculative backends beyond Azure and dry-run; the dispatch SHALL be open so a new backend is added without editing the existing methods.
 
 #### Scenario: Extension contract is documented
 - **WHEN** a developer reads `?ssd_upload_shard`
-- **THEN** it SHALL state that a new backend is added by writing a constructor returning an `ssdsims_upload_<backend>`/`ssdsims_upload` object (with construction-time validation) and implementing the three generics (`ssd_upload_shard()`, `ssd_test_upload()`, `ssd_open_uploaded()`), with no edit to existing methods
+- **THEN** it SHALL state that a new backend is added by writing a constructor returning an `ssdsims_upload_<backend>`/`ssdsims_upload` object (with construction-time validation) and implementing the generics (`ssd_upload_shard()`, `ssd_test_upload()`, `ssd_open_uploaded()`, `ssd_summarise_uploaded()`), with no edit to existing methods
 
 #### Scenario: No speculative backends are shipped
 - **WHEN** the package's exported upload constructors are enumerated
