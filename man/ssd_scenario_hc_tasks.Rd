@@ -15,12 +15,14 @@ fit-task identity crossed with the hc grid.
 }
 \description{
 Crosses each fit-task identity with each row of the scenario's \code{hc} argument
-grid (\code{nboot}, \code{est_method}, \code{ci_method}, \code{parametric}). The scenario's
-scalar \code{ci} flag is applied uniformly to every hc row - it is not a cross-join
-axis (it is absent from \code{task_axes("hc")}) and rides as a carried column. When
-\code{ci = FALSE}, the bootstrap-only knobs (\code{nboot}, \code{ci_method}, \code{parametric})
-are canonically \code{NA}, leaving \code{est_method} as the only fan-out axis; when
-\code{ci = TRUE}, the grid fans out across \verb{nboot x est_method x ci_method x parametric}.
+grid (\code{nboot}, \code{ci_method}, \code{parametric}). The scenario's scalar \code{ci} flag and
+the \code{est_method} setting are applied uniformly to every hc row - neither is a
+cross-join axis (both are absent from \code{task_axes("hc")}); \code{ci} rides as a
+carried column and every requested \code{est_method} is summarised within each task
+from its single bootstrap sample set. When \code{ci = FALSE}, the bootstrap-only
+knobs (\code{nboot}, \code{ci_method}, \code{parametric}) are canonically \code{NA} and there is no
+fan-out axis, so the grid is exactly one hc row per fit task; when \code{ci = TRUE},
+the grid fans out across \verb{nboot x ci_method x parametric}.
 }
 \details{
 Each row carries an \code{hc_id} primary key and a \code{fit_id} foreign key
