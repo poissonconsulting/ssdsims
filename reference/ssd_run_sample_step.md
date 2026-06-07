@@ -49,5 +49,5 @@ scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()
 ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
-#> [1] "/tmp/RtmpWbDMZ2/file38d05191359c/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
+#> [1] "/tmp/RtmpfGxz6b/file39b350891515/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
 ```

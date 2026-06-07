@@ -2346,7 +2346,6 @@ public-API or ergonomics gaps.
   derive names by **symbol capture**, which must happen in the
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   frame. Surfaced in PR \#80.
-
 - **`tidyverse-rlang-alignment`** — Align the package’s code with the
   tidyverse design: prefer **rlang** over base-R idioms throughout,
   especially metaprogramming —
@@ -2365,7 +2364,6 @@ public-API or ergonomics gaps.
   so new and existing code read consistently. Surfaced in PR \#101
   review. Independent tidy-up with no dependants; not on the dependency
   DAG.
-
 - **`canonical-call-sites`** — Sweep call sites of the public
   constructors so arguments are passed in signature order. The first
   pass canonicalised every
@@ -2380,53 +2378,6 @@ public-API or ergonomics gaps.
   ([`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md),
   the `ssd_run_*`/`ssd_scenario_*` family) for the same ordering.
   Independent tidy-up with no dependants; not on the dependency DAG.
-
-- **`dists-simulation-setting`** — Reconcile `dists`’s classification
-  across the spec, signature, and docs. `dists` is absent from
-  `task_axes("fit")` — a fit-level **simulation setting** (one
-  model-averaged `ssd_fit_dists()` per task, applied uniformly), not a
-  cross-join axis — but the `scenario-definition` role-grouping
-  requirement lists it among the axes and the signature wedges it in the
-  fit-axis block. This change moves `dists` to lead the contiguous
-  simulation-settings block
-  (`… parametric, dists, proportion, ci, samples`), corrects the spec,
-  and sweeps call sites. Behaviour-preserving (no task-graph, primer, or
-  shard change); pairs with the §9 / GLOSSARY corrections that also
-  fixed the stale *“`dists` and `nboot` are not fit/hc grid axes”*
-  heading (`nboot` **is** an hc axis). Independent tidy-up; not on the
-  dependency DAG.
-
-- **`est-method-setting`** — Reclassify `est_method` from an hc
-  cross-join axis to an hc-level **simulation setting** (the same shape
-  as `dists-simulation-setting` / `scalar-ci-flag`:
-  `scenario-definition` + `task-lists` + `hazard-concentrations`
-  deltas). `est_method` is removed from `task_axes("hc")`; the hc
-  fan-out becomes `nboot × ci_method × parametric` and a single
-  bootstrap per cell yields every requested `est_method` (the analytical
-  `est` differs; the CI is est_method-invariant — verified at a fixed
-  seed in the change’s `exploration/`). Unlike the other
-  reclassifications this is **not** byte-preserving: because the hc
-  primer hashes the hc-grid row including `est_method` (§2), dropping
-  the axis **re-seeds** every hc task, so bootstrap CIs change
-  numerically (point estimates unchanged). ~3× cost reduction on the
-  `est_method` axis. Independent tidy-up; not on the dependency DAG.
-
-- **`cost-estimation`** — New `cost-estimation` capability: a
-  calibration harness
-  ([`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md))
-  that re-measures a per-task cost model on the target architecture and
-  an estimator
-  ([`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md))
-  that reads a scenario’s hc task expansion (read-only, no run) to
-  predict ballpark total cost and the longest single task. Model: the hc
-  bootstrap dominates `ci = TRUE`; per-call time ≈
-  `base + slope(ci_method) × max(nboot, n0)`, with
-  `proportion`/`est_method` free and a bounded non-monotonic `nrow`
-  factor (calibrated this session at ~430 single-core hours for the
-  motivating scenario). Ships a default calibration with provenance; the
-  model-form discovery is preserved in the change’s `exploration/`.
-  Independent new capability; not on the dependency DAG (reads the
-  archived `task-tables` expansion, no dependants).
 
 ### Archived
 
@@ -2622,6 +2573,50 @@ implemented; the Mermaid graph below colours these nodes green inside
   in the change’s `exploration` (the `benchmark-blob-encoding.R`
   script). Independent tidy-up with no dependants; not on the dependency
   DAG.
+- **`dists-simulation-setting`** — Reconcile `dists`’s classification
+  across the spec, signature, and docs. `dists` is absent from
+  `task_axes("fit")` — a fit-level **simulation setting** (one
+  model-averaged `ssd_fit_dists()` per task, applied uniformly), not a
+  cross-join axis — but the `scenario-definition` role-grouping
+  requirement listed it among the axes and the signature wedged it in
+  the fit-axis block. This change moved `dists` to lead the contiguous
+  simulation-settings block
+  (`… parametric, dists, proportion, ci, samples`), corrected the spec,
+  and swept call sites. Behaviour-preserving (no task-graph, primer, or
+  shard change); paired with the §9 / GLOSSARY corrections that also
+  fixed the stale *“`dists` and `nboot` are not fit/hc grid axes”*
+  heading (`nboot` **is** an hc axis). Independent tidy-up; not on the
+  dependency DAG.
+- **`est-method-setting`** — Reclassify `est_method` from an hc
+  cross-join axis to an hc-level **simulation setting** (the same shape
+  as `dists-simulation-setting` / `scalar-ci-flag`:
+  `scenario-definition` + `task-lists` + `hazard-concentrations`
+  deltas). `est_method` is removed from `task_axes("hc")`; the hc
+  fan-out becomes `nboot × ci_method × parametric` and a single
+  bootstrap per cell yields every requested `est_method` (the analytical
+  `est` differs; the CI is est_method-invariant — verified at a fixed
+  seed in the change’s `exploration/`). Unlike the other
+  reclassifications this is **not** byte-preserving: because the hc
+  primer hashes the hc-grid row including `est_method` (§2), dropping
+  the axis **re-seeds** every hc task, so bootstrap CIs change
+  numerically (point estimates unchanged). ~3× cost reduction on the
+  `est_method` axis. Independent tidy-up; not on the dependency DAG.
+- **`cost-estimation`** — New `cost-estimation` capability: a
+  calibration harness
+  ([`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md))
+  that re-measures a per-task cost model on the target architecture and
+  an estimator
+  ([`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md))
+  that reads a scenario’s hc task expansion (read-only, no run) to
+  predict ballpark total cost and the longest single task. Model: the hc
+  bootstrap dominates `ci = TRUE`; per-call time ≈
+  `base + slope(ci_method) × max(nboot, n0)`, with
+  `proportion`/`est_method` free and a bounded non-monotonic `nrow`
+  factor (calibrated this session at ~430 single-core hours for the
+  motivating scenario). Ships a default calibration with provenance; the
+  model-form discovery is preserved in the change’s `exploration/`.
+  Independent new capability; not on the dependency DAG (reads the
+  archived `task-tables` expansion, no dependants).
 
 ### Dependency DAG (parallel streams)
 
@@ -2857,13 +2852,23 @@ Three “wait points” (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not chained by
 an arrow can be worked on in parallel.
 
-**Addendum (2026-06-07).** Two further changes were proposed, both off
-the dependency DAG (prose bullets above, no Mermaid nodes):
-`est-method-setting` (an axis→setting reclassification in the
-`dists-simulation-setting` / `scalar-ci-flag` family) and
-`cost-estimation` (a new, independent capability that reads the archived
-`task-tables` expansion). Both grew out of the `ci = TRUE` performance
-investigation recorded in their `exploration/` scripts.
+**Addendum (2026-06-07).** Three off-DAG changes have since been
+**synced and archived** (prose bullets now under `### Archived`, no
+Mermaid nodes, graph unchanged): `dists-simulation-setting` (the `dists`
+axis→setting reclassification and signature reorder),
+`est-method-setting` (the matching `est_method` reclassification —
+`scenario-definition` + `task-lists` + `hazard-concentrations` deltas,
+removing `est_method` from `task_axes("hc")`), and `cost-estimation` (a
+new, independent capability that reads the archived `task-tables`
+expansion). The two reclassifications grew out of the `ci = TRUE`
+performance investigation recorded in their `exploration/` scripts;
+their deltas are folded into the main specs and the GLOSSARY’s
+forward-reference note is resolved. `cluster-pipeline` is
+**intentionally held back** (still active, done/yellow): its
+implementation and scheduler-free validation have landed, but the
+real-SLURM end-to-end run (tasks 4.1/4.2 — see its `design.md` Risks)
+remains the documented manual/lab step, so the change is not archived
+until that runs.
 
 The off-DAG tidy-up `blob-storage-format` (`shard-runner` delta) has
 since been **synced and archived**. Its benchmark
