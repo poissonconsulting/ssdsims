@@ -40,7 +40,9 @@ ssd_scenario_targets(scenario)
 The shard and summary targets carry \code{error = "null"} so a shard whose body
 fails entirely goes \code{NULL} (its error readable via \code{tar_meta()}) without
 aborting the run, and \code{ssd_summarize()} unions whatever landed
-(TARGETS-DESIGN.md section 6.2). The shipped \verb{_targets.R} templates pair this
+(TARGETS-DESIGN.md section 6.2). A final \code{manifest} target then writes the
+per-scenario \code{manifest.json} provenance sidecar under \code{root} (see the
+\emph{Manifest} section below). The shipped \verb{_targets.R} templates pair this
 with a pipeline-wide \strong{keep-going} default (\code{tar_option_set(error = "continue")}, the \code{make -k} analogue) so an errored target skips only its
 dependents while the rest of the shards still build; fail-fast pre-flight
 checks (upload/cluster connectivity) belong in a separate script the user
@@ -75,6 +77,22 @@ projection the runner uses to read them. So rewriting one parent
 shard re-runs only the child shards that read it. \code{summary} reads the whole
 \code{hc} directory, so it names every \code{hc} shard (it re-runs when any \code{hc} shard's
 bytes change, and unions the survivors of a partially-failed run).
+}
+
+\section{Manifest}{
+
+The factory appends a downstream \code{manifest} target that writes
+\verb{<root>/manifest.json} - the per-scenario provenance sidecar of
+\code{TARGETS-DESIGN.md} section 8.5/section 9. It records the scenario's
+declarative fields and the session info captured at write time (the stable
+\emph{head}, via \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}) and assembles \code{completed_shards} - each
+landed shard's partition path and the sha256 of its Parquet - from the shards
+on disk (the \emph{tail}, via \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}}). Per the \code{task-shards}
+contract the shard runners record nothing; the assembler hashes each shard
+Parquet directly. The target names every shard (so it re-assembles whenever
+any shard's bytes change) and reads the result tree (so it captures whatever
+shards landed, the survivors of a partially-failed run). Inspect it with
+\code{\link[=ssd_read_manifest]{ssd_read_manifest()}}.
 }
 
 \section{Pinning trusted shards (\code{cue})}{

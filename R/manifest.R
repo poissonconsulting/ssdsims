@@ -175,6 +175,23 @@ ssd_assemble_manifest <- function(dir) {
 
 # ---- internals -------------------------------------------------------------
 
+# The stable, declarative projection of a scenario the manifest head records -
+# the scenario with its two non-declarative fields dropped: the materialised
+# datasets (`$data`, large tibbles the head records only by *name*) and the
+# `min_pmix` *functions* (`$min_pmix_fns`, whose `rlang::hash()` is not
+# byte-stable across a recompile/JIT, section 1.1). The targets `manifest`
+# consumer splices this (not the bare scenario) into its command so the manifest
+# target's dependency hash covers only stable declarative fields - a function or
+# dataset-byte change never spuriously rebuilds the manifest - while every field
+# `manifest_head()` reads (`seed`, `datasets`, `fit`, `hc`, `partition_by`) is
+# retained. The class tag is preserved so `ssd_write_manifest()`'s contract
+# (`chk_s3_class()`) is unchanged.
+manifest_head_scenario <- function(scenario) {
+  scenario$data <- NULL
+  scenario$min_pmix_fns <- NULL
+  scenario
+}
+
 # The manifest's stable head: the scenario's declarative fields, the flat
 # bit-stability-critical version subset (section 9), and the complete session
 # info captured at write time.

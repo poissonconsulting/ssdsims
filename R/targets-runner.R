@@ -554,7 +554,9 @@ edge_block <- function(names) {
 #' The shard and summary targets carry `error = "null"` so a shard whose body
 #' fails entirely goes `NULL` (its error readable via `tar_meta()`) without
 #' aborting the run, and `ssd_summarize()` unions whatever landed
-#' (TARGETS-DESIGN.md section 6.2). The shipped `_targets.R` templates pair this
+#' (TARGETS-DESIGN.md section 6.2). A final `manifest` target then writes the
+#' per-scenario `manifest.json` provenance sidecar under `root` (see the
+#' *Manifest* section below). The shipped `_targets.R` templates pair this
 #' with a pipeline-wide **keep-going** default (`tar_option_set(error =
 #' "continue")`, the `make -k` analogue) so an errored target skips only its
 #' dependents while the rest of the shards still build; fail-fast pre-flight
@@ -590,6 +592,20 @@ edge_block <- function(names) {
 #' shard re-runs only the child shards that read it. `summary` reads the whole
 #' `hc` directory, so it names every `hc` shard (it re-runs when any `hc` shard's
 #' bytes change, and unions the survivors of a partially-failed run).
+#'
+#' @section Manifest:
+#' The factory appends a downstream `manifest` target that writes
+#' `<root>/manifest.json` - the per-scenario provenance sidecar of
+#' `TARGETS-DESIGN.md` section 8.5/section 9. It records the scenario's
+#' declarative fields and the session info captured at write time (the stable
+#' *head*, via [ssd_write_manifest()]) and assembles `completed_shards` - each
+#' landed shard's partition path and the sha256 of its Parquet - from the shards
+#' on disk (the *tail*, via [ssd_assemble_manifest()]). Per the `task-shards`
+#' contract the shard runners record nothing; the assembler hashes each shard
+#' Parquet directly. The target names every shard (so it re-assembles whenever
+#' any shard's bytes change) and reads the result tree (so it captures whatever
+#' shards landed, the survivors of a partially-failed run). Inspect it with
+#' [ssd_read_manifest()].
 #'
 #' @section Pinning trusted shards (`cue`):
 #' Pass `cue = targets::tar_cue(depend = FALSE)` to **pin** the shard targets
@@ -748,5 +764,37 @@ ssd_scenario_targets <- function(
     format = "file"
   )
 
-  list(sample_targets, fit_targets, hc_targets, summary_target)
+  # The per-scenario manifest (TARGETS-DESIGN.md section 8.5/section 9), wired in
+  # as the *downstream* `manifest` consumer the `task-shards` contract calls for
+  # (the shard runners record nothing). It writes the declarative/session-info
+  # head (`ssd_write_manifest()`) and assembles `completed_shards` from the
+  # shards on disk (`ssd_assemble_manifest()` hashes each shard Parquet). Like
+  # `summary` it names every sample/fit/hc shard - so it re-assembles when any
+  # shard's bytes change - and reads the directory tree, so it records whatever
+  # shards landed (the survivors of a partially-failed run, section 6.2). One
+  # target writes head then tail into the single `<root>/manifest.json`: two
+  # targets owning one `format = "file"` path would chase each other's rewrites.
+  # The spliced head scenario (`manifest_head_scenario()`) carries only stable
+  # declarative fields (no dataset bytes, no `min_pmix` functions), so the
+  # manifest's dependency hash never spuriously rebuilds on a recompile/JIT.
+  manifest_scenario <- manifest_head_scenario(scenario)
+  manifest_target <- targets::tar_target_raw(
+    "manifest",
+    rlang::expr({
+      # depend on every shard so the manifest re-assembles on any shard change
+      !!edge_block(c(unname(sample_names), unname(fit_names), unname(hc_names)))
+      ssd_write_manifest(!!manifest_scenario, !!root)
+      ssd_assemble_manifest(!!root)
+      file.path(!!root, "manifest.json")
+    }),
+    format = "file"
+  )
+
+  list(
+    sample_targets,
+    fit_targets,
+    hc_targets,
+    summary_target,
+    manifest_target
+  )
 }

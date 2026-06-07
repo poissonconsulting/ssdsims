@@ -244,6 +244,49 @@ test_that("task-shards: the shipped template tar_make()s every shard", {
   )
 })
 
+test_that("task-shards: the pipeline writes a manifest with head and shards", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  template_dir <- system.file("targets-templates", "small", package = "ssdsims")
+  skip_if(!nzchar(template_dir))
+  file.copy(
+    file.path(template_dir, c("_targets.R", "scenario.R")),
+    dir
+  )
+  withr::local_dir(dir)
+  suppressWarnings(targets::tar_make(reporter = "silent"))
+
+  # The factory's downstream `manifest` target built without error.
+  meta <- targets::tar_meta(fields = "error")
+  expect_identical(meta$error[meta$name == "manifest"], NA_character_)
+
+  # Exactly one manifest.json, under the per-layout results root.
+  manifests <- list.files(
+    "results",
+    pattern = "manifest.json",
+    recursive = TRUE
+  )
+  expect_length(manifests, 1L)
+
+  # The head (declarative + session info) round-trips, and the tail
+  # (`completed_shards`) is keyed by every landed shard's partition path with a
+  # sha256 matching the Parquet on disk.
+  root <- dirname(file.path("results", manifests))
+  manifest <- ssd_read_manifest(root)
+  expect_identical(manifest$seed, 42L)
+  expect_true("ssdtools" %in% names(manifest$session_info$packages))
+
+  parquets <- list.files(root, pattern = "^part.parquet$", recursive = TRUE)
+  keys <- vapply(parquets, dirname, character(1L), USE.NAMES = FALSE)
+  expect_setequal(names(manifest$completed_shards), keys)
+  for (key in keys) {
+    expect_identical(
+      manifest$completed_shards[[key]]$sha256,
+      ssd_file_sha256(file.path(root, key, "part.parquet"))
+    )
+  }
+})
+
 # ---- byte-identity oracle (task 7.5) ---------------------------------------
 
 # Copy a plain-text pipeline fixture (`fixtures/<name>.R`) into `dir` as its
@@ -442,7 +485,10 @@ test_that("hive: per-child edges replace the coarse step barrier; no data step",
   # No step-wide tar_combine() barrier targets, and the fold is kept (no data step).
   expect_false(any(c("sample_done", "fit_done", "hc_done") %in% all_names))
   expect_false(any(grepl("^data_step", all_names)))
-  expect_true(all(grepl("^(sample_step|fit_step|hc_step|summary)", all_names)))
+  expect_true(all(grepl(
+    "^(sample_step|fit_step|hc_step|summary|manifest)",
+    all_names
+  )))
 })
 
 test_that("hive: cue is threaded onto every shard target", {
