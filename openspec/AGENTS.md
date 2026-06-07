@@ -45,9 +45,9 @@ of the graph):
   is the spec half; it does not by itself touch the roadmap, but if you sync as
   part of archiving, do the archive roadmap update above.
 
-The authoritative, full statement of the colour/box rule is in the root
-`AGENTS.md` → *Architectural Notes → The targets redesign*. This file is the
-reminder that it applies to **every** lifecycle action; that file is the spec.
+The authoritative, full statement of the colour/box rule is **here** plus the
+legend at the foot of the `TARGETS-DESIGN.md` §12 graph itself. The root
+`AGENTS.md` only points here; keep this file and the §12 legend in step.
 
 ## Layout
 
