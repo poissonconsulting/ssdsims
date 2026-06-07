@@ -32,8 +32,8 @@ reference:
     fan in a summary - the building blocks of the static-branching `targets`
     pipeline (see the `inst/targets-templates/small/_targets.R` template).
   contents:
-  - ssd_scenario_sample_shards
-  - ssd_run_sample_step
+  - ssd_scenario_shards
+  - ssd_run_step
   - ssd_scenario_targets
   - ssd_summarize
   - scenario_results_dir

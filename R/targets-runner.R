@@ -188,7 +188,6 @@ scenario_step_slice <- function(
 
 #' Run a Step Shard
 #'
-#' @description
 #' The per-shard step runners the `targets` pipeline (and the single-core
 #' [ssd_run_scenario_shards()]) call - one target per shard, one runner per step.
 #' Each takes a shard's `tasks` (the `tasks` list-column of a row of the matching
@@ -200,11 +199,6 @@ scenario_step_slice <- function(
 #' contract). Because a task's result is fully determined by its `(seed, primer)`
 #' and is order-independent, the per-task results are byte-identical to
 #' [ssd_run_scenario_baseline()] regardless of how tasks bundle into shards.
-#'
-#' [ssd_run_sample_step()] runs the `sample` tasks: it reads each task's dataset
-#' off the scenario via [scenario_dataset()], draws `n_max` rows through
-#' `sample_data_task_primer()`, and tags each draw with its `sample_id` and a
-#' `.row` order index so a downstream `fit` shard can isolate and re-order it.
 #'
 #' @param tasks A tibble of the shard's task rows (the `tasks` list-column of a
 #'   row of the matching `ssd_scenario_*_shards()`), each carrying the step's axis
@@ -219,6 +213,13 @@ scenario_step_slice <- function(
 #' @return The shard's Parquet path (the `format = "file"` contract).
 #' @seealso [ssd_scenario_sample_shards()] (the shard grouping these consume),
 #'   [ssd_run_scenario_shards()], [ssd_run_scenario_baseline()].
+#' @name ssd_run_step
+NULL
+
+#' @describeIn ssd_run_step Run the `sample` tasks: read each task's dataset off
+#'   the scenario via [scenario_dataset()], draw `n_max` rows through
+#'   `sample_data_task_primer()`, and tag each draw with its `sample_id` and a
+#'   `.row` order index so a downstream `fit` shard can isolate and re-order it.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
@@ -252,7 +253,7 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
   ssd_write_parquet(dplyr::bind_rows(draws), out)
 }
 
-#' @describeIn ssd_run_sample_step Run the `fit` tasks: read the distinct set of
+#' @describeIn ssd_run_step Run the `fit` tasks: read the distinct set of
 #'   parent `sample` shards the shard's tasks reference (each once - they may span
 #'   several sample shards), isolate each task's draw by `sample_id` (restoring
 #'   row order), truncate it inline (`head(sample, nrow)`, RNG-free, section 5),
@@ -323,7 +324,7 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   ssd_write_parquet(dplyr::bind_rows(rows), out)
 }
 
-#' @describeIn ssd_run_sample_step Run the `hc` tasks: read the distinct set of
+#' @describeIn ssd_run_step Run the `hc` tasks: read the distinct set of
 #'   parent `fit` shards the shard's tasks reference (each once - an hc shard
 #'   typically spans several fit shards), isolate each task's fit by `fit_id`,
 #'   deserialise the `fitdists` object, and estimate the hazard concentration with

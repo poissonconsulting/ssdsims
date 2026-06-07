@@ -18,7 +18,6 @@
 
 #' Group Tasks into Shards
 #'
-#' @description
 #' Group a step's per-task table into a per-shard table: one row per
 #' `partition_by` **path** cell, carrying the path-axis columns (the `tar_map`
 #' target-name suffix and Hive path) and a `tasks` list-column of that cell's task
@@ -28,16 +27,19 @@
 #' ([ssd_scenario_tasks()]) keep their no-`(seed, primer)` contract. The result is
 #' the `values` a `tarchetypes::tar_map()` consumes to mint one target per shard.
 #'
-#' [ssd_scenario_sample_shards()] groups the `sample` tasks
-#' ([ssd_scenario_sample_tasks()]) by `partition_by$sample`; the `fit` and `hc`
-#' siblings group their step's tasks the same way (see below). For `fit`/`hc` each
-#' task row in `tasks` also carries its parent step's path-axis values and
-#' `<parent>_id`, so the runner opens the matching parent shard by partition path.
+#' For `fit`/`hc` each task row in `tasks` also carries its parent step's
+#' path-axis values and `<parent>_id`, so the runner opens the matching parent
+#' shard by partition path.
 #'
 #' @param scenario An `ssdsims_scenario` from [ssd_define_scenario()].
 #' @return A tibble with one row per shard of the step: the path-axis columns and
 #'   a `tasks` list-column. Suitable as `tarchetypes::tar_map(values = )`.
 #' @seealso [ssd_run_sample_step()] (the matching per-shard step runners).
+#' @name ssd_scenario_shards
+NULL
+
+#' @describeIn ssd_scenario_shards Group the `sample` tasks
+#'   ([ssd_scenario_sample_tasks()]) by `partition_by$sample`.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
@@ -46,7 +48,7 @@ ssd_scenario_sample_shards <- function(scenario) {
   scenario_shards(scenario, "sample")
 }
 
-#' @describeIn ssd_scenario_sample_shards Group the `fit` tasks
+#' @describeIn ssd_scenario_shards Group the `fit` tasks
 #'   ([ssd_scenario_fit_tasks()]) by `partition_by$fit`. Each task row in `tasks`
 #'   carries its parent `sample` path-axis values and `sample_id`, so the runner
 #'   opens the matching `sample` shard by partition path.
@@ -63,7 +65,7 @@ ssd_scenario_fit_shards <- function(scenario) {
   scenario_shards(scenario, "fit")
 }
 
-#' @describeIn ssd_scenario_sample_shards Group the `hc` tasks
+#' @describeIn ssd_scenario_shards Group the `hc` tasks
 #'   ([ssd_scenario_hc_tasks()]) by `partition_by$hc`. Each task row in `tasks`
 #'   carries its parent `fit` path-axis values and `fit_id`, so the runner opens
 #'   the matching `fit` shard by partition path.
