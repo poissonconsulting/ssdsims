@@ -34,6 +34,9 @@
 #' @param url The Azure Blob Storage account endpoint, e.g.
 #'   `"https://<account>.blob.core.windows.net"` (a non-empty string).
 #' @param container The blob container name (a non-empty string).
+#' @param ... Unused; must be empty. Its presence forces `prefix` to be passed
+#'   **by name** (`rlang::check_dots_empty()` aborts on a positional or
+#'   misspelled argument).
 #' @param prefix An optional subdirectory (blob-name prefix) **within** the
 #'   container under which the shards are written, e.g. `"study-2026/run-3"`, or
 #'   `NULL` (default) to write at the container root. Leading/trailing slashes
@@ -55,8 +58,9 @@
 #'   prefix = "study-2026/run-3"
 #' )
 #' ssd_upload_dryrun()
-ssd_upload_azure <- function(url, container, prefix = NULL) {
+ssd_upload_azure <- function(url, container, ..., prefix = NULL) {
   call <- environment()
+  rlang::check_dots_empty()
   if (!chk::vld_string(url) || !nzchar(url)) {
     chk::abort_chk("`url` must be a non-empty string.", call = call)
   }

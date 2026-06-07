@@ -1,3 +1,24 @@
+# cloud-upload: ssd_upload_azure() forces prefix to be passed by name
+
+    Code
+      ssd_upload_azure("https://acct", "c", "study-2026")
+    Condition
+      Error in `ssd_upload_azure()`:
+      ! `...` must be empty.
+      x Problematic argument:
+      * ..1 = "study-2026"
+      i Did you forget to name an argument?
+
+---
+
+    Code
+      ssd_upload_azure("https://acct", "c", prefx = "study-2026")
+    Condition
+      Error in `ssd_upload_azure()`:
+      ! `...` must be empty.
+      x Problematic argument:
+      * prefx = "study-2026"
+
 # cloud-upload: ssd_upload_azure() validates its destination
 
     Code

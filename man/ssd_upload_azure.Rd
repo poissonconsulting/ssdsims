@@ -5,7 +5,7 @@
 \alias{ssd_upload_dryrun}
 \title{Upload Destinations for a Scenario's Shards}
 \usage{
-ssd_upload_azure(url, container, prefix = NULL)
+ssd_upload_azure(url, container, ..., prefix = NULL)
 
 ssd_upload_dryrun()
 }
@@ -14,6 +14,10 @@ ssd_upload_dryrun()
 \code{"https://<account>.blob.core.windows.net"} (a non-empty string).}
 
 \item{container}{The blob container name (a non-empty string).}
+
+\item{...}{Unused; must be empty. Its presence forces \code{prefix} to be passed
+\strong{by name} (\code{rlang::check_dots_empty()} aborts on a positional or
+misspelled argument).}
 
 \item{prefix}{An optional subdirectory (blob-name prefix) \strong{within} the
 container under which the shards are written, e.g. \code{"study-2026/run-3"}, or

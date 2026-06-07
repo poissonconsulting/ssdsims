@@ -29,6 +29,15 @@ test_that("cloud-upload: ssd_upload_azure() takes an optional subdirectory prefi
   expect_null(ssd_upload_azure("u", "c", prefix = "///")$prefix)
 })
 
+test_that("cloud-upload: ssd_upload_azure() forces prefix to be passed by name", {
+  expect_snapshot(error = TRUE, {
+    ssd_upload_azure("https://acct", "c", "study-2026")
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_upload_azure("https://acct", "c", prefx = "study-2026")
+  })
+})
+
 test_that("cloud-upload: a prefix routes the blob key and the read-back glob", {
   bare <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
   pre <- ssd_upload_azure(
