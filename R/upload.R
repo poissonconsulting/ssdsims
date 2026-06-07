@@ -349,7 +349,8 @@ azure_container_endpoint <- function(upload, creds) {
         resource = "https://storage.azure.com/",
         tenant = creds$tenant,
         app = creds$client,
-        password = creds$secret
+        password = creds$secret,
+        use_cache = FALSE
       )
     )
   )
