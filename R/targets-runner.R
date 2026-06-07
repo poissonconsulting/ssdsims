@@ -458,16 +458,17 @@ ssd_summarise <- function(dir_sample, dir_fit, dir_hc, path) {
   glob <- file.path(dir_hc, "**", "part.parquet")
   # Project out the `dists`/`samples` list-columns at the DuckDB level (so the
   # potentially-large retained `samples` draws are never pulled into R): the
-  # summary is the analysis-ready estimate table; the draws stay in the hc shards.
-  hc <- tibble::as_tibble(dplyr::collect(
-    dplyr::select(
-      duckplyr::read_parquet_duckdb(
-        glob,
-        options = list(hive_partitioning = FALSE)
-      ),
-      -dplyr::any_of(c("dists", "samples"))
-    )
-  ))
+  # summary is the analysis-ready estimate table; the draws stay in the hc
+  # shards. The select stays lazy and is written straight to Parquet by
+  # duckplyr - the read, projection, and write all happen inside DuckDB, never
+  # collecting the union into R.
+  hc <- dplyr::select(
+    duckplyr::read_parquet_duckdb(
+      glob,
+      options = list(hive_partitioning = FALSE)
+    ),
+    -dplyr::any_of(c("dists", "samples"))
+  )
   ssd_write_parquet(hc, path)
 }
 

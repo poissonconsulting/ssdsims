@@ -13,8 +13,34 @@ test_that("cloud-upload: ssd_upload_azure() is classed and carries no credential
   expect_identical(upload$url, "https://acct.blob.core.windows.net")
   expect_identical(upload$container, "ssdsims-results")
   # only the destination is stored - no secrets, connections, or environments
-  expect_setequal(names(upload), c("url", "container", "prefix"))
+  expect_setequal(
+    names(upload),
+    c("url", "container", "prefix", "domain", "account")
+  )
   expect_null(upload$prefix)
+  # the storage account name is derived from the url, not the environment
+  expect_identical(upload$account, "acct")
+  expect_identical(upload$domain, "blob.core.windows.net")
+})
+
+test_that("cloud-upload: the storage account is derived from the url (+ domain)", {
+  expect_identical(
+    ssd_upload_azure("https://myacct.blob.core.windows.net", "c")$account,
+    "myacct"
+  )
+  # a sovereign/non-public cloud via `domain`
+  expect_identical(
+    ssd_upload_azure(
+      "https://gov.blob.core.usgovcloudapi.net",
+      "c",
+      domain = "blob.core.usgovcloudapi.net"
+    )$account,
+    "gov"
+  )
+  # a url whose host does not end with `.<domain>` aborts (account ambiguous)
+  expect_snapshot(error = TRUE, {
+    ssd_upload_azure("https://acct.example.com", "c")
+  })
 })
 
 test_that("cloud-upload: ssd_upload_azure() takes an optional subdirectory prefix", {
@@ -26,7 +52,13 @@ test_that("cloud-upload: ssd_upload_azure() takes an optional subdirectory prefi
   # leading/trailing slashes are trimmed
   expect_identical(upload$prefix, "study-2026/run-3")
   # a slashes-only prefix collapses to no prefix
-  expect_null(ssd_upload_azure("u", "c", prefix = "///")$prefix)
+  expect_null(
+    ssd_upload_azure(
+      "https://acct.blob.core.windows.net",
+      "c",
+      prefix = "///"
+    )$prefix
+  )
 })
 
 test_that("cloud-upload: ssd_upload_azure() forces prefix to be passed by name", {
@@ -77,7 +109,11 @@ test_that("cloud-upload: ssd_upload_azure() validates its destination", {
     ssd_upload_azure(url = "https://acct", container = 1L)
   })
   expect_snapshot(error = TRUE, {
-    ssd_upload_azure(url = "https://acct", container = "c", prefix = 1L)
+    ssd_upload_azure(
+      url = "https://acct.blob.core.windows.net",
+      container = "c",
+      prefix = 1L
+    )
   })
 })
 
@@ -93,7 +129,6 @@ test_that("cloud-upload: ssd_test_upload() Azure names the missing credential", 
   local_mocked_bindings(azure_check_installed = function() invisible(NULL))
   upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
   withr::local_envvar(
-    SSDSIMS_AZURE_STORAGE_ACCOUNT = NA,
     SSDSIMS_AZURE_STORAGE_KEY = NA,
     SSDSIMS_AZURE_STORAGE_SAS = NA,
     SSDSIMS_AZURE_TENANT_ID = NA,
@@ -105,9 +140,8 @@ test_that("cloud-upload: ssd_test_upload() Azure names the missing credential", 
   })
 })
 
-test_that("cloud-upload: an account with no secret names the auth options", {
+test_that("cloud-upload: no secret set names the auth options", {
   withr::local_envvar(
-    SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct",
     SSDSIMS_AZURE_STORAGE_KEY = NA,
     SSDSIMS_AZURE_STORAGE_SAS = NA,
     SSDSIMS_AZURE_TENANT_ID = NA,
@@ -120,21 +154,17 @@ test_that("cloud-upload: an account with no secret names the auth options", {
 })
 
 test_that("cloud-upload: credential resolution honours key/SAS/principal precedence", {
+  # the account name is NOT read from the environment (it comes from the url)
   withr::with_envvar(
-    c(SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct", SSDSIMS_AZURE_STORAGE_KEY = "k"),
+    c(SSDSIMS_AZURE_STORAGE_KEY = "k"),
     expect_identical(resolve_azure_credentials()$mode, "key")
   )
   withr::with_envvar(
-    c(
-      SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct",
-      SSDSIMS_AZURE_STORAGE_KEY = NA,
-      SSDSIMS_AZURE_STORAGE_SAS = "s"
-    ),
+    c(SSDSIMS_AZURE_STORAGE_KEY = NA, SSDSIMS_AZURE_STORAGE_SAS = "s"),
     expect_identical(resolve_azure_credentials()$mode, "sas")
   )
   withr::with_envvar(
     c(
-      SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct",
       SSDSIMS_AZURE_STORAGE_KEY = NA,
       SSDSIMS_AZURE_STORAGE_SAS = NA,
       SSDSIMS_AZURE_TENANT_ID = "t",
@@ -163,7 +193,6 @@ test_that("cloud-upload: Azure ssd_upload_shard() with absent credentials fails 
   file.create(path)
   upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
   withr::local_envvar(
-    SSDSIMS_AZURE_STORAGE_ACCOUNT = NA,
     SSDSIMS_AZURE_STORAGE_KEY = NA,
     SSDSIMS_AZURE_STORAGE_SAS = NA,
     SSDSIMS_AZURE_TENANT_ID = NA,
@@ -212,8 +241,9 @@ test_that("cloud-upload: ssd_open_uploaded() builds the expected Hive glob", {
 })
 
 test_that("cloud-upload: the DuckDB secret remaps the front-end credentials", {
+  # the account is supplied separately (derived from the url), not from the env
   expect_match(
-    azure_duckdb_secret_sql(list(mode = "key", account = "acct", key = "k")),
+    azure_duckdb_secret_sql(list(mode = "key", key = "k"), "acct"),
     "TYPE azure, CONNECTION_STRING 'AccountName=acct;AccountKey=k'",
     fixed = TRUE
   )

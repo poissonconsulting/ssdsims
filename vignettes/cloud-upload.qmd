@@ -72,10 +72,14 @@ class(azure)
 unclass(azure)
 ```
 
-Credentials stay **external**: the Azure methods resolve them from the
-environment (`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of `SSDSIMS_AZURE_STORAGE_KEY`,
-`SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio) at call time, and the object
-itself holds no secrets.
+Credentials stay **external**: the Azure methods resolve the **secret** from the
+environment at call time --- one of `SSDSIMS_AZURE_STORAGE_KEY`,
+`SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio
+(`SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`)
+--- and the object itself holds no secrets. The storage **account name** is
+derived from `url` (the `acct` in `https://acct.blob.core.windows.net`), so there
+is **no** account environment variable; for a sovereign cloud, set `domain` (e.g.
+`domain = "blob.core.usgovcloudapi.net"`).
 
 To write under a **subdirectory** of the container (so one container can hold
 several independent result sets), pass `prefix`:
@@ -190,7 +194,7 @@ aborting loudly (naming the missing `SSDSIMS_AZURE_*` variable) if your wiring i
 ```{r}
 #| label: azure-preflight
 #| eval: false
-Sys.setenv(SSDSIMS_AZURE_STORAGE_ACCOUNT = "<account>", SSDSIMS_AZURE_STORAGE_KEY = "<key>")
+Sys.setenv(SSDSIMS_AZURE_STORAGE_KEY = "<key>") # account comes from the url
 ssd_test_upload(ssd_upload_azure("https://<account>.blob.core.windows.net", "ssdsims-results"))
 # silent on success; aborts naming the missing variable otherwise
 ```

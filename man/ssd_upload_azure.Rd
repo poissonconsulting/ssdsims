@@ -5,18 +5,26 @@
 \alias{ssd_upload_dryrun}
 \title{Upload Destinations for a Scenario's Shards}
 \usage{
-ssd_upload_azure(url, container, ..., prefix = NULL)
+ssd_upload_azure(
+  url,
+  container,
+  ...,
+  prefix = NULL,
+  domain = "blob.core.windows.net"
+)
 
 ssd_upload_dryrun()
 }
 \arguments{
 \item{url}{The Azure Blob Storage account endpoint, e.g.
-\code{"https://<account>.blob.core.windows.net"} (a non-empty string).}
+\code{"https://<account>.blob.core.windows.net"} (a non-empty string). The
+storage \strong{account name} is derived from this endpoint's leading host label
+(so it need not be repeated in the environment); see \code{domain}.}
 
 \item{container}{The blob container name (a non-empty string).}
 
-\item{...}{Unused; must be empty. Its presence forces \code{prefix} to be passed
-\strong{by name} (\code{rlang::check_dots_empty()} aborts on a positional or
+\item{...}{Unused; must be empty. Its presence forces \code{prefix}/\code{domain} to be
+passed \strong{by name} (\code{rlang::check_dots_empty()} aborts on a positional or
 misspelled argument).}
 
 \item{prefix}{An optional subdirectory (blob-name prefix) \strong{within} the
@@ -26,6 +34,15 @@ are trimmed. With a prefix the shards land at
 \verb{<container>/<prefix>/<step>/<partition-path>/part.parquet} and
 \code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}} reads them back from the same prefixed glob, so one
 container can hold several independent result sets.}
+
+\item{domain}{The storage endpoint domain suffix (default
+\code{"blob.core.windows.net"}). The storage account name is the part of \code{url}'s
+host \emph{before} \verb{.<domain>} — so \verb{https://acct.blob.core.windows.net} yields
+account \code{"acct"}. Override it for a sovereign/non-public cloud (e.g.
+\code{"blob.core.usgovcloudapi.net"}). \code{url} must end with \verb{.<domain>} or
+construction aborts. The derived account is what the read-back path
+(\code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}}, \code{\link[=ssd_summarise_uploaded]{ssd_summarise_uploaded()}}) hands to DuckDB's
+\code{azure} secret, so \strong{no} account environment variable is needed.}
 }
 \value{
 An S3 object of class \code{c("ssdsims_upload_azure_blob", "ssdsims_upload")} (for \code{ssd_upload_azure()}) or
@@ -47,11 +64,16 @@ destination} - never credentials, open connections, or environments - so it
 travels unchanged to \code{crew} workers and through \code{targets}.
 
 Credentials stay \strong{external} to the object: the Azure methods
-(\code{\link[=ssd_test_upload]{ssd_test_upload()}}, \code{\link[=ssd_upload_shard]{ssd_upload_shard()}}, \code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}}) resolve
-them from the environment at call time (\code{SSDSIMS_AZURE_STORAGE_ACCOUNT} plus one of
-\code{SSDSIMS_AZURE_STORAGE_KEY}, \code{SSDSIMS_AZURE_STORAGE_SAS}, or the service-principal trio
-\code{SSDSIMS_AZURE_TENANT_ID}/\code{SSDSIMS_AZURE_CLIENT_ID}/\code{SSDSIMS_AZURE_CLIENT_SECRET}), and abort with a
-loud error naming the missing variable when a required one is absent.
+(\code{\link[=ssd_test_upload]{ssd_test_upload()}}, \code{\link[=ssd_upload_shard]{ssd_upload_shard()}}, \code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}},
+\code{\link[=ssd_summarise_uploaded]{ssd_summarise_uploaded()}}) resolve the \strong{secret} from the environment at
+call time - one of \code{SSDSIMS_AZURE_STORAGE_KEY}, \code{SSDSIMS_AZURE_STORAGE_SAS},
+or the service-principal trio
+\code{SSDSIMS_AZURE_TENANT_ID}/\code{SSDSIMS_AZURE_CLIENT_ID}/\code{SSDSIMS_AZURE_CLIENT_SECRET}
+\itemize{
+\item and abort with a loud error naming the missing variable when none is
+present. The storage \strong{account name} is derived from \code{url} (see \code{domain}),
+so it is \strong{not} an environment variable.
+}
 }
 \examples{
 ssd_upload_azure("https://acct.blob.core.windows.net", "ssdsims-results")

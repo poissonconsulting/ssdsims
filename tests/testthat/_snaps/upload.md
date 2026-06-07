@@ -1,3 +1,11 @@
+# cloud-upload: the storage account is derived from the url (+ domain)
+
+    Code
+      ssd_upload_azure("https://acct.example.com", "c")
+    Condition
+      Error in `ssd_upload_azure()`:
+      ! `url` ("https://acct.example.com") must be an Azure Blob endpoint of the form `https://<account>.blob.core.windows.net` so the storage account name can be derived; pass a matching `domain` for a non-public cloud.
+
 # cloud-upload: ssd_upload_azure() forces prefix to be passed by name
 
     Code
@@ -38,7 +46,8 @@
 ---
 
     Code
-      ssd_upload_azure(url = "https://acct", container = "c", prefix = 1L)
+      ssd_upload_azure(url = "https://acct.blob.core.windows.net", container = "c",
+        prefix = 1L)
     Condition
       Error in `ssd_upload_azure()`:
       ! `prefix` must be `NULL` or a non-empty string (a subdirectory within the container).
@@ -49,15 +58,15 @@
       ssd_test_upload(upload)
     Condition
       Error:
-      ! Azure credentials are incomplete: the environment variable `SSDSIMS_AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) together with one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`.
+      ! Azure credentials are incomplete: no authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET` (missing: 'SSDSIMS_AZURE_TENANT_ID', 'SSDSIMS_AZURE_CLIENT_ID' and 'SSDSIMS_AZURE_CLIENT_SECRET'). The storage account name is taken from the destination `url`, not the environment.
 
-# cloud-upload: an account with no secret names the auth options
+# cloud-upload: no secret set names the auth options
 
     Code
       resolve_azure_credentials()
     Condition
       Error:
-      ! Azure credentials are incomplete: `SSDSIMS_AZURE_STORAGE_ACCOUNT` is set, but no authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio (missing: 'SSDSIMS_AZURE_TENANT_ID', 'SSDSIMS_AZURE_CLIENT_ID' and 'SSDSIMS_AZURE_CLIENT_SECRET').
+      ! Azure credentials are incomplete: no authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET` (missing: 'SSDSIMS_AZURE_TENANT_ID', 'SSDSIMS_AZURE_CLIENT_ID' and 'SSDSIMS_AZURE_CLIENT_SECRET'). The storage account name is taken from the destination `url`, not the environment.
 
 # cloud-upload: Azure ssd_upload_shard() with absent credentials fails loud
 
@@ -65,7 +74,7 @@
       ssd_upload_shard(path, upload)
     Condition
       Error:
-      ! Azure credentials are incomplete: the environment variable `SSDSIMS_AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) together with one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`.
+      ! Azure credentials are incomplete: no authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET` (missing: 'SSDSIMS_AZURE_TENANT_ID', 'SSDSIMS_AZURE_CLIENT_ID' and 'SSDSIMS_AZURE_CLIENT_SECRET'). The storage account name is taken from the destination `url`, not the environment.
 
 # cloud-upload: unknown upload object aborts on every generic
 

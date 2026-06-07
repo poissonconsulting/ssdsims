@@ -18,20 +18,24 @@ ssd_summarise_uploaded(upload, step = "hc", drop_samples = TRUE)
 to keep them (e.g. when the in-flight bootstrap \code{samples} are needed).}
 }
 \value{
-A tibble: the unioned, collected summary of the uploaded \code{step}
-layer.
+A \strong{lazy} \code{duckplyr}/DuckDB tibble over the unioned, uploaded \code{step}
+layer (not collected), composable with \code{dplyr} verbs - \code{dplyr::collect()}
+it (or write it with \code{duckplyr::compute_parquet()}) when you need the rows
+in R.
 }
 \description{
 The cloud counterpart of \code{\link[=ssd_summarise]{ssd_summarise()}}: a generic, dispatched on the
 upload object's class, that fans a step's \strong{uploaded} shards into a single
-analysis-ready tibble read \strong{in place} (no download). For an Azure
+\strong{lazy} \code{duckplyr} table read \strong{in place} (no download). For an Azure
 destination it reads the \verb{<container>[/<prefix>]/<step>/**/part.parquet} Hive
 glob via DuckDB's \code{azure} extension - resolving the \strong{same} front-end
-\verb{SSDSIMS_AZURE_*} credentials as the write path and remapping them into a
-DuckDB \code{azure} secret - and collects the union into a tibble. By default it
-projects away the heavy \code{dists}/\code{samples} list-columns (the analysis-ready
-summary, mirroring \code{\link[=ssd_summarise]{ssd_summarise()}}); pass \code{drop_samples = FALSE} to keep
-them when the in-flight bootstrap \code{samples} are needed. The default method
+secret as the write path and remapping it (with the account derived from
+\code{url}) into a DuckDB \code{azure} secret - and returns the union as a lazy
+\code{duckplyr} tibble (not collected, so the read and projection stay in DuckDB).
+By default it projects away the heavy \code{dists}/\code{samples} list-columns (the
+analysis-ready summary, mirroring \code{\link[=ssd_summarise]{ssd_summarise()}}); pass
+\code{drop_samples = FALSE} to keep them when the in-flight bootstrap \code{samples}
+are needed. The default method
 (an unknown destination) and the dry-run method both abort.
 }
 \examples{

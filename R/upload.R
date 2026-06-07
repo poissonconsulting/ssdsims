@@ -26,17 +26,22 @@
 #' travels unchanged to `crew` workers and through `targets`.
 #'
 #' Credentials stay **external** to the object: the Azure methods
-#' ([ssd_test_upload()], [ssd_upload_shard()], [ssd_open_uploaded()]) resolve
-#' them from the environment at call time (`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of
-#' `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio
-#' `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`), and abort with a
-#' loud error naming the missing variable when a required one is absent.
+#' ([ssd_test_upload()], [ssd_upload_shard()], [ssd_open_uploaded()],
+#' [ssd_summarise_uploaded()]) resolve the **secret** from the environment at
+#' call time - one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`,
+#' or the service-principal trio
+#' `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`
+#' - and abort with a loud error naming the missing variable when none is
+#' present. The storage **account name** is derived from `url` (see `domain`),
+#' so it is **not** an environment variable.
 #'
 #' @param url The Azure Blob Storage account endpoint, e.g.
-#'   `"https://<account>.blob.core.windows.net"` (a non-empty string).
+#'   `"https://<account>.blob.core.windows.net"` (a non-empty string). The
+#'   storage **account name** is derived from this endpoint's leading host label
+#'   (so it need not be repeated in the environment); see `domain`.
 #' @param container The blob container name (a non-empty string).
-#' @param ... Unused; must be empty. Its presence forces `prefix` to be passed
-#'   **by name** (`rlang::check_dots_empty()` aborts on a positional or
+#' @param ... Unused; must be empty. Its presence forces `prefix`/`domain` to be
+#'   passed **by name** (`rlang::check_dots_empty()` aborts on a positional or
 #'   misspelled argument).
 #' @param prefix An optional subdirectory (blob-name prefix) **within** the
 #'   container under which the shards are written, e.g. `"study-2026/run-3"`, or
@@ -45,6 +50,14 @@
 #'   `<container>/<prefix>/<step>/<partition-path>/part.parquet` and
 #'   [ssd_open_uploaded()] reads them back from the same prefixed glob, so one
 #'   container can hold several independent result sets.
+#' @param domain The storage endpoint domain suffix (default
+#'   `"blob.core.windows.net"`). The storage account name is the part of `url`'s
+#'   host *before* `.<domain>` — so `https://acct.blob.core.windows.net` yields
+#'   account `"acct"`. Override it for a sovereign/non-public cloud (e.g.
+#'   `"blob.core.usgovcloudapi.net"`). `url` must end with `.<domain>` or
+#'   construction aborts. The derived account is what the read-back path
+#'   ([ssd_open_uploaded()], [ssd_summarise_uploaded()]) hands to DuckDB's
+#'   `azure` secret, so **no** account environment variable is needed.
 #' @return An S3 object of class `c("ssdsims_upload_azure_blob",
 #'   "ssdsims_upload")` (for `ssd_upload_azure()`) or
 #'   `c("ssdsims_upload_dryrun", "ssdsims_upload")` (for `ssd_upload_dryrun()`).
@@ -59,7 +72,13 @@
 #'   prefix = "study-2026/run-3"
 #' )
 #' ssd_upload_dryrun()
-ssd_upload_azure <- function(url, container, ..., prefix = NULL) {
+ssd_upload_azure <- function(
+  url,
+  container,
+  ...,
+  prefix = NULL,
+  domain = "blob.core.windows.net"
+) {
   call <- environment()
   rlang::check_dots_empty()
   if (!chk::vld_string(url) || !nzchar(url)) {
@@ -68,6 +87,10 @@ ssd_upload_azure <- function(url, container, ..., prefix = NULL) {
   if (!chk::vld_string(container) || !nzchar(container)) {
     chk::abort_chk("`container` must be a non-empty string.", call = call)
   }
+  if (!chk::vld_string(domain) || !nzchar(domain)) {
+    chk::abort_chk("`domain` must be a non-empty string.", call = call)
+  }
+  account <- azure_account_from_url(url, domain, call = call)
   if (!is.null(prefix)) {
     if (!chk::vld_string(prefix) || !nzchar(prefix)) {
       chk::abort_chk(
@@ -82,7 +105,13 @@ ssd_upload_azure <- function(url, container, ..., prefix = NULL) {
     }
   }
   structure(
-    list(url = url, container = container, prefix = prefix),
+    list(
+      url = url,
+      container = container,
+      prefix = prefix,
+      domain = domain,
+      account = account
+    ),
     class = c("ssdsims_upload_azure_blob", "ssdsims_upload")
   )
 }
@@ -207,22 +236,26 @@ ssd_open_uploaded <- function(upload, step) {
 #'
 #' The cloud counterpart of [ssd_summarise()]: a generic, dispatched on the
 #' upload object's class, that fans a step's **uploaded** shards into a single
-#' analysis-ready tibble read **in place** (no download). For an Azure
+#' **lazy** `duckplyr` table read **in place** (no download). For an Azure
 #' destination it reads the `<container>[/<prefix>]/<step>/**/part.parquet` Hive
 #' glob via DuckDB's `azure` extension - resolving the **same** front-end
-#' `SSDSIMS_AZURE_*` credentials as the write path and remapping them into a
-#' DuckDB `azure` secret - and collects the union into a tibble. By default it
-#' projects away the heavy `dists`/`samples` list-columns (the analysis-ready
-#' summary, mirroring [ssd_summarise()]); pass `drop_samples = FALSE` to keep
-#' them when the in-flight bootstrap `samples` are needed. The default method
+#' secret as the write path and remapping it (with the account derived from
+#' `url`) into a DuckDB `azure` secret - and returns the union as a lazy
+#' `duckplyr` tibble (not collected, so the read and projection stay in DuckDB).
+#' By default it projects away the heavy `dists`/`samples` list-columns (the
+#' analysis-ready summary, mirroring [ssd_summarise()]); pass
+#' `drop_samples = FALSE` to keep them when the in-flight bootstrap `samples`
+#' are needed. The default method
 #' (an unknown destination) and the dry-run method both abort.
 #'
 #' @inheritParams ssd_open_uploaded
 #' @param drop_samples Flag (default `TRUE`): project away the heavy
 #'   `dists`/`samples` list-columns for the analysis-ready summary. Pass `FALSE`
 #'   to keep them (e.g. when the in-flight bootstrap `samples` are needed).
-#' @return A tibble: the unioned, collected summary of the uploaded `step`
-#'   layer.
+#' @return A **lazy** `duckplyr`/DuckDB tibble over the unioned, uploaded `step`
+#'   layer (not collected), composable with `dplyr` verbs - `dplyr::collect()`
+#'   it (or write it with `duckplyr::compute_parquet()`) when you need the rows
+#'   in R.
 #' @seealso [ssd_open_uploaded()], [ssd_summarise()], [ssd_upload_shard()].
 #' @export
 #' @examples
@@ -342,7 +375,7 @@ ssd_open_uploaded.ssdsims_upload_azure_blob <- function(upload, step) {
   step <- rlang::arg_match0(step, c("sample", "fit", "hc", "summary"))
   rlang::check_installed("duckplyr")
   creds <- resolve_azure_credentials(call = rlang::caller_env())
-  azure_load_duckdb_extension(creds, call = rlang::caller_env())
+  azure_load_duckdb_extension(creds, upload$account, call = rlang::caller_env())
   duckplyr::read_parquet_duckdb(
     azure_glob(upload, step),
     options = list(hive_partitioning = FALSE)
@@ -360,15 +393,18 @@ ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   rlang::check_installed("duckplyr")
   # Fetch the SAME credentials used for uploading and remap them into a DuckDB
   # `azure` secret (shared with `ssd_upload_shard()`/`ssd_open_uploaded()` - one
-  # credential source, translated for the backend, never a second source).
+  # credential source, translated for the backend, never a second source). The
+  # account name comes from the destination's `url`, not the environment.
   creds <- resolve_azure_credentials(call = rlang::caller_env())
-  azure_load_duckdb_extension(creds, call = rlang::caller_env())
+  azure_load_duckdb_extension(creds, upload$account, call = rlang::caller_env())
 
   # --- duckplyr query: read the uploaded shards in place and union them -------
   # SKETCH - drop-in point for the working implementation. Reads the step's Hive
-  # glob via the `azure` extension (predicate pushdown, no download), optionally
-  # projects away the heavy `dists`/`samples` list-columns (the analysis-ready
-  # summary, mirroring `ssd_summarise()`), and collects the union into a tibble.
+  # glob via the `azure` extension (predicate pushdown, no download) and
+  # optionally projects away the heavy `dists`/`samples` list-columns (the
+  # analysis-ready summary, mirroring `ssd_summarise()`). The result stays a
+  # **lazy duckplyr tibble** (not collected), so it composes with `dplyr` verbs
+  # and the read/projection run inside DuckDB.
   tbl <- duckplyr::read_parquet_duckdb(
     azure_glob(upload, step),
     options = list(hive_partitioning = FALSE)
@@ -376,7 +412,7 @@ ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   if (drop_samples) {
     tbl <- dplyr::select(tbl, -dplyr::any_of(c("dists", "samples")))
   }
-  tibble::as_tibble(dplyr::collect(tbl))
+  tbl
 }
 
 # ---- internals -------------------------------------------------------------
@@ -401,35 +437,51 @@ azure_check_installed <- function() {
   rlang::check_installed(c("AzureStor", "AzureRMR"))
 }
 
-# Resolve the external Azure credentials from the environment, in precedence:
-# account key, then SAS, then an AAD service principal - each alongside
-# `SSDSIMS_AZURE_STORAGE_ACCOUNT`. Returns a `list(mode, account, ...)`; aborts in the
-# context of `call` with a loud error naming the missing variable when no
-# complete credential set is present, so the failure surfaces at the prompt (or
-# the pipeline's up-front probe) rather than deep in the DAG on a worker.
+# Derive the storage account name from the endpoint `url`'s leading host label
+# (the part before `.<domain>`), e.g. `https://acct.blob.core.windows.net` ->
+# `"acct"`. The account is intrinsic to the endpoint, so it need not be repeated
+# in the environment. Aborts in the context of `call` when `url` does not end
+# with `.<domain>` (so the account would be ambiguous) - pass a matching
+# `domain` for a sovereign/non-public cloud.
+azure_account_from_url <- function(url, domain, call = rlang::caller_env()) {
+  host <- sub("^[a-z]+://", "", url, ignore.case = TRUE)
+  host <- sub("[:/?].*$", "", host)
+  suffix <- paste0(".", domain)
+  if (!endsWith(host, suffix) || nchar(host) <= nchar(suffix)) {
+    chk::abort_chk(
+      "`url` (",
+      encodeString(url, quote = "\""),
+      ") must be an Azure Blob endpoint of the form ",
+      "`https://<account>.",
+      domain,
+      "` so the storage account name can be derived; pass a matching `domain` ",
+      "for a non-public cloud.",
+      call = call
+    )
+  }
+  substr(host, 1L, nchar(host) - nchar(suffix))
+}
+
+# Resolve the external Azure **secret** from the environment, in precedence:
+# account key, then SAS, then an AAD service principal. Returns a
+# `list(mode, ...)` carrying only the secret material - the storage account name
+# is derived from the destination `url` (see `azure_account_from_url()`), not the
+# environment. Aborts in the context of `call` with a loud error naming the
+# missing variable when no complete secret is present, so the failure surfaces at
+# the prompt (or the pipeline's up-front probe) rather than deep in the DAG on a
+# worker.
 resolve_azure_credentials <- function(call = rlang::caller_env()) {
   env <- function(name) {
     value <- Sys.getenv(name, unset = NA_character_)
     if (is.na(value) || !nzchar(value)) NULL else value
   }
-  account <- env("SSDSIMS_AZURE_STORAGE_ACCOUNT")
-  if (is.null(account)) {
-    chk::abort_chk(
-      "Azure credentials are incomplete: the environment variable ",
-      "`SSDSIMS_AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) ",
-      "together with one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the ",
-      "service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/",
-      "`SSDSIMS_AZURE_CLIENT_SECRET`.",
-      call = call
-    )
-  }
   key <- env("SSDSIMS_AZURE_STORAGE_KEY")
   if (!is.null(key)) {
-    return(list(mode = "key", account = account, key = key))
+    return(list(mode = "key", key = key))
   }
   sas <- env("SSDSIMS_AZURE_STORAGE_SAS")
   if (!is.null(sas)) {
-    return(list(mode = "sas", account = account, sas = sas))
+    return(list(mode = "sas", sas = sas))
   }
   tenant <- env("SSDSIMS_AZURE_TENANT_ID")
   client <- env("SSDSIMS_AZURE_CLIENT_ID")
@@ -437,24 +489,25 @@ resolve_azure_credentials <- function(call = rlang::caller_env()) {
   if (!is.null(tenant) && !is.null(client) && !is.null(secret)) {
     return(list(
       mode = "service_principal",
-      account = account,
       tenant = tenant,
       client = client,
       secret = secret
     ))
   }
-  missing <- c(
+  missing_sp <- c(
     if (is.null(tenant)) "SSDSIMS_AZURE_TENANT_ID",
     if (is.null(client)) "SSDSIMS_AZURE_CLIENT_ID",
     if (is.null(secret)) "SSDSIMS_AZURE_CLIENT_SECRET"
   )
   chk::abort_chk(
-    "Azure credentials are incomplete: `SSDSIMS_AZURE_STORAGE_ACCOUNT` is set, but no ",
-    "authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key ",
-    "auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio ",
+    "Azure credentials are incomplete: no authentication secret was found. ",
+    "Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key auth), or ",
+    "`SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio ",
+    "`SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET` ",
     "(missing: ",
-    chk::cc(missing, conj = " and "),
-    ").",
+    chk::cc(missing_sp, conj = " and "),
+    "). The storage account name is taken from the destination `url`, not the ",
+    "environment.",
     call = call
   )
 }
@@ -524,20 +577,21 @@ azure_glob <- function(upload, step) {
   sprintf("az://%s/%s", upload$container, azure_blob_dest(upload, tail))
 }
 
-# `CREATE SECRET` SQL that remaps the front-end Azure credentials into a DuckDB
+# `CREATE SECRET` SQL that remaps the front-end Azure secret into a DuckDB
 # `azure` secret for the in-place read (one credential source, translated for
-# the backend - never a second source).
-azure_duckdb_secret_sql <- function(creds) {
+# the backend - never a second source). `account` is the storage account name
+# derived from the destination `url`.
+azure_duckdb_secret_sql <- function(creds, account) {
   body <- switch(
     creds$mode,
     key = sprintf(
       "TYPE azure, CONNECTION_STRING 'AccountName=%s;AccountKey=%s'",
-      creds$account,
+      account,
       creds$key
     ),
     sas = sprintf(
       "TYPE azure, CONNECTION_STRING 'AccountName=%s;SharedAccessSignature=%s'",
-      creds$account,
+      account,
       creds$sas
     ),
     service_principal = sprintf(
@@ -548,17 +602,22 @@ azure_duckdb_secret_sql <- function(creds) {
       creds$tenant,
       creds$client,
       creds$secret,
-      creds$account
+      account
     )
   )
   sprintf("CREATE OR REPLACE SECRET ssdsims_azure (%s)", body)
 }
 
 # Load DuckDB's `azure` extension on `duckplyr`'s managed connection and create
-# the `azure` secret from the resolved credentials. Aborts in the context of
-# `call`, naming the `azure` extension, when it cannot be installed/loaded (e.g.
-# offline workers without it pre-installed) - fail loud, never a partial table.
-azure_load_duckdb_extension <- function(creds, call = rlang::caller_env()) {
+# the `azure` secret from the resolved credentials and the `account` (derived
+# from the destination `url`). Aborts in the context of `call`, naming the
+# `azure` extension, when it cannot be installed/loaded (e.g. offline workers
+# without it pre-installed) - fail loud, never a partial table.
+azure_load_duckdb_extension <- function(
+  creds,
+  account,
+  call = rlang::caller_env()
+) {
   ok <- tryCatch(
     {
       duckplyr::db_exec("INSTALL azure")
@@ -577,6 +636,6 @@ azure_load_duckdb_extension <- function(creds, call = rlang::caller_env()) {
       call = call
     )
   }
-  duckplyr::db_exec(azure_duckdb_secret_sql(creds))
+  duckplyr::db_exec(azure_duckdb_secret_sql(creds, account))
   invisible(NULL)
 }
