@@ -2478,6 +2478,18 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   primer-identity enumeration). Surfaced verifying the `ci` axis against
   `ssdtools`. Independent tidy-up with no dependants; not on the dependency
   DAG.
+- **`ci-false-partition-guard`** — Close the layout-knob gap left by
+  `scalar-ci-flag` (§1.2): when `ci = FALSE` the bootstrap-only hc axes
+  (`nboot`, `ci_method`, `parametric`) are canonically `NA`, yet `partition_by`/
+  `bundle` still accept them (they are a valid subset of `task_axes("hc")`),
+  producing a degenerate all-`NA` Hive partition. Extend the constructor's
+  existing "bootstrap knobs rejected when `ci = FALSE`" guard to reject those
+  axes when named in `partition_by$hc`/`bundle$hc` under `ci = FALSE`. Validation
+  only — deliberately the cheap option: `task_axes("hc")` stays pure, the hc
+  shard schema stays fixed-shape, and the results-layout root is unchanged (a
+  `ci`-dependent shape would have forced `ci` into the layout root to avoid
+  schema-union conflicts under one root). Independent tidy-up with no dependants;
+  not on the dependency DAG.
 
 ### Dependency DAG (parallel streams)
 
