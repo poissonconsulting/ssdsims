@@ -34,6 +34,13 @@
 #' @param url The Azure Blob Storage account endpoint, e.g.
 #'   `"https://<account>.blob.core.windows.net"` (a non-empty string).
 #' @param container The blob container name (a non-empty string).
+#' @param prefix An optional subdirectory (blob-name prefix) **within** the
+#'   container under which the shards are written, e.g. `"study-2026/run-3"`, or
+#'   `NULL` (default) to write at the container root. Leading/trailing slashes
+#'   are trimmed. With a prefix the shards land at
+#'   `<container>/<prefix>/<step>/<partition-path>/part.parquet` and
+#'   [ssd_open_uploaded()] reads them back from the same prefixed glob, so one
+#'   container can hold several independent result sets.
 #' @return An S3 object of class `c("ssdsims_upload_azure_blob",
 #'   "ssdsims_upload")` (for `ssd_upload_azure()`) or
 #'   `c("ssdsims_upload_dryrun", "ssdsims_upload")` (for `ssd_upload_dryrun()`).
@@ -42,8 +49,13 @@
 #' @export
 #' @examples
 #' ssd_upload_azure("https://acct.blob.core.windows.net", "ssdsims-results")
+#' ssd_upload_azure(
+#'   "https://acct.blob.core.windows.net",
+#'   "ssdsims-results",
+#'   prefix = "study-2026/run-3"
+#' )
 #' ssd_upload_dryrun()
-ssd_upload_azure <- function(url, container) {
+ssd_upload_azure <- function(url, container, prefix = NULL) {
   call <- environment()
   if (!chk::vld_string(url) || !nzchar(url)) {
     chk::abort_chk("`url` must be a non-empty string.", call = call)
@@ -51,8 +63,21 @@ ssd_upload_azure <- function(url, container) {
   if (!chk::vld_string(container) || !nzchar(container)) {
     chk::abort_chk("`container` must be a non-empty string.", call = call)
   }
+  if (!is.null(prefix)) {
+    if (!chk::vld_string(prefix) || !nzchar(prefix)) {
+      chk::abort_chk(
+        "`prefix` must be `NULL` or a non-empty string (a subdirectory ",
+        "within the container).",
+        call = call
+      )
+    }
+    prefix <- normalise_blob_prefix(prefix)
+    if (!nzchar(prefix)) {
+      prefix <- NULL
+    }
+  }
   structure(
-    list(url = url, container = container),
+    list(url = url, container = container, prefix = prefix),
     class = c("ssdsims_upload_azure_blob", "ssdsims_upload")
   )
 }
@@ -97,7 +122,9 @@ ssd_test_upload <- function(upload) {
 #' A generic, dispatched on the upload object's class, that ships one shard
 #' Parquet to the destination and returns the **local** `path` (so the paired
 #' `upload_<step>` target stays `format = "file"`). For an Azure destination it
-#' uploads the file at `path` to `<url>/<container>/<step>/<partition-path>/part.parquet`;
+#' uploads the file at `path` to
+#' `<url>/<container>[/<prefix>]/<step>/<partition-path>/part.parquet` (the
+#' optional `prefix` subdirectory from [ssd_upload_azure()]);
 #' when the required credentials are **absent** it aborts with a loud error -
 #' never a silent no-op - so intent to skip the network is only ever expressed
 #' by passing [ssd_upload_dryrun()]. For a dry-run destination it performs no
@@ -143,7 +170,8 @@ ssd_upload_shard <- function(path, upload) {
 #' **uploaded** results so a user can read them back and confirm they landed
 #' right after an upload (`TARGETS-DESIGN.md` section 6.1). For an Azure
 #' destination it returns a **lazy** `duckplyr`/DuckDB table over the Hive glob
-#' `<container>/<step>/**/part.parquet`, read **in place** via DuckDB's `azure`
+#' `<container>[/<prefix>]/<step>/**/part.parquet` (honouring the destination's
+#' optional `prefix` subdirectory), read **in place** via DuckDB's `azure`
 #' extension (predicate pushdown straight against blob storage - **no
 #' download**), composable with `dplyr` verbs so a one-line
 #' `ssd_open_uploaded(upload, step) |> dplyr::count()` is the immediate
@@ -221,7 +249,10 @@ ssd_test_upload.ssdsims_upload_azure_blob <- function(upload) {
   creds <- resolve_azure_credentials(call = rlang::caller_env())
   container <- azure_container_endpoint(upload, creds)
   AzureStor::list_blobs(container)
-  marker <- paste0("ssdsims-marker-", as.integer(Sys.time()), ".txt")
+  marker <- azure_blob_dest(
+    upload,
+    paste0("ssdsims-marker-", as.integer(Sys.time()), ".txt")
+  )
   tmp <- tempfile(fileext = ".txt")
   on.exit(unlink(tmp), add = TRUE)
   writeLines("ssdsims upload probe", tmp)
@@ -236,7 +267,11 @@ ssd_upload_shard.ssdsims_upload_azure_blob <- function(path, upload) {
   azure_check_installed()
   creds <- resolve_azure_credentials(call = rlang::caller_env())
   container <- azure_container_endpoint(upload, creds)
-  AzureStor::upload_blob(container, src = path, dest = upload_blob_key(path))
+  AzureStor::upload_blob(
+    container,
+    src = path,
+    dest = azure_blob_dest(upload, upload_blob_key(path))
+  )
   out <- path
   attr(out, "cloud_sha256") <- ssd_file_sha256(path)
   out
@@ -373,15 +408,30 @@ upload_blob_key <- function(path) {
   paste(parts, collapse = "/")
 }
 
-# The DuckDB `azure` glob for a step layer: `az://<container>/<step>/**/part.parquet`
-# (or the single `summary.parquet` for the combined summary), addressing the
-# uploaded shards in place via the `azure` extension.
+# Trim leading/trailing slashes from a container subdirectory prefix so it joins
+# cleanly into a blob key (`"/a/b/"` -> `"a/b"`).
+normalise_blob_prefix <- function(prefix) {
+  gsub("^/+|/+$", "", prefix)
+}
+
+# Prepend the destination's optional subdirectory `prefix` to a blob `key`
+# (within the container), so a prefixed destination writes/reads under
+# `<prefix>/<key>` and an unprefixed one writes/reads at the container root.
+azure_blob_dest <- function(upload, key) {
+  if (is.null(upload$prefix)) key else paste0(upload$prefix, "/", key)
+}
+
+# The DuckDB `azure` glob for a step layer:
+# `az://<container>[/<prefix>]/<step>/**/part.parquet` (or the single
+# `[<prefix>/]summary.parquet` for the combined summary), addressing the uploaded
+# shards in place via the `azure` extension.
 azure_glob <- function(upload, step) {
-  if (step == "summary") {
-    sprintf("az://%s/summary.parquet", upload$container)
+  tail <- if (step == "summary") {
+    "summary.parquet"
   } else {
-    sprintf("az://%s/%s/**/part.parquet", upload$container, step)
+    sprintf("%s/**/part.parquet", step)
   }
+  sprintf("az://%s/%s", upload$container, azure_blob_dest(upload, tail))
 }
 
 # `CREATE SECRET` SQL that remaps the front-end Azure credentials into a DuckDB

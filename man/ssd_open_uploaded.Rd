@@ -21,7 +21,8 @@ A generic, dispatched on the upload object's class, that opens the
 \strong{uploaded} results so a user can read them back and confirm they landed
 right after an upload (\code{TARGETS-DESIGN.md} section 6.1). For an Azure
 destination it returns a \strong{lazy} \code{duckplyr}/DuckDB table over the Hive glob
-\verb{<container>/<step>/**/part.parquet}, read \strong{in place} via DuckDB's \code{azure}
+\verb{<container>[/<prefix>]/<step>/**/part.parquet} (honouring the destination's
+optional \code{prefix} subdirectory), read \strong{in place} via DuckDB's \code{azure}
 extension (predicate pushdown straight against blob storage - \strong{no
 download}), composable with \code{dplyr} verbs so a one-line
 \code{ssd_open_uploaded(upload, step) |> dplyr::count()} is the immediate

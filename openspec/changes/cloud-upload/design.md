@@ -32,7 +32,7 @@ The `ssd_scenario_targets()` factory (`R/targets-runner.R:625`, owned by the `ta
 
 ### Decision: destination objects are plain, classed S3 lists — not R6, not connections
 
-`ssd_upload_azure()`/`ssd_upload_dryrun()` return `structure(list(url=, container=), class = c("ssdsims_upload_azure_blob", "ssdsims_upload"))`. This matches house style (`ssdsims_scenario` at `R/scenario.R:286`, `ssdsims_data` at `:533`/`:569`) and, critically, stays a **plain serialisable value** so it rides on the `upload` argument to `crew` workers and through `targets` without an open handle or environment. *Alternative considered:* an R6 object holding a live client — rejected: not cleanly serialisable across workers, and it would tempt carrying credentials in-object.
+`ssd_upload_azure()`/`ssd_upload_dryrun()` return `structure(list(url=, container=, prefix=), class = c("ssdsims_upload_azure_blob", "ssdsims_upload"))` (the optional `prefix` is a subdirectory within the container, `NULL` by default, that prefixes every shard's blob key and the read-back glob). This matches house style (`ssdsims_scenario` at `R/scenario.R:286`, `ssdsims_data` at `:533`/`:569`) and, critically, stays a **plain serialisable value** so it rides on the `upload` argument to `crew` workers and through `targets` without an open handle or environment. *Alternative considered:* an R6 object holding a live client — rejected: not cleanly serialisable across workers, and it would tempt carrying credentials in-object.
 
 ### Decision: fail loud on missing credentials; dry-run is explicit, not a fallback
 

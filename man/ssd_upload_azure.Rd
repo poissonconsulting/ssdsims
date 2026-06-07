@@ -5,7 +5,7 @@
 \alias{ssd_upload_dryrun}
 \title{Upload Destinations for a Scenario's Shards}
 \usage{
-ssd_upload_azure(url, container)
+ssd_upload_azure(url, container, prefix = NULL)
 
 ssd_upload_dryrun()
 }
@@ -14,6 +14,14 @@ ssd_upload_dryrun()
 \code{"https://<account>.blob.core.windows.net"} (a non-empty string).}
 
 \item{container}{The blob container name (a non-empty string).}
+
+\item{prefix}{An optional subdirectory (blob-name prefix) \strong{within} the
+container under which the shards are written, e.g. \code{"study-2026/run-3"}, or
+\code{NULL} (default) to write at the container root. Leading/trailing slashes
+are trimmed. With a prefix the shards land at
+\verb{<container>/<prefix>/<step>/<partition-path>/part.parquet} and
+\code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}} reads them back from the same prefixed glob, so one
+container can hold several independent result sets.}
 }
 \value{
 An S3 object of class \code{c("ssdsims_upload_azure_blob", "ssdsims_upload")} (for \code{ssd_upload_azure()}) or
@@ -43,6 +51,11 @@ loud error naming the missing variable when a required one is absent.
 }
 \examples{
 ssd_upload_azure("https://acct.blob.core.windows.net", "ssdsims-results")
+ssd_upload_azure(
+  "https://acct.blob.core.windows.net",
+  "ssdsims-results",
+  prefix = "study-2026/run-3"
+)
 ssd_upload_dryrun()
 }
 \seealso{

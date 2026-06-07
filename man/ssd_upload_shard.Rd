@@ -22,7 +22,9 @@ shows up as a mismatch.
 A generic, dispatched on the upload object's class, that ships one shard
 Parquet to the destination and returns the \strong{local} \code{path} (so the paired
 \verb{upload_<step>} target stays \code{format = "file"}). For an Azure destination it
-uploads the file at \code{path} to \verb{<url>/<container>/<step>/<partition-path>/part.parquet};
+uploads the file at \code{path} to
+\verb{<url>/<container>[/<prefix>]/<step>/<partition-path>/part.parquet} (the
+optional \code{prefix} subdirectory from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}});
 when the required credentials are \strong{absent} it aborts with a loud error -
 never a silent no-op - so intent to skip the network is only ever expressed
 by passing \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}. For a dry-run destination it performs no

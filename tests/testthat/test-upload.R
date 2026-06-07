@@ -13,7 +13,44 @@ test_that("cloud-upload: ssd_upload_azure() is classed and carries no credential
   expect_identical(upload$url, "https://acct.blob.core.windows.net")
   expect_identical(upload$container, "ssdsims-results")
   # only the destination is stored - no secrets, connections, or environments
-  expect_setequal(names(upload), c("url", "container"))
+  expect_setequal(names(upload), c("url", "container", "prefix"))
+  expect_null(upload$prefix)
+})
+
+test_that("cloud-upload: ssd_upload_azure() takes an optional subdirectory prefix", {
+  upload <- ssd_upload_azure(
+    url = "https://acct.blob.core.windows.net",
+    container = "ssdsims-results",
+    prefix = "/study-2026/run-3/"
+  )
+  # leading/trailing slashes are trimmed
+  expect_identical(upload$prefix, "study-2026/run-3")
+  # a slashes-only prefix collapses to no prefix
+  expect_null(ssd_upload_azure("u", "c", prefix = "///")$prefix)
+})
+
+test_that("cloud-upload: a prefix routes the blob key and the read-back glob", {
+  bare <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+  pre <- ssd_upload_azure(
+    "https://acct.blob.core.windows.net",
+    "results",
+    prefix = "study-2026/run-3"
+  )
+  key <- "sample/dataset=boron/sim=1/part.parquet"
+  expect_identical(azure_blob_dest(bare, key), key)
+  expect_identical(
+    azure_blob_dest(pre, key),
+    "study-2026/run-3/sample/dataset=boron/sim=1/part.parquet"
+  )
+  expect_identical(azure_glob(bare, "hc"), "az://results/hc/**/part.parquet")
+  expect_identical(
+    azure_glob(pre, "hc"),
+    "az://results/study-2026/run-3/hc/**/part.parquet"
+  )
+  expect_identical(
+    azure_glob(pre, "summary"),
+    "az://results/study-2026/run-3/summary.parquet"
+  )
 })
 
 test_that("cloud-upload: ssd_upload_dryrun() is classed and empty", {
@@ -29,6 +66,9 @@ test_that("cloud-upload: ssd_upload_azure() validates its destination", {
   })
   expect_snapshot(error = TRUE, {
     ssd_upload_azure(url = "https://acct", container = 1L)
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_upload_azure(url = "https://acct", container = "c", prefix = 1L)
   })
 })
 

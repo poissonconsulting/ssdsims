@@ -14,6 +14,14 @@
       Error in `ssd_upload_azure()`:
       ! `container` must be a non-empty string.
 
+---
+
+    Code
+      ssd_upload_azure(url = "https://acct", container = "c", prefix = 1L)
+    Condition
+      Error in `ssd_upload_azure()`:
+      ! `prefix` must be `NULL` or a non-empty string (a subdirectory within the container).
+
 # cloud-upload: ssd_test_upload() Azure names the missing credential
 
     Code

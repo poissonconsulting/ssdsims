@@ -77,6 +77,21 @@ environment (`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of `SSDSIMS_AZURE_STORAGE_
 `SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio) at call time, and the object
 itself holds no secrets.
 
+To write under a **subdirectory** of the container (so one container can hold
+several independent result sets), pass `prefix`:
+
+```{r}
+#| label: prefix
+ssd_upload_azure(
+  url = "https://acct.blob.core.windows.net",
+  container = "ssdsims-results",
+  prefix = "study-2026/run-3"
+)$prefix
+```
+
+The shards then land at `<container>/<prefix>/<step>/<partition>/part.parquet`,
+and `ssd_open_uploaded()` reads them back from the same prefixed location.
+
 ## Run it locally with a dry run
 
 The dry-run probe is trivially OK --- no credentials, no network:
