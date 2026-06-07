@@ -114,7 +114,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/Rtmp6uA5VT/ssdsims-shards-40b01d0aa7ea
+#>   dir: /tmp/RtmposdHgq/ssdsims-shards-410c587754d6
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -176,7 +176,14 @@ all.equal(base_est, shard_est)
 [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md)
 fans the `hc` layer in across shards (via duckplyr) into a single
 `summary.parquet` — the analysis-ready table — without recomputing
-anything.
+anything. It projects the `dists`/`samples` list-columns out at the
+DuckDB level, so the (potentially large) retained bootstrap draws are
+never pulled into R. Pass `path_with_samples =` to **also** write a full
+summary that keeps those columns; that write stays lazy in DuckDB, so
+the draws never materialise in R there either. In the `targets` pipeline
+the full `summary-samples.parquet` is written automatically when the
+scenario set `samples = TRUE` (the case where the retained draws carry
+information the compact summary cannot).
 
 ## Scaling up: the `targets` pipeline
 

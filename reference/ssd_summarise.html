@@ -71,7 +71,7 @@ summary material, so the combined summary is the <code>hc</code> layer.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ssd_summarise</span><span class="op">(</span><span class="va">dir_sample</span>, <span class="va">dir_fit</span>, <span class="va">dir_hc</span>, <span class="va">path</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ssd_summarise</span><span class="op">(</span><span class="va">dir_sample</span>, <span class="va">dir_fit</span>, <span class="va">dir_hc</span>, <span class="va">path</span>, path_with_samples <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -91,16 +91,31 @@ summary material, so the combined summary is the <code>hc</code> layer.</p>
 
 
 <dt id="arg-path">path<a class="anchor" aria-label="anchor" href="#arg-path"></a></dt>
-<dd><p>The output Parquet path for the combined summary.</p></dd>
+<dd><p>The output Parquet path for the compact summary (<code>dists</code>/<code>samples</code>
+projected out).</p></dd>
+
+
+<dt id="arg-path-with-samples">path_with_samples<a class="anchor" aria-label="anchor" href="#arg-path-with-samples"></a></dt>
+<dd><p>Optional output Parquet path for a full summary that
+retains the <code>dists</code>/<code>samples</code> list-columns. <code>NULL</code> (the default) writes only
+the compact summary.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>The summary Parquet path (the <code>format = "file"</code> contract).</p>
+    <p>The summary Parquet path(s) (the <code>format = "file"</code> contract): <code>path</code>
+when <code>path_with_samples</code> is <code>NULL</code>, otherwise <code>c(path, path_with_samples)</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>In a <code>targets</code> pipeline a directory read carries no dependency edge, so
+    <p>The compact summary at <code>path</code> projects the <code>dists</code>/<code>samples</code> list-columns out
+at the DuckDB level, so the potentially-large retained bootstrap draws are
+never pulled into R. Supply <code>path_with_samples</code> to <strong>also</strong> write a full
+summary that retains those list-columns: that write reuses the same lazy
+DuckDB read, so the draws never materialise in R there either. The draws are
+populated only when the scenario set <code>samples = TRUE</code>, so the full summary is
+the analysis-ready estimates plus the per-row draws.</p>
+<p>In a <code>targets</code> pipeline a directory read carries no dependency edge, so
 <code><a href="ssd_scenario_targets.html">ssd_scenario_targets()</a></code> orders <code>summary</code> after the shards by naming every
 <code>hc</code> shard target in its command (it re-runs when any <code>hc</code> shard's bytes
 change). Reading the directory - rather than the shard target values - is what
@@ -126,7 +141,7 @@ section 6.2).</p>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"summary.parquet"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmp29ZPyR/ssdsims-shards-3b6e2d56dc91/summary.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpiXpGtK/ssdsims-shards-3bc795e5aaf/summary.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
