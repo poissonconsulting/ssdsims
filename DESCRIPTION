@@ -19,13 +19,16 @@ Depends:
     R (>= 4.3)
 Imports: 
     chk,
+    digest,
     dplyr,
     dqrng (>= 0.4.1),
     duckplyr,
+    jsonlite,
     methods,
     parallel,
     purrr,
     rlang,
+    sessioninfo,
     ssdtools (>= 2.6.0),
     tibble,
     tidyr,

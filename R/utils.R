@@ -12,3 +12,11 @@ sim_seq <- function(start_sim, nsim) {
 `%||%` <- function(x, y) {
   if (is.null(x)) y else x
 }
+
+# sha256 over a file's bytes - the shared hash the manifest's per-shard recorder
+# and `completed_shards` assembler key on (TARGETS-DESIGN.md section 8.5). One
+# hash function for both paths so a recorded sha and a re-hash agree byte for
+# byte.
+ssd_file_sha256 <- function(path) {
+  digest::digest(file = path, algo = "sha256")
+}
