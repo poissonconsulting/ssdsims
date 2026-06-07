@@ -103,10 +103,16 @@ The most consequential design choices, with section refs:
   target, content-hashing skips re-uploading shards that did not
   change; `ssd_test_upload()` probes the backend at pipeline init,
   and the graph still builds and dry-runs with no credentials.
-- **Partial failures survive and stay visible (§6.2).** A shard body
+- **Partial failures survive and stay visible (§6.2).** The pipeline
+  runs **keep-going by default** — the shipped `_targets.R` templates set
+  `tar_option_set(error = "continue")`, the `make -k` analogue, so one
+  errored target skips only its dependents while every other reachable
+  shard still builds (a long parallel run is never lost to one bad
+  branch). On top of that, a shard body
   writes as many rows as ran successfully, so a bad task yields a
   *shorter* shard, not an abort; the step target errors (and carries
-  `error = "null"`) only in exceptional cases. A downstream
+  `error = "null"`, stronger still — its NULL flows downstream) only in
+  exceptional cases. A downstream
   `assert_<step>` target — sibling to `upload_<step>` — compares the
   shard's row count to the expected count and goes red on any
   shortfall, making incompleteness a first-class DAG node and the
@@ -1272,25 +1278,44 @@ combo). The scenario object does **not** carry secrets — it carries
 only the destination URL and container name. Their absence is what
 flips `ssd_upload_shard()` into its dry-run no-op.
 
-**Connectivity probe up front.** `ssd_test_upload(scenario)` performs
-a minimal round-trip (list the container, write and delete a small
-marker blob) and either returns silently or errors with the
-backend's diagnostic. The pipeline calls it once at the start of
-`tar_make()` so an auth or network failure aborts before any
-compute starts. Easy to run interactively too:
+**Connectivity probe up front, in a separate pre-flight script.**
+`ssd_test_upload(scenario)` performs a minimal round-trip (list the
+container, write and delete a small marker blob) and either returns
+silently or errors with the backend's diagnostic. It is a **fail-fast
+guard the user runs *before* `tar_make()`, not a target inside the
+DAG** — running it is the **user's responsibility**, a documented
+pre-condition the pipeline neither contains nor can enforce. The
+standalone `preflight.R` carries the probe; the `run.R` driver runs it
+ahead of `tar_make()` as a convenience, but a bare `tar_make()` (or an
+interactive re-run) does not, so the user must ensure the pre-flight has
+run. Either way the check happens *independent of the pipeline's
+keep-going error mode* (§6.2). Keeping it outside the DAG is deliberate
+and now the established pattern: the `cluster/` template does exactly
+this for its SLURM connectivity + worker-prerequisite probe (a standalone
+`preflight.R` the user runs — `run.R` sources it as a convenience — kept
+out of `_targets.R` so that stays a clean scenario-and-factory
+definition), and the upload probe follows the same shape. A credentials
+check is a pre-condition for the *whole* run, not a per-shard concern, so
+it must not live in a target that `error = "continue"`/`"null"` would let
+slide past. The same call works interactively:
 
 ```r
 scenario <- ssd_scenario(..., upload = list(backend = "azure_blob", ...))
-ssd_test_upload(scenario)   # silent on success, throws on failure
+ssd_test_upload(scenario)   # silent on success, throws on failure — the user runs this before tar_make()
 tar_make()
 ```
 
 **Failure mode.** A per-shard upload error becomes that
 `upload_<step>` branch's error (and, under `error = "null"`, leaves
 the rest uploading); the local shard remains, so `tar_make()` can be
-re-driven and only the failed uploads retried. The scenario's
-manifest records, per shard, the local sha256 and the cloud sha256; a
-mismatch flags a corrupted transfer.
+re-driven and only the failed uploads retried. Each shard's `meta.json`
+sidecar (the manifest's per-shard sha256 record, §8.5) is uploaded
+**alongside** its Parquet, so the trusted-as-produced sha256 travels with
+the data; a downloaded copy is verified by re-hashing it against that
+recorded sha256, and a mismatch flags a corrupted transfer. The manifest
+itself carries no separate cloud-copy sha256 — under a faithful byte copy
+it would equal the recorded sha256, so `cloud-upload` needs nothing added
+to the manifest (the two are decoupled).
 
 ### 6.2 Surviving a failed shard
 
@@ -1325,6 +1350,34 @@ So "see partial shard failures clearly" is the assert layer's job;
 (the exceptional case) is always out of date, so a re-driven
 `tar_make()` after a fix retries it (§8.4); a short shard is found by
 its red `assert_<step>` (also §8.4).
+
+**Keep-going is the pipeline default (`make -k`), and it is layered.**
+The shipped `_targets.R` templates set `tar_option_set(error =
+"continue")` — the `make -k` analogue — so a target that errors skips
+only its own dependents while every other reachable shard still builds;
+one bad branch never tears down a long parallel run. (It is a
+pipeline-wide *option*, so it sits in `_targets.R` next to the controller
+block, not in the `ssd_scenario_targets()` factory — which owns the
+*per-target* settings instead.) The shard, `assert_<step>`, and
+`upload_<step>` targets carry the stronger per-target `error = "null"`,
+which is *more* permissive than `make -k`: the errored target's value
+becomes `NULL` and its downstream still runs (a short/`NULL` shard flows
+on and is reported, above), where plain `make -k` would skip it. The two
+settings compose cleanly — a per-target `error` overrides the global
+default — so the global `continue` only governs the targets that carry no
+explicit override (e.g. an unexpected error in `summary` or a
+user-added target skips its dependents instead of aborting the run).
+Guards that *should* abort the whole run — the upload/cluster pre-flight
+(§6.1, §4) — deliberately live **outside** the DAG, in a separate
+pre-flight script the **user runs** before `tar_make()` (a documented
+pre-condition, not a target the pipeline enforces), so the keep-going
+default never swallows them. The trade we accept: under keep-going a *systemic*
+failure (every shard red because a package won't load) does not stop the
+pipeline on its own — but the operator watches the first few minutes,
+where a wall of red surfaces immediately, so optimising for *not losing a
+long run to one bad branch* beats stop-on-first-error. Override with an
+explicit `tar_option_set(error = "stop")` in `_targets.R` if a hard stop
+is ever wanted.
 
 Two constraints, both confirmed by the targets lab's failure spike:
 
@@ -1752,14 +1805,64 @@ directory):
 - `fit`, `hc` — the argument-vector grids.
 - `partition_by` — the per-shard path axes (§5).
 - `completed_shards` — set of shard partition paths whose Parquet
-  exists and is trusted, with each shard's sha256 (recorded at
-  write time, including the cloud copy's sha256 if `upload` is
-  set; see §6.1, §7).
+  exists and is trusted, with each shard's sha256 (the
+  trusted-as-produced value, recorded at write time in a per-shard
+  `meta.json` sidecar; see §6.1, §7). No separate cloud-copy sha256:
+  the sidecar is uploaded with the shard and a download is verified by
+  re-hashing against this sha256 (§6.1).
 - `r_version`, `dqrng_version`, `ssdtools_version` — versions
   pinned for bit-stability across re-runs (§9).
 
 Restart property for dqrng (same `(seed, state)` ⇒ same draw
 sequence) is verified by `scripts/experiment-dqrng-hash.R`.
+
+### 8.6 The incremental loop — run, assemble, expand, re-assemble
+
+The pieces above compose into one repeatable cycle: **run a scenario,
+assemble, expand the scenario, run only the missing pieces, assemble
+again** — with no redundant recomputation. It works because every step is
+a pure function of the *current* state, never an accumulation of edits:
+
+1. **Run.** `tar_make()` writes one Parquet per shard under the scenario's
+   layout root (§5). Path-axis growth and inner-axis rewrite (§8.1–§8.2)
+   are exactly the rules that decide which shards a *later* run rebuilds.
+2. **Assemble.** `ssd_assemble_manifest()` walks the results tree and
+   rebuilds `completed_shards` from whatever Parquets exist (§8.5),
+   preferring each shard's `meta.json` sidecar and hashing the rest. It
+   reads the manifest head left by `ssd_write_manifest()` and replaces
+   only the tail.
+3. **Expand.** Edit the scenario object — append a dataset, grow `nsim`,
+   add a `min_pmix`, widen `nrow` — and re-source `_targets.R`. The shard
+   set is re-derived from the expanded scenario at sourcing time (§6
+   static branching).
+4. **Run the missing pieces.** `tar_make()` again. Path-axis growth mints
+   and builds *only* the new shards and skips the rest (cache-by-
+   existence, §8.1); inner-axis growth atomically rewrites *only* the
+   affected shards (§8.2). Nothing else recomputes.
+5. **Assemble again.** `ssd_assemble_manifest()` re-walks the tree. Because
+   it rebuilds the tail from disk every call, the second assembly is
+   **idempotent and monotone under growth**: the new shards appear, the
+   untouched ones keep their (byte-identical) entries, and the result is
+   their union — no merge bookkeeping, no stale entries to prune.
+
+**Two ordering facts make the loop safe.**
+
+- *Write the head before you assemble.* The head is a pure function of the
+  scenario (§8.5), and `ssd_write_manifest()` rewrites the *whole* file
+  with the head alone — it does not preserve a previous tail. So after an
+  **expansion** the head must be re-written from the *expanded* scenario
+  (otherwise it still describes the smaller grid), and the assemble must
+  follow it to rebuild the tail from disk. The runner's contract is
+  therefore *write-head-then-assemble-tail* on every (re-)run: the head
+  always matches the current scenario, the tail always matches the shards
+  on disk, and the two cannot drift across runs (the within-run case is §6
+  static branching).
+- *Growth keeps the layout root; re-layout starts a fresh tree.* The
+  results root is keyed by `partition_by` (`layout=<hash>`, §5), so growing
+  along existing axes accretes into the *same* tree and reuses its cache
+  and manifest. Changing `partition_by` itself is not growth — it mints a
+  new layout root with its own (initially empty) manifest, leaving the old
+  tree intact rather than migrating it.
 
 ---
 
@@ -2009,9 +2112,13 @@ already ran end to end (see §4, §6). These steps are therefore
   shards' existence (`completed_shards`), never the reverse — the
   `task-tables` runner reads nothing from it. The `completed_shards`
   assembler hashes the shards on disk; recording each shard's sha256
-  *at write time* (and the cloud copy's sha256) is the
+  *at write time* (in a per-shard `meta.json` sidecar) is the
   trusted-as-produced enhancement wired in by the consumers that need
   it (`replay-helper`, `cloud-upload`), not by the happy-path pipeline.
+  It records **one** trusted sha256 per shard and nothing cloud-specific,
+  so `manifest` and `cloud-upload` are **decoupled**: `cloud-upload`
+  uploads the sidecar with the shard and verifies a download by
+  re-hashing against that sha256, needing nothing added to the manifest.
   Land it before its first consumer (`replay-helper` /
   `shard-completeness-assert`), and operationally before the first
   expensive cluster run whose results you intend to trust/reproduce;
@@ -2040,13 +2147,28 @@ already ran end to end (see §4, §6). These steps are therefore
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
   `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
   on a real (or sandboxed) Slurm queue.
-- **`cloud-upload`** — §6.1 — per-shard `upload_<step>` target +
-  `ssd_test_upload()` probe + `ssd_upload_shard()` with a credential
-  check that dry-runs (no-op) when secrets are absent. Hello-Azure
-  round trip from interactive R; the connectivity probe is
-  `tar_make()`'s first target. Test: a second `tar_make()` with no
-  shard changes uploads nothing (content-hash skip); the graph
-  builds offline.
+- **`cloud-upload`** — §6.1 — typed, self-validating destination objects
+  (`ssd_upload_azure(url, container)`, `ssd_upload_dryrun()`; class
+  `ssdsims_upload`) dispatched by three generics — `ssd_upload_shard()`
+  (ships one shard), `ssd_test_upload()` (the front-door
+  creds/connectivity probe), and construction-time validation. The
+  destination is a **runner argument**, the sibling of `root` on
+  `ssd_scenario_targets(scenario, ..., root, upload, cue)` (with
+  `rlang::check_dots_empty()` forcing named args), **not** a `scenario`
+  field — so it is dropped from `ssd_define_scenario()` and the
+  `ssdsims_scenario` object (both **BREAKING**). Fail-loud: Azure with
+  absent credentials **errors** (no silent no-op); intent to skip the
+  network is expressed only by `ssd_upload_dryrun()`. Both `upload = NULL`
+  (no `upload_<step>` nodes) and `ssd_upload_dryrun()` (no-op nodes,
+  exercised offline/in CI) are supported. Per-shard `upload_<step>` target
+  (`format = "file"`, `error = "null"`), content-hashed so a second
+  `tar_make()` with no shard changes uploads nothing; the cloud sha256 is
+  recorded in the `manifest`. The `ssd_test_upload()` probe is
+  `tar_make()`'s first target; the hello-Azure round trip runs from
+  interactive R. **Departs from the original §6.1 sketch** (silent dry-run
+  on absent creds → now a loud error) and **moves `upload` off the
+  scenario**. Proposed (the `cloud-upload` change); with `manifest` now
+  landed (#114) its prerequisites are met — ready to implement.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and
   `ssd_input_hash()` for the lightweight recipe. Tests simulate a
   branch failure and reproduce locally.
@@ -2470,9 +2592,9 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate proposed
-    class cluster done
-    class survive,assert,cloud,replay,lockin,cleanup open
+    class inputs,postcheck,migrate,cloud proposed
+    class manif,cluster done
+    class survive,assert,replay,lockin,cleanup open
 ```
 
 **Node colours track each step's status** — green = archived, yellow = done
@@ -2545,9 +2667,18 @@ and retires the §1.2 collapse; also off the dependency DAG. It has since been
 main specs and the change now lives in `openspec/changes/archive/`, so it
 appears under `### Archived` above rather than among the active changes.
 
-The remaining open nodes stay blocked: `cloud-upload`/`replay-helper` wait on
-`manifest` landing, `shard-failure-survival` on `cluster-pipeline`,
-`shard-completeness-assert` on both `manifest` and `shard-failure-survival`,
+`cloud-upload` has since been **proposed** (the `cloud-upload` capability plus
+`scenario-definition`/`task-shards` deltas): it moves the upload destination
+onto the runner (`ssd_scenario_targets(..., upload)`, the sibling of `root`)
+and replaces the original §6.1 silent dry-run with a fail-loud credential
+contract, and adds an in-place `ssd_open_uploaded()` read-back. It carries
+artifacts (red) and, with `manifest` now landed (#114), its prerequisites are
+met — it is ready to implement (it records the cloud sha256 through the
+manifest).
+
+With `manifest` landed, `replay-helper` is unblocked (ready to propose). The
+remaining open nodes stay blocked: `shard-failure-survival` on
+`cluster-pipeline`, `shard-completeness-assert` on `shard-failure-survival`,
 `mixed-code-lockin` on `shard-atomic-rewrite`, and `cleanup-lecuyer` on
 `migrate-public-api` + `mixed-code-lockin`. (`dataset-provenance` remains
 roadmap-only, deliberately deferred.)
