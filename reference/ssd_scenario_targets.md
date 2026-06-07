@@ -10,7 +10,9 @@ call this*:
 ``` r
 ssd_scenario_targets(
   scenario,
+  ...,
   root = scenario_results_dir(scenario),
+  upload = NULL,
   cue = NULL
 )
 ```
@@ -22,11 +24,28 @@ ssd_scenario_targets(
   An `ssdsims_scenario` from
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md).
 
+- ...:
+
+  Unused; must be empty. Its presence forces `root`, `upload`, and `cue`
+  to be passed **by name**
+  ([`rlang::check_dots_empty()`](https://rlang.r-lib.org/reference/check_dots_empty.html)
+  aborts on a positional or misspelled argument), since `root` and
+  `upload` are both path-shaped and easy to transpose.
+
 - root:
 
   The results root the shards and summary are written under; defaults to
   the per-layout
   [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md).
+
+- upload:
+
+  An optional upload destination (the remote-destination sibling of
+  `root`) from
+  [`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+  or
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md),
+  or `NULL` (default) for no upload targets. See the section above.
 
 - cue:
 
@@ -52,7 +71,7 @@ The shard and summary targets carry `error = "null"` so a shard whose
 body fails entirely goes `NULL` (its error readable via
 [`tar_meta()`](https://docs.ropensci.org/targets/reference/tar_meta.html))
 without aborting the run, and
-[`ssd_summarize()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md)
+[`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md)
 unions whatever landed (TARGETS-DESIGN.md section 6.2). The shipped
 `_targets.R` templates pair this with a pipeline-wide **keep-going**
 default (`tar_option_set(error = "continue")`, the `make -k` analogue)
@@ -127,11 +146,35 @@ with
 [`targets::tar_option_set()`](https://docs.ropensci.org/targets/reference/tar_option_set.html)
 in `_targets.R` before calling this - the target set is unchanged.
 
+## Uploading shards to cloud storage (`upload`)
+
+`upload` is the **remote-destination sibling of `root`** (default
+`NULL`). With `upload = NULL` the pipeline contains **no**
+`upload_<step>` targets - the clean default DAG for a non-uploader. With
+a non-`NULL` upload object the factory pairs each step shard with an
+`upload_<step>` target in the same `tar_map` (`format = "file"`,
+`error = "null"`), so an unchanged shard is never re-uploaded
+(content-hash skip) and a per-shard upload failure isolates to its own
+branch. Pass
+[`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+for no-op upload targets that reach no network (exercising the DAG shape
+offline / in CI) or
+[`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+to ship to Azure. The destination's
+[`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
+probe is run **once up front** (when the factory is called, before
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)),
+so missing credentials or an unreachable destination abort before any
+compute. The per-task results are byte-identical across all three
+`upload` modes; only the presence and behaviour of the `upload_<step>`
+targets differ.
+
 ## See also
 
 [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md),
 [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
-(the single-core, `targets`-free equivalent).
+(the single-core, `targets`-free equivalent),
+[`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md).
 
 ## Examples
 
@@ -143,5 +186,8 @@ library(tarchetypes)
 library(ssdsims)
 scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
+
+# Pair each shard with a (no-op) upload target, exercised offline:
+ssd_scenario_targets(scenario, upload = ssd_upload_dryrun())
 } # }
 ```

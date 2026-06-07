@@ -98,13 +98,16 @@ The most consequential design choices, with section refs:
   downstream shards open the upstream shard by partition path
   (`format = "file"`), and duckplyr predicate-pushes filters into the
   partition columns.
-- **Cloud upload as a separate target (§6.1).** When `scenario$upload`
-  is set, an `upload_<step>` target sits downstream of each shard file
-  and pushes it to Azure Blob (or another object store). Because it is
-  its own `format = "file"` target, content-hashing skips re-uploading
-  shards that did not change; `ssd_test_upload()` probes the backend at
-  pipeline init, and the graph still builds and dry-runs with no
-  credentials.
+- **Cloud upload as a separate target (§6.1).** When the runner’s
+  `upload` argument is set (`ssd_scenario_targets(..., upload = ...)`),
+  an `upload_<step>` target sits downstream of each shard file and
+  pushes it to Azure Blob (or another object store). Because it is its
+  own `format = "file"` target, content-hashing skips re-uploading
+  shards that did not change;
+  [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
+  probes the backend at pipeline init, and
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+  builds and dry-runs the DAG with no credentials.
 - **Partial failures survive and stay visible (§6.2).** The pipeline
   runs **keep-going by default** — the shipped `_targets.R` templates
   set `tar_option_set(error = "continue")`, the `make -k` analogue, so
@@ -170,19 +173,22 @@ holding:
     │                  flag (not an axis, §1.2) — when ci = FALSE the
     │                  bootstrap-only knobs (nboot, ci_method, parametric)
     │                  are stored as NA on the hc tasks
-    ├── partition_by ← list(data = ..., fit = ..., hc = ...) of character
-    │                  vectors picking the Hive partition axes per step;
-    │                  one shard per (step, partition-cell). Default:
-    │                  data=(dataset,sim,replace), fit=(dataset,sim,rescale),
-    │                  hc=(dataset,sim). See §5.
-    └── upload       ← NULL (no upload) or list(backend, url, …) (§6.1)
+    └── partition_by ← list(data = ..., fit = ..., hc = ...) of character
+                       vectors picking the Hive partition axes per step;
+                       one shard per (step, partition-cell). Default:
+                       data=(dataset,sim,replace), fit=(dataset,sim,rescale),
+                       hc=(dataset,sim). See §5.
 
-There is no `parent` field. Extension never needs one: plain growth
-(more datasets, more `nsim`) reuses shards by file existence
-(`file existence ⇒ cache hit`, §8.1), inner-axis growth rewrites the
-affected shards (§8.2), and pinning shards against a code change is done
-in-project with `tar_cue(depend = FALSE)` (§8.3) rather than by pointing
-a second project at this one’s outputs.
+There is no `upload` field. The upload destination is a **runner
+argument** (`ssd_scenario_targets(..., upload = ...)`), the sibling of
+`root`, not part of the scenario’s declarative identity (the single-core
+runner deliberately has no upload; §6.1). There is no `parent` field.
+Extension never needs one: plain growth (more datasets, more `nsim`)
+reuses shards by file existence (`file existence ⇒ cache hit`, §8.1),
+inner-axis growth rewrites the affected shards (§8.2), and pinning
+shards against a code change is done in-project with
+`tar_cue(depend = FALSE)` (§8.3) rather than by pointing a second
+project at this one’s outputs.
 
 Three design points distinguish this from the current code:
 
@@ -569,8 +575,10 @@ parallel; none is downstream of the others. Roles:
   ssdsims logic is involved** — proves the cluster wiring works.
 
 - **C — working scenario object** contributes the *content*: `seed`,
-  dataset names, fit/hc argument vectors, optional `upload` (§6.1).
-  Already exercised locally with
+  dataset names, fit/hc argument vectors. (The optional cloud `upload`
+  is a **runner argument** of
+  [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md),
+  not a scenario field — §6.1.) Already exercised locally with
   [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
   (§3) so the only remaining unknown when assembling the three is the
   cluster wiring itself.
@@ -1049,7 +1057,7 @@ list(
 
   tar_target(
     summary,
-    ssd_summarize(dir_data = "results/data",
+    ssd_summarise(dir_data = "results/data",
                   dir_fit  = "results/fit",
                   dir_hc   = "results/hc",
                   path     = "results/summary.parquet"),
@@ -1233,18 +1241,43 @@ uploader. That is why every step target here — and the `summary` and
 
 The data/fit/hc shards are the user-facing artefacts and they need to be
 readable **from outside the cluster** — analysis notebooks on a laptop,
-dashboards, downstream R/Python scripts. The scenario carries an
-optional `upload` field describing a destination object store.
+dashboards, downstream R/Python scripts.
 
-       scenario$upload (NULL by default; non-NULL example):
-         list(
-           backend   = "azure_blob",
-           url       = "https://<acct>.blob.core.windows.net",
-           container = "ssdsims-results"
-         )
+> **Implemented** (the `cloud-upload` capability) with three departures
+> from the original sketch below: the destination is a **runner
+> argument** of `ssd_scenario_targets(scenario, ..., root, upload, cue)`
+> (the sibling of `root`), **not** a `scenario` field; it is a **typed,
+> self-validating** object rather than an untyped list; and absent Azure
+> credentials **fail loud** rather than silently dry-running. See the
+> realised contract immediately below; the historical sketch follows for
+> context.
+
+**The destination is a typed runner argument.** Two constructors return
+plain, serialisable, classed S3 objects carrying **only** the
+destination (never credentials): `ssd_upload_azure(url, container)`
+(class `c("ssdsims_upload_azure_blob", "ssdsims_upload")`) and
+[`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+(class `c("ssdsims_upload_dryrun", "ssdsims_upload")`), validated at
+construction. They are passed by name to the factory — `upload = NULL`
+(default; **no** `upload_<step>` nodes),
+[`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+(no-op nodes, exercised offline/in CI), or `ssd_upload_azure(...)` (ship
+to Azure). Four generics dispatch on the object’s class:
+[`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
+(the front-door creds/connectivity probe, run once up front),
+`ssd_upload_shard(path, upload)` (ship one shard),
+`ssd_open_uploaded(upload, step)` (read the uploaded results back in
+place), and construction-time validation. A new backend (S3/GCS) is a
+constructor plus those three methods — no edit to existing methods.
+
+**Fail loud on absent credentials.** Azure with missing credentials
+**errors** (naming the missing `SSDSIMS_AZURE_*` variable), at probe
+time and as a per-shard backstop — never a silent no-op. Intent to skip
+the network is expressed only by
+[`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md).
 
 **Upload is its own target, not an inline side effect.** When `upload`
-is non-NULL the pipeline adds one `upload_<step>` target per shard,
+is non-NULL the factory adds one `upload_<step>` target per shard,
 paired with its step target by the same `tar_map`:
 
 ``` r
@@ -1253,7 +1286,7 @@ tar_map(
   values = fit_shards, names = c(dataset, sim, rescale),
   tar_target(fit_step, ssd_run_fit_step(tasks, scenario, ...),
              format = "file", error = "null"),
-  tar_target(upload_fit, ssd_upload_shard(fit_step, scenario$upload),
+  tar_target(upload_fit, ssd_upload_shard(fit_step, upload),
              format = "file", error = "null")   # fit_step = the shard path
 )
 ```
@@ -1269,11 +1302,14 @@ from inside `ssd_run_<step>_step()` right after the local write:
   the new/rewritten shards. (A combined lab pipeline composes this with
   `error = "null"` and a pinning cue: fixing one failed branch becomes a
   *minimal* re-upload, not a full redo.)
-- **The graph builds and dry-runs with no credentials.**
-  `ssd_upload_shard()` checks for credentials and, when absent, returns
-  the local path as a no-op (a dry run) instead of erroring — so the
-  same pipeline is runnable offline and against real cloud storage, and
-  the upload nodes still appear in the DAG.
+- **The graph builds and dry-runs with no credentials — explicitly.**
+  Passing
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+  gives `upload_<step>` nodes that no-op (reach no network and return
+  the local path), so the same DAG shape runs offline and in CI without
+  credentials. This is now an **explicit opt-in**, not a silent fallback
+  on absent credentials (see *fail loud* above): `ssd_upload_azure(...)`
+  with missing credentials **errors**.
 - **Concerns stay separated by dependency.** The compute manifest
   depends only on the shard targets (what was produced); the upload
   manifest depends on the `upload_<step>` targets (what was shipped). A
@@ -1293,8 +1329,9 @@ Per-shard flow when `upload` is non-NULL:
             │                  (local shard; targets tracks it, format = "file")
             ▼
        upload_<step> branch ──▶ <url>/<container>/<step>/<partition-path>/part.parquet
-                                (own target; runs only if the shard hash changed,
-                                 dry-run no-op when credentials are absent)
+                                (own target; runs only if the shard hash changed;
+                                 with ssd_upload_dryrun() it no-ops, never touching
+                                 the network)
             │
             ▼ records the upload's sha256 in the result manifest
 
@@ -1302,42 +1339,35 @@ The local shard stays on disk so `targets`’ `format = "file"` tracking
 is unaffected; the cloud copy is an additional artefact.
 
 **Auth is external.** Credentials come from environment variables
-(`AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, or a service-principal
-combo). The scenario object does **not** carry secrets — it carries only
-the destination URL and container name. Their absence is what flips
-`ssd_upload_shard()` into its dry-run no-op.
+(`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of
+`SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the
+service-principal trio). The upload object does **not** carry secrets —
+it carries only the destination URL and container name. Their absence is
+a **loud error** (naming the missing variable), not a silent no-op —
+skipping the network is
+[`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)’s
+job.
 
-**Connectivity probe up front, in a separate pre-flight script.**
-`ssd_test_upload(scenario)` performs a minimal round-trip (list the
-container, write and delete a small marker blob) and either returns
-silently or errors with the backend’s diagnostic. It is a **fail-fast
-guard the user runs *before*
-[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
-not a target inside the DAG** — running it is the **user’s
-responsibility**, a documented pre-condition the pipeline neither
-contains nor can enforce. The standalone `preflight.R` carries the
-probe; the `run.R` driver runs it ahead of
+**Connectivity probe up front.** `ssd_test_upload(upload)` performs a
+minimal round-trip (list the container, write and delete a small marker
+blob) and either returns silently or errors with the backend’s
+diagnostic — resolving the credentials first and aborting, naming the
+missing `SSDSIMS_AZURE_*` variable, when one is absent. The factory
+[`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
+runs it **once up front** (when the target list is built, i.e. when
+`_targets.R` is sourced — before
 [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-as a convenience, but a bare
-[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-(or an interactive re-run) does not, so the user must ensure the
-pre-flight has run. Either way the check happens *independent of the
-pipeline’s keep-going error mode* (§6.2). Keeping it outside the DAG is
-deliberate and now the established pattern: the `cluster/` template does
-exactly this for its SLURM connectivity + worker-prerequisite probe (a
-standalone `preflight.R` the user runs — `run.R` sources it as a
-convenience — kept out of `_targets.R` so that stays a clean
-scenario-and-factory definition), and the upload probe follows the same
-shape. A credentials check is a pre-condition for the *whole* run, not a
-per-shard concern, so it must not live in a target that
-`error = "continue"`/`"null"` would let slide past. The same call works
-interactively:
+builds anything), so an auth/network failure aborts before any compute
+rather than deep in the DAG on a worker. The same one-liner works
+interactively as the user’s “are my credentials in the right place?”
+check:
 
 ``` r
 
-scenario <- ssd_scenario(..., upload = list(backend = "azure_blob", ...))
-ssd_test_upload(scenario)   # silent on success, throws on failure — the user runs this before tar_make()
-tar_make()
+upload <- ssd_upload_azure(url = "https://<acct>.blob.core.windows.net",
+                           container = "ssdsims-results")
+ssd_test_upload(upload)   # silent on success, throws (naming the missing var) on failure
+ssd_scenario_targets(scenario, upload = upload)   # runs the probe up front too
 ```
 
 **Failure mode.** A per-shard upload error becomes that `upload_<step>`
@@ -2053,7 +2083,7 @@ discipline — documented in AGENTS.md (§RNG discipline).
 | Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci` is a scalar flag (not an axis); under `ci=FALSE` the bootstrap-only knobs are rejected at construction and stored `NA`, so they never fan out. |
 | Branch failure unreproducible off the cluster | §7 — task row + upstream shard replays the failing task via `_state` primitives. |
 | Code fix re-runs every branch by hash invalidation | §8.3 — `tar_cue(depend = FALSE)` pins shards against the edit; §8.4 — [`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html) / [`unlink()`](https://rdrr.io/r/base/unlink.html) refreshes only the chosen shards. |
-| Off-cluster access to Parquet outputs | §6.1 — `scenario$upload` adds a per-shard `upload_<step>` target (content-hashed, dry-run offline) to a configurable object store (e.g. Azure Blob). |
+| Off-cluster access to Parquet outputs | §6.1 — the runner’s `upload` argument adds a per-shard `upload_<step>` target (content-hashed, [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md) offline) to a configurable object store (e.g. Azure Blob), and [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md) reads it back in place. |
 | Phantom local repros (regenerated upstream ≠ cluster’s actual) | §7 — manifest’s per-shard sha256 lets the lightweight recipe verify the local upstream before running the failing task. |
 
 The RNGkind side-effect bug and the independent data/fit/hc substream
@@ -2236,32 +2266,47 @@ validated behaviour into the package, not discovering it.
   [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
   on a real (or sandboxed) Slurm queue.
 - **`cloud-upload`** — §6.1 — typed, self-validating destination objects
-  (`ssd_upload_azure(url, container)`, `ssd_upload_dryrun()`; class
-  `ssdsims_upload`) dispatched by three generics — `ssd_upload_shard()`
-  (ships one shard), `ssd_test_upload()` (the front-door
-  creds/connectivity probe), and construction-time validation. The
-  destination is a **runner argument**, the sibling of `root` on
-  `ssd_scenario_targets(scenario, ..., root, upload, cue)` (with
+  (`ssd_upload_azure(url, container)`,
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md);
+  class `ssdsims_upload`) dispatched by three generics —
+  [`ssd_upload_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_shard.md)
+  (ships one shard),
+  [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
+  (the front-door creds/connectivity probe), and construction-time
+  validation. The destination is a **runner argument**, the sibling of
+  `root` on `ssd_scenario_targets(scenario, ..., root, upload, cue)`
+  (with
   [`rlang::check_dots_empty()`](https://rlang.r-lib.org/reference/check_dots_empty.html)
   forcing named args), **not** a `scenario` field — so it is dropped
   from
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   and the `ssdsims_scenario` object (both **BREAKING**). Fail-loud:
   Azure with absent credentials **errors** (no silent no-op); intent to
-  skip the network is expressed only by `ssd_upload_dryrun()`. Both
-  `upload = NULL` (no `upload_<step>` nodes) and `ssd_upload_dryrun()`
+  skip the network is expressed only by
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md).
+  Both `upload = NULL` (no `upload_<step>` nodes) and
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
   (no-op nodes, exercised offline/in CI) are supported. Per-shard
   `upload_<step>` target (`format = "file"`, `error = "null"`),
   content-hashed so a second
   [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
   with no shard changes uploads nothing; the cloud sha256 is recorded in
-  the `manifest`. The `ssd_test_upload()` probe is
+  the `manifest`. The
+  [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
+  probe is
   [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)’s
-  first target; the hello-Azure round trip runs from interactive R.
-  **Departs from the original §6.1 sketch** (silent dry-run on absent
-  creds → now a loud error) and **moves `upload` off the scenario**.
-  Proposed (the `cloud-upload` change); with `manifest` now landed
-  (#114) its prerequisites are met — ready to implement.
+  first target; the hello-Azure round trip runs from interactive R, and
+  `ssd_open_uploaded(upload, step)` reads the uploaded shards back **in
+  place** via DuckDB’s `azure` extension (no download) for an immediate
+  round-trip check. **Departs from the original §6.1 sketch** (silent
+  dry-run on absent creds → now a loud error) and **moves `upload` off
+  the scenario**. **Implemented** (the `cloud-upload` change):
+  `R/upload.R` (the constructors and four generics), `upload` wired into
+  [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md),
+  `upload` removed from
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)/`ssdsims_scenario`
+  (BREAKING), the `vignettes/cloud-upload.qmd` vignette, and
+  `AzureStor`/`AzureRMR` added to `Suggests`.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and `ssd_input_hash()`
   for the lightweight recipe. Tests simulate a branch failure and
   reproduce locally.
@@ -2729,8 +2774,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow,manif archived
-    class inputs,postcheck,migrate,cloud proposed
-    class cluster done
+    class inputs,postcheck,migrate proposed
+    class cluster,cloud done
     class replay ready
     class survive,assert,lockin,cleanup open
 ```
@@ -2815,15 +2860,19 @@ rather than among the active changes.
 
 With `manifest` archived (#114, see the 2026-06-07 addendum), the
 verification layer it feeds is unblocked. `cloud-upload` has since been
-**proposed** (the `cloud-upload` capability plus
+**implemented** (the `cloud-upload` capability plus
 `scenario-definition`/`task-shards` deltas): it moves the upload
 destination onto the runner (`ssd_scenario_targets(..., upload)`, the
 sibling of `root`) and replaces the original §6.1 silent dry-run with a
 fail-loud credential contract, and adds an in-place
-`ssd_open_uploaded()` read-back. It carries artifacts (red) and, with
-`task-tables` and `manifest` both archived, its prerequisites are met —
-it is ready to implement (it records the cloud sha256 through the
-manifest).
+[`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md)
+read-back. It landed as `R/upload.R` (the typed constructors and four
+generics), the `upload` wiring in
+[`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md),
+the BREAKING removal of `upload` from
+[`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)/`ssdsims_scenario`,
+the `cloud-upload.qmd` vignette, and `AzureStor`/`AzureRMR` in
+`Suggests` (it records the cloud sha256 through the manifest).
 
 `replay-helper` is also unblocked (`task-tables` and `manifest` both
 archived) but carries no artifacts yet, so it moves to **ready** (blue)

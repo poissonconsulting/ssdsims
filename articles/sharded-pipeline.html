@@ -39,6 +39,7 @@
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
+    <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -146,7 +147,7 @@
 <code class="sourceCode R"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">run</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_shard_run&gt;</span></span>
-<span><span class="co">#&gt;   dir: /tmp/Rtmpxo5xxf/ssdsims-shards-3e4a6a3a3ab3</span></span>
+<span><span class="co">#&gt;   dir: /tmp/Rtmpa4Ve5H/ssdsims-shards-410c2ddf3485</span></span>
 <span><span class="co">#&gt;   sample shards: 2</span></span>
 <span><span class="co">#&gt;   fit    shards: 8</span></span>
 <span><span class="co">#&gt;   hc     shards: 2</span></span></code></pre></div>
@@ -178,7 +179,7 @@
 <code class="sourceCode R"><span><span class="va">base</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">base_est</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">base</span><span class="op">$</span><span class="va">hc</span><span class="op">$</span><span class="va">hc</span><span class="op">)</span><span class="op">$</span><span class="va">est</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">summary_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_summarize.html">ssd_summarize</a></span><span class="op">(</span></span>
+<span><span class="va">summary_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_summarise.html">ssd_summarise</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span>,</span>
@@ -190,7 +191,7 @@
 <span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">base_est</span>, <span class="va">shard_est</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
-<p><code><a href="../reference/ssd_summarize.html">ssd_summarize()</a></code> fans the <code>hc</code> layer in across shards (via duckplyr) into a single <code>summary.parquet</code> — the analysis-ready table — without recomputing anything.</p>
+<p><code><a href="../reference/ssd_summarise.html">ssd_summarise()</a></code> fans the <code>hc</code> layer in across shards (via duckplyr) into a single <code>summary.parquet</code> — the analysis-ready table — without recomputing anything.</p>
 </section></section><section class="level2"><h2 id="scaling-up-the-targets-pipeline">Scaling up: the <code>targets</code> pipeline<a class="anchor" aria-label="anchor" href="#scaling-up-the-targets-pipeline"></a>
 </h2>
 <p>The sharded runner is single core. To run shards <strong>in parallel</strong> (or on a cluster), the same building blocks plug into a static-branching <code>targets</code> pipeline: <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_map.html" class="external-link">tarchetypes::tar_map()</a></code> mints one named target per shard, so <code>targets</code> caches, invalidates, and reruns each shard independently. Three ready example projects ship with the package — a minimal <code>small</code> one, a fuller <code>large</code> one (adapted from <code>scripts/example.R</code>, sweeping <code>nrow</code>, <code>proportion</code>, and the estimation / CI methods), and a <code>cluster</code> one for SLURM. The <code>large</code> project parallelises its shards across local workers with a mirai-backed <code>crew</code> controller (<code>tar_option_set(controller = crew::crew_controller_local())</code>); the <code>cluster</code> project is the same pipeline under a <code><a href="https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html" class="external-link">crew.cluster::crew_controller_slurm()</a></code> controller, with a connectivity + worker-prerequisite preflight — see the <a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a> vignette, a “zero to a running cluster job” guide that maps your site’s own SLURM instructions onto the controller:</p>
@@ -230,9 +231,11 @@
 <li>
 <a href="defining-a-scenario.html">“Defining a Scenario”</a> — the scenario object and the baseline runner.</li>
 <li>
+<a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a> — the same pipeline on a cluster, and <a href="cloud-upload.html">“Uploading Shards to Cloud Storage”</a> — shipping the shards to an object store so they are readable off the cluster.</li>
+<li>
 <code>TARGETS-DESIGN.md</code> §5 (tasks into shards), §6 (inter-shard linking, the Hive layout, the <code>targets</code> sketch).</li>
 <li>
-<code><a href="../reference/ssd_run_scenario_shards.html">?ssd_run_scenario_shards</a></code>, <code><a href="../reference/ssd_scenario_shards.html">?ssd_scenario_fit_shards</a></code>, <code><a href="../reference/ssd_run_step.html">?ssd_run_fit_step</a></code>, <code><a href="../reference/ssd_summarize.html">?ssd_summarize</a></code>.</li>
+<code><a href="../reference/ssd_run_scenario_shards.html">?ssd_run_scenario_shards</a></code>, <code><a href="../reference/ssd_scenario_shards.html">?ssd_scenario_fit_shards</a></code>, <code><a href="../reference/ssd_run_step.html">?ssd_run_fit_step</a></code>, <code><a href="../reference/ssd_summarise.html">?ssd_summarise</a></code>.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

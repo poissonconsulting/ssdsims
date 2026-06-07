@@ -32,6 +32,7 @@ and has no dependency on targets."></head><body>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
+    <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -84,8 +85,7 @@ and has <strong>no</strong> dependency on <code>targets</code>.</p>
 <span>  parametric <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  samples <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  partition_by <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  bundle <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  upload <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  bundle <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -253,11 +253,6 @@ step in <strong>both</strong> is an error), but they may be mixed across steps a
 may be partial. Use <code>partition_by</code> when you want few path axes, <code>bundle</code>
 when you want fine sharding and only a few inner axes. Both normalise into
 the single stored <code>partition_by</code> path list.</p></dd>
-
-
-<dt id="arg-upload">upload<a class="anchor" aria-label="anchor" href="#arg-upload"></a></dt>
-<dd><p>An optional upload specification (a list), or <code>NULL</code> for no
-upload.</p></dd>
 
 </dl></div>
     <div class="section level2">

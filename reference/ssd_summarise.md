@@ -14,7 +14,7 @@ summary is the `hc` layer.
 ## Usage
 
 ``` r
-ssd_summarize(dir_sample, dir_fit, dir_hc, path)
+ssd_summarise(dir_sample, dir_fit, dir_hc, path)
 ```
 
 ## Arguments
@@ -62,12 +62,12 @@ scenario <- ssd_define_scenario(
 )
 # Materialise the shards single-core, then fan in the hc layer.
 run <- ssd_run_scenario_shards(scenario)
-ssd_summarize(
+ssd_summarise(
   file.path(run$dir, "sample"),
   file.path(run$dir, "fit"),
   file.path(run$dir, "hc"),
   file.path(run$dir, "summary.parquet")
 )
-#> [1] "/tmp/RtmprK4KKv/ssdsims-shards-399e1f27285a/summary.parquet"
+#> [1] "/tmp/RtmpoIAAeC/ssdsims-shards-3bcb8affc8a/summary.parquet"
 # }
 ```

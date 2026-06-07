@@ -22,6 +22,7 @@
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
+    <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -152,7 +153,7 @@
 
         <dt>
 
-          <code><a href="ssd_summarize.html">ssd_summarize()</a></code>
+          <code><a href="ssd_summarise.html">ssd_summarise()</a></code>
 
         </dt>
         <dd>Summarise a Run's hc Estimates Across Shards</dd>
@@ -163,6 +164,50 @@
 
         </dt>
         <dd>Layout-keyed Results Root for a Scenario</dd>
+      </dl></div><div class="section level2">
+      <h2 id="cloud-upload">Cloud upload<a class="anchor" aria-label="anchor" href="#cloud-upload"></a></h2>
+
+      <div class="section-desc"><p>Typed, self-validating upload destinations (<code><a href="../reference/ssd_upload_azure.html">ssd_upload_azure()</a></code>, <code><a href="../reference/ssd_upload_azure.html">ssd_upload_dryrun()</a></code>) and the class-dispatched generics that probe credentials, ship each shard, and read the uploaded results back in place - the remote-destination sibling of <code>root</code> on <code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code>.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ssd_upload_azure.html">ssd_upload_azure()</a></code> <code><a href="ssd_upload_azure.html">ssd_upload_dryrun()</a></code>
+
+        </dt>
+        <dd>Upload Destinations for a Scenario's Shards</dd>
+
+        <dt>
+
+          <code><a href="ssd_test_upload.html">ssd_test_upload()</a></code>
+
+        </dt>
+        <dd>Probe an Upload Destination's Credentials and Connectivity</dd>
+
+        <dt>
+
+          <code><a href="ssd_upload_shard.html">ssd_upload_shard()</a></code>
+
+        </dt>
+        <dd>Ship One Shard to an Upload Destination</dd>
+
+        <dt>
+
+          <code><a href="ssd_open_uploaded.html">ssd_open_uploaded()</a></code>
+
+        </dt>
+        <dd>Open Uploaded Results for Querying, In Place</dd>
+
+        <dt>
+
+          <code><a href="ssd_summarise_uploaded.html">ssd_summarise_uploaded()</a></code>
+
+        </dt>
+        <dd>Summarise Uploaded Results, In Place (the cloud <code><a href="../reference/ssd_summarise.html">ssd_summarise()</a></code>)</dd>
       </dl></div><div class="section level2">
       <h2 id="manifest">Manifest<a class="anchor" aria-label="anchor" href="#manifest"></a></h2>
 

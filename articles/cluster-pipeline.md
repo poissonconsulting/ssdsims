@@ -296,3 +296,8 @@ lifetime — “many-to-one”; `tasks_max = 1L` gives one shard per job —
 - The [“Running a Sharded
   Pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
   vignette — the `small`/`large`/`cluster` template trio.
+- [“Uploading Shards to Cloud
+  Storage”](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.md)
+  — ship the cluster’s shards to an object store (the
+  `upload = ssd_upload_azure(...)` line in this template’s `_targets.R`)
+  and read them back in place.

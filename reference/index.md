@@ -53,10 +53,39 @@ template).
   : Run a Step Shard
 - [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
   : Build the Targets Pipeline for a Scenario
-- [`ssd_summarize()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md)
+- [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md)
   : Summarise a Run's hc Estimates Across Shards
 - [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md)
   : Layout-keyed Results Root for a Scenario
+
+## Cloud upload
+
+Typed, self-validating upload destinations
+([`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md),
+[`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md))
+and the class-dispatched generics that probe credentials, ship each
+shard, and read the uploaded results back in place - the
+remote-destination sibling of `root` on
+[`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md).
+
+- [`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+  : Upload Destinations for a Scenario's Shards
+
+- [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
+  : Probe an Upload Destination's Credentials and Connectivity
+
+- [`ssd_upload_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_shard.md)
+  : Ship One Shard to an Upload Destination
+
+- [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md)
+  : Open Uploaded Results for Querying, In Place
+
+- [`ssd_summarise_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise_uploaded.md)
+  :
+
+  Summarise Uploaded Results, In Place (the cloud
+  [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md))
 
 ## Manifest
 

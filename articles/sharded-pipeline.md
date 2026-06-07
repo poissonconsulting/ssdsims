@@ -114,7 +114,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/Rtmpxo5xxf/ssdsims-shards-3e4a6a3a3ab3
+#>   dir: /tmp/Rtmpa4Ve5H/ssdsims-shards-410c2ddf3485
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -160,7 +160,7 @@ joined on the task identity:
 base <- ssd_run_scenario_baseline(scenario)
 base_est <- sort(do.call(rbind, base$hc$hc)$est)
 
-summary_path <- ssd_summarize(
+summary_path <- ssd_summarise(
   file.path(run$dir, "sample"),
   file.path(run$dir, "fit"),
   file.path(run$dir, "hc"),
@@ -173,7 +173,7 @@ all.equal(base_est, shard_est)
 #> [1] TRUE
 ```
 
-[`ssd_summarize()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md)
+[`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md)
 fans the `hc` layer in across shards (via duckplyr) into a single
 `summary.parquet` — the analysis-ready table — without recomputing
 anything.
@@ -273,9 +273,15 @@ one that fits the run.
 - [“Defining a
   Scenario”](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
   — the scenario object and the baseline runner.
+- [“Running on a SLURM
+  Cluster”](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
+  — the same pipeline on a cluster, and [“Uploading Shards to Cloud
+  Storage”](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.md)
+  — shipping the shards to an object store so they are readable off the
+  cluster.
 - `TARGETS-DESIGN.md` §5 (tasks into shards), §6 (inter-shard linking,
   the Hive layout, the `targets` sketch).
 - [`?ssd_run_scenario_shards`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md),
   [`?ssd_scenario_fit_shards`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md),
   [`?ssd_run_fit_step`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md),
-  [`?ssd_summarize`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md).
+  [`?ssd_summarise`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md).

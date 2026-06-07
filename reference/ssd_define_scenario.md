@@ -34,8 +34,7 @@ ssd_define_scenario(
   parametric = TRUE,
   samples = FALSE,
   partition_by = NULL,
-  bundle = NULL,
-  upload = NULL
+  bundle = NULL
 )
 ```
 
@@ -230,10 +229,6 @@ ssd_define_scenario(
   you want few path axes, `bundle` when you want fine sharding and only
   a few inner axes. Both normalise into the single stored `partition_by`
   path list.
-
-- upload:
-
-  An optional upload specification (a list), or `NULL` for no upload.
 
 ## Value
 

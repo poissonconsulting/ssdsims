@@ -45,7 +45,7 @@ each run.
 ## See also
 
 [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md),
-[`ssd_summarize()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md).
+[`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md).
 
 ## Examples
 

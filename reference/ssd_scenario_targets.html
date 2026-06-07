@@ -28,6 +28,7 @@ this:"></head><body>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
+    <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -57,7 +58,9 @@ this</em>:</p>
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ssd_scenario_targets</span><span class="op">(</span></span>
 <span>  <span class="va">scenario</span>,</span>
+<span>  <span class="va">...</span>,</span>
 <span>  root <span class="op">=</span> <span class="fu"><a href="scenario_results_dir.html">scenario_results_dir</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span>,</span>
+<span>  upload <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cue <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -70,9 +73,22 @@ this</em>:</p>
 <dd><p>An <code>ssdsims_scenario</code> from <code><a href="ssd_define_scenario.html">ssd_define_scenario()</a></code>.</p></dd>
 
 
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Unused; must be empty. Its presence forces <code>root</code>, <code>upload</code>, and
+<code>cue</code> to be passed <strong>by name</strong> (<code><a href="https://rlang.r-lib.org/reference/check_dots_empty.html" class="external-link">rlang::check_dots_empty()</a></code> aborts on a
+positional or misspelled argument), since <code>root</code> and <code>upload</code> are both
+path-shaped and easy to transpose.</p></dd>
+
+
 <dt id="arg-root">root<a class="anchor" aria-label="anchor" href="#arg-root"></a></dt>
 <dd><p>The results root the shards and summary are written under;
 defaults to the per-layout <code><a href="scenario_results_dir.html">scenario_results_dir()</a></code>.</p></dd>
+
+
+<dt id="arg-upload">upload<a class="anchor" aria-label="anchor" href="#arg-upload"></a></dt>
+<dd><p>An optional upload destination (the remote-destination sibling
+of <code>root</code>) from <code><a href="ssd_upload_azure.html">ssd_upload_azure()</a></code> or <code><a href="ssd_upload_azure.html">ssd_upload_dryrun()</a></code>, or <code>NULL</code>
+(default) for no upload targets. See the section above.</p></dd>
 
 
 <dt id="arg-cue">cue<a class="anchor" aria-label="anchor" href="#arg-cue"></a></dt>
@@ -94,7 +110,7 @@ changes). <code>NULL</code> (default) uses <code>targets</code>' standard cue.</
 <span><span class="fu"><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></code></pre><p></p></div>
 <p>The shard and summary targets carry <code>error = "null"</code> so a shard whose body
 fails entirely goes <code>NULL</code> (its error readable via <code><a href="https://docs.ropensci.org/targets/reference/tar_meta.html" class="external-link">tar_meta()</a></code>) without
-aborting the run, and <code><a href="ssd_summarize.html">ssd_summarize()</a></code> unions whatever landed
+aborting the run, and <code><a href="ssd_summarise.html">ssd_summarise()</a></code> unions whatever landed
 (TARGETS-DESIGN.md section 6.2). The shipped <code>_targets.R</code> templates pair this
 with a pipeline-wide <strong>keep-going</strong> default (<code>tar_option_set(error = "continue")</code>, the <code>make -k</code> analogue) so an errored target skips only its
 dependents while the rest of the shards still build; fail-fast pre-flight
@@ -156,9 +172,28 @@ that read the wider draw - no stale short draw is produced.</p>
 <code>_targets.R</code> before calling this - the target set is unchanged.</p>
     </div>
     <div class="section level2">
+    <h2 id="uploading-shards-to-cloud-storage-upload-">Uploading shards to cloud storage (<code>upload</code>)<a class="anchor" aria-label="anchor" href="#uploading-shards-to-cloud-storage-upload-"></a></h2>
+
+
+<p><code>upload</code> is the <strong>remote-destination sibling of <code>root</code></strong> (default <code>NULL</code>).
+With <code>upload = NULL</code> the pipeline contains <strong>no</strong> <code>upload_&lt;step&gt;</code> targets -
+the clean default DAG for a non-uploader. With a non-<code>NULL</code> upload object the
+factory pairs each step shard with an <code>upload_&lt;step&gt;</code> target in the same
+<code>tar_map</code> (<code>format = "file"</code>, <code>error = "null"</code>), so an unchanged shard is
+never re-uploaded (content-hash skip) and a per-shard upload failure isolates
+to its own branch. Pass <code><a href="ssd_upload_azure.html">ssd_upload_dryrun()</a></code> for no-op upload targets that
+reach no network (exercising the DAG shape offline / in CI) or
+<code><a href="ssd_upload_azure.html">ssd_upload_azure()</a></code> to ship to Azure. The destination's
+<code><a href="ssd_test_upload.html">ssd_test_upload()</a></code> probe is run <strong>once up front</strong> (when the factory is
+called, before <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>), so missing credentials or an unreachable
+destination abort before any compute. The per-task results are byte-identical
+across all three <code>upload</code> modes; only the presence and behaviour of the
+<code>upload_&lt;step&gt;</code> targets differ.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="scenario_results_dir.html">scenario_results_dir()</a></code>, <code><a href="ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code> (the
-single-core, <code>targets</code>-free equivalent).</p></div>
+single-core, <code>targets</code>-free equivalent), <code><a href="ssd_upload_azure.html">ssd_upload_azure()</a></code>.</p></div>
     </div>
 
     <div class="section level2">
@@ -170,6 +205,9 @@ single-core, <code>targets</code>-free equivalent).</p></div>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://poissonconsulting.github.io/ssdsims/">ssdsims</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ssd_scenario_targets</span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Pair each shard with a (no-op) upload target, exercised offline:</span></span></span>
+<span class="r-in"><span><span class="fu">ssd_scenario_targets</span><span class="op">(</span><span class="va">scenario</span>, upload <span class="op">=</span> <span class="fu"><a href="ssd_upload_azure.html">ssd_upload_dryrun</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

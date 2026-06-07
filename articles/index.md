@@ -10,3 +10,5 @@
   Pipeline](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md):
 - [Running on a SLURM
   Cluster](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md):
+- [Uploading Shards to Cloud
+  Storage](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.md):
