@@ -4,8 +4,8 @@ test_that("task-lists: sample table has D * nsim * R rows with axes populated", 
   scenario <- ssd_define_scenario(
     ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
     nsim = 3L,
-    nrow = c(5L, 10L),
-    seed = 42L
+    seed = 42L,
+    nrow = c(5L, 10L)
   )
   tasks <- ssd_scenario_sample_tasks(scenario)
   # D = 2 datasets, nsim = 3, R = 1 (replace defaults to FALSE)
@@ -32,8 +32,8 @@ test_that("task-lists: nrow does not multiply the sample draw; n_max is carried"
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 4L,
-    nrow = c(5L, 10L, 20L),
-    seed = 42L
+    seed = 42L,
+    nrow = c(5L, 10L, 20L)
   )
   tasks <- ssd_scenario_sample_tasks(scenario)
   # 1 dataset * 4 sims * 1 replace = 4, not multiplied by the 3 nrow values
@@ -57,8 +57,8 @@ test_that("task-lists: fit table crosses sample identity x nrow x fit grid", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 3L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE)
   )
   sample_tasks <- ssd_scenario_sample_tasks(scenario)
@@ -146,8 +146,8 @@ test_that("task-lists: each table carries a path-style id and parent foreign key
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = c(5L, 10L),
-    seed = 42L
+    seed = 42L,
+    nrow = c(5L, 10L)
   )
   tasks <- ssd_scenario_tasks(scenario)
   # path-style primary keys
@@ -202,8 +202,8 @@ test_that("task-lists: printing a task table is informative", {
       ssd_define_scenario(
         ssddata::ccme_boron,
         nsim = 1L,
-        nrow = c(5L, 10L),
         seed = 42L,
+        nrow = c(5L, 10L),
         rescale = c(FALSE, TRUE)
       )
     )
@@ -227,8 +227,8 @@ test_that("task-lists: ssd_scenario_tasks bundles the three task tables", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
     ci = TRUE
   )
@@ -246,8 +246,8 @@ test_that("task-lists: printing a task set reports per-step counts", {
       ssd_define_scenario(
         ssddata::ccme_boron,
         nsim = 2L,
-        nrow = c(5L, 10L),
         seed = 42L,
+        nrow = c(5L, 10L),
         rescale = c(FALSE, TRUE),
         ci = TRUE,
         nboot = c(10L, 100L)
@@ -263,8 +263,8 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = c(5L, 6L),
     seed = 42L,
+    nrow = c(5L, 6L),
     dists = "lnorm"
   )
   tmp <- withr::local_tempdir()
@@ -290,8 +290,8 @@ test_that("task-lists: sub-truncation property holds across nrow", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     dists = "lnorm"
   )
   out <- ssd_run_scenario_baseline(scenario)
@@ -309,8 +309,8 @@ test_that("parallel-safe-seeding: baseline runner is reproducible without an ext
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = c(5L, 6L),
     seed = 42L,
+    nrow = c(5L, 6L),
     dists = "lnorm"
   )
   set.seed(1L)
@@ -337,8 +337,8 @@ test_that("parallel-safe-seeding: baseline runner results are order-independent"
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 3L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm"
   )
   out <- ssd_run_scenario_baseline(scenario)
@@ -459,8 +459,8 @@ test_that("task-lists: task-table column contracts are pinned", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     ci = TRUE
   )
   expect_snapshot({
@@ -504,8 +504,8 @@ test_that("scenario-definition: samples = TRUE works with multiple dists and ci 
   scenario <- ssd_define_scenario(
     ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = c("lnorm", "gamma"),
     ci = FALSE,
     samples = TRUE

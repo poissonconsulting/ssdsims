@@ -12,7 +12,7 @@ library(dqrng)
 scenario <- ssd_define_scenario(
   ssddata::ccme_boron,
   nsim = 2L,
+  seed = 42L,
   nrow = c(5L, 10L),
-  rescale = c(FALSE, TRUE),
-  seed = 42L
+  rescale = c(FALSE, TRUE)
 )

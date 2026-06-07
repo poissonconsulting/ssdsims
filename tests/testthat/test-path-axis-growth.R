@@ -37,8 +37,8 @@ test_that("path-axis-growth: appending a dataset builds only the new dataset's s
   scenario <- ssd_define_scenario(
     ssd_data(d1 = numeric_dataset()),
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm",
     partition_by = growth_partition_by
   )
@@ -92,8 +92,8 @@ test_that("path-axis-growth: growing nsim builds only the new sim cells' shards 
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
     nsim = 2L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm",
     partition_by = growth_partition_by
   )

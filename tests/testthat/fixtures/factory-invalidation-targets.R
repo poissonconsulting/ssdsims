@@ -11,8 +11,8 @@ library(dqrng)
 scenario <- ssd_define_scenario(
   ssd_data(d = readRDS("data.rds")),
   nsim = 2L,
-  nrow = 6L,
   seed = 42L,
+  nrow = 6L,
   dists = "lnorm",
   partition_by = list(
     sample = c("dataset", "sim"),

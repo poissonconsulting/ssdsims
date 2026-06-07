@@ -26,8 +26,8 @@ test_that("shard-runner: per-task results match the in-memory baseline", {
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
     dists = c("lnorm", "gamma")
   )
@@ -97,8 +97,8 @@ test_that("shard-runner: a fit shard reads several sample shards (inner replace)
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     replace = c(FALSE, TRUE),
     dists = "lnorm"
   )
@@ -124,8 +124,8 @@ test_that("shard-runner: an hc shard reads several fit shards (coarse hc)", {
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 1L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
     dists = "lnorm"
   )
@@ -148,8 +148,8 @@ test_that("shard-runner: shard count equals the path-cell count, not task count"
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
     dists = "lnorm"
   )
@@ -178,8 +178,8 @@ test_that("shard-runner: re-running yields identical per-task results", {
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 2L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm"
   )
   run1 <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
@@ -232,8 +232,8 @@ test_that("shard-runner: fit step aborts when a parent sample draw is missing", 
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm"
   )
   dir <- withr::local_tempdir()
@@ -265,4 +265,70 @@ test_that("shard-runner: fit step aborts when a parent sample draw is missing", 
     ),
     "found none in the parent .sample. shard"
   )
+})
+
+# ---- blob encoding: lossless round-trip through the shard Parquet (task 3.1) -
+#
+# The byte-identity oracle "read back through the hc path equals the baseline"
+# is covered by the per-task-results test above (it decodes each `fit_blob` and
+# compares to `ssd_run_scenario_baseline()`); this pins the seam itself - the
+# encode/decode round trip and its survival through a Parquet `VARCHAR`.
+
+test_that("shard-runner: a fit object round-trips losslessly through the encode/decode seam and a Parquet VARCHAR", {
+  scenario <- ssd_define_scenario(
+    ssd_data(d = sr_dataset()),
+    nsim = 1L,
+    nrow = 6L,
+    seed = 42L,
+    dists = c("lnorm", "gamma")
+  )
+  fit <- ssd_run_scenario_baseline(scenario)$fit$fits[[1L]]
+
+  # the seam alone is lossless (a deserialised fitdists has nil TMB pointers
+  # that waldo flags but all.equal ignores - matching the oracle above).
+  expect_true(isTRUE(all.equal(decode_obj(encode_obj(fit)), fit)))
+
+  # and it survives a Parquet VARCHAR round trip: write -> read -> decode, with
+  # the blob carried as a string column (no raw/list column, which duckplyr
+  # cannot store).
+  path <- file.path(withr::local_tempdir(), "part.parquet")
+  ssd_write_parquet(
+    tibble::tibble(fit_id = "f1", fit_blob = encode_obj(fit)),
+    path
+  )
+  back <- ssd_read_parquet(path)
+  expect_type(back$fit_blob, "character")
+  expect_true(isTRUE(all.equal(decode_obj(back$fit_blob), fit)))
+})
+
+# ---- blob encoding: the blob column projects out without decoding (task 3.2) -
+
+test_that("shard-runner: the summary-style projection drops the blob column without decoding it", {
+  path <- file.path(withr::local_tempdir(), "part.parquet")
+  # A `fit_blob` value that is NOT a decodable object: if the projection pulled
+  # the bytes into R and decoded them, `decode_obj()` would error - so a clean
+  # projection that simply omits the column proves no decode happened.
+  ssd_write_parquet(
+    tibble::tibble(
+      fit_id = c("f1", "f2"),
+      fit_blob = c("not-a-blob", "garbage")
+    ),
+    path
+  )
+
+  # Mirror the §6 ssd_summarize() projection: drop the heavy column at the
+  # DuckDB level, before anything is collected into R.
+  projected <- tibble::as_tibble(dplyr::collect(
+    dplyr::select(
+      duckplyr::read_parquet_duckdb(
+        path,
+        options = list(hive_partitioning = FALSE)
+      ),
+      -dplyr::any_of("fit_blob")
+    )
+  ))
+
+  expect_named(projected, "fit_id")
+  expect_false("fit_blob" %in% names(projected))
+  expect_identical(projected$fit_id, c("f1", "f2"))
 })

@@ -7,8 +7,8 @@ test_that("task-shards: one shard row per partition_by path cell", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE)
   )
   fit_shards <- ssd_scenario_fit_shards(scenario)
@@ -24,8 +24,8 @@ test_that("task-shards: union of a step's shard tasks equals its task table", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     ci = TRUE,
     nboot = 10L
   )
@@ -64,15 +64,15 @@ test_that("task-shards: a coarser partition_by bundles more tasks per shard", {
   base <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE)
   )
   coarse <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
     partition_by = list(
       sample = c("dataset", "sim", "replace"),
@@ -133,8 +133,8 @@ test_that("task-shards: step runners write one Parquet and read upstream by path
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm"
   )
   ss <- ssd_scenario_sample_shards(scenario)
@@ -178,8 +178,8 @@ test_that("task-shards: ssd_summarize unions landed hc shards without recomputat
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
     nsim = 2L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm"
   )
   ss <- ssd_scenario_sample_shards(scenario)
@@ -267,8 +267,8 @@ test_that("task-shards: pipeline per-task results equal the baseline runner", {
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
     nsim = 2L,
-    nrow = c(5L, 10L),
     seed = 42L,
+    nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
     dists = c("lnorm", "gamma")
   )
@@ -382,8 +382,8 @@ test_that("hive: each child shard names exactly the parent shards it reads (m:n)
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm",
     partition_by = list(
       sample = c("dataset", "sim"),
@@ -467,15 +467,15 @@ test_that("hive: widening max(nrow) changes the sample shard command (rewrite tr
   base <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm"
   )
   wide <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = c(6L, 12L),
     seed = 42L,
+    nrow = c(6L, 12L),
     dists = "lnorm"
   )
   s1 <- ssd_scenario_targets(base)[[1L]][["sample_step"]][[1L]]$command$expr
@@ -655,8 +655,8 @@ test_that("task-shards: factory per-task results equal the baseline (slice drops
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = "lnorm",
     partition_by = list(
       sample = c("dataset", "sim"),
