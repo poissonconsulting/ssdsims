@@ -57,6 +57,18 @@ reference:
   - ssd_record_shard
   - ssd_assemble_manifest
 
+- title: Cost estimation
+  desc: >
+    Predict, before launching, roughly how much compute a scenario costs and how
+    long its single longest task runs. Calibrate the per-task cost model on the
+    target machine (or use the shipped default), then apply it to a scenario
+    read-only - no fit, bootstrap, or RNG.
+  contents:
+  - ssd_estimate_cost
+  - ssd_calibrate_cost
+  - ssd_cost_calibration
+  - ssd_cost_calibration_default
+
 - title: Scenario accessors
   desc: >
     A technical detail of the pipelines: isolate an already-materialised value
@@ -84,3 +96,12 @@ reference:
 - title: Package
   contents:
   - ssdsims-package
+
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - defining-a-scenario
+  - cost-estimation
+  - sharded-pipeline
+  - cluster-pipeline
