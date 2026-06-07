@@ -62,8 +62,8 @@ storage loop only, de-risking `hive-partitioning`/`task-tables`.
 
 [`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
 (the in-memory reference oracle),
-[`ssd_scenario_sample_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_shards.md),
-[`ssd_run_sample_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_sample_step.md).
+[`ssd_scenario_sample_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md),
+[`ssd_run_sample_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md).
 
 ## Examples
 
@@ -77,5 +77,5 @@ scenario <- ssd_define_scenario(
 )
 run <- ssd_run_scenario_shards(scenario)
 run$hc
-#> [1] "/tmp/RtmpfGxz6b/ssdsims-shards-39b33913cf24/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/RtmprK4KKv/ssdsims-shards-399e6d58b059/hc/dataset=ccme_boron/sim=1/part.parquet"
 ```

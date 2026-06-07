@@ -3,7 +3,7 @@
 Predicts, *before* a scenario is launched, roughly how much compute it
 costs and how long its single longest task runs. It expands the scenario
 into its hc task table read-only (via
-[`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_tasks.md),
+[`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md),
 without running any fit or bootstrap), applies the calibrated per-task
 cost model, and returns the ballpark serial **total** cost and the
 **duration of the longest single task**, plus a per-axis breakdown of

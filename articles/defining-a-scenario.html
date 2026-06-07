@@ -358,7 +358,7 @@
 <span><span class="co">#&gt; # ℹ 8 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, ci &lt;lgl&gt;,</span></span>
 <span><span class="co">#&gt; #   nboot &lt;int&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;</span></span></code></pre></div>
 </div>
-<p>The per-step derivations are also available individually (<code><a href="../reference/ssd_scenario_sample_tasks.html">ssd_scenario_sample_tasks()</a></code>, <code><a href="../reference/ssd_scenario_fit_tasks.html">ssd_scenario_fit_tasks()</a></code>, <code><a href="../reference/ssd_scenario_hc_tasks.html">ssd_scenario_hc_tasks()</a></code>) when you only need one table.</p>
+<p>The per-step derivations are also available individually (<code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_sample_tasks()</a></code>, <code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_fit_tasks()</a></code>, <code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_hc_tasks()</a></code>) when you only need one table.</p>
 </section><section class="level2"><h2 id="stage-4-run-the-baseline-loop">Stage 4: run the baseline loop<a class="anchor" aria-label="anchor" href="#stage-4-run-the-baseline-loop"></a>
 </h2>
 <p><code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> is the no-frills runner. It executes the three task tables in dependency order, threading each task’s result forward to its children by the foreign-key id. It runs <strong>in-process</strong>, with no <code>targets</code>, no shard grouping, and no Parquet I/O.</p>

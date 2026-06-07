@@ -114,7 +114,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/Rtmp7CTe6w/ssdsims-shards-3eb6f067a30
+#>   dir: /tmp/Rtmpxo5xxf/ssdsims-shards-3e4a6a3a3ab3
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -276,6 +276,6 @@ one that fits the run.
 - `TARGETS-DESIGN.md` §5 (tasks into shards), §6 (inter-shard linking,
   the Hive layout, the `targets` sketch).
 - [`?ssd_run_scenario_shards`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md),
-  [`?ssd_scenario_fit_shards`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_shards.md),
-  [`?ssd_run_fit_step`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_fit_step.md),
+  [`?ssd_scenario_fit_shards`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md),
+  [`?ssd_run_fit_step`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md),
   [`?ssd_summarize`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md).

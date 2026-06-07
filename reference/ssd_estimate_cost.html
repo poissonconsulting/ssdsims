@@ -53,7 +53,7 @@ plus a per-axis breakdown of which ci_method/nboot cells dominate."></head><body
     <div class="ref-description section level2">
     <p>Predicts, <em>before</em> a scenario is launched, roughly how much compute it costs
 and how long its single longest task runs. It expands the scenario into its hc
-task table read-only (via <code><a href="ssd_scenario_hc_tasks.html">ssd_scenario_hc_tasks()</a></code>, without running any fit or
+task table read-only (via <code><a href="ssd_scenario_tasks.html">ssd_scenario_hc_tasks()</a></code>, without running any fit or
 bootstrap), applies the calibrated per-task cost model, and returns the
 ballpark serial <strong>total</strong> cost and the <strong>duration of the longest single task</strong>,
 plus a per-axis breakdown of which <code>ci_method</code>/<code>nboot</code> cells dominate.</p>

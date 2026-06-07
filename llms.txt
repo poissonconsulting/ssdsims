@@ -71,13 +71,10 @@ builds on, with a baseline loop runner.
 - [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   : Define a Simulation Scenario
 - [`ssd_scenario_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
-  : Expand a Scenario into all Three Task Tables
-- [`ssd_scenario_sample_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_tasks.md)
-  : Derive the sample Task Table from a Scenario
-- [`ssd_scenario_fit_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_tasks.md)
-  : Derive the fit Task Table from a Scenario
-- [`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_tasks.md)
-  : Derive the hc Task Table from a Scenario
+  [`ssd_scenario_sample_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
+  [`ssd_scenario_fit_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
+  [`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
+  : Expand a Scenario into Task Tables
 - [`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
   : Run a Scenario with the Baseline Loop Runner
 - [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
@@ -106,18 +103,14 @@ and fan in a summary - the building blocks of the static-branching
 `targets` pipeline (see the `inst/targets-templates/small/_targets.R`
 template).
 
-- [`ssd_scenario_sample_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_sample_shards.md)
-  : Group sample Tasks into Shards
-- [`ssd_scenario_fit_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_fit_shards.md)
-  : Group fit Tasks into Shards
-- [`ssd_scenario_hc_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_hc_shards.md)
-  : Group hc Tasks into Shards
-- [`ssd_run_sample_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_sample_step.md)
-  : Run a sample Shard
-- [`ssd_run_fit_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_fit_step.md)
-  : Run a fit Shard
-- [`ssd_run_hc_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_hc_step.md)
-  : Run an hc Shard
+- [`ssd_scenario_sample_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md)
+  [`ssd_scenario_fit_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md)
+  [`ssd_scenario_hc_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md)
+  : Group Tasks into Shards
+- [`ssd_run_sample_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md)
+  [`ssd_run_fit_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md)
+  [`ssd_run_hc_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md)
+  : Run a Step Shard
 - [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
   : Build the Targets Pipeline for a Scenario
 - [`ssd_summarize()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md)
