@@ -1318,9 +1318,14 @@ tar_make()
 branch’s error (and, under `error = "null"`, leaves the rest uploading);
 the local shard remains, so
 [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-can be re-driven and only the failed uploads retried. The scenario’s
-manifest records, per shard, the local sha256 and the cloud sha256; a
-mismatch flags a corrupted transfer.
+can be re-driven and only the failed uploads retried. Each shard’s
+`meta.json` sidecar (the manifest’s per-shard sha256 record, §8.5) is
+uploaded **alongside** its Parquet, so the trusted-as-produced sha256
+travels with the data; a downloaded copy is verified by re-hashing it
+against that recorded sha256, and a mismatch flags a corrupted transfer.
+The manifest itself carries no separate cloud-copy sha256 — under a
+faithful byte copy it would equal the recorded sha256, so `cloud-upload`
+needs nothing added to the manifest (the two are decoupled).
 
 ### 6.2 Surviving a failed shard
 
@@ -1800,13 +1805,74 @@ Per-scenario manifest (a small JSON sidecar to the results directory):
 - `fit`, `hc` — the argument-vector grids.
 - `partition_by` — the per-shard path axes (§5).
 - `completed_shards` — set of shard partition paths whose Parquet exists
-  and is trusted, with each shard’s sha256 (recorded at write time,
-  including the cloud copy’s sha256 if `upload` is set; see §6.1, §7).
+  and is trusted, with each shard’s sha256 (the trusted-as-produced
+  value, recorded at write time in a per-shard `meta.json` sidecar; see
+  §6.1, §7). No separate cloud-copy sha256: the sidecar is uploaded with
+  the shard and a download is verified by re-hashing against this sha256
+  (§6.1).
 - `r_version`, `dqrng_version`, `ssdtools_version` — versions pinned for
   bit-stability across re-runs (§9).
 
 Restart property for dqrng (same `(seed, state)` ⇒ same draw sequence)
 is verified by `scripts/experiment-dqrng-hash.R`.
+
+### 8.6 The incremental loop — run, assemble, expand, re-assemble
+
+The pieces above compose into one repeatable cycle: **run a scenario,
+assemble, expand the scenario, run only the missing pieces, assemble
+again** — with no redundant recomputation. It works because every step
+is a pure function of the *current* state, never an accumulation of
+edits:
+
+1.  **Run.**
+    [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+    writes one Parquet per shard under the scenario’s layout root (§5).
+    Path-axis growth and inner-axis rewrite (§8.1–§8.2) are exactly the
+    rules that decide which shards a *later* run rebuilds.
+2.  **Assemble.**
+    [`ssd_assemble_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_assemble_manifest.md)
+    walks the results tree and rebuilds `completed_shards` from whatever
+    Parquets exist (§8.5), preferring each shard’s `meta.json` sidecar
+    and hashing the rest. It reads the manifest head left by
+    [`ssd_write_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_write_manifest.md)
+    and replaces only the tail.
+3.  **Expand.** Edit the scenario object — append a dataset, grow
+    `nsim`, add a `min_pmix`, widen `nrow` — and re-source `_targets.R`.
+    The shard set is re-derived from the expanded scenario at sourcing
+    time (§6 static branching).
+4.  **Run the missing pieces.**
+    [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+    again. Path-axis growth mints and builds *only* the new shards and
+    skips the rest (cache-by- existence, §8.1); inner-axis growth
+    atomically rewrites *only* the affected shards (§8.2). Nothing else
+    recomputes.
+5.  **Assemble again.**
+    [`ssd_assemble_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_assemble_manifest.md)
+    re-walks the tree. Because it rebuilds the tail from disk every
+    call, the second assembly is **idempotent and monotone under
+    growth**: the new shards appear, the untouched ones keep their
+    (byte-identical) entries, and the result is their union — no merge
+    bookkeeping, no stale entries to prune.
+
+**Two ordering facts make the loop safe.**
+
+- *Write the head before you assemble.* The head is a pure function of
+  the scenario (§8.5), and
+  [`ssd_write_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_write_manifest.md)
+  rewrites the *whole* file with the head alone — it does not preserve a
+  previous tail. So after an **expansion** the head must be re-written
+  from the *expanded* scenario (otherwise it still describes the smaller
+  grid), and the assemble must follow it to rebuild the tail from disk.
+  The runner’s contract is therefore *write-head-then-assemble-tail* on
+  every (re-)run: the head always matches the current scenario, the tail
+  always matches the shards on disk, and the two cannot drift across
+  runs (the within-run case is §6 static branching).
+- *Growth keeps the layout root; re-layout starts a fresh tree.* The
+  results root is keyed by `partition_by` (`layout=<hash>`, §5), so
+  growing along existing axes accretes into the *same* tree and reuses
+  its cache and manifest. Changing `partition_by` itself is not growth —
+  it mints a new layout root with its own (initially empty) manifest,
+  leaving the old tree intact rather than migrating it.
 
 ------------------------------------------------------------------------
 
@@ -2071,12 +2137,17 @@ validated behaviour into the package, not discovering it.
   shards’ existence (`completed_shards`), never the reverse — the
   `task-tables` runner reads nothing from it. The `completed_shards`
   assembler hashes the shards on disk; recording each shard’s sha256 *at
-  write time* (and the cloud copy’s sha256) is the trusted-as-produced
-  enhancement wired in by the consumers that need it (`replay-helper`,
-  `cloud-upload`), not by the happy-path pipeline. Land it before its
-  first consumer (`replay-helper` / `shard-completeness-assert`), and
-  operationally before the first expensive cluster run whose results you
-  intend to trust/reproduce; it does not gate `task-tables`.
+  write time* (in a per-shard `meta.json` sidecar) is the
+  trusted-as-produced enhancement wired in by the consumers that need it
+  (`replay-helper`, `cloud-upload`), not by the happy-path pipeline. It
+  records **one** trusted sha256 per shard and nothing cloud-specific,
+  so `manifest` and `cloud-upload` are **decoupled**: `cloud-upload`
+  uploads the sidecar with the shard and verifies a download by
+  re-hashing against that sha256, needing nothing added to the manifest.
+  Land it before its first consumer (`replay-helper` /
+  `shard-completeness-assert`), and operationally before the first
+  expensive cluster run whose results you intend to trust/reproduce; it
+  does not gate `task-tables`.
 - **`shard-failure-survival`** — §6.2 — the shard body writes as many
   rows as ran successfully (a bad task yields a shorter shard, not an
   abort); the step target carries `error = "null"` only for the
@@ -2583,8 +2654,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate proposed
-    class cluster done
+    class inputs,postcheck,migrate proposed
+    class manif,cluster done
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
