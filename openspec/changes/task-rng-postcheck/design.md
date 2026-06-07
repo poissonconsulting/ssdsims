@@ -47,14 +47,28 @@ The witness consumes one draw. Rather than rely on "a draw at task end is harmle
 
 A failed witness means the task's draws did **not** come from dqrng — the result is silently wrong. That is a correctness violation, so it aborts via `chk::abort_chk(..., call = ...)`, exactly like `chk_dqrng_backend_active()` did on entry, reporting in the user-facing frame (AGENTS.md error-origin rule). A warning that lets the run finish would let corrupted results flow into the summary — the opposite of what the check is for. In a `targets` run each shard is its own process, so an abort fails *that* shard (recoverable via `error = "null"` / `shard-failure-survival`) without poisoning the others.
 
-### Decision: bracket the task body — witness on entry *and* exit
+### Decision: bracket the task body — both brackets inside `local_dqrng_state()`
 
-`primer-primitives` (landed) centralises "install the primer once, then run the op" in the three `*_data_task_primer()` wrappers (`R/task-lists.R`) — the exact per-task bodies, and the same entry point `targets` shards and the §7 replay helper reuse. The integrity assertion belongs there:
+Both the entry precondition and the exit postcondition live in **one** function, `local_dqrng_state()` (`R/dqrng-state.R`), not scattered across the three `*_data_task_primer()` wrappers. `local_dqrng_state()` is the per-task seeding step every RNG-consuming body already goes through, and it is already a withr-style wrapper that `withr::defer()`s a `set_dqrng_state(old)` restore onto the task frame — so the exit bracket rides that existing machinery with no new call sites and no wrapper edits:
 
-- **Exit** — call `chk_dqrng_backend_intact()` after the op returns, before the wrapper returns, so it covers every path that draws without each caller re-implementing it.
-- **Entry** — upgrade `local_dqrng_state()`'s guard from `chk_dqrng_backend_active()` (cheap `RNGkind()` probe) to `chk_dqrng_backend_intact()` (the full witness), so a task refuses to *start* on a foreign-hijacked or torn-down backend rather than discovering the corruption only at exit. The witness is intact ⟹ user-supplied (a state advance proves dqrng served the draw), so it strictly subsumes the old probe at this site; it runs before `dqset.seed()`, which overwrites the state, so the entry witness leaves the seed untouched. This resolves the prior open question (the entry-side upgrade) in the affirmative; the witness is cheap enough (two `dqrng_get_state()`, one `runif(1)`, one `dqrng_set_state()`) that running it once per task on entry is negligible.
+- **Entry** — upgrade `local_dqrng_state()`'s guard from `chk_dqrng_backend_active()` (cheap `RNGkind()` probe) to `chk_dqrng_backend_intact()` (the full witness), so a task refuses to *start* on a foreign-hijacked or torn-down backend rather than discovering the corruption only at exit. Intact ⟹ user-supplied (a state advance proves dqrng served the draw), so it strictly subsumes the old probe at this site; it runs before `dqset.seed()`, which overwrites the state, so the entry witness leaves the seed untouched.
+- **Exit** — add a second `withr::defer(...)` onto the same `.local_envir`, so the witness fires when the task frame unwinds. It is gated to the **success path** so a failing task body's own error is never masked by a witness abort during unwinding (see the next decision). The three wrappers and `with_dqrng_state()` are unchanged.
 
-`local_dqrng_state()` (entry witness) and the wrapper's exit `chk_dqrng_backend_intact()` become the matching brackets around the body. *Alternative considered:* a single check at the end of `ssd_run_scenario_baseline()` — rejected; it would not localise *which* task corrupted the backend, and would miss the per-shard/per-process granularity that is the whole point in the cluster path. *Alternative considered:* keep the cheap probe on entry and only add the witness on exit — rejected; a hijack present *before* the task starts should fail the task at entry, not after wasting the body's work.
+This resolves the prior open question (the entry-side upgrade) in the affirmative, and chooses `local_dqrng_state()` over the wrappers because it is per-task (so it still localises *which* task corrupted the backend, including per-shard/per-process in the cluster path) yet collapses four edit sites (entry + three wrappers) into one, co-located with the seeding. The witness is cheap enough (two `dqrng_get_state()`, one `runif(1)`, one `dqrng_set_state()`) that running it on entry and on exit per task is negligible. *Alternatives considered:* (a) a single check at the end of `ssd_run_scenario_baseline()` — rejected; it would not localise the offending task and would miss per-shard granularity; (b) an explicit exit call in each of the three wrappers — rejected; three duplicated call sites for what the existing `local_dqrng_state()` defer already provides; (c) placing the bracket on `local_dqrng_backend()` — rejected; that scope is per-scenario, so in the in-process baseline path it would not catch which task tore the backend down.
+
+### Decision: gate the deferred exit witness to the success path via `returnValue()`
+
+`withr::defer` fires on *every* frame exit, including error unwinding — so a naive deferred witness would also run when the task body throws, and if the backend were also corrupt the witness's `abort_chk` would replace (mask) the task's original error. To avoid that without reintroducing a per-wrapper success flag, the deferred witness is gated on `base::returnValue()`:
+
+```r
+sentinel <- new.env()  # per-call unique; a task body cannot reproduce it
+withr::defer(
+  if (!identical(returnValue(sentinel), sentinel)) chk_dqrng_backend_intact(),
+  envir = .local_envir
+)
+```
+
+`returnValue(default)` returns the frame's return value on a normal exit and `default` on an error / non-local exit; with a private `new.env()` sentinel (compared by reference via `identical()`, so no real return value can collide) the witness runs **only** on the happy path. Verified through `withr::defer` registered on the caller's frame (R 4.5.3 / withr 3.0.2): normal return → witness runs; `stop()` in the body → witness skipped, original error propagates. This keeps the postcondition's real job — catching silently-wrong *successful* results — while leaving genuine task failures to surface their own cause. *Alternatives considered:* (a) fire on every exit and accept occasional error-masking — rejected; the `returnValue()` gate removes the downside at the cost of one `new.env()` + one `identical()`; (b) a success flag set by each wrapper — rejected; it would push wiring back into the three wrappers, defeating the single-site placement.
 
 ### Decision: name the culprit in the abort message
 
@@ -92,11 +106,11 @@ The witness helper and the per-task brackets are a self-contained robustness lay
 Internal only — no dependency change and no caller-visible behavioural change:
 
 - Add `chk_dqrng_backend_intact()` and the diagnostic helpers (`rng_slot_owner()`, `user_rng_providers()`) to `R/dqrng-backend.R`.
-- Upgrade `local_dqrng_state()`'s entry guard from `chk_dqrng_backend_active()` to `chk_dqrng_backend_intact()`; add the exit `chk_dqrng_backend_intact()` to the three `*_data_task_primer()` wrappers.
+- In `R/dqrng-state.R`: upgrade `local_dqrng_state()`'s entry guard from `chk_dqrng_backend_active()` to `chk_dqrng_backend_intact()`, and add the `returnValue()`-gated deferred exit witness alongside the existing state-restore defer. The three `*_data_task_primer()` wrappers are **unchanged**.
 - Retain `dqrng_backend_active()` / `chk_dqrng_backend_active()` as `local_dqrng_backend()`'s reentrancy no-op gate.
 - `dqrng` stays in `Imports`; examples / vignettes / scaffolds / tests are **unchanged** (no `@examplesIf`, no added `library(dqrng)`), since dqrng is still auto-loaded.
 
-Reverting means removing the new functions, reverting the entry guard to `chk_dqrng_backend_active()`, and removing the exit calls.
+Reverting means removing the new functions and reverting `local_dqrng_state()` (entry guard back to `chk_dqrng_backend_active()`, drop the exit defer).
 
 ## Open Questions
 
