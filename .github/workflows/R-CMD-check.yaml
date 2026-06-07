@@ -12,13 +12,10 @@ on:
       - release
       - next
       - cran-*
-  # TEMPORARY: pull_request trigger disabled so the smoke test does not run on
-  # PRs while we iterate on a Windows-only failure (see windows-check.yaml).
-  # Restore before merge.
-  # pull_request:
-  #   branches:
-  #     - main
-  #     - master
+  pull_request:
+    branches:
+      - main
+      - master
   workflow_dispatch:
     inputs:
       ref:
