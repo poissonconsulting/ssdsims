@@ -39,3 +39,4 @@ ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", strrep("a", 64))
 \seealso{
 \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}}, \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}.
 }
+\keyword{internal}

@@ -2053,274 +2053,29 @@ restored on exit, not process-global).
 
 ## 12. Roadmap
 
-In-place, step-by-step implementation. Each bullet is identified by
-a kebab-case slug and lands as a coherent working state. ssdsims
-has no downstream dependencies, so breaking-change steps are fine.
-**Parallel work streams are preferred** — the dependency DAG below
-shows where branches open and close.
+This section is the **landed-work record and dependency graph** for the in-place,
+step-by-step implementation. Each step is a kebab-case slug that lands as a
+coherent working state; ssdsims has no downstream dependencies, so
+breaking-change steps are fine, and **parallel work streams are preferred** —
+the dependency DAG below shows where branches open and close.
 
-The bullets below are the **pending** steps (the dependency-ordered
-backlog, then the independent `### Cleanup` tidy-ups). Steps that have
-landed and been archived are collected under `### Archived`, and the
-dependency DAG colours every node by status (green = archived).
+The **forward-looking backlog** (the not-yet-landed steps, their priorities, and
+the independent tidy-ups) now lives in [`ROADMAP.md`](ROADMAP.md), in the
+`initiative`-template `Now` / `Next` / `Later` / `Bluesky` style. This section
+retains the steps that have **landed and been archived** (`### Archived`, in the
+dependency order they were implemented) and the dependency DAG, which still
+shows the not-yet-landed nodes so the shape of the remaining work stays visible.
+Keep the two in step: when a change lands, move its DAG node to green (and into
+`archived_box`), add its `### Archived` bullet here, and move its `ROADMAP.md`
+line to `## Done`.
 
-**De-risked by the labs.** The targets-mechanics steps —
-`shard-failure-survival`, `hive-partitioning`, `cloud-upload`,
-`mixed-code-lockin`, and the `format = "file"` choice underneath them —
-each have a working single-behaviour spike in the project's targets
-lab, and `cluster-pipeline` ports a crew + SLURM shape the crew labs
-already ran end to end (see §4, §6). These steps are therefore
-*porting* validated behaviour into the package, not discovering it.
-
-- **`scenario-input-types`** — Extend `ssd_define_scenario()` to accept
-  the remaining input types `ssd_run_scenario()` handles today —
-  `fitdists`, `tmbfit`, a generator function, and a function-name string —
-  not just data frames / lists of data frames. Each non-data-frame input
-  is a data *generator*, **materialised once in the constructor** to an
-  inline tibble (datasets are tiny; the scenario transports the realised
-  bytes). Generation is seeded **independently of the scenario** by a
-  dedicated `ssd_data(..., .seed = NULL)`, with the dataset *name* as the
-  dqrng stream, under a dqrng-only contract enforced by a post-hoc
-  RNG-state check (base R aborts; dqrng needs `.seed`; pure needs none);
-  the scoped run leaves global `.Random.seed` unchanged. **Depends on**
-  `task-primer` / `local-dqrng-state` (for the scoped, name-streamed
-  draw). Name-only regeneration and provenance are the deferred
-  `dataset-provenance` step.
-- **`task-rng-postcheck`** — Per-task RNG-backend **postcondition**.
-  Each `*_data_task_primer()` wrapper, when the task *ends*, verifies
-  that dqrng (not merely *some* user-supplied RNG) still held base R's
-  `user_unif_rand` slot for the whole body, via a non-destructive
-  state-advance witness (`dqrng_get_state()` → base draw →
-  `dqrng_get_state()` → `dqrng_set_state()` restore); a frozen state
-  means a foreign RNG hijacked the slot, so it **aborts** (chk-style),
-  symmetric with the `local_dqrng_state()` entry guard. Closes the gap
-  that the `RNGkind()` probe (`dqrng_backend_active()`) is satisfied by a
-  *foreign* user-supplied RNG: a second user-RNG package (e.g.
-  `randtoolbox`) loaded in the session takes the single global slot while
-  `RNGkind()[1]` still reads `"user-supplied"`. Validated (and the threat
-  reproduced, dqrng vs `randtoolbox`) in
-  `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/`.
-  Rides inside the per-task primitives, so it carries into the `targets`
-  shard body and §7 `replay-helper` — each shard self-verifies in its own
-  process. Depends on `primer-primitives` (**landed**) — so it is
-  unblocked — and is orthogonal to `task-primer`.
-- **`migrate-public-api`** — *Cosmetic, independent of the targets
-  work (like `error-call-origin`).* Migrate `ssd_sim_data.data.frame`,
-  `ssd_fit_dists_sims`, `ssd_hc_sims` to the new contract; keep the
-  `_seed` wrappers as a one-release shim. `example-expanded*.R`
-  re-runs with byte-equivalence across **every** input form, so it
-  **depends on** `scenario-input-types` (the full input surface must
-  exist before the public-API re-run can exercise it) and on
-  `primer-primitives` (the contract it reuses). None of the targets-only
-  plumbing (`scenario-accessors`, `manifest`, `task-tables`, …) waits on
-  it, but it **gates `cleanup-lecuyer`**: the L'Ecuyer-CMRG helpers and
-  `_seed` shims cannot be removed until the public step functions stop
-  calling them. The DAG shows the solid `scenario-input-types →
-  migrate-public-api` and `primer-primitives → migrate-public-api`
-  prereqs and the `migrate-public-api → cleanup-lecuyer` dependant.
-- **`manifest`** — Per-scenario manifest writer/reader with the
-  §8.5 field set (the head records **complete session info**, not just
-  the three named version pins). **Not on the `task-tables` critical
-  path**: the manifest is provenance/verification metadata *about* the
-  pipeline's outputs, so it depends on the scenario (head) and on the
-  shards' existence (`completed_shards`), never the reverse — the
-  `task-tables` runner reads nothing from it. The `completed_shards`
-  assembler hashes the shards on disk; recording each shard's sha256
-  *at write time* (in a per-shard `meta.json` sidecar) is the
-  trusted-as-produced enhancement wired in by the consumers that need
-  it (`replay-helper`, `cloud-upload`), not by the happy-path pipeline.
-  It records **one** trusted sha256 per shard and nothing cloud-specific,
-  so `manifest` and `cloud-upload` are **decoupled**: `cloud-upload`
-  uploads the sidecar with the shard and verifies a download by
-  re-hashing against that sha256, needing nothing added to the manifest.
-  Land it before its first consumer (`replay-helper` /
-  `shard-completeness-assert`), and operationally before the first
-  expensive cluster run whose results you intend to trust/reproduce;
-  it does not gate `task-tables`.
-- **`shard-failure-survival`** — §6.2 — the shard body writes as many
-  rows as ran successfully (a bad task yields a shorter shard, not an
-  abort); the step target carries `error = "null"` only for the
-  exceptional whole-shard case, and `summary` unions the survivors; the
-  runner muffles only the expected end-of-pipeline "errored" warning
-  under `options(warn = 2)`. Test: a deterministically-failing task
-  leaves a shorter shard and the other shards built; a deterministically
-  -failing whole shard leaves the others built and the error readable
-  via `tar_meta()` after the run.
-- **`shard-completeness-assert`** — §6.2 / §8.4 — a downstream
-  `assert_<step>` target per shard (sibling to `upload_<step>`) reads
-  the shard's row count from the Parquet footer and compares it to the
-  expected count derived from the task table; errors (red) on any
-  shortfall, itself under `error = "null"` so it does not abort the
-  build. The runner reads the red asserts to drive the §8.4
-  fix-and-refresh loop (`tar_invalidate()` the short shards, re-make).
-  Test: a short shard turns its assert red and a full shard leaves it
-  green; the runner's two-pass loop refreshes exactly the short shards
-  through a §8.3 pin. Depends on `task-tables` (for the expected count);
-  pairs with `cloud-upload` (same sibling-target shape) and `manifest`
-  (records expected-vs-actual per shard).
-- **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
-  `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
-  on a real (or sandboxed) Slurm queue.
-- **`cloud-upload`** — §6.1 — typed, self-validating destination objects
-  (`ssd_upload_azure(url, container)`, `ssd_upload_dryrun()`; class
-  `ssdsims_upload`) dispatched by three generics — `ssd_upload_shard()`
-  (ships one shard), `ssd_test_upload()` (the front-door
-  creds/connectivity probe), and construction-time validation. The
-  destination is a **runner argument**, the sibling of `root` on
-  `ssd_scenario_targets(scenario, ..., root, upload, cue)` (with
-  `rlang::check_dots_empty()` forcing named args), **not** a `scenario`
-  field — so it is dropped from `ssd_define_scenario()` and the
-  `ssdsims_scenario` object (both **BREAKING**). Fail-loud: Azure with
-  absent credentials **errors** (no silent no-op); intent to skip the
-  network is expressed only by `ssd_upload_dryrun()`. Both `upload = NULL`
-  (no `upload_<step>` nodes) and `ssd_upload_dryrun()` (no-op nodes,
-  exercised offline/in CI) are supported. Per-shard `upload_<step>` target
-  (`format = "file"`, `error = "null"`), content-hashed so a second
-  `tar_make()` with no shard changes uploads nothing; the cloud sha256 is
-  recorded in the `manifest`. The `ssd_test_upload()` probe is
-  `tar_make()`'s first target; the hello-Azure round trip runs from
-  interactive R, and `ssd_open_uploaded(upload, step)` reads the uploaded
-  shards back **in place** via DuckDB's `azure` extension (no download) for an
-  immediate round-trip check. **Departs from the original §6.1 sketch** (silent
-  dry-run on absent creds → now a loud error) and **moves `upload` off the
-  scenario**. **Implemented** (the `cloud-upload` change): `R/upload.R` (the
-  constructors and four generics), `upload` wired into `ssd_scenario_targets()`,
-  `upload` removed from `ssd_define_scenario()`/`ssdsims_scenario` (BREAKING),
-  the `vignettes/cloud-upload.qmd` vignette, and `AzureStor`/`AzureRMR` added to
-  `Suggests`.
-- **`replay-helper`** — `ssd_replay_task()` (§7) and
-  `ssd_input_hash()` for the lightweight recipe. Tests simulate a
-  branch failure and reproduce locally.
-- **`mixed-code-lockin`** — §8.3 — `tar_cue(depend = FALSE)` on the
-  step targets to pin shards against a code change (in-project, no
-  child project); `tar_invalidate()` / `unlink()` for forced re-runs
-  of the chosen shards (§8.4). Both recipes have tests.
-  `hive-partitioning` pinned the cue *semantics* — the
-  `ssd_scenario_targets(cue = )` argument, the "Pinning trusted shards"
-  roxygen, and the §8.3 carve-outs — and threaded the cue onto every
-  shard target; this change documents the **specifics** of
-  `tar_cue(depend = FALSE)` as a runnable recipe and locks them in with
-  *runtime* tests (the `hive-partitioning` verification found the pin
-  covered only structurally — the `cue` is set on the targets — but
-  never exercised through an actual `tar_make()`):
-  - **All-or-nothing at the factory.** The `cue` argument is applied
-    uniformly to every shard target across all three steps; the factory
-    exposes no per-shard cue. Document that pinning a *subset* is
-    expressed by pinning everything and then `tar_invalidate()`-ing the
-    handful to refresh (§8.4), not by a per-shard cue.
-  - **The carve-outs, asserted at runtime.** Drive a pipeline, set the
-    pin, edit a per-task primitive, and assert which shards rebuild: a
-    pinned shard whose `format = "file"` Parquet is missing, whose
-    task-table grouping changed (so path-axis/inner-axis growth still
-    apply under the pin), or that previously errored under
-    `error = "null"` SHALL still rebuild; an otherwise-trusted pinned
-    shard SHALL NOT.
-  - **The §8.4 fix-and-refresh loop.** `tar_invalidate()` / `unlink()`
-    overrides the pin for the chosen shards; the `assert_<step>`
-    red-target query names the short shards to refresh
-    (`shard-completeness-assert` supplies the asserts). Document the
-    two-pass `tar_make()` → read asserts → `tar_invalidate()` →
-    `tar_make()` recipe end to end.
-- **`cleanup-lecuyer`** — Remove the L'Ecuyer-CMRG helpers and the
-  `_seed` shims; `scripts/experiment-substream-restart.R` becomes
-  a historical reference. **Depends on `migrate-public-api`** (the public
-  step functions must be off the L'Ecuyer path first).
-- **`error-call-origin`** — *Cosmetic, independent of the rest.*
-  Audit every user-facing function so its validation errors report the
-  **calling function** as the origin (`Error in \`ssd_*()\`:`), never an
-  internal frame (`purrr::map()`, `lapply()`, a private helper). Thread
-  the public frame into validators (`chk::abort_chk(..., call = call)`
-  with `call = environment()`), and prefer plain loops over
-  `purrr::walk` / `chk::chk_all` where those wrappers would surface in the
-  error header. May need upstream `chk` changes (e.g. a `call`/`error_call`
-  argument on `chk_*()` so the origin can be set without hand-rolling each
-  check). Not on the dependency DAG — it can land at any time; the
-  `ssd-define-scenario` work already follows the convention (see the
-  repo `AGENTS.md` "Error origin" note).
-- **`dataset-provenance`** — *Independent, deferred until much later;
-  not on the dependency DAG.* The decoupling `scenario-input-types`
-  defers: stop transporting generated datasets inline and instead store
-  only the name + generator reference + `.seed`, regenerating the tibble
-  from that provenance (rather than carrying the bytes; cf. §1.1). Until a real dataset is large enough to make inline transport
-  heavy, the **generator code is the provenance** and the realised bytes
-  ride on the scenario; this step is the escape hatch, not a near-term
-  need. Tracking the *execution environment* (R / package versions) is
-  explicitly **out of scope** — the §9 manifest's version pins cover the
-  reproducibility contract.
-
-### Cleanup
-
-Independent tidy-ups with no dependants — each can land at any time and
-is **not** on the dependency DAG. Grown as review turns up small
-public-API or ergonomics gaps.
-
-- **`cleanup-as-ssd-data`** — Add a public `as_ssd_data()` that coerces
-  the already-named input forms (an `ssd_data()` collection passthrough, a
-  named list, or a single data frame with an explicit `name=`) into a
-  validated `ssd_data()` collection. The scenario's internal
-  `scenario_datasets()` does this coercion today, but it cannot simply
-  delegate to a public `as_ssd_data()` because the bare-data-frame and
-  unnamed-list forms derive names by **symbol capture**, which must happen
-  in the `ssd_define_scenario()` frame. Surfaced in PR #80.
-- **`tidyverse-rlang-alignment`** — Align the package's code with the
-  tidyverse design: prefer **rlang** over base-R idioms throughout, especially
-  metaprogramming — `rlang::expr()`/`!!`/`inject()`/`call2()`/`sym()`/`syms()`
-  in place of `bquote()`/`substitute()`/`quote()`/`as.call()`/`as.symbol()`,
-  `rlang::set_names()` for `names<-`, and `purrr` iteration over `*apply()`
-  where it reads more clearly. `ssd_scenario_targets()` (the `targets` factory)
-  was migrated to rlang when `hive-partitioning` landed; this item sweeps the
-  rest of `R/` (e.g. the L'Ecuyer/`do_call_seed()` helpers, `get0()`/`match.fun()`
-  name resolution, remaining `*apply()` loops) for the same convention, so new
-  and existing code read consistently. Surfaced in PR #101 review. Independent
-  tidy-up with no dependants; not on the dependency DAG.
-- **`canonical-call-sites`** — Sweep call sites of the public constructors so
-  arguments are passed in signature order. The first pass canonicalised every
-  `ssd_define_scenario()` call (R examples, tests, fixtures, scripts, vignettes,
-  and the shipped `inst/targets-templates/`) to lead with the required trio
-  `data, nsim, seed` before any `...` knob — `seed` is the scenario's RNG root,
-  not a grid axis or simulation setting, so it sits third rather than wedged
-  between knobs like `nrow`. The convention is recorded in `AGENTS.md` (Coding
-  rules) and `GLOSSARY.md` (the `seed` entry). This item revisits the remaining
-  constructors (`ssd_data()`, the `ssd_run_*`/`ssd_scenario_*` family) for the
-  same ordering. Independent tidy-up with no dependants; not on the dependency
-  DAG.
-
-- **`nrow-max-setting`** — Add an explicit `nrow_max` simulation setting (the
-  fixed shared-draw size, default a reasonably high `1000L`) replacing the
-  derived `n_max = max(scenario$nrow)`, and complete *Direction B* — a task row
-  carries only its identity. The effective per-dataset draw is
-  `min(nrow_max, nrow(data))` for `replace = FALSE` (a high default ⇒ the full
-  permutation) and `nrow_max` rows for `replace = TRUE`; because the draw size is
-  now fixed, extending `nrow` (within the draw size) never re-draws — the
-  `sample` shard stays cached and only new `nrow`-keyed `fit` shards mint,
-  retiring the §5 "widened `max(nrow)` re-draws the sample shard" churn. In the
-  same sweep the last two carried columns leave the task tables: `n_max` (the
-  draw size is now computed in the runner from `nrow_max` + the dataset) and `ci`
-  both move into the scenario slice, so every task row is purely
-  `task_axes(step)` + `<step>_id` + parent FK (+ the per-row `seed`/`primer` the
-  shard path already attaches). No primer/partition change (neither was ever in
-  `task_axes()`); pure storage/plumbing. **Breaking** pre-release: the realised
-  `sample` draw changes for a fixed seed (now `nrow_max`/full-permutation rows,
-  not `max(nrow)`), so downstream re-baselines; the §5 `head(., nrow)` prefix
-  property is preserved. Same "axis/row → setting" family as `scalar-ci-flag` /
-  `dists-simulation-setting` / `est-method-setting`. Independent tidy-up; not on
-  the dependency DAG.
-
-- **`dual-summary-outputs`** — Give the §6 fan-in a second, optional output.
-  `ssd_summarise()` keeps writing the compact `summary.parquet` (the
-  analysis-ready estimate table, `dists`/`samples` projected out at the DuckDB
-  level and never pulled into R) and gains a trailing `path_with_samples = NULL`: when
-  supplied it **also** writes a *full* hc union that **retains** the
-  `dists`/`samples` list-columns, via the same directory read kept lazy in DuckDB
-  (read glob → write Parquet) so the draws never materialise in R either.
-  `ssd_scenario_targets()` passes `path_with_samples = <root>/summary-samples.parquet`
-  **iff** `scenario$hc$samples` is `TRUE` (the case where the retained draws carry
-  information the compact summary cannot) and the `summary` target returns the
-  path vector so `targets` tracks both files; with `samples = FALSE` the pipeline
-  is unchanged. Additive and backward-compatible (`path_with_samples` defaults to `NULL`);
-  `task-shards` delta. Pairs with the cloud-upload `ssd_summarise_uploaded(...,
-  drop_samples =)` knob (the uploaded-read analogue). Independent tidy-up; not on
-  the dependency DAG.
+**De-risked by the labs.** The remaining targets-mechanics steps —
+`shard-failure-survival`, `mixed-code-lockin`, and the `format = "file"` choice
+underneath them — each have a working single-behaviour spike in the project's
+targets lab, and the now-landed `hive-partitioning`, `cloud-upload`, and
+`cluster-pipeline` ported a crew + SLURM shape the crew labs already ran end to
+end (see §4, §6). These steps are therefore *porting* validated behaviour into
+the package, not discovering it.
 
 ### Archived
 
@@ -2535,6 +2290,64 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   `exploration/`. Independent new capability; not on the dependency DAG (reads
   the archived `task-tables` expansion, no dependants).
 
+- **`manifest`** — Per-scenario manifest writer/reader/recorder/assembler
+  with the §8.5 field set (the head records **complete session info**, not just
+  the three named version pins); the recorder writes one per-shard `meta.json`
+  sidecar and the assembler unions them (hashing shards without one). **Not on
+  the `task-tables` critical path** — the runner reads nothing from it. Landed
+  in `R/manifest.R` (#114). **Subsequently un-exported** (kept internal, no live
+  consumer yet — the shard runner does not depend on it and its readers
+  `replay-helper` / `shard-completeness-assert` are not built): the four
+  functions are now `@keywords internal`, dropped from `NAMESPACE` and the
+  pkgdown reference; the code, tests, and `manifest` spec stay. See `ROADMAP.md`
+  *Decisions* and the `manifest-revival` task.
+- **`cluster-pipeline`** — Editable SLURM `crew.cluster` targets template
+  (`inst/targets-templates/cluster/`) reusing the `ssd_scenario_targets()`
+  factory and scenario shape verbatim from `large/`, with a standalone
+  connectivity + worker-prerequisite `preflight.R` (run before `tar_make()`),
+  shards as the unit of parallelism dispatched to SLURM jobs, and a
+  zero-to-running-job guide shipped as both the template `README.md` and the
+  `cluster-pipeline.qmd` vignette (#115). `crew.cluster` is in `Suggests`; a
+  scheduler-free test exercises the preflight probe and asserts the pipeline
+  graph stays clean. The **real-SLURM end-to-end run** (tasks 4.1/4.2) remains a
+  documented manual/lab step (the byte-identity comparison runs green
+  off-cluster via `large/`).
+- **`cloud-upload`** — §6.1 — typed, self-validating destination objects
+  (`ssd_upload_azure(url, container, ..., prefix, domain)`, `ssd_upload_dryrun()`;
+  class `ssdsims_upload`) dispatched by `ssd_upload_shard()` / `ssd_test_upload()`
+  / `ssd_open_uploaded()` / `ssd_summarise_uploaded()` generics. The destination
+  is a **runner argument**, the sibling of `root` on `ssd_scenario_targets(...,
+  upload, cue)` (with `rlang::check_dots_empty()` forcing named args), **not** a
+  `scenario` field (so it is dropped from `ssd_define_scenario()` and
+  `ssdsims_scenario` — both **BREAKING**). Fail-loud credentials (Azure with
+  absent creds errors; skip-the-network intent is expressed only by
+  `ssd_upload_dryrun()`); per-shard content-hashed `upload_<step>` targets
+  (`format = "file"`, `error = "null"`) recording the cloud sha256 in the
+  manifest; in-place read-back via DuckDB's `azure` extension (no download).
+  Landed as `R/upload.R`, the `upload` wiring in `ssd_scenario_targets()`, the
+  `cloud-upload.qmd` vignette, and `AzureStor`/`AzureRMR` in `Suggests`
+  (#114/#129).
+- **`dual-summary-outputs`** — Optional second `ssd_summarise()` output: a
+  trailing `path_with_samples = NULL` that, when supplied, **also** writes a
+  *full* hc union **retaining** the `dists`/`samples` list-columns (read lazily
+  in DuckDB, never materialised in R), alongside the unchanged compact
+  `summary.parquet`. `ssd_scenario_targets()` passes
+  `path_with_samples = <root>/summary-samples.parquet` **iff**
+  `scenario$hc$samples` is `TRUE`, and the `summary` target returns the path
+  vector so `targets` tracks both files; with `samples = FALSE` the pipeline is
+  unchanged. Additive and backward-compatible; `task-shards` delta. Independent
+  tidy-up; not on the dependency DAG (#140).
+- **`task-rng-postcheck`** — Per-task RNG-backend **postcondition**. Each
+  `*_data_task_primer()` wrapper, when the task *ends*, verifies that dqrng (not
+  merely *some* user-supplied RNG) still held base R's `user_unif_rand` slot for
+  the whole body, via a non-destructive state-advance witness; a frozen state
+  means a foreign RNG hijacked the slot, so it **aborts** (chk-style), symmetric
+  with the `local_dqrng_state()` entry guard. Closes the gap that the
+  `RNGkind()` probe is satisfied by a *foreign* user-supplied RNG. Depends on
+  `primer-primitives`; orthogonal to `task-primer`. *Treated as merged for the
+  2026-06-07 roadmap split; its change directory is not yet physically
+  archived (see `ROADMAP.md`).*
+
 ### Dependency DAG (parallel streams)
 
 Mermaid (renders inline on GitHub):
@@ -2559,16 +2372,16 @@ flowchart TD
         rewrite[shard-atomic-rewrite]
         pathgrow[path-axis-growth]
         manif[manifest]
+        cluster[cluster-pipeline]
+        cloud[cloud-upload]
+        postcheck[task-rng-postcheck]
     end
 
     inputs[scenario-input-types]
-    postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
 
-    cluster[cluster-pipeline]
     survive[shard-failure-survival]
     assert[shard-completeness-assert]
-    cloud[cloud-upload]
     replay[replay-helper]
     lockin[mixed-code-lockin]
     cleanup[cleanup-lecuyer]
@@ -2645,11 +2458,10 @@ flowchart TD
     classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow,manif archived
-    class inputs,postcheck,migrate proposed
-    class cluster,cloud done
-    class replay ready
-    class survive,assert,lockin,cleanup open
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow,manif,cluster,cloud,postcheck archived
+    class inputs,migrate proposed
+    class replay,survive,lockin ready
+    class assert,cleanup open
 ```
 
 **Node colours track each step's status** — green = archived, yellow = done
@@ -2661,150 +2473,25 @@ and **keep the archived (green) nodes collected inside the `archived_box`
 subgraph** — when a step is archived, move its node declaration into that box
 as well as giving it the `archived` class.
 
-**Status snapshot (2026-06-05).** Twelve changes carry artifacts;
-`hive-partitioning` and `step-scenario-slice` are now both **archived** (green —
-the content-hash model + per-child Option-3 edges, and the per-step/per-dataset
-scenario slice, all landed in `R/targets-runner.R`), and the remaining ten stay
-**proposed but unimplemented** (verified against the source tree, not just the
-task lists). The four original proposals:
-- `task-rng-postcheck` — `dqrng` is still in `Imports` (not `Suggests`); no
-  `dqrng_usable()`, no `chk_dqrng_backend_intact()`, no exit-bookend wiring.
-- `scenario-input-types` — `ssd_data()` still rejects non-data-frame input
-  and has no `.seed`; no `classify_input()`.
-- `migrate-public-api` — the three public step functions still seed via the
-  L'Ecuyer-CMRG lattice; only the prerequisite `*_data_task_primer()` wrappers
-  (from the archived `primer-primitives`) exist, so the change itself is
-  essentially un-started.
-- `manifest` — *(superseded by the 2026-06-07 addendum: now implemented in
-  `R/manifest.R` (#114), synced, and archived).*
+**Status snapshot (2026-06-07).** The dependency-DAG steps that have **landed
+and been archived** are green inside `archived_box`: the scenario/RNG/task-table
+foundation (`ssd-define-scenario` … `task-tables`), the shard machinery
+(`shard-runner-baseline`, `hive-partitioning`, `partition-by`), the three
+minimal-rebuild contracts (`step-scenario-slice`, `path-axis-growth`,
+`shard-atomic-rewrite`), the `manifest`, and now `cluster-pipeline`,
+`cloud-upload`, and `task-rng-postcheck` (the last treated as merged for this
+split). Off the DAG, the independent tidy-ups `scalar-ci-flag`,
+`blob-storage-format`, `dists-simulation-setting`, `est-method-setting`,
+`cost-estimation`, and `dual-summary-outputs` are likewise archived (prose
+bullets above, no Mermaid nodes).
 
-Eight further changes were proposed in this round (all `openspec validate
---strict`-clean):
-- `hive-partitioning` — **re-scoped** to the caching/invalidation half only
-  (pin the content-hash model, per-child Option-3 upstream edges, settle the
-  data-step fold); its storage/read half already landed in `task-shards` /
-  `shard-runner`, so it is not re-specified. Now **archived** (green): the
-  content-hash model and per-child edges are in `R/targets-runner.R`, so the
-  three minimal-rebuild contracts can finalise their cached-vs-rebuilt
-  assertions against it.
-- `shard-atomic-rewrite`, `path-axis-growth`, `step-scenario-slice` — the
-  three minimal-rebuild contracts (`task-shards` deltas); each **finalises its
-  cached-vs-rebuilt assertion against the invalidation model `hive-partitioning`
-  pins**, shown as the dotted `hive -.-> {rewrite, pathgrow, slice}` edges.
-  `step-scenario-slice` is now **archived** (green): besides the
-  per-step slice, it builds the `sample` slice **per dataset** (per shard), so
-  appending a dataset leaves the existing shards cached. That per-dataset slice
-  is precisely what makes `path-axis-growth`'s dataset-growth contract hold, so
-  `path-axis-growth` now **depends on** `step-scenario-slice` (the solid
-  `slice --> pathgrow` edge), not merely pairs with it.
-- `cluster-pipeline` — new `cluster-pipeline` capability (crew.cluster SLURM
-  template via the existing factory). **Now done (yellow):** the minimal
-  `inst/targets-templates/cluster/` template ships four files — the controller in
-  one editable `controller.R` (`crew_controller_slurm()`), a clean `_targets.R`
-  (controller + inline scenario + factory, no probe target), a standalone
-  `preflight.R` connectivity + worker-prerequisite check (carrying the probe
-  body), and `run.R` — plus a "zero to a running cluster job" README. `run.R`
-  runs the preflight before `tar_make()` (so a wiring failure blocks the shards)
-  and aborts cleanly off-cluster (pointing at `large/` for local runs). A
-  scheduler-free test covers the preflight probe function and asserts the
-  pipeline graph stays clean; the shape is byte-identical to the `large/`
-  single-core oracle. The real-SLURM end-to-end run remains the documented
-  manual/lab step.
-- `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
-  (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta —
-  *since synced and archived; see the closing 2026-06-07 addendum*)
-  — the independent tidy-ups, kept **off** the dependency DAG per convention
-  (no prerequisites, no dependants).
-
-A later independent tidy-up, `scalar-ci-flag` (`scenario-definition` +
-`task-lists` + `hazard-concentrations` deltas), demotes `ci` to a scalar flag
-and retires the §1.2 collapse; also off the dependency DAG. It has since been
-**implemented, synced, and archived** — its deltas are folded into the three
-main specs and the change now lives in `openspec/changes/archive/`, so it
-appears under `### Archived` above rather than among the active changes.
-
-With `manifest` archived (#114, see the 2026-06-07 addendum), the verification
-layer it feeds is unblocked. `cloud-upload` has since been **implemented** (the
-`cloud-upload` capability plus `scenario-definition`/`task-shards` deltas): it
-moves the upload destination onto the runner (`ssd_scenario_targets(...,
-upload)`, the sibling of `root`) and replaces the original §6.1 silent dry-run
-with a fail-loud credential contract, and adds an in-place `ssd_open_uploaded()`
-read-back. It landed as `R/upload.R` (the typed constructors and four generics),
-the `upload` wiring in `ssd_scenario_targets()`, the BREAKING removal of
-`upload` from `ssd_define_scenario()`/`ssdsims_scenario`, the `cloud-upload.qmd`
-vignette, and `AzureStor`/`AzureRMR` in `Suggests` (it records the cloud sha256
-through the manifest).
-
-`replay-helper` is also unblocked (`task-tables` and `manifest` both archived)
-but carries no artifacts yet, so it moves to **ready** (blue) — ready to
-propose. The remaining open nodes stay blocked: `shard-failure-survival` on
-`cluster-pipeline`, `shard-completeness-assert` on both `manifest` and
-`shard-failure-survival`, `mixed-code-lockin` on `shard-atomic-rewrite`, and
-`cleanup-lecuyer` on `migrate-public-api` + `mixed-code-lockin`.
-(`dataset-provenance` remains roadmap-only, deliberately deferred.)
-
-`migrate-public-api` depends on `scenario-input-types` (its
-byte-equivalence re-run must exercise the full input surface) and on
-`primer-primitives` (the contract it reuses); no targets step waits on
-it, but it **gates `cleanup-lecuyer`** — the L'Ecuyer-CMRG helpers and
-`_seed` shims cannot be removed until the public step functions stop
-calling them.
-
-`shard-runner-baseline` sits off `primer-primitives` + `partition-by`,
-parallel to the `targets`-only plumbing: it proves the Hive
-write/read + m:n loop in plain R, then feeds `hive-partitioning`
-(which keeps the `targets`-integration + invalidation half). The
-`baseline → partby` edge is the previously-latent reuse dependency —
-`partition-by` reads `task_axes()`/`task_parent()` from
-`task-list-loop-baseline`.
-
-Three "wait points" (`primer-primitives`, `task-tables`,
-`mixed-code-lockin`) gate the layers in between; anything not
-chained by an arrow can be worked on in parallel.
-
-**Addendum (2026-06-07).** Three off-DAG changes have since been **synced and
-archived** (prose bullets now under `### Archived`, no Mermaid nodes, graph
-unchanged): `dists-simulation-setting` (the `dists` axis→setting reclassification
-and signature reorder), `est-method-setting` (the matching `est_method`
-reclassification — `scenario-definition` + `task-lists` + `hazard-concentrations`
-deltas, removing `est_method` from `task_axes("hc")`), and `cost-estimation` (a
-new, independent capability that reads the archived `task-tables` expansion). The
-two reclassifications grew out of the `ci = TRUE` performance investigation
-recorded in their `exploration/` scripts; their deltas are folded into the main
-specs and the GLOSSARY's forward-reference note is resolved. `cluster-pipeline`
-is **intentionally held back** (still active, done/yellow): its implementation and
-scheduler-free validation have landed, but the real-SLURM end-to-end run (tasks
-4.1/4.2 — see its `design.md` Risks) remains the documented manual/lab step, so
-the change is not archived until that runs.
-
-The off-DAG tidy-up `blob-storage-format` (`shard-runner` delta) has since been
-**synced and archived**. Its benchmark (`benchmark-blob-encoding.R`, preserved
-in the change's `exploration`) found that neither candidate cleared the swap
-gate — binary `serialize(ascii = FALSE)` as base64 text is ~1.5× larger on disk
-(the fit is mostly compact doubles and Parquet already compresses the `VARCHAR`),
-and `jsonlite::serializeJSON()` is not lossless on the embedded model fits — so
-the interim ASCII-`VARCHAR` `encode_obj()`/`decode_obj()` encoding is **kept** and
-the change instead tightens the `shard-runner` spec with the byte-identity,
-string-column, and projectable-blob contracts. It carried no Mermaid node
-(off the dependency DAG), so its bullet simply moves from `### Cleanup` to
-`### Archived`; the graph is unchanged.
-
-A further off-DAG tidy-up, `nrow-max-setting`, has since been **proposed** (prose
-bullet above, no Mermaid node): it adds the explicit `nrow_max` draw-size setting
-(default `1000L`, decoupling the draw from the `nrow` axis to retire the §5
-re-draw churn) and completes *Direction B* by moving the last two carried columns
-(`n_max`, `ci`) off the task tables into the scenario slice, so a task row carries
-only its identity. Same "axis/row → setting" family; it modifies
-`scenario-definition`, `task-lists`, `parallel-safe-seeding`,
-`scenario-accessors`, and `task-shards`, with no DAG prerequisites or dependants.
-
-`manifest` has since been **implemented (#114), synced, and archived** — the
-writer/reader/recorder/assembler live in `R/manifest.R` (with the shared
-`ssd_file_sha256()` in `R/utils.R`), `jsonlite`/`digest`/`sessioninfo` are in
-`Imports`, its delta spec is folded into the new `openspec/specs/manifest/`
-main spec, and the change now lives in `openspec/changes/archive/`. Its node
-is therefore **green (archived)** and moved into the `archived_box`. Because
-`task-tables` was already archived, this lands the last prerequisite for
-`cloud-upload` and `replay-helper`: `cloud-upload` has since been proposed
-(#122), so it is **proposed** (red); `replay-helper` has no artifacts yet, so
-it moves to **ready** (blue).
+With `cluster-pipeline` landed, `shard-failure-survival` is unblocked (blue —
+ready to propose); with `shard-atomic-rewrite` landed, `mixed-code-lockin` is
+ready (blue); `replay-helper` stays ready (its `task-tables` + `manifest`
+prereqs are archived). The still-blocked nodes: `scenario-input-types` and
+`migrate-public-api` carry artifacts but are unimplemented (red/proposed);
+`shard-completeness-assert` waits on `shard-failure-survival`, and
+`cleanup-lecuyer` waits on `migrate-public-api` + `mixed-code-lockin` (both
+open). The prose, priorities, and queue position for every not-yet-landed node
+live in [`ROADMAP.md`](ROADMAP.md); the DAG colours here are the single source
+of node *status*.

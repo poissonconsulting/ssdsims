@@ -38,3 +38,4 @@ ssd_assemble_manifest(dir)$completed_shards
 \seealso{
 \code{\link[=ssd_record_shard]{ssd_record_shard()}}, \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}.
 }
+\keyword{internal}

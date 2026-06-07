@@ -20,7 +20,8 @@ ssdsims/
 
 ## Key Design Documents
 
-- **TARGETS-DESIGN.md** — Forward-looking design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. This is the north star for the roadmap.
+- **TARGETS-DESIGN.md** — Forward-looking design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. §12 holds the dependency DAG and the landed-step record; it is the north star for the design.
+- **ROADMAP.md** — The actionable roadmap: the `Now`/`Next`/`Later`/`Bluesky` backlog and the `Done` shipped log (`initiative`-template style), keyed by OpenSpec `[change]` identifiers.
 - **RNG-FLOW.md** — RNG design rationale and gaps closed by TARGETS-DESIGN.
 - **GLOSSARY.md** — Terminology (seed vs. state vs. primer vs. stream).
 
@@ -159,9 +160,12 @@ The package uses OpenSpec for spec-driven development (see `.claude/` and `.gith
 - **`/opsx:archive <change-name>`** — Finalize a completed change.
 
 > **Every lifecycle action (propose / apply / sync / archive) must update the
-> `TARGETS-DESIGN.md` §12 roadmap in the same change-set** — the generic skills
-> will not. `openspec/AGENTS.md` is the authority for that rule (node colours,
-> the `archived_box`, the per-action checklist) and for the change/spec layout.
+> roadmap in the same change-set** — the generic skills will not. The roadmap
+> spans two files: [`ROADMAP.md`](ROADMAP.md) (the `Now`/`Next`/`Later`/
+> `Bluesky`/`Done` backlog + shipped log) and `TARGETS-DESIGN.md` §12 (the
+> dependency DAG + `### Archived` prose for landed steps). `openspec/AGENTS.md`
+> is the authority for that rule (node colours, the `archived_box`, the
+> per-action checklist) and for the change/spec layout.
 
 Active changes live in `openspec/changes/<name>/`; the current capability specs
 live in `openspec/specs/` — that directory is the authoritative list.
@@ -232,7 +236,7 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 - **Static branching** (default) — `tar_map()` mints one named target per shard at sourcing time.
 - **Dynamic branching** (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.
 
-The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged. **Keep its Mermaid graph current as part of each change** — see `openspec/AGENTS.md` for the node-colour and `archived_box` rules.
+The roadmap lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged. The forward-looking backlog lives in [`ROADMAP.md`](ROADMAP.md); `TARGETS-DESIGN.md` §12 keeps the dependency DAG and the landed-step (`### Archived`) record. **Keep both current as part of each change** — see `openspec/AGENTS.md` for the node-colour and `archived_box` rules.
 
 ## Contact & Contribution
 

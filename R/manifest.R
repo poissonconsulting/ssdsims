@@ -40,7 +40,7 @@
 #' @return The path to the written `manifest.json`, invisibly.
 #' @seealso [ssd_read_manifest()], [ssd_record_shard()],
 #'   [ssd_assemble_manifest()].
-#' @export
+#' @keywords internal
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 #' dir <- withr::local_tempdir()
@@ -72,7 +72,7 @@ ssd_write_manifest <- function(scenario, dir) {
 #' @return The manifest as an R list, with the scalar/vector knob types of the
 #'   written scenario restored.
 #' @seealso [ssd_write_manifest()].
-#' @export
+#' @keywords internal
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 #' dir <- withr::local_tempdir()
@@ -118,7 +118,7 @@ ssd_read_manifest <- function(dir) {
 #'   `ssd_file_sha256()` internal).
 #' @return The path to the written sidecar, invisibly.
 #' @seealso [ssd_assemble_manifest()], [ssd_write_manifest()].
-#' @export
+#' @keywords internal
 #' @examples
 #' dir <- withr::local_tempdir()
 #' ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", strrep("a", 64))
@@ -152,7 +152,7 @@ ssd_record_shard <- function(dir, partition_key, sha256) {
 #' @return The merged manifest (head plus `completed_shards`) as an R list,
 #'   invisibly.
 #' @seealso [ssd_record_shard()], [ssd_write_manifest()].
-#' @export
+#' @keywords internal
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 #' dir <- withr::local_tempdir()

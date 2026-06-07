@@ -31,3 +31,4 @@ manifest$partition_by
 \seealso{
 \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}.
 }
+\keyword{internal}

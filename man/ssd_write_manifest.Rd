@@ -45,3 +45,4 @@ ssd_read_manifest(dir)$seed
 \code{\link[=ssd_read_manifest]{ssd_read_manifest()}}, \code{\link[=ssd_record_shard]{ssd_record_shard()}},
 \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}}.
 }
+\keyword{internal}
