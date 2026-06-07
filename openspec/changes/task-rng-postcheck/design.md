@@ -100,6 +100,7 @@ The witness helper and the per-task brackets are a self-contained robustness lay
 - **Does not catch the segfault hijack** (`case3`) → accepted and documented; that failure crashes the body's own draw first, and is prevented upstream by not registering at load and not co-loading user-RNG packages.
 - **`getNativeSymbolInfo()` / `getLoadedDLLs()` in the message helpers** → these are **exported, documented base R functions**, used widely on CRAN; they are *not* the C-level non-API entry points (e.g. `R_FindSymbol`) that the `R CMD check` "checking compiled code" NOTE concerns, so they raise no check note. A verification task confirms this rather than relying on the assumption.
 - **`dqrng` stays in `Imports`** → loading ssdsims still loads dqrng's `user_unif_rand` provider into the session (the status quo). Accepted: avoiding it does not prevent collisions (base R last-loaded-wins), and the runtime witness is what protects correctness.
+- **The deferred exit witness fires only on a normal *closure* return** → `returnValue()` reports a return value for a function call, not for an `eval()` / `local()` frame, so the exit witness is skipped for an ad-hoc `local({...})` block (the entry witness and the state-restore defer still run there). Accepted, and in fact aligned with intent: every real task path is a closure — the three `*_data_task_primer()` wrappers and `with_dqrng_state()` — so the postcondition covers task execution; tests that exercise the exit bracket therefore use a closure, not `local({...})`.
 
 ## Migration Plan
 

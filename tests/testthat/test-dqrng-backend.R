@@ -104,3 +104,31 @@ test_that("dqrng-backend: scenario execution leaves base R RNG unchanged", {
   post <- runif(3)
   expect_identical(pre, post)
 })
+
+test_that("dqrng-backend: chk_dqrng_backend_intact is intact and non-destructive when dqrng holds the slot", {
+  local_dqrng_backend()
+  dqrng::dqset.seed(42L, stream = c(1L, 2L))
+
+  # Intact: dqrng is the bound generator, so the guard returns invisibly (NULL).
+  expect_null(chk_dqrng_backend_intact())
+
+  # Non-destructive: the witness advances dqrng's state then restores it, so a
+  # seeded draw sequence is byte-identical with and without an intervening call.
+  dqrng::dqset.seed(42L, stream = c(1L, 2L))
+  without_witness <- runif(3)
+  dqrng::dqset.seed(42L, stream = c(1L, 2L))
+  invisible(chk_dqrng_backend_intact())
+  with_witness <- runif(3)
+  expect_identical(without_witness, with_witness)
+})
+
+test_that("dqrng-backend: chk_dqrng_backend_intact aborts when the backend is torn down", {
+  # Tear base R's RNG down to a non-user-supplied generator (no foreign package
+  # needed): dqrng no longer serves the draw, so the witness aborts. The message
+  # reports the current RNGkind() and names no symbol owner (it would mislead --
+  # the symbol still resolves to a loaded DLL that is not serving RNG).
+  withr::defer(suppressWarnings(RNGkind("Mersenne-Twister")))
+  suppressWarnings(RNGkind("Mersenne-Twister"))
+  expect_false(identical(RNGkind()[1L], "user-supplied"))
+  expect_snapshot(error = TRUE, chk_dqrng_backend_intact())
+})

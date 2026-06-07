@@ -1,10 +1,10 @@
-# parallel-safe-seeding: local_dqrng_state aborts outside an active backend
+# parallel-safe-seeding: local_dqrng_state aborts on entry when the backend is not intact
 
     Code
       local_dqrng_state(42L, c(1L, 2L))
     Condition
       Error in `local_dqrng_state()`:
-      ! The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.
+      ! The dqrng backend is not intact: it was reset mid-task. Base R's RNG is now `Mersenne-Twister`, not dqrng's pcg64, so the task's draws did not come from dqrng.
 
 # parallel-safe-seeding: local_dqrng_state validation
 

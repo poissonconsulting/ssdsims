@@ -74,6 +74,102 @@ chk_dqrng_backend_active <- function(call = rlang::caller_call()) {
   invisible(NULL)
 }
 
+# Diagnostic: name the package that currently owns base R's `user_unif_rand`
+# slot. `getNativeSymbolInfo()` runs the same all-DLL `R_FindSymbol` search R's
+# `RNG_Init` uses, so the resolved DLL is the owner R would route `runif()`
+# through. Read the DLL name with `[["name"]]` -- a `DLLInfo`'s `$` is
+# overloaded to look up a *native symbol* of that name, so `$name` would try to
+# resolve a symbol called `name` and error. Returns `NA_character_` if the
+# symbol resolves nowhere (no user-supplied RNG provider is loaded). Lifted from
+# `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/case7-who-owns-rng.R`.
+rng_slot_owner <- function() {
+  info <- tryCatch(
+    getNativeSymbolInfo("user_unif_rand"),
+    error = function(e) NULL
+  )
+  if (is.null(info)) NA_character_ else info$dll[["name"]]
+}
+
+# Diagnostic: every loaded package that exports `user_unif_rand`, i.e. that
+# could take base R's single global user-supplied RNG slot (e.g. `dqrng`,
+# `randtoolbox`). Lists the offending co-load even when more than one is present.
+user_rng_providers <- function() {
+  providers <- character(0)
+  for (dll in getLoadedDLLs()) {
+    has_symbol <- tryCatch(
+      {
+        getNativeSymbolInfo("user_unif_rand", PACKAGE = dll)
+        TRUE
+      },
+      error = function(e) FALSE
+    )
+    if (isTRUE(has_symbol)) {
+      providers <- c(providers, dll[["name"]])
+    }
+  }
+  providers
+}
+
+# Assert that *dqrng specifically* holds base R's user-supplied RNG slot,
+# aborting otherwise. The companion to `chk_dqrng_backend_active()`, but
+# stronger: the cheap `RNGkind()` probe answers "is *a* user-supplied RNG
+# active" and so is fooled by a foreign user-supplied RNG that has taken the
+# single process-global `user_unif_rand` slot; this answers "is *dqrng* the
+# active one". `dqrng_backend_active()` / `chk_dqrng_backend_active()` stay the
+# cheap reentrancy gate for `local_dqrng_backend()`; this is the per-task
+# integrity assertion.
+#
+# The witness is dqrng's own state: a base-R `runif(1)` draw routes through the
+# `user_unif_rand` slot, so it advances dqrng's internal state iff dqrng is the
+# bound generator. The draw is rolled back via `dqrng_set_state()`, so the check
+# is non-destructive (consumes no net randomness). On failure it branches on
+# `RNGkind()[1]`: a torn-down backend reports the current `RNGkind()` and names
+# no owner (the symbol still resolves to a loaded DLL that is not serving RNG);
+# a foreign hijack names `rng_slot_owner()` and lists `user_rng_providers()`.
+#
+# See `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/`
+# (case5: the witness; case6: it catches a hijack the cheap probe misses; case7:
+# naming the owner; case8: the per-task entry/exit brackets). `call` defaults to
+# the calling frame so the error is reported in the context of the user-facing
+# function (AGENTS.md error-call-origin rule).
+chk_dqrng_backend_intact <- function(call = rlang::caller_call()) {
+  state_before <- dqrng::dqrng_get_state()
+  invisible(stats::runif(1L)) # base RNG -> whatever holds the user_unif_rand slot
+  state_after <- dqrng::dqrng_get_state()
+  dqrng::dqrng_set_state(state_before) # roll the witness draw back: non-destructive
+  if (!identical(state_before, state_after)) {
+    return(invisible(NULL)) # dqrng advanced -> dqrng is the bound generator
+  }
+  if (!identical(RNGkind()[1L], "user-supplied")) {
+    chk::abort_chk(
+      "The dqrng backend is not intact: it was reset mid-task. ",
+      "Base R's RNG is now `",
+      RNGkind()[1L],
+      "`, not dqrng's pcg64, so the task's draws did not come from dqrng.",
+      call = call
+    )
+  }
+  providers <- user_rng_providers()
+  providers_msg <- if (length(providers) > 0L) {
+    paste0(
+      " Loaded user-RNG providers: ",
+      paste0("`", providers, "`", collapse = ", "),
+      "."
+    )
+  } else {
+    ""
+  }
+  chk::abort_chk(
+    "The dqrng backend is not intact: a foreign user-supplied RNG holds base ",
+    "R's RNG slot, so the task's draws did not come from dqrng. The ",
+    "`user_unif_rand` slot is owned by `",
+    rng_slot_owner(),
+    "`.",
+    providers_msg,
+    call = call
+  )
+}
+
 #' Local dqrng pcg64 Backend
 #'
 #' Activates the dqrng `pcg64` RNG backend for the duration of the calling
