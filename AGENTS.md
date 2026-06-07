@@ -158,11 +158,14 @@ The package uses OpenSpec for spec-driven development (see `.claude/` and `.gith
 - **`/opsx:apply <change-name>`** — Implement tasks from a change.
 - **`/opsx:archive <change-name>`** — Finalize a completed change.
 
-> **Proposing a change includes updating the roadmap.** Whenever you create a
-> change (via `/opsx:propose`, `/opsx:ff`, or by hand), reflect it in
-> `TARGETS-DESIGN.md` §12 — a Mermaid node + edges coloured `proposed` for a DAG
-> step, or an off-DAG prose bullet for an independent tidy-up / new capability.
-> See "Architectural Notes → The targets redesign" below for the full rule.
+> **Working a change includes updating the roadmap.** Whenever you create,
+> apply, or archive a change (via `/opsx:propose`, `/opsx:ff`, `/opsx:apply`,
+> `/opsx:archive`, or by hand), reflect it in `TARGETS-DESIGN.md` §12 and keep
+> its node status colour in sync (red = proposed, yellow = done/implemented,
+> green = archived; move an archived node into the `archived_box` subgraph). On
+> first proposal, add a Mermaid node + edges coloured `proposed` for a DAG step,
+> or an off-DAG prose bullet for an independent tidy-up / new capability. See
+> "Architectural Notes → The targets redesign" below for the full rule.
 
 Changes live in `openspec/changes/<name>/` with:
 - `proposal.md` — What and why.
