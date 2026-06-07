@@ -2458,7 +2458,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate,cluster,cloud proposed
+    class inputs,postcheck,manif,migrate,cloud proposed
+    class cluster done
     class survive,assert,replay,lockin,cleanup open
 ```
 
@@ -2508,7 +2509,18 @@ Eight further changes were proposed in this round (all `openspec validate
   `path-axis-growth` now **depends on** `step-scenario-slice` (the solid
   `slice --> pathgrow` edge), not merely pairs with it.
 - `cluster-pipeline` — new `cluster-pipeline` capability (crew.cluster SLURM
-  template via the existing factory).
+  template via the existing factory). **Now done (yellow):** the minimal
+  `inst/targets-templates/cluster/` template ships four files — the controller in
+  one editable `controller.R` (`crew_controller_slurm()`), a clean `_targets.R`
+  (controller + inline scenario + factory, no probe target), a standalone
+  `preflight.R` connectivity + worker-prerequisite check (carrying the probe
+  body), and `run.R` — plus a "zero to a running cluster job" README. `run.R`
+  runs the preflight before `tar_make()` (so a wiring failure blocks the shards)
+  and aborts cleanly off-cluster (pointing at `large/` for local runs). A
+  scheduler-free test covers the preflight probe function and asserts the
+  pipeline graph stays clean; the shape is byte-identical to the `large/`
+  single-core oracle. The real-SLURM end-to-end run remains the documented
+  manual/lab step.
 - `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
   (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta)
   — the independent tidy-ups, kept **off** the dependency DAG per convention

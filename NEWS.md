@@ -1,5 +1,84 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9013
+
+## Features
+
+### targets
+
+- Per-step minimal scenario slice for shard invalidation (#102).
+
+## Chore
+
+### openspec
+
+- Sync and archive `scalar-ci-flag`; tidy roadmap (#112).
+
+### openspec
+
+- Archive `path-axis-growth` and `shard-atomic-rewrite` (#111).
+
+## Continuous integration
+
+- Require R \>= 4.3 and fix Windows Quarto vignette builds (#100).
+
+## Documentation
+
+- Reclassify `dists` as fit-level simulation setting (#119).
+
+### roadmap
+
+- Sync DAG status and surface ready-to-propose changes (#101).
+
+- Demote ci to scalar flag, retire ci = FALSE collapse (#104).
+
+### openspec
+
+- Sync and archive hive-partitioning change (#103).
+
+### openspec
+
+- Sync and archive step-scenario-slice change (#106).
+
+### roadmap
+
+- Sync DAG status and surface ready-to-propose changes (#101).
+
+### openspec
+
+- Sync specs and archive five completed changes (#98).
+
+### openspec
+
+- Propose migrate-public-api change (#96).
+
+## Refactoring
+
+- Canonicalise `seed` position in `ssd_define_scenario()` call sites (#116).
+
+- Make `ci` a scalar flag, not a grid axis (#109).
+
+## Testing
+
+### shard-runner
+
+- Pin blob-encoding contracts; keep the ASCII VARCHAR (benchmark-gated) (#113).
+
+### task-shards
+
+- Pin inner-axis-growth atomic byte-stable rewrite (shard-atomic-rewrite) (#107).
+
+- Add end-to-end path-axis growth tests (#108).
+
+- Use minimal nboot in bootstrap-executing tests (#105).
+
+## Uncategorized
+
+- Merge pull request #97 from poissonconsulting/add-codeowners.
+
+  Add CODEOWNERS assigning @joethorley
+
+
 # ssdsims 0.0.0.9012
 
 ## Features
