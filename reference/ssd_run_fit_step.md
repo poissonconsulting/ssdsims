@@ -60,13 +60,13 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/Rtmp9WLFp3/file39b87d9d149c/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
+#> [1] "/tmp/RtmpbuT0lE/file39f873bc949a/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/Rtmp9WLFp3/file39b87d9d149c/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/RtmpbuT0lE/file39f873bc949a/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 # }
 ```
