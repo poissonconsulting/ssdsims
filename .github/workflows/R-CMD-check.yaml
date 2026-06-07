@@ -12,9 +12,6 @@ on:
       - release
       - next
       - cran-*
-      # TEMPORARY: exercise full CI (incl. the rcc-suggests "Without <pkg>"
-      # matrix) on this feature branch. Revert before merge.
-      - claude/sharp-ramanujan-LPM6f
   pull_request:
     branches:
       - main
@@ -187,10 +184,8 @@ jobs:
       # Deployment on schedule adds too much noise.
       # Deployment on pull_request is not possible because it requires a token with write permissions, which is not available in pull_request workflows for security reasons.
       # Deployment on workflow_dispatch is available via the pkgdown workflow
-      # TEMPORARY: restrict deploy to main/master so this feature branch's
-      # pushes do not publish the docs site. Revert before merge.
       - uses: ./.github/workflows/pkgdown-deploy
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        if: github.event_name == 'push'
 
       # Upload sha as artifact
       - run: |
@@ -363,9 +358,7 @@ jobs:
 
     runs-on: ubuntu-24.04
 
-    # TEMPORARY: `|| github.event_name == 'push'` forces the "Without <pkg>"
-    # suggests matrix to run on this feature branch's pushes. Revert before merge.
-    if: ${{ needs.rcc-smoke.outputs.dep-suggests-matrix != '' && (github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run-rcc-suggests)) }}
+    if: ${{ needs.rcc-smoke.outputs.dep-suggests-matrix != '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run-rcc-suggests)) }}
 
     name: Without ${{ matrix.package }}
 
