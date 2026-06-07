@@ -1022,7 +1022,7 @@ list(
 
   tar_target(
     summary,
-    ssd_summarize(dir_data = "results/data",
+    ssd_summarise(dir_data = "results/data",
                   dir_fit  = "results/fit",
                   dir_hc   = "results/hc",
                   path     = "results/summary.parquet"),

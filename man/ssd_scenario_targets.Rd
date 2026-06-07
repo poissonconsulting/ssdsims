@@ -50,7 +50,7 @@ ssd_scenario_targets(scenario)
 
 The shard and summary targets carry \code{error = "null"} so a shard whose body
 fails entirely goes \code{NULL} (its error readable via \code{tar_meta()}) without
-aborting the run, and \code{ssd_summarize()} unions whatever landed
+aborting the run, and \code{ssd_summarise()} unions whatever landed
 (TARGETS-DESIGN.md section 6.2). The shipped \verb{_targets.R} templates pair this
 with a pipeline-wide \strong{keep-going} default (\code{tar_option_set(error = "continue")}, the \code{make -k} analogue) so an errored target skips only its
 dependents while the rest of the shards still build; fail-fast pre-flight

@@ -89,7 +89,7 @@ decode_obj <- function(s) {
 #' @inheritParams scenario_dataset
 #' @param root The results root directory (default `"results"`).
 #' @return The layout-keyed path `file.path(root, paste0("layout=", <hash>))`.
-#' @seealso [ssd_run_scenario_shards()], [ssd_summarize()].
+#' @seealso [ssd_run_scenario_shards()], [ssd_summarise()].
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
@@ -447,14 +447,14 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' )
 #' # Materialise the shards single-core, then fan in the hc layer.
 #' run <- ssd_run_scenario_shards(scenario)
-#' ssd_summarize(
+#' ssd_summarise(
 #'   file.path(run$dir, "sample"),
 #'   file.path(run$dir, "fit"),
 #'   file.path(run$dir, "hc"),
 #'   file.path(run$dir, "summary.parquet")
 #' )
 #' }
-ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
+ssd_summarise <- function(dir_sample, dir_fit, dir_hc, path) {
   glob <- file.path(dir_hc, "**", "part.parquet")
   # Project out the `dists`/`samples` list-columns at the DuckDB level (so the
   # potentially-large retained `samples` draws are never pulled into R): the
@@ -553,7 +553,7 @@ edge_block <- function(names) {
 #'
 #' The shard and summary targets carry `error = "null"` so a shard whose body
 #' fails entirely goes `NULL` (its error readable via `tar_meta()`) without
-#' aborting the run, and `ssd_summarize()` unions whatever landed
+#' aborting the run, and `ssd_summarise()` unions whatever landed
 #' (TARGETS-DESIGN.md section 6.2). The shipped `_targets.R` templates pair this
 #' with a pipeline-wide **keep-going** default (`tar_option_set(error =
 #' "continue")`, the `make -k` analogue) so an errored target skips only its
@@ -817,7 +817,7 @@ ssd_scenario_targets <- function(
     "summary",
     rlang::expr({
       !!edge_block(unname(hc_names)) # order/value-depend on every hc shard
-      ssd_summarize(!!sample_dir, !!fit_dir, !!hc_dir, !!summary_path)
+      ssd_summarise(!!sample_dir, !!fit_dir, !!hc_dir, !!summary_path)
     }),
     format = "file"
   )

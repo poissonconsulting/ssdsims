@@ -239,7 +239,7 @@ ssd_upload_shard.ssdsims_upload_dryrun <- function(path, upload) {
 ssd_open_uploaded.ssdsims_upload_dryrun <- function(upload, step) {
   chk::abort_chk(
     "A dry-run upload ships nothing, so there is nothing to read back. ",
-    "Read the local shards directly (e.g. with `ssd_summarize()` or ",
+    "Read the local shards directly (e.g. with `ssd_summarise()` or ",
     "`duckplyr::read_parquet_duckdb()` under the results root).",
     call = rlang::caller_env()
   )

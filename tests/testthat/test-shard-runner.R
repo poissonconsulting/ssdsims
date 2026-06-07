@@ -308,7 +308,7 @@ test_that("shard-runner: the summary-style projection drops the blob column with
     path
   )
 
-  # Mirror the §6 ssd_summarize() projection: drop the heavy column at the
+  # Mirror the §6 ssd_summarise() projection: drop the heavy column at the
   # DuckDB level, before anything is collected into R.
   projected <- tibble::as_tibble(dplyr::collect(
     dplyr::select(

@@ -97,7 +97,7 @@
       ssd_open_uploaded(ssd_upload_dryrun(), "hc")
     Condition
       Error:
-      ! A dry-run upload ships nothing, so there is nothing to read back. Read the local shards directly (e.g. with `ssd_summarize()` or `duckplyr::read_parquet_duckdb()` under the results root).
+      ! A dry-run upload ships nothing, so there is nothing to read back. Read the local shards directly (e.g. with `ssd_summarise()` or `duckplyr::read_parquet_duckdb()` under the results root).
 
 # cloud-upload: root, upload, and cue must be passed by name
 

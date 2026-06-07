@@ -42,7 +42,7 @@ reference:
   - ssd_run_fit_step
   - ssd_run_hc_step
   - ssd_scenario_targets
-  - ssd_summarize
+  - ssd_summarise
   - scenario_results_dir
 
 - title: Cloud upload

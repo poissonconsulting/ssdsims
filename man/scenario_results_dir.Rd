@@ -36,5 +36,5 @@ scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
 scenario_results_dir(scenario)
 }
 \seealso{
-\code{\link[=ssd_run_scenario_shards]{ssd_run_scenario_shards()}}, \code{\link[=ssd_summarize]{ssd_summarize()}}.
+\code{\link[=ssd_run_scenario_shards]{ssd_run_scenario_shards()}}, \code{\link[=ssd_summarise]{ssd_summarise()}}.
 }

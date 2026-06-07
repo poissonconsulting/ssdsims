@@ -170,7 +170,7 @@ test_that("task-shards: step runners write one Parquet and read upstream by path
 
 # ---- summary fan-in (task 7.6) ---------------------------------------------
 
-test_that("task-shards: ssd_summarize unions landed hc shards without recomputation", {
+test_that("task-shards: ssd_summarise unions landed hc shards without recomputation", {
   dir <- withr::local_tempdir()
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
@@ -201,7 +201,7 @@ test_that("task-shards: ssd_summarize unions landed hc shards without recomputat
       file.path(dir, "hc")
     )
   }
-  out <- ssd_summarize(
+  out <- ssd_summarise(
     file.path(dir, "sample"),
     file.path(dir, "fit"),
     file.path(dir, "hc"),
