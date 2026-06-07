@@ -23,6 +23,15 @@
 #   memory per cpu                    ->  crew_options_slurm(memory_gigabytes_per_cpu=)
 #
 # See `?crew.cluster::crew_controller_slurm` and `?crew.cluster::crew_options_slurm`.
+#
+# NON-SLURM CLUSTERS: this targets SLURM, but `crew.cluster` also provides
+# `crew_controller_sge()` / `crew_controller_pbs()` / `crew_controller_lsf()`
+# (each with a matching `crew_options_*()`). To retarget one, swap the two
+# constructors below — the factory, the scenario, and the preflight are
+# unchanged. `script_lines` (your `module load` / account / `TMPDIR`) carries
+# over verbatim; the named resource args differ (e.g. `cpus_per_task` -> `cores`,
+# `partition`/`time_minutes` move into `script_lines` directives). Untested here;
+# the README's "Targeting a non-SLURM cluster" table has the mapping.
 
 # The R version your `module load` provides — `preflight.R` checks the worker
 # resolves it (set to NULL to skip the version check).

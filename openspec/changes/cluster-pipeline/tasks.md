@@ -29,6 +29,8 @@
 - [x] 5.3 Note the new `cluster/` template wherever `small/`/`large/` are referenced (e.g. the templates' README/index and any pkgdown article), and mark `cluster-pipeline` done in the `TARGETS-DESIGN.md` §12 DAG
 - [x] 5.4 Write a "zero to a running cluster job" guide — shipped as both the `cluster/` template `README.md` and a rendered vignette (`vignettes/cluster-pipeline.qmd`, "Running on a SLURM Cluster", cross-linked with the sharded-pipeline vignette) — that starts from the user's **non-R** site instructions and ends at a running job, in four steps: (1) a mapping table from the site's SLURM usage instructions (login node, `sbatch`, partition/queue, account/allocation, `module load`, scratch path, walltime, cores) to the `crew_controller_slurm()` arguments; (2) running the standalone connectivity+prerequisite preflight to confirm the mapping; (3) running a minimal (shrunken) scenario end-to-end through the `cluster/` template as the first job; (4) swapping in the user's own scenario (the inline block in `_targets.R`)
 
+- [x] 5.5 Note in the guide (vignette + README + `controller.R`) that the example targets SLURM but `crew.cluster` also supports SGE, PBS/TORQUE, and LSF (supported-but-untested), with a table of what to change to retarget one — the controller constructor and its `crew_options_*()` function (ingredient B), `script_lines` carrying over and the named resource arguments differing
+
 ## 6. Validation
 
 - [x] 6.1 Run `devtools::check()` (builds/passes without a scheduler, with `crew.cluster` only in `Suggests`) and `air format .` — 0 errors / 0 notes; the only WARNING is the environmental `qpdf` notice (missing system tool for PDF size checks), unrelated to this change

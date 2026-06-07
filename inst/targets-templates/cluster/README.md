@@ -155,6 +155,40 @@ Run `run.R` again.
 
 ---
 
+## Targeting a non-SLURM cluster (untested)
+
+This template targets **SLURM**, but `crew.cluster` also ships controllers for
+**SGE**, **PBS/TORQUE**, and **LSF**, so the same pipeline can in principle run
+on them. ssdsims has only been exercised on SLURM — treat the others as
+**supported by `crew.cluster` but untested here**, and lean on the preflight to
+catch wiring problems.
+
+Only **ingredient B** changes: in `controller.R`, swap the controller
+constructor and its options function. The factory, the scenario, and the
+preflight stay the same.
+
+| Scheduler | Controller | Options |
+|---|---|---|
+| SLURM | `crew_controller_slurm()` | `crew_options_slurm()` |
+| SGE | `crew_controller_sge()` | `crew_options_sge()` |
+| PBS / TORQUE | `crew_controller_pbs()` | `crew_options_pbs()` |
+| LSF | `crew_controller_lsf()` | `crew_options_lsf()` |
+
+`script_lines` exists on every options function and works identically — your
+`module load R/...`, account/project directive, and scratch `export TMPDIR=...`
+go there on any scheduler, so the worker-prerequisite story and the preflight are
+unchanged. The named resource arguments differ; anything without a named argument
+goes in `script_lines` as a literal directive (`#$` for SGE, `#PBS` for PBS, `#BSUB` for LSF):
+
+| Resource | SLURM | SGE | PBS / TORQUE | LSF |
+|---|---|---|---|---|
+| cores | `cpus_per_task` | `cores` | `cores` | `cores` |
+| memory | `memory_gigabytes_per_cpu` | `memory_gigabytes_limit` | `memory_gigabytes_required` | `memory_gigabytes_limit` |
+| walltime | `time_minutes` | `script_lines` (`#$ -l h_rt=…`) | `walltime_hours` | `script_lines` (`#BSUB -W …`) |
+| queue/partition | `partition` | `script_lines` (`#$ -q …`) | `script_lines` (`#PBS -q …`) | `script_lines` (`#BSUB -q …`) |
+
+See `?crew.cluster::crew_controller_sge` (and the `_pbs`/`_lsf` equivalents).
+
 ## Shard ↔ SLURM-job packing
 
 Shards are the **unit of parallelism**: independent shard targets run
