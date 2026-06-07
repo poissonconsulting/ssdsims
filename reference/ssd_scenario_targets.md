@@ -48,6 +48,20 @@ A list of `targets` target objects, for `_targets.R` to return.
     scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
     ssd_scenario_targets(scenario)
 
+The shard and summary targets carry `error = "null"` so a shard whose
+body fails entirely goes `NULL` (its error readable via
+[`tar_meta()`](https://docs.ropensci.org/targets/reference/tar_meta.html))
+without aborting the run, and
+[`ssd_summarize()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarize.md)
+unions whatever landed (TARGETS-DESIGN.md section 6.2). The shipped
+`_targets.R` templates pair this with a pipeline-wide **keep-going**
+default (`tar_option_set(error = "continue")`, the `make -k` analogue)
+so an errored target skips only its dependents while the rest of the
+shards still build; fail-fast pre-flight checks (upload/cluster
+connectivity) belong in a separate script the user runs *before*
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
+not in this DAG.
+
 For each step it
 [`tarchetypes::tar_map()`](https://docs.ropensci.org/tarchetypes/reference/tar_map.html)s
 one named, `format = "file"`, `error = "null"` target per `partition_by`

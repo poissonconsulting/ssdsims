@@ -114,7 +114,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmpTqK9zt/ssdsims-shards-3d6c1ce5ddfa
+#>   dir: /tmp/Rtmp8EsMoJ/ssdsims-shards-3c9c741e3e4b
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2

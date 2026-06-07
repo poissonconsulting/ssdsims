@@ -91,6 +91,14 @@ changes). <code>NULL</code> (default) uses <code>targets</code>' standard cue.</
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://poissonconsulting.github.io/ssdsims/">ssdsims</a></span><span class="op">)</span></span>
 <span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></code></pre><p></p></div>
+<p>The shard and summary targets carry <code>error = "null"</code> so a shard whose body
+fails entirely goes <code>NULL</code> (its error readable via <code><a href="https://docs.ropensci.org/targets/reference/tar_meta.html" class="external-link">tar_meta()</a></code>) without
+aborting the run, and <code><a href="ssd_summarize.html">ssd_summarize()</a></code> unions whatever landed
+(TARGETS-DESIGN.md section 6.2). The shipped <code>_targets.R</code> templates pair this
+with a pipeline-wide <strong>keep-going</strong> default (<code>tar_option_set(error = "continue")</code>, the <code>make -k</code> analogue) so an errored target skips only its
+dependents while the rest of the shards still build; fail-fast pre-flight
+checks (upload/cluster connectivity) belong in a separate script the user
+runs <em>before</em> <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>, not in this DAG.</p>
 <p>For each step it <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_map.html" class="external-link">tarchetypes::tar_map()</a></code>s one named, <code>format = "file"</code>,
 <code>error = "null"</code> target per <code>partition_by</code> path cell (the <code>names</code> are the
 step's path axes), and writes every shard and the summary under the
