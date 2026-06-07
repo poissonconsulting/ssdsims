@@ -13,17 +13,17 @@ from Parquet is cheap, so there is no reason to make the run choose: it can writ
 ## What Changes
 
 - **`ssd_summarise()` gains an optional second output.** A new trailing
-  `path_full = NULL` argument: when supplied, the function **also** writes a
-  *full* hc union to `path_full` that **retains** the `dists`/`samples`
+  `path_with_samples = NULL` argument: when supplied, the function **also** writes a
+  *full* hc union to `path_with_samples` that **retains** the `dists`/`samples`
   list-columns, in addition to the compact `path` (whose projection is
   unchanged). The full write stays at the DuckDB level (read the Hive glob → write
   Parquet) so the draws are **never collected into R** — the same no-R-materialise
-  guarantee the compact path already has. With `path_full = NULL` the behaviour is
+  guarantee the compact path already has. With `path_with_samples = NULL` the behaviour is
   exactly as today (single compact summary), so existing call sites are
   unaffected.
 - **The targets pipeline writes the full summary when, and only when, the
   scenario retains draws.** `ssd_scenario_targets()` passes
-  `path_full = <root>/summary-samples.parquet` to the `summary` target **iff**
+  `path_with_samples = <root>/summary-samples.parquet` to the `summary` target **iff**
   `scenario$hc$samples` is `TRUE` (the case where the draws carry information the
   compact summary cannot). The target returns the path **vector** so `targets`
   tracks both files under its `format = "file"` contract. When
@@ -52,10 +52,10 @@ from Parquet is cheap, so there is no reason to make the run choose: it can writ
 ## Impact
 
 - **Specs**: `task-shards` delta.
-- **Code**: `R/targets-runner.R` — `ssd_summarise()` (`path_full` argument and the
-  lazy full write); `ssd_scenario_targets()` (conditional `path_full`, the
+- **Code**: `R/targets-runner.R` — `ssd_summarise()` (`path_with_samples` argument and the
+  lazy full write); `ssd_scenario_targets()` (conditional `path_with_samples`, the
   `summary` target returning a path vector).
-- **API**: additive, backward-compatible (`path_full` defaults to `NULL`); no
+- **API**: additive, backward-compatible (`path_with_samples` defaults to `NULL`); no
   change to the compact `summary.parquet` bytes or path.
 - **Docs/templates**: `man/ssd_summarise.Rd` (roxygen), `vignettes/sharded-pipeline.qmd`,
   `inst/targets-templates/` run scripts/READMEs, `GLOSSARY.md`/`TARGETS-DESIGN.md`

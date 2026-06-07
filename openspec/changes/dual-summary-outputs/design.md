@@ -45,9 +45,9 @@ failure) and returns `summary_path`.
 
 ## Decisions
 
-### Decision: an optional `path_full = NULL` argument, not a new function or a flag
+### Decision: an optional `path_with_samples = NULL` argument, not a new function or a flag
 
-`ssd_summarise()` grows a trailing `path_full = NULL`. `NULL` ⇒ today's
+`ssd_summarise()` grows a trailing `path_with_samples = NULL`. `NULL` ⇒ today's
 behaviour, so the four-positional call sites
 (`inst/targets-templates/`, the vignette) are untouched. A non-`NULL` value adds
 the second write.
@@ -70,7 +70,7 @@ glob and writes Parquet entirely at the DuckDB level:
 ```r
 duckplyr::compute_parquet(
   duckplyr::read_parquet_duckdb(glob, options = list(hive_partitioning = FALSE)),
-  path_full
+  path_with_samples
 )
 ```
 
@@ -84,7 +84,7 @@ carried by the engine, not by R.
 ### Decision: the factory gates the full summary on `scenario$hc$samples`
 
 `scenario$hc$samples` is known at sourcing time, so `ssd_scenario_targets()`
-decides **statically** whether to pass `path_full`. When `TRUE` it passes
+decides **statically** whether to pass `path_with_samples`. When `TRUE` it passes
 `file.path(root, "summary-samples.parquet")` and the `summary` target returns
 `c(summary_path, summary_full_path)`; a `format = "file"` target accepts a path
 vector, so `targets` tracks both files. When `FALSE` the command and return arity

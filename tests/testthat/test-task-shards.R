@@ -243,7 +243,7 @@ materialise_shards <- function(scenario, dir) {
   }
 }
 
-test_that("dual-summary-outputs: path_full writes a full summary retaining samples", {
+test_that("dual-summary-outputs: path_with_samples writes a full summary retaining samples", {
   dir <- withr::local_tempdir()
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
@@ -263,7 +263,7 @@ test_that("dual-summary-outputs: path_full writes a full summary retaining sampl
     file.path(dir, "fit"),
     file.path(dir, "hc"),
     compact_path,
-    path_full = full_path
+    path_with_samples = full_path
   )
   # both paths returned and written
   expect_identical(out, c(compact_path, full_path))
@@ -284,7 +284,7 @@ test_that("dual-summary-outputs: path_full writes a full summary retaining sampl
   expect_equal(sort(compact$ucl), sort(full$ucl))
 })
 
-test_that("dual-summary-outputs: path_full = NULL writes only the compact summary", {
+test_that("dual-summary-outputs: path_with_samples = NULL writes only the compact summary", {
   dir <- withr::local_tempdir()
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
@@ -335,14 +335,18 @@ test_that("dual-summary-outputs: the pipeline gates the full summary on samples"
     "summary-samples.parquet",
     fixed = TRUE
   )
-  expect_match(summary_cmd(with_samples), "path_full = ", fixed = TRUE)
-  # samples = FALSE injects `path_full = NULL` and no second file path
+  expect_match(summary_cmd(with_samples), "path_with_samples = ", fixed = TRUE)
+  # samples = FALSE injects `path_with_samples = NULL` and no second file path
   expect_no_match(
     summary_cmd(without_samples),
     "summary-samples.parquet",
     fixed = TRUE
   )
-  expect_match(summary_cmd(without_samples), "path_full = NULL", fixed = TRUE)
+  expect_match(
+    summary_cmd(without_samples),
+    "path_with_samples = NULL",
+    fixed = TRUE
+  )
 })
 
 # ---- targets pipeline integration (task 7.4) -------------------------------
