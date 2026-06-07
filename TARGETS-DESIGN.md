@@ -2232,15 +2232,33 @@ validated behaviour into the package, not discovering it.
   End-to-end
   [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
   on a real (or sandboxed) Slurm queue.
-- **`cloud-upload`** — §6.1 — per-shard `upload_<step>` target +
-  `ssd_test_upload()` probe + `ssd_upload_shard()` with a credential
-  check that dry-runs (no-op) when secrets are absent. Hello-Azure round
-  trip from interactive R; the connectivity probe is
-  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)’s
-  first target. Test: a second
+- **`cloud-upload`** — §6.1 — typed, self-validating destination objects
+  (`ssd_upload_azure(url, container)`, `ssd_upload_dryrun()`; class
+  `ssdsims_upload`) dispatched by three generics — `ssd_upload_shard()`
+  (ships one shard), `ssd_test_upload()` (the front-door
+  creds/connectivity probe), and construction-time validation. The
+  destination is a **runner argument**, the sibling of `root` on
+  `ssd_scenario_targets(scenario, ..., root, upload, cue)` (with
+  [`rlang::check_dots_empty()`](https://rlang.r-lib.org/reference/check_dots_empty.html)
+  forcing named args), **not** a `scenario` field — so it is dropped
+  from
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
+  and the `ssdsims_scenario` object (both **BREAKING**). Fail-loud:
+  Azure with absent credentials **errors** (no silent no-op); intent to
+  skip the network is expressed only by `ssd_upload_dryrun()`. Both
+  `upload = NULL` (no `upload_<step>` nodes) and `ssd_upload_dryrun()`
+  (no-op nodes, exercised offline/in CI) are supported. Per-shard
+  `upload_<step>` target (`format = "file"`, `error = "null"`),
+  content-hashed so a second
   [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-  with no shard changes uploads nothing (content-hash skip); the graph
-  builds offline.
+  with no shard changes uploads nothing; the cloud sha256 is recorded in
+  the `manifest`. The `ssd_test_upload()` probe is
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)’s
+  first target; the hello-Azure round trip runs from interactive R.
+  **Departs from the original §6.1 sketch** (silent dry-run on absent
+  creds → now a loud error) and **moves `upload` off the scenario**.
+  Proposed (the `cloud-upload` change); with `manifest` now landed
+  (#114) its prerequisites are met — ready to implement.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and `ssd_input_hash()`
   for the lightweight recipe. Tests simulate a branch failure and
   reproduce locally.
@@ -2708,9 +2726,9 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,migrate proposed
+    class inputs,postcheck,migrate,cloud proposed
     class manif,cluster done
-    class survive,assert,cloud,replay,lockin,cleanup open
+    class survive,assert,replay,lockin,cleanup open
 ```
 
 **Node colours track each step’s status** — green = archived, yellow =
@@ -2790,9 +2808,19 @@ into the three main specs and the change now lives in
 `openspec/changes/archive/`, so it appears under `### Archived` above
 rather than among the active changes.
 
-The remaining open nodes stay blocked: `cloud-upload`/`replay-helper`
-wait on `manifest` landing, `shard-failure-survival` on
-`cluster-pipeline`, `shard-completeness-assert` on both `manifest` and
+`cloud-upload` has since been **proposed** (the `cloud-upload`
+capability plus `scenario-definition`/`task-shards` deltas): it moves
+the upload destination onto the runner
+(`ssd_scenario_targets(..., upload)`, the sibling of `root`) and
+replaces the original §6.1 silent dry-run with a fail-loud credential
+contract, and adds an in-place `ssd_open_uploaded()` read-back. It
+carries artifacts (red) and, with `manifest` now landed (#114), its
+prerequisites are met — it is ready to implement (it records the cloud
+sha256 through the manifest).
+
+With `manifest` landed, `replay-helper` is unblocked (ready to propose).
+The remaining open nodes stay blocked: `shard-failure-survival` on
+`cluster-pipeline`, `shard-completeness-assert` on
 `shard-failure-survival`, `mixed-code-lockin` on `shard-atomic-rewrite`,
 and `cleanup-lecuyer` on `migrate-public-api` + `mixed-code-lockin`.
 (`dataset-provenance` remains roadmap-only, deliberately deferred.)
