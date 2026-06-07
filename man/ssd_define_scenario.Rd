@@ -12,19 +12,19 @@ ssd_define_scenario(
   name = NULL,
   nrow = 6L,
   replace = FALSE,
-  dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
-  nboot = 1000,
+  dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
-  ci_method = "weighted_samples",
-  parametric = TRUE,
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
+  ci_method = "weighted_samples",
+  parametric = TRUE,
   samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
@@ -51,8 +51,6 @@ overriding the derived name. Must not be combined with a named list or an
 
 \item{replace}{A logical vector specifying whether to sample with replacement.}
 
-\item{dists}{A character vector of the distribution names.}
-
 \item{rescale}{A flag specifying whether to leave the values unchanged (FALSE) or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values (TRUE) or a string specifying whether to leave the values unchanged ("no") or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values ("geomean") or to logistically transform ("odds").}
 
 \item{computable}{A flag specifying whether to only return fits with numerically computable standard errors.}
@@ -78,7 +76,7 @@ upper bounds for the shape1 parameter.}
 \item{range_shape2}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape2 parameter.}
 
-\item{nboot}{A count of the number of bootstrap samples to use to estimate the confidence limits. A value of 10,000 is recommended for official guidelines.}
+\item{dists}{A character vector of the distribution names.}
 
 \item{est_method}{A string specifying whether to estimate directly from
 the model-averaged cumulative distribution function (\code{est_method = 'multi'}) or
@@ -86,6 +84,12 @@ to take the arithmetic mean of the estimates from the
 individual cumulative distribution functions weighted
 by the AICc derived weights  (\code{est_method = 'arithmetic'}) or
 or to use the geometric mean instead (\code{est_method = 'geometric'}).}
+
+\item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
+
+\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
+
+\item{nboot}{A count of the number of bootstrap samples to use to estimate the confidence limits. A value of 10,000 is recommended for official guidelines.}
 
 \item{ci_method}{A string specifying which method to use for estimating
 the standard error and confidence limits from the bootstrap samples.
@@ -108,10 +112,6 @@ calculate the confidence limits (and SE) from the single set of samples.}
 
 \item{parametric}{A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.}
 
-\item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
-
-\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
-
 \item{samples}{A logical scalar (default \code{FALSE}): retain the bootstrap draws
 in the hc result's \code{samples} list-column (passed to \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}}).
 This is \strong{output retention only} - it does not change the estimates or the
@@ -126,8 +126,9 @@ that step (one shard per path cell; the inner complement rides as Parquet
 columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: \code{sample} = \code{dataset}, \code{sim}, \code{replace}; \code{fit} adds
 \code{nrow}, \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix},
-\code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{nboot}, \code{est_method},
-\code{ci_method}, \code{parametric} (\code{ci} is a scalar hc flag, not an axis).
+\code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{nboot}, \code{ci_method},
+\code{parametric} (\code{ci} and \code{est_method} are hc simulation settings, not axes;
+\code{dists} is the fit-level simulation setting).
 \code{"nrow"} is rejected only for \code{sample} (the
 shared draw carries no \code{nrow} axis; the \code{fit} step truncates it inline), and
 is a valid path axis for \code{fit}/\code{hc}. Steps partition \strong{independently} -
@@ -197,6 +198,19 @@ estimates, or \code{ci = TRUE} for estimates plus confidence intervals. When
 \code{ci = FALSE}, the bootstrap-only knobs \code{nboot}, \code{ci_method}, and \code{parametric}
 are meaningless; passing any of them in that case is an error, so set
 \code{ci = TRUE} to enable bootstrap, or omit the knobs.
+}
+
+\section{\code{dists} and \code{est_method}}{
+\code{dists} and \code{est_method} are \strong{simulation settings}, not cross-join axes -
+they are absent from \code{task_axes("fit")}/\code{task_axes("hc")}, so they never
+multiply tasks or enter the per-task RNG primer. \code{dists} is the \emph{fit}-level
+setting: the whole character vector is handed to one \code{ssd_fit_dists()} call
+per fit task (fanning out per distribution would dissolve the model averaging
+that defines a fit). \code{est_method} is an \emph{hc}-level setting: every requested
+method is summarised from each hc task's \strong{single} bootstrap sample set
+rather than re-bootstrapping per method (the CI is est_method-invariant and
+the point \code{est} is analytical), so a vector \code{est_method} yields one row per
+method within a task without fanning out into separate tasks.
 }
 
 \examples{

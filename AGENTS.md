@@ -149,7 +149,7 @@ writing tests.
 
 ## OpenSpec Workflow
 
-The package uses OpenSpec for spec-driven development (see `.claude/` and `.github/` directories).
+The package uses OpenSpec for spec-driven development (see `.claude/` and `.github/` directories). **`openspec/AGENTS.md`** is the focused subdirectory guide — read it before running any OpenSpec skill; it spells out the per-action roadmap obligation (below) that the generic skills do not enforce.
 
 ### Commands
 
@@ -158,31 +158,13 @@ The package uses OpenSpec for spec-driven development (see `.claude/` and `.gith
 - **`/opsx:apply <change-name>`** — Implement tasks from a change.
 - **`/opsx:archive <change-name>`** — Finalize a completed change.
 
-> **Working a change includes updating the roadmap.** Whenever you create,
-> apply, or archive a change (via `/opsx:propose`, `/opsx:ff`, `/opsx:apply`,
-> `/opsx:archive`, or by hand), reflect it in `TARGETS-DESIGN.md` §12 and keep
-> its node status colour in sync (red = proposed, yellow = done/implemented,
-> green = archived; move an archived node into the `archived_box` subgraph). On
-> first proposal, add a Mermaid node + edges coloured `proposed` for a DAG step,
-> or an off-DAG prose bullet for an independent tidy-up / new capability. See
-> "Architectural Notes → The targets redesign" below for the full rule.
+> **Every lifecycle action (propose / apply / sync / archive) must update the
+> `TARGETS-DESIGN.md` §12 roadmap in the same change-set** — the generic skills
+> will not. `openspec/AGENTS.md` is the authority for that rule (node colours,
+> the `archived_box`, the per-action checklist) and for the change/spec layout.
 
-Changes live in `openspec/changes/<name>/` with:
-- `proposal.md` — What and why.
-- `design.md` — How.
-- `specs/<capability>/spec.md` — Detailed requirements (WHEN/THEN scenarios).
-- `tasks.md` — Implementation checklist.
-
-### Capability Specs
-
-The package's current capabilities are documented in `openspec/specs/`:
-- `simulate-data` — `ssd_sim_data()` and its 5 S3 methods.
-- `fit-distributions` — `ssd_fit_dists_sims()` and factorial expansion.
-- `hazard-concentrations` — `ssd_hc_sims()` with bootstrap CI options.
-- `run-scenario` — `ssd_run_scenario()` pipeline.
-- `parallel-safe-seeding` — L'Ecuyer-CMRG and dqrng seed/state helpers.
-
-New capabilities land via OpenSpec changes (e.g., `ssd-define-scenario`, `dqrng-init`); existing specs guide their implementation.
+Active changes live in `openspec/changes/<name>/`; the current capability specs
+live in `openspec/specs/` — that directory is the authoritative list.
 
 ## Key Dependencies
 
@@ -199,54 +181,26 @@ See `DESCRIPTION` for versions and imports.
 
 ## Common Tasks
 
-### Add a new exported function
-
-1. Write the function in `R/` with roxygen comments.
-2. Mark `@export` in the docstring.
-3. Run `devtools::document()` to update `NAMESPACE`.
-4. Add tests in `tests/testthat/test-*.R`.
-5. Run `devtools::check()` and `air format`.
-
-### Modify an existing function's arguments
-
-1. Update the function body and roxygen `@param` / `@return`.
-2. Update all tests that call the function.
-3. Run `devtools::document()`.
-4. Check if snapshots need updating (run tests, review diffs, accept or reject).
-5. Commit with a clear message.
-
-### Add a new test file
-
-See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
-(file/naming, expectations, snapshots, RNG seeding).
-
-### Update package version and news
-
-`NEWS.md` and the dev version are managed by [fledge](https://fledge.cynkra.com) — **do not hand-edit `NEWS.md`** (its header says as much). Entries are generated from commit messages and grouped by Conventional Commit type (Features, Bug fixes, Chore, Refactoring), so the way to shape a changelog entry is to write a clear, conventionally-typed commit message (see Pull Requests below).
-
-- `fledge::bump_version()` bumps the `DESCRIPTION` version and assembles `NEWS.md` from the commits since the last bump; a scheduled GitHub Action (`.github/workflows/fledge.yaml`) also runs this on `main`.
-- Reference the related issue in the commit message (e.g. `(#64)`) so it carries through to the changelog.
-
-> **Deviation from tidyverse/r-lib**: those packages have contributors hand-add a `NEWS.md` bullet (and order bullets alphabetically by function). This package does **not** — fledge derives the changelog from commits, so skip the manual bullet entirely and put the effort into the commit message instead.
+- **Add / change a function**: edit the roxygen alongside it, `devtools::document()`,
+  update or add tests (and review any snapshot diffs), then `air format .` and
+  `devtools::check()`. New non-internal topics also go in `_pkgdown.yml` (see
+  *Documentation*); test conventions are in **`tests/testthat/AGENTS.md`**.
+- **Version & news**: `NEWS.md` and the dev version are managed by
+  [fledge](https://fledge.cynkra.com) (`fledge::bump_version()`, plus a scheduled
+  Action on `main`) — **do not hand-edit `NEWS.md`**. The changelog is derived
+  from commit messages grouped by Conventional Commit type, so shape entries via
+  clear, conventionally-typed messages (see *Pull Requests*), not manual bullets.
 
 ## Pull Requests
+
+> **PR titles MUST be valid Conventional Commits** — `<type>(<scope>):
+> <summary>`. The canonical rule, examples, and rationale (squash-merge → the
+> title is the lone commit on `main` that `fledge` turns into `NEWS.md`) live in
+> the *Pull Requests* section of `CLAUDE.md`.
 
 - **Always update PR title and description** when opening the PR and after committing.
   The description must capture the
 change's *current* state, not a revision/process log.
-- **PRs are squash-merged**, so the **PR title becomes the single commit on
-  `main`** — and that commit is what `fledge` reads to build `NEWS.md` (see
-  *Update package version and news* above). The PR title is therefore the
-  load-bearing message: it **must** be a valid Conventional Commit. Individual
-  commits on the branch are squashed away, so their messages are not
-  consumed by `fledge` — a clean history still helps review, but the title is
-  what ships.
-- **Titles follow Conventional Commits** — `<type>: <summary>` or
-  `<type>(<scope>): <summary>`, where `type` is one of `feat`, `fix`, `docs`,
-  `refactor`, `test`, `chore`, etc. (e.g.
-  `feat: add scenario-scoped dqrng pcg64 RNG backend`,
-  `docs(openspec): propose registry, manifest, and task-tables changes`). Use
-  the imperative mood and keep the summary concise.
 - **Escape function, object, and file names in backticks** in PR titles and
   descriptions (e.g. `local_dqrng_backend()`, `run_scenario()`, `DESCRIPTION`).
 - **Reference the related issue** in the title where one exists (e.g. `(#64)`)
@@ -278,9 +232,7 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 - **Static branching** (default) — `tar_map()` mints one named target per shard at sourcing time.
 - **Dynamic branching** (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.
 
-The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged.
-
-**Keep the roadmap and its Mermaid graph (TARGETS-DESIGN.md §12) up to date as part of each change** — add/rename nodes and edges when a change is proposed, and update each node's status colour as it progresses: **green = archived, yellow = done** (implemented, not yet archived), **red = proposed** (artifacts exist, not implemented), **unfilled = open** (roadmap only). The colours are Mermaid `classDef`s applied via `class` lines at the foot of the graph. **Archived (green) nodes are collected in the `archived_box` subgraph** — when a step is archived, move its node declaration into that subgraph as well as giving it the `archived` class, so the box always holds exactly the archived nodes.
+The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged. **Keep its Mermaid graph current as part of each change** — see `openspec/AGENTS.md` for the node-colour and `archived_box` rules.
 
 ## Contact & Contribution
 
