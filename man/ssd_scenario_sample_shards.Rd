@@ -2,30 +2,70 @@
 % Please edit documentation in R/task-shards.R
 \name{ssd_scenario_sample_shards}
 \alias{ssd_scenario_sample_shards}
-\title{Group sample Tasks into Shards}
+\alias{ssd_scenario_fit_shards}
+\alias{ssd_scenario_hc_shards}
+\title{Group Tasks into Shards}
 \usage{
 ssd_scenario_sample_shards(scenario)
+
+ssd_scenario_fit_shards(scenario)
+
+ssd_scenario_hc_shards(scenario)
 }
 \arguments{
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 }
 \value{
-A tibble with one row per \code{sample} shard: the path-axis columns and a
-\code{tasks} list-column. Suitable as \code{tarchetypes::tar_map(values = )}.
+A tibble with one row per shard of the step: the path-axis columns and
+a \code{tasks} list-column. Suitable as \code{tarchetypes::tar_map(values = )}.
 }
 \description{
-Groups the scenario's \code{sample} task table (\code{\link[=ssd_scenario_sample_tasks]{ssd_scenario_sample_tasks()}}) by
-its \code{partition_by$sample} \strong{path} axes into one row per shard: each shard row
-carries the path-axis columns (the \code{tar_map} target-name suffix and Hive path)
-and a \code{tasks} list-column of that shard's task rows, each decorated with
-\code{seed = scenario$seed} and its per-task \code{primer} (\code{\link[=task_primer]{task_primer()}} over
-\code{task_axes("sample")}). The decoration is RNG-free; the bare task table keeps
-its no-\verb{(seed, primer)} contract.
+Group a step's per-task table into a per-shard table: one row per
+\code{partition_by} \strong{path} cell, carrying the path-axis columns (the \code{tar_map}
+target-name suffix and Hive path) and a \code{tasks} list-column of that cell's task
+rows. Each task row is decorated with \code{seed = scenario$seed} and its per-task
+\code{primer} (\code{\link[=task_primer]{task_primer()}} over the step's \code{task_axes()}); the decoration is
+RNG-free (a pure hash, not a draw), so the bare task tables
+(\code{\link[=ssd_scenario_tasks]{ssd_scenario_tasks()}}) keep their no-\verb{(seed, primer)} contract. The result is
+the \code{values} a \code{tarchetypes::tar_map()} consumes to mint one target per shard.
+
+\code{\link[=ssd_scenario_sample_shards]{ssd_scenario_sample_shards()}} groups the \code{sample} tasks
+(\code{\link[=ssd_scenario_sample_tasks]{ssd_scenario_sample_tasks()}}) by \code{partition_by$sample}; the \code{fit} and \code{hc}
+siblings group their step's tasks the same way (see below). For \code{fit}/\code{hc} each
+task row in \code{tasks} also carries its parent step's path-axis values and
+\verb{<parent>_id}, so the runner opens the matching parent shard by partition path.
 }
+\section{Functions}{
+\itemize{
+\item \code{ssd_scenario_fit_shards()}: Group the \code{fit} tasks
+(\code{\link[=ssd_scenario_fit_tasks]{ssd_scenario_fit_tasks()}}) by \code{partition_by$fit}. Each task row in \code{tasks}
+carries its parent \code{sample} path-axis values and \code{sample_id}, so the runner
+opens the matching \code{sample} shard by partition path.
+
+\item \code{ssd_scenario_hc_shards()}: Group the \code{hc} tasks
+(\code{\link[=ssd_scenario_hc_tasks]{ssd_scenario_hc_tasks()}}) by \code{partition_by$hc}. Each task row in \code{tasks}
+carries its parent \code{fit} path-axis values and \code{fit_id}, so the runner opens
+the matching \code{fit} shard by partition path.
+
+}}
 \examples{
 scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
 ssd_scenario_sample_shards(scenario)
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  seed = 42L,
+  rescale = c(FALSE, TRUE)
+)
+ssd_scenario_fit_shards(scenario)
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  seed = 42L,
+  ci = TRUE
+)
+ssd_scenario_hc_shards(scenario)
 }
 \seealso{
-\code{\link[=ssd_run_sample_step]{ssd_run_sample_step()}}, \code{\link[=ssd_scenario_fit_shards]{ssd_scenario_fit_shards()}}.
+\code{\link[=ssd_run_sample_step]{ssd_run_sample_step()}} (the matching per-shard step runners).
 }
