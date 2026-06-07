@@ -1,12 +1,12 @@
 ## 1. Upload objects and generics (`R/upload.R`)
 
-- [ ] 1.1 Add an Azure object-store client and the DuckDB `azure` extension to `DESCRIPTION` `Suggests`; document that the upload path is opt-in
+- [ ] 1.1 Add `AzureStor`, `AzureRMR`, and the DuckDB `azure` extension to `DESCRIPTION` `Suggests`; document that the upload path is opt-in
 - [ ] 1.2 Implement `ssd_upload_azure(url, container)` returning `structure(list(url, container), class = c("ssdsims_upload_azure_blob", "ssdsims_upload"))` with `chk`-style construction-time validation of `url`/`container` (non-empty strings), aborting in the user-facing call context
 - [ ] 1.3 Implement `ssd_upload_dryrun()` returning `structure(list(), class = c("ssdsims_upload_dryrun", "ssdsims_upload"))`
 - [ ] 1.4 Define the `ssd_test_upload(upload)` generic (`UseMethod`) and `ssd_upload_shard(path, upload)` generic; add a default method that aborts on an unknown class
-- [ ] 1.5 Implement `ssd_test_upload.ssdsims_upload_azure_blob()`: resolve env credentials, abort with a loud error **naming the missing `AZURE_*` variable**, then list container + write/delete a marker blob; guard the client with `rlang::check_installed()`
+- [ ] 1.5 Implement `ssd_test_upload.ssdsims_upload_azure_blob()` over `AzureStor`/`AzureRMR`: `rlang::check_installed(c("AzureStor", "AzureRMR"))`, resolve env credentials (account-key, SAS, or AAD service principal), abort with a loud error **naming the missing `AZURE_*` variable**, then list container + write/delete a marker blob
 - [ ] 1.6 Implement `ssd_test_upload.ssdsims_upload_dryrun()` as a trivial success (no credential resolution, no network)
-- [ ] 1.7 Implement `ssd_upload_shard.ssdsims_upload_azure_blob(path, upload)`: put the Parquet at `<url>/<container>/<step>/<partition-path>/part.parquet`, return local `path`; abort loudly when credentials are absent (no silent no-op)
+- [ ] 1.7 Implement `ssd_upload_shard.ssdsims_upload_azure_blob(path, upload)` via `AzureStor::upload_blob()`: put the Parquet at `<url>/<container>/<step>/<partition-path>/part.parquet`, return local `path`; abort loudly when credentials are absent (no silent no-op)
 - [ ] 1.8 Implement `ssd_upload_shard.ssdsims_upload_dryrun(path, upload)`: no network I/O, record a skip, return local `path`
 - [ ] 1.9 Compute and surface the cloud copy's sha256 from `ssd_upload_shard()` for the manifest to record alongside the local sha256
 - [ ] 1.10 Roxygen-document all constructors and generics; on `?ssd_upload_shard` document the extension contract (constructor + three methods, no edit to existing methods); `@export` the public functions and run `devtools::document()` to update `NAMESPACE`/`man/`
