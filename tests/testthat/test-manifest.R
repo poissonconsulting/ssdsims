@@ -25,8 +25,8 @@ test_that("manifest: round-trip keeps seed/nboot whole and knobs logical", {
     seed = 7L,
     rescale = c(TRUE, FALSE),
     ci = TRUE,
-    parametric = FALSE,
-    nboot = 250L
+    nboot = 250L,
+    parametric = FALSE
   )
   dir <- withr::local_tempdir()
   ssd_write_manifest(scenario, dir)

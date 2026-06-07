@@ -270,8 +270,8 @@ test_that("shard-runner: a fit object round-trips losslessly through the encode/
   scenario <- ssd_define_scenario(
     ssd_data(d = sr_dataset()),
     nsim = 1L,
-    nrow = 6L,
     seed = 42L,
+    nrow = 6L,
     dists = c("lnorm", "gamma")
   )
   fit <- ssd_run_scenario_baseline(scenario)$fit$fits[[1L]]
