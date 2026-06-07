@@ -44,11 +44,14 @@ function that turns a scenario into a total-cost and longest-task prediction.
   (Intel Xeon @ 2.10 GHz, R 4.5.3, `ssdtools` 2.6.0.9002) — used when the user
   has not run `ssd_calibrate_cost()` on their own machine. The estimate is
   labelled with the calibration's provenance and a clear "ballpark" caveat.
-- **Reproducible analysis vignette** documenting the *method* (calibration sweep
-  + linear model, the `max(nboot, n0)` form, why `proportion`/`est_method` are
-  free, the non-monotonic `nrow` factor) and the *outcome* (the estimator and a
-  worked example on the motivating scenario), rerunnable end-to-end to produce a
-  custom estimator for any architecture.
+- **Documentation vignette** explaining the *method* (the `max(nboot, n0)`
+  per-`ci_method` model, why `proportion`/`est_method` are free, the
+  non-monotonic `nrow` factor) and demonstrating the *outcome* (`ssd_calibrate_cost()`
+  + `ssd_estimate_cost()` on the motivating scenario). Recalibration for a new
+  architecture is the **single call** `ssd_calibrate_cost()` — the vignette
+  documents and demonstrates it but is not the mechanism. The one-time research
+  that discovered the model's *form* is preserved (not shipped) under the
+  change's `exploration/` directory.
 
 No change to scenario results, RNG, task graph, or shard layout: the estimator
 only *reads* the scenario's task expansion.

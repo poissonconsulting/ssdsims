@@ -16,7 +16,9 @@ aggregated `est`/CI columns (verified). Their per-call cost is identical
 and re-summarise them — a pure ~3× overhead on the most expensive step. On the
 motivating scenario (10 sims × 4 `nrow` × 7 `ci_method` × 4 `nboot`,
 `ci = TRUE`) collapsing `est_method` cuts the single-core estimate from ~430 h to
-~143 h with **identical results**.
+~143 h. Point estimates (`est`) are unchanged (analytical); CIs are re-seeded by
+the axis change (see Impact) and change numerically while staying statistically
+equivalent.
 
 This is the same re-classification `dists-simulation-setting` applied to `dists`,
 but unlike that one (a label-only fix — `dists` was never an axis in code) this
@@ -49,8 +51,14 @@ and `proportion` is absent from `task_axes("hc")`).
 - **Sweep call sites and docs** (examples, tests, snapshots, scripts,
   vignettes, `inst/targets-templates/`, `man/`, `GLOSSARY.md`/`TARGETS-DESIGN.md`).
 
-`est_method` estimates are **unchanged** byte-for-byte (same seed, same draws,
-same aggregation); only the redundant re-bootstrapping is removed.
+Point estimates (`est`) are **unchanged** (analytical, seed-independent). The
+bootstrap CIs are **re-seeded** by the axis change — the hc primer hashes the
+hc-grid row, which today includes `est_method` (`R/task-primer.R`), so dropping
+it changes every hc task's primer. The new CIs are statistically equivalent and,
+unlike today, consistent across est_methods within a task. The byte-identity of
+est_method as a pure post-hoc aggregation holds **at a fixed seed** and is
+demonstrated by `exploration/est-method-invariance.R`; it is not asserted
+post-hoc against the differently-seeded old pipeline.
 
 ## Capabilities
 
@@ -76,13 +84,16 @@ same aggregation); only the redundant re-bootstrapping is removed.
   summarise per method), `R/internal.R` (`hc_state()`/`hc_seed()` produce
   multi-method output from retained samples), `R/task-lists.R` (`task_axes("hc")`),
   `R/scenario.R` (signature/storage/print), `partition_by`/`bundle` validation.
-- **Correctness risk**: the per-method aggregation over retained samples MUST
-  match `ssdtools::ssd_hc(est_method = m)` exactly; a regression test SHALL
-  assert byte-identity against per-method `ssd_hc()` calls across all three
-  methods and both `ci` values. If `ssdtools` exposes no public re-aggregation
-  entry point for retained samples, the design records the chosen mechanism
-  (in-package aggregation vs. a thin upstream helper).
+- **RNG re-seeding**: the hc primer hashes the hc-grid row including
+  `est_method` (`R/task-primer.R:91-94`), so dropping the axis re-seeds every hc
+  task. Point estimates (`est`) are unchanged; bootstrap CIs change numerically
+  (statistically equivalent). No byte-identity is preserved across the axis
+  change, so no stored-CI migration is implied.
+- **Correctness gate**: a same-seed invariant unit test (one bootstrap →
+  per-method analytical `est` + shared CI equals per-method `ssd_hc()` calls
+  seeded with the *same* primer), backed by `exploration/est-method-invariance.R`
+  — **not** an old-vs-new pipeline equality test (the seeds differ).
 - **Call sites/docs**: name-only signature move plus snapshot re-recording for
-  printed scenarios and any `hc`-row-count assertions that assumed an
-  `est_method` fan-out.
-- **Cost**: ~3× reduction on the `est_method` axis; no change to results.
+  printed scenarios, `hc`-row-count assertions that assumed an `est_method`
+  fan-out, and any CI snapshots affected by re-seeding.
+- **Cost**: ~3× reduction on the `est_method` axis; point estimates unchanged.

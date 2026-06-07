@@ -67,14 +67,26 @@ execute the scenario, draw random numbers, or alter any result.
 - **WHEN** a scenario includes a `multi_fixed`/`multi_free` `ci_method` at the largest `nboot`
 - **THEN** the reported longest-task duration SHALL correspond to that cell (the costliest per the calibrated slopes), not merely the most numerous cell
 
-### Requirement: Reproducible cost-estimation analysis
-The package SHALL include a rerunnable analysis (vignette) documenting the
-method (calibration sweep and the `max(nboot, n0)` per-`ci_method` linear model,
-why `proportion`/`est_method` are free, the bounded non-monotonic `nrow` factor)
-and the outcome (the estimator applied to a worked scenario). Running the
-analysis end-to-end SHALL reproduce a calibration object for the running
-architecture.
+### Requirement: Recalibration is a single function call
+Producing an architecture-specific estimator SHALL require nothing more than
+calling `ssd_calibrate_cost()` and passing its result to `ssd_estimate_cost()`;
+the calibration logic SHALL live in that function (not in a vignette code-block
+or a standalone script the user must run). The package MAY document the
+discovery of the model's *form* (the session sweeps) under the change's
+`exploration/` directory, but that material is illustrative only and SHALL NOT
+be required to recalibrate.
 
-#### Scenario: Vignette reproduces a calibration
+#### Scenario: A user recalibrates with one call
+- **WHEN** a user wants a custom estimator for their machine
+- **THEN** calling `ssd_calibrate_cost()` SHALL return a usable `ssdsims_cost_calibration` without running any separate analysis script
+
+### Requirement: Cost-estimation documentation vignette
+The package SHALL include a vignette that documents the method (the
+`max(nboot, n0)` per-`ci_method` model, why `proportion`/`est_method` are free,
+the bounded non-monotonic `nrow` factor) and demonstrates `ssd_calibrate_cost()`
+and `ssd_estimate_cost()` on a worked scenario. The vignette is documentation; it
+SHALL NOT be the mechanism by which calibration is reproduced.
+
+#### Scenario: Vignette demonstrates the workflow
 - **WHEN** the cost-estimation vignette is rendered
 - **THEN** it SHALL call `ssd_calibrate_cost()` and `ssd_estimate_cost()` and display a total-cost and longest-task estimate for a worked scenario

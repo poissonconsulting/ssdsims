@@ -35,9 +35,11 @@ within one `ssd_hc()` call, absent from `task_axes("hc")`) and the
   a `partition_by`/`bundle` axis, stored at `scenario$hc$est_method`, allowed to
   be a vector without multiplying tasks.
 - Compute every requested `est_method` from a **single** bootstrap per
-  `(nboot, ci_method, parametric)` cell, with byte-identical results to the
-  current per-method path.
-- ~3× cost reduction on the est_method axis; zero change to estimates.
+  `(nboot, ci_method, parametric)` cell.
+- ~3× cost reduction on the est_method axis. Point estimates (`est`) are
+  unchanged (analytical, seed-independent); bootstrap CIs are **re-seeded** (see
+  Decision 4) and change numerically — statistically equivalent, and now
+  consistent across est_methods within a task.
 
 **Non-Goals:**
 - No change to `nboot`, `ci_method`, `parametric`, or any fit axis.
@@ -85,19 +87,39 @@ in `ssd_hc_sims()`/`ssd_fit_dists_sims` plumbing and the hc grid in
 `ssd_define_scenario()` into the settings block, and is removed from
 `task_axes("hc")` and the accepted `partition_by`/`bundle` hc vocabulary.
 
-### Decision 4: Regression test is the correctness gate
-A test SHALL assert that, for each `(est_method × ci_method)` and both `ci`
-values, the collapsed `ssd_hc_sims()` output is byte-identical (`est`, `se`,
-`lcl`, `ucl`, and `samples` when retained) to the pre-change per-method path,
-using a fixed seed. This guards the est_method-invariance assumption against
-future `ssdtools` changes.
+### Decision 4: The correctness gate is a same-seed invariant, not old-vs-new equality
+The per-task RNG primer hashes the hc-grid row, which today **includes**
+`est_method` (`R/task-primer.R:91-94`). Removing `est_method` from
+`task_axes("hc")` changes that hash, so every hc task is **re-seeded** relative
+to the old per-`est_method` path. The collapsed pipeline's bootstrap CIs are
+therefore **not** byte-comparable to the pre-change output, and the byte-identity
+seen in exploration holds only *at a fixed seed* — it cannot be asserted
+post-hoc against the old pipeline. What is invariant is the point estimate `est`
+(analytical, seed-independent); the CIs change numerically (and become
+consistent across est_methods within a task).
+
+The gate is accordingly a **unit-level, same-seed invariant** plus the
+exploration record:
+- *Exploration* (`exploration/est-method-invariance.R`): at a fixed seed, for
+  every `ci_method`, the three est_methods share a byte-identical bootstrap draw
+  and an est_method-invariant CI; only `est` differs. This is the justification
+  that `est_method` need not be a bootstrap axis.
+- *Unit test*: with a single fixed primer, the collapsed computation
+  (one bootstrap → per-method analytical `est` + shared CI) is byte-identical to
+  calling `ssdtools::ssd_hc(est_method = m)` once per method **seeded with that
+  same primer**. This guards the invariance assumption against future `ssdtools`
+  changes without claiming old-pipeline equality.
 
 ## Risks / Trade-offs
 
-- **CI ceases to be est_method-invariant in a future ssdtools** → the
-  byte-identity regression test fails loudly; if that ever happens the fallback
-  is to bootstrap per distinct `(est_method, ci_method)` only where coupling
-  exists. The split is the optimisation; the test is the guard.
+- **CI ceases to be est_method-invariant in a future ssdtools** → the same-seed
+  invariant unit test (Decision 4) fails loudly; if that ever happens the
+  fallback is to bootstrap per distinct `(est_method, ci_method)` only where
+  coupling exists. The split is the optimisation; the test is the guard.
+- **Re-seeding changes CI values vs. the old pipeline** → expected, not a
+  regression: point estimates are unchanged and the new CIs are statistically
+  valid and internally consistent. There is no byte-identity to preserve across
+  the axis change, so no migration of stored CI values is implied.
 - **Extra analytical `ci = FALSE` calls per method** → these are bootstrap-free
   and ~milliseconds; negligible beside the bootstrap they replace (net ~3×
   faster for a 3-method axis).

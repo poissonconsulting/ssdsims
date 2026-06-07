@@ -18,7 +18,7 @@
 
 ## 4. Correctness gate
 
-- [ ] 4.1 Add a regression test asserting byte-identity (`est`, `se`, `lcl`, `ucl`, and `samples` when retained) between the collapsed `ssd_hc_sims()` and the prior per-method path, across every `est_method × ci_method` and both `ci` values, at a fixed seed.
+- [ ] 4.1 Add a same-seed invariant test: with a single fixed primer, the collapsed cell (one bootstrap → per-method analytical `est` + shared CI) is byte-identical to `ssdtools::ssd_hc(est_method = m)` called per method seeded with that **same** primer, across every `est_method × ci_method` and both `ci` values. (Do NOT assert equality with the old, differently-seeded pipeline — the primer change re-seeds tasks; see `exploration/est-method-invariance.R` and design Decision 4.)
 - [ ] 4.2 Add a test that a vector `est_method` does not multiply hc tasks/rows (row count independent of the number of methods; `hc` tibble still covers all methods).
 
 ## 5. Call sites, docs, snapshots

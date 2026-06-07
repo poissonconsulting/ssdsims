@@ -21,10 +21,10 @@
 - [ ] 4.1 Add a `data-raw/cost_calibration.R` script that runs `ssd_calibrate_cost()` and saves the object; record this session's coefficients (weighted_samples 5.68 / GMACL 18.90 / MACL 19.64 / arithmetic_samples 21.24 / geometric_samples 21.60 / multi_fixed 52.63 / multi_free 55.00 ms/boot; n0 ≈ 25–30) and provenance (Intel Xeon @ 2.10 GHz, R 4.5.3, ssdtools 2.6.0.9002).
 - [ ] 4.2 Check in `data/ssd_cost_calibration_default.rda`; document the dataset (`R/data.R`) and add to `_pkgdown.yml`.
 
-## 5. Reproducible analysis vignette
+## 5. Documentation vignette
 
-- [ ] 5.1 Write `vignettes/cost-estimation.qmd` documenting the method (calibration sweep, `max(nboot, n0)` per-`ci_method` model, free `proportion`/`est_method`, bounded non-monotonic `nrow` factor) and outcome (estimator on the motivating ~430 h scenario).
-- [ ] 5.2 Make the vignette rerun `ssd_calibrate_cost()` end-to-end so it yields a custom estimator for the rendering architecture; add to `_pkgdown.yml`.
+- [ ] 5.1 Write `vignettes/cost-estimation.qmd` documenting the method (`max(nboot, n0)` per-`ci_method` model, free `proportion`/`est_method`, bounded non-monotonic `nrow` factor) and demonstrating `ssd_calibrate_cost()` + `ssd_estimate_cost()` on the motivating ~430 h scenario. Frame recalibration as the single `ssd_calibrate_cost()` call (the vignette documents/demonstrates, it is not the mechanism); reference the `exploration/` scripts as the one-time model-form derivation.
+- [ ] 5.2 Add the vignette to `_pkgdown.yml`.
 
 ## 6. Tests, docs, checks
 

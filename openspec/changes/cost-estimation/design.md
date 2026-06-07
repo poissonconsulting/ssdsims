@@ -34,8 +34,9 @@ These coefficients are architecture-specific, so the package must ship both a
 - `ssd_estimate_cost(scenario)` returning ballpark **total** cost and **longest
   single task** duration + a per-axis breakdown, purely by reading the task
   expansion (no execution).
-- A shipped default calibration (this session) and a rerunnable analysis vignette
-  documenting method and outcome.
+- A shipped default calibration (this session), and a vignette that **documents**
+  the method and **demonstrates** the one-call recalibration — recalibration
+  itself is `ssd_calibrate_cost()`, not a script the user runs (Decision 6).
 
 **Non-Goals:**
 - Exact timing or a performance model of the fit/sample steps (bootstrap
@@ -93,6 +94,30 @@ Total = Σ per-task time; longest = max per-task time. The breakdown groups by
 `ci_method` × `nboot` so users see which cells dominate (e.g. `multi_free` ×
 `nboot = 50 000`). Wall-time under parallelism is `max(longest_task,
 total / n_workers)` — documented, computed by the caller.
+
+### Decision 6: Recalibration is a function call; the vignette is documentation
+Three layers are kept distinct so the "reproducible analysis" does not become a
+script users must run:
+- **Model *form* (one-time research).** Which axes are free, the
+  `base + slope · max(nboot, n0)` shape, and the non-monotonic `nrow` factor were
+  discovered by the session sweeps preserved in
+  `openspec/changes/cost-estimation/exploration/`. These are *not* shipped and
+  *not* rerun by users; they justify why `ssd_calibrate_cost()` fits this model.
+- **Model *coefficients* (productized recalibration).** Re-measuring the
+  coefficients on a target architecture is exactly `ssd_calibrate_cost()` — a
+  single call returning a self-contained `ssdsims_cost_calibration`. That is the
+  whole rerunnable step; there is no analysis script to execute.
+- **Documentation.** The vignette explains the method and rationale and
+  *demonstrates* `ssd_calibrate_cost()` / `ssd_estimate_cost()` on a worked
+  scenario. It is user-facing docs, not the reproducibility mechanism.
+
+*Why:* a user wanting an architecture-specific estimator runs one function;
+embedding the calibration logic in the package (not a vignette code-block) makes
+it testable, callable from scripts/CI, and the single source of truth.
+
+*Alternative considered:* keep the calibration as vignette code the user
+re-knits — rejected; it would not be unit-testable or callable outside the
+vignette, and would duplicate the function's logic.
 
 ## Risks / Trade-offs
 
