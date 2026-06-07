@@ -289,21 +289,21 @@
         nrow:     5, 10
         replace:  FALSE
         fit grid:
-          dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
           rescale: FALSE
           computable: FALSE
           at_boundary_ok: TRUE
           min_pmix: ssd_min_pmix
           range_shape1: {0.05, 20}
           range_shape2: {0.05, 20}
+          dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
         hc grid:
           nboot: 1000
-          est_method: multi
           ci_method: weighted_samples
           parametric: TRUE
-          proportion: 0.05
-          ci: FALSE
-          samples: FALSE
+          est_method: multi (setting)
+          proportion: 0.05 (setting)
+          ci: FALSE (setting)
+          samples: FALSE (setting)
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -311,7 +311,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -330,21 +330,21 @@
         nrow:     5, 6, 10
         replace:  FALSE
         fit grid:
-          dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
           rescale: FALSE, TRUE
           computable: FALSE, TRUE
           at_boundary_ok: TRUE, FALSE
           min_pmix: ssd_min_pmix
           range_shape1: {0.05, 20; 0.1, 10}
           range_shape2: {0.05, 20}
+          dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
         hc grid:
           nboot: 100, 1000
-          est_method: multi, geometric
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
-          proportion: 0.05, 0.1
-          ci: TRUE
-          samples: FALSE
+          est_method: multi, geometric (setting)
+          proportion: 0.05, 0.1 (setting)
+          ci: TRUE (setting)
+          samples: FALSE (setting)
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -352,7 +352,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 
 # scenario-definition: samples must be a flag
 

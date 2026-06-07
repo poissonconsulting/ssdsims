@@ -44,6 +44,19 @@
 #' are meaningless; passing any of them in that case is an error, so set
 #' `ci = TRUE` to enable bootstrap, or omit the knobs.
 #'
+#' # `dists` and `est_method`
+#'
+#' `dists` and `est_method` are **simulation settings**, not cross-join axes -
+#' they are absent from `task_axes("fit")`/`task_axes("hc")`, so they never
+#' multiply tasks or enter the per-task RNG primer. `dists` is the *fit*-level
+#' setting: the whole character vector is handed to one `ssd_fit_dists()` call
+#' per fit task (fanning out per distribution would dissolve the model averaging
+#' that defines a fit). `est_method` is an *hc*-level setting: every requested
+#' method is summarised from each hc task's **single** bootstrap sample set
+#' rather than re-bootstrapping per method (the CI is est_method-invariant and
+#' the point `est` is analytical), so a vector `est_method` yields one row per
+#' method within a task without fanning out into separate tasks.
+#'
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
@@ -83,8 +96,9 @@
 #'   columns). Each entry must be unique, non-missing, and a subset of that
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
-#'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `est_method`,
-#'   `ci_method`, `parametric` (`ci` is a scalar hc flag, not an axis).
+#'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`,
+#'   `parametric` (`ci` and `est_method` are hc simulation settings, not axes;
+#'   `dists` is the fit-level simulation setting).
 #'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
@@ -119,7 +133,6 @@ ssd_define_scenario <- function(
   name = NULL,
   nrow = 6L,
   replace = FALSE,
-  dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
@@ -127,9 +140,10 @@ ssd_define_scenario <- function(
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   nboot = 1000,
-  est_method = "multi",
   ci_method = "weighted_samples",
   parametric = TRUE,
+  dists = ssdtools::ssd_dists_bcanz(),
+  est_method = "multi",
   proportion = 0.05,
   ci = FALSE,
   samples = FALSE,
@@ -303,9 +317,9 @@ ssd_define_scenario <- function(
       min_pmix_fns = min_pmix_spec$fns,
       hc = list(
         nboot = nboot,
-        est_method = est_method,
         ci_method = ci_method,
         parametric = parametric,
+        est_method = est_method,
         proportion = proportion,
         ci = ci,
         samples = samples
@@ -748,9 +762,9 @@ print.ssdsims_scenario <- function(x, ...) {
   cat("  nrow:     ", paste(x$nrow, collapse = ", "), "\n", sep = "")
   cat("  replace:  ", paste(x$replace, collapse = ", "), "\n", sep = "")
   cat("  fit grid:\n")
-  print_grid(x$fit)
+  print_grid(x$fit, "fit")
   cat("  hc grid:\n")
-  print_grid(x$hc)
+  print_grid(x$hc, "hc")
   cat("  partition_by:\n")
   for (step in c("sample", "fit", "hc")) {
     cat(
@@ -776,11 +790,26 @@ print.ssdsims_scenario <- function(x, ...) {
   invisible(x)
 }
 
-#' Print a named list of argument vectors in a snapshot-stable way.
+#' Print a step's argument grid by role: cross-join axes first, then the
+#' simulation settings (the knobs absent from `task_axes(step)`), each marked
+#' `(setting)`. Within each role group the stored order is preserved, so the
+#' fit grid renders `dists` after its axes and the hc grid renders
+#' `est_method`/`proportion`/`ci`/`samples` after `nboot`/`ci_method`/`parametric`.
 #' @noRd
-print_grid <- function(grid) {
-  for (nm in names(grid)) {
-    cat("    ", nm, ": ", fmt_grid_value(grid[[nm]]), "\n", sep = "")
+print_grid <- function(grid, step) {
+  nms <- names(grid)
+  is_setting <- !nms %in% task_axes(step)
+  for (i in c(which(!is_setting), which(is_setting))) {
+    marker <- if (is_setting[i]) " (setting)" else ""
+    cat(
+      "    ",
+      nms[i],
+      ": ",
+      fmt_grid_value(grid[[nms[i]]]),
+      marker,
+      "\n",
+      sep = ""
+    )
   }
 }
 

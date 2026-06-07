@@ -88,7 +88,7 @@ test_that("task-lists: min_pmix is stored by name, not function value", {
 
 # ---- hc task table ---------------------------------------------------------
 
-test_that("task-lists: hc table has K * H rows", {
+test_that("task-lists: hc table has K * H rows, not multiplied by est_method", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
@@ -99,8 +99,11 @@ test_that("task-lists: hc table has K * H rows", {
   )
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
   hc_tasks <- ssd_scenario_hc_tasks(scenario)
-  # H = 2 nboot * 2 est_method * 1 ci_method * 1 parametric = 4
-  expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 4L)
+  # H = 2 nboot * 1 ci_method * 1 parametric = 2 (est_method is a setting, not
+  # an axis, so the 2 est_method values do NOT multiply the task count).
+  expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 2L)
+  expect_false("est_method" %in% names(hc_tasks))
+  expect_false("est_method" %in% attr(hc_tasks, "axes"))
 })
 
 test_that("task-lists: ci is not an hc axis", {
@@ -117,8 +120,11 @@ test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
   )
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
   hc_tasks <- ssd_scenario_hc_tasks(scenario)
-  # One row per est_method, no fan-out over the bootstrap-only knobs.
-  expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 2L)
+  # Exactly one hc row per fit task: with `est_method` a setting (not an axis),
+  # `ci = FALSE` leaves no fan-out axis, so the two est_method values are
+  # summarised within the single task rather than multiplying it.
+  expect_identical(nrow(hc_tasks), nrow(fit_tasks))
+  expect_false("est_method" %in% names(hc_tasks))
   expect_true(all(hc_tasks$ci == FALSE))
   expect_true(all(is.na(hc_tasks$nboot)))
   expect_true(all(is.na(hc_tasks$ci_method)))
@@ -135,9 +141,117 @@ test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
   )
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
   hc_tasks <- ssd_scenario_hc_tasks(scenario)
-  # 2 nboot * 1 est_method * 1 ci_method * 1 parametric = 2 per fit task.
+  # 2 nboot * 1 ci_method * 1 parametric = 2 per fit task (est_method is a
+  # within-task setting, absent from the fan-out).
   expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 2L)
   expect_true(all(hc_tasks$ci == TRUE))
+  expect_false("est_method" %in% attr(hc_tasks, "axes"))
+})
+
+test_that("scenario-definition: dists is a setting, not a fit axis or identity", {
+  expect_false("dists" %in% task_axes("fit"))
+  s1 <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    dists = c("lnorm", "gamma")
+  )
+  s2 <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    dists = "lnorm"
+  )
+  # `dists` is stored on the fit step but is not part of fit/hc identity, so
+  # scenarios differing only in `dists` produce identical ids and primers.
+  expect_identical(s1$fit$dists, c("lnorm", "gamma"))
+  expect_identical(
+    ssd_scenario_fit_tasks(s1)$fit_id,
+    ssd_scenario_fit_tasks(s2)$fit_id
+  )
+  expect_identical(
+    ssd_scenario_hc_tasks(s1)$hc_id,
+    ssd_scenario_hc_tasks(s2)$hc_id
+  )
+  expect_identical(
+    task_primers(ssd_scenario_fit_tasks(s1), "fit"),
+    task_primers(ssd_scenario_fit_tasks(s2), "fit")
+  )
+})
+
+test_that("hazard-concentrations: collapsed est_methods match per-method ssd_hc at the same seed", {
+  fit <- ssdtools::ssd_fit_dists(
+    ssddata::ccme_boron,
+    dists = c("lnorm", "gamma"),
+    silent = TRUE
+  )
+  methods <- c("arithmetic", "geometric", "multi")
+  primer <- c(3L, 4L)
+  for (ci in c(FALSE, TRUE)) {
+    local_dqrng_backend()
+    local_dqrng_state(42L, primer = primer)
+    collapsed <- hc_collapse_est_methods(
+      fit,
+      proportion = c(0.05, 0.1),
+      ci = ci,
+      nboot = if (ci) 50L else NA_integer_,
+      est_method = methods,
+      ci_method = if (ci) "weighted_samples" else NA_character_,
+      parametric = if (ci) TRUE else NA,
+      samples = ci
+    )
+    per_method <- purrr::list_rbind(purrr::map(methods, function(m) {
+      local_dqrng_backend()
+      local_dqrng_state(42L, primer = primer)
+      if (ci) {
+        ssdtools::ssd_hc(
+          fit,
+          proportion = c(0.05, 0.1),
+          ci = TRUE,
+          nboot = 50L,
+          est_method = m,
+          ci_method = "weighted_samples",
+          parametric = TRUE,
+          samples = TRUE,
+          min_pboot = 0
+        )
+      } else {
+        ssdtools::ssd_hc(
+          fit,
+          proportion = c(0.05, 0.1),
+          ci = FALSE,
+          est_method = m,
+          samples = FALSE,
+          min_pboot = 0
+        )
+      }
+    }))
+    expect_identical(collapsed, per_method)
+  }
+})
+
+test_that("hazard-concentrations: a vector est_method is summarised within one hc task", {
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    seed = 42L,
+    dists = "lnorm",
+    ci = TRUE,
+    nboot = 10L,
+    est_method = c("arithmetic", "geometric", "multi")
+  )
+  out <- ssd_run_scenario_baseline(scenario)
+  # est_method does not fan out: exactly one hc task.
+  expect_identical(nrow(out$hc), 1L)
+  hc <- out$hc$hc[[1L]]
+  expect_setequal(unique(hc$est_method), c("arithmetic", "geometric", "multi"))
+  # One row per est_method at each proportion, all sharing the bootstrap CI
+  # (est_method-invariant): lcl/ucl are constant across methods at a proportion.
+  for (g in split(hc, hc$proportion)) {
+    expect_identical(nrow(g), 3L)
+    expect_identical(length(unique(g$lcl)), 1L)
+    expect_identical(length(unique(g$ucl)), 1L)
+  }
 })
 
 # ---- task ids / foreign keys -----------------------------------------------

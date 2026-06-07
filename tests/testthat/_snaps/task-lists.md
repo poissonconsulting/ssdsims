@@ -39,16 +39,15 @@
       ci = TRUE, nboot = c(10L, 100L)))
     Output
       <ssdsims_tasks: hc>
-        axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+        axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
         tasks: 2
-      # A tibble: 2 x 17
+      # A tibble: 2 x 16
         dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
         <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
       1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
       2 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-      # i 9 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-      #   nboot <int>, est_method <chr>, ci_method <chr>, parametric <lgl>,
-      #   hc_id <chr>, fit_id <chr>
+      # i 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
+      #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 
 # task-lists: printing a task set reports per-step counts
 
@@ -79,6 +78,5 @@
        [1] "dataset"        "sim"            "replace"        "nrow"          
        [5] "rescale"        "computable"     "at_boundary_ok" "min_pmix"      
        [9] "range_shape1"   "range_shape2"   "ci"             "nboot"         
-      [13] "est_method"     "ci_method"      "parametric"     "hc_id"         
-      [17] "fit_id"        
+      [13] "ci_method"      "parametric"     "hc_id"          "fit_id"        
 

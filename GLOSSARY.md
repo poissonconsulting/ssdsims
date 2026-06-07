@@ -68,8 +68,8 @@ Terminology used throughout `ssdsims`.
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
   `fit` adds the fit-grid axes (`rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`);
-  `hc` adds the hc-grid axes (`nboot`, `est_method`, `ci_method`,
-  `parametric`). `proportion`, `ci`, and `samples` are **not** hc axes —
+  `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`).
+  `est_method`, `proportion`, `ci`, and `samples` are **not** hc axes —
   they are *simulation settings* (below), consumed within each task rather
   than multiplying it. Contrast a *carried column* (e.g. `n_max`), which is
   data on the row but is **not** fanned out over:

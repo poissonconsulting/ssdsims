@@ -76,15 +76,26 @@ test_that("scenario-definition: minimal construction stores declarative fields",
     s$hc,
     c(
       "nboot",
-      "est_method",
       "ci_method",
       "parametric",
+      "est_method",
       "proportion",
       "ci",
       "samples"
     )
   )
   expect_identical(s$hc$ci, FALSE)
+})
+
+test_that("scenario-definition: simulation settings are contiguous after the axes", {
+  fmls <- names(formals(ssd_define_scenario))
+  settings <- c("dists", "est_method", "proportion", "ci", "samples")
+  idx <- match(settings, fmls)
+  # Contiguous and in this order.
+  expect_identical(idx, seq(idx[[1L]], length.out = length(settings)))
+  # Immediately after the last cross-join axis, and before the partitioning args.
+  expect_identical(fmls[[idx[[1L]] - 1L]], "parametric")
+  expect_identical(fmls[[max(idx) + 1L]], "partition_by")
 })
 
 test_that("scenario-definition: stores dataset names, not data frames", {

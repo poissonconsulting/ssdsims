@@ -307,9 +307,9 @@ the bootstrap:
 
 - If `ci = FALSE`, those knobs are meaningless: supplying any of them aborts at
   scenario construction (set `ci = TRUE` or omit them), and the hc-task table
-  stores them as `NA`, leaving `est_method` as the only fan-out axis.
-- If `ci = TRUE`, the hc grid fans out across `nboot × est_method × ci_method ×
-  parametric` as usual.
+  stores them as `NA`. `est_method` is an hc simulation setting (not an axis), so
+  this leaves no fan-out axis at all — exactly one hc row per fit task.
+- If `ci = TRUE`, the hc grid fans out across `nboot × ci_method × parametric`.
 
 In the hc task table (here a `ci = TRUE` scenario with two `nboot` values):
 
@@ -318,8 +318,9 @@ In the hc task table (here a `ci = TRUE` scenario with two `nboot` values):
 | 1   | 5    | FALSE   | TRUE | 100   | weighted_samples | TRUE       |
 | 1   | 5    | FALSE   | TRUE | 1000  | weighted_samples | TRUE       |
 
-A `ci = FALSE` scenario instead yields one row per `est_method` with `nboot` /
-`ci_method` / `parametric` all `NA`. The hash of an `NA`-bearing row is
+A `ci = FALSE` scenario instead yields exactly one hc row per fit task with
+`nboot` / `ci_method` / `parametric` all `NA` (every requested `est_method` is
+summarised within that single task). The hash of an `NA`-bearing row is
 well-defined as long as `NA` is encoded canonically — `task_primer()` does this
 via `rlang::hash()` on the named list — so the `NA` bootstrap knobs never
 allocate phantom streams to combinations that don't exist in practice.
@@ -429,9 +430,10 @@ value is sub-truncation of the same `n_max`-row sample (§5). For a
 fit task: data-task identity plus the fit-arg-grid row (`rescale`,
 `computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
 `range_shape2`). For an hc task: fit-task identity plus the hc-arg-
-grid row (`nboot`, `est_method`, `ci_method`, `parametric`). `ci` is a
-scalar flag, **not** in the hash (§1.2); when `ci = FALSE` the bootstrap-only
-knobs are `NA` in that row (canonically encoded).
+grid row (`nboot`, `ci_method`, `parametric`). `ci` and `est_method` are
+hc simulation settings, **not** in the hash (§1.2; `est_method` is summarised
+within the task from a single bootstrap sample set); when `ci = FALSE` the
+bootstrap-only knobs are `NA` in that row (canonically encoded).
 
 Function-valued parameters (`min_pmix`) are referenced **by name**
 (§1.1) so that a recompile/JIT does not move the task to a different
