@@ -339,6 +339,77 @@ test_that("scenario-definition: bundle rejects ci as an hc axis", {
   })
 })
 
+test_that("scenario-definition: partition_by$hc rejects bootstrap-only axes when ci = FALSE", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      ci = FALSE,
+      partition_by = list(hc = c("dataset", "sim", "nboot"))
+    )
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      ci = FALSE,
+      partition_by = list(hc = c("dataset", "sim", "ci_method", "parametric"))
+    )
+  })
+})
+
+test_that("scenario-definition: bundle$hc rejects bootstrap-only axes when ci = FALSE", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      ci = FALSE,
+      bundle = list(hc = "nboot")
+    )
+  })
+})
+
+test_that("scenario-definition: ci = FALSE still accepts a non-bootstrap hc axis", {
+  pb <- list(
+    sample = c("dataset", "sim", "replace"),
+    fit = c("dataset", "sim", "nrow", "rescale"),
+    hc = c("dataset", "sim", "est_method")
+  )
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    ci = FALSE,
+    partition_by = pb
+  )
+  expect_identical(s$partition_by, pb)
+})
+
+test_that("scenario-definition: ci = TRUE accepts bootstrap axes in partition_by/bundle", {
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    ci = TRUE,
+    nboot = c(100L, 1000L),
+    partition_by = list(hc = c("dataset", "sim", "nboot"))
+  )
+  expect_identical(s$partition_by$hc, c("dataset", "sim", "nboot"))
+  # `bundle$hc` (inner axis) is the other entry point and is equally allowed.
+  s2 <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    ci = TRUE,
+    nboot = c(100L, 1000L),
+    bundle = list(hc = "nboot")
+  )
+  expect_false("nboot" %in% s2$partition_by$hc)
+})
+
 test_that("scenario-definition: partition_by rejects nrow under the sample step", {
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
@@ -493,10 +564,14 @@ test_that("scenario-definition: scenario_partition_axes splits path and inner", 
 })
 
 test_that("scenario-definition: all-axes-in-path yields no inner axes", {
+  # `ci = TRUE` so the bootstrap-only hc axes carry real values and are
+  # legitimate path axes (under `ci = FALSE` they are canonically `NA` and
+  # rejected as layout knobs).
   s <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
     seed = 1L,
+    ci = TRUE,
     partition_by = list(
       sample = task_axes("sample"),
       fit = task_axes("fit"),

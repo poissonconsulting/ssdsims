@@ -101,6 +101,33 @@
       Error in `ssd_define_scenario()`:
       ! `bundle$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"parametric"'.
 
+# scenario-definition: partition_by$hc rejects bootstrap-only axes when ci = FALSE
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = FALSE,
+      partition_by = list(hc = c("dataset", "sim", "nboot")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$hc` names bootstrap-only axis '"nboot"', which cannot be a partition or bundle axis when `ci = FALSE` (it is canonically `NA`). Set `ci = TRUE` to enable bootstrap, or drop the axis.
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = FALSE,
+      partition_by = list(hc = c("dataset", "sim", "ci_method", "parametric")))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `partition_by$hc` names bootstrap-only axes '"ci_method"' and '"parametric"', which cannot be a partition or bundle axis when `ci = FALSE` (they are canonically `NA`). Set `ci = TRUE` to enable bootstrap, or drop the axes.
+
+# scenario-definition: bundle$hc rejects bootstrap-only axes when ci = FALSE
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = FALSE,
+      bundle = list(hc = "nboot"))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `bundle$hc` names bootstrap-only axis '"nboot"', which cannot be a partition or bundle axis when `ci = FALSE` (it is canonically `NA`). Set `ci = TRUE` to enable bootstrap, or drop the axis.
+
 # scenario-definition: partition_by rejects nrow under the sample step
 
     Code

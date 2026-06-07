@@ -85,6 +85,10 @@
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
 #'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `est_method`,
 #'   `ci_method`, `parametric` (`ci` is a scalar hc flag, not an axis).
+#'   When `ci = FALSE` the bootstrap-only hc axes (`nboot`, `ci_method`,
+#'   `parametric`) are canonically `NA` and are rejected as `hc` path or inner
+#'   axes (set `ci = TRUE` or drop them) — the layout-knob counterpart of the
+#'   bootstrap-knob guard on the hc arguments.
 #'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
@@ -281,7 +285,12 @@ ssd_define_scenario <- function(
     call = call
   )
 
-  partition_by <- validate_partition_by(partition_by, bundle, call = call)
+  partition_by <- validate_partition_by(
+    partition_by,
+    bundle,
+    ci = ci,
+    call = call
+  )
 
   structure(
     list(
@@ -347,17 +356,23 @@ scenario_default_partition_by <- function() {
 #' relationship is resolved at the read layer). Returns the normalised, complete
 #' three-step `partition_by` path list: a `bundle[[step]]` becomes its path
 #' complement `setdiff(task_axes(step), bundle[[step]])`, and steps named in
-#' neither argument take their documented default. Aborts in the context of
-#' `call` (the user-facing function). Plain loops (not `purrr::walk`) keep
-#' internal frames out of the error header (error-call-origin rule).
+#' neither argument take their documented default. When `ci = FALSE` the
+#' bootstrap-only hc axes (`nboot`/`ci_method`/`parametric`) are canonically `NA`
+#' (`scalar-ci-flag`, §1.2), so naming any of them under `partition_by$hc`/
+#' `bundle$hc` is rejected with a bespoke message — the layout-knob counterpart
+#' of the constructor's argument-level bootstrap-knob guard — leaving
+#' `task_axes("hc")` itself unchanged. Aborts in the context of `call` (the
+#' user-facing function). Plain loops (not `purrr::walk`) keep internal frames
+#' out of the error header (error-call-origin rule).
 #' @noRd
 validate_partition_by <- function(
   partition_by = NULL,
   bundle = NULL,
+  ci = FALSE,
   call = rlang::caller_env()
 ) {
-  validate_axis_list(partition_by, "partition_by", call = call)
-  validate_axis_list(bundle, "bundle", call = call)
+  validate_axis_list(partition_by, "partition_by", ci = ci, call = call)
+  validate_axis_list(bundle, "bundle", ci = ci, call = call)
 
   both <- intersect(names(partition_by), names(bundle))
   if (length(both)) {
@@ -388,9 +403,17 @@ validate_partition_by <- function(
 #' `arg` names the argument for messages. Each named entry must name a real step
 #' and be a character vector that is unique, non-`NA`, and a subset of that
 #' step's `task_axes()`. `"nrow"` under `partition_by$sample` gets a bespoke
-#' message.
+#' message. When `ci = FALSE`, the bootstrap-only hc axes
+#' (`nboot`/`ci_method`/`parametric`) under the `hc` step get another bespoke
+#' message: they are canonically `NA` under `ci = FALSE`, so partitioning or
+#' bundling on them would yield a degenerate all-`NA` Hive partition.
 #' @noRd
-validate_axis_list <- function(lst, arg, call = rlang::caller_env()) {
+validate_axis_list <- function(
+  lst,
+  arg,
+  ci = FALSE,
+  call = rlang::caller_env()
+) {
   if (is.null(lst)) {
     return(invisible(NULL))
   }
@@ -472,6 +495,31 @@ validate_axis_list <- function(lst, arg, call = rlang::caller_env()) {
         ".",
         call = call
       )
+    }
+    # `ci = FALSE` carve-out: the bootstrap-only hc axes are canonically `NA`
+    # (so partitioning/bundling on them yields a degenerate all-`NA` Hive
+    # partition); reject them as layout knobs, mirroring the constructor's
+    # argument-level bootstrap-knob guard. Additive — runs after the generic
+    # checks; `task_axes("hc")` is unchanged.
+    if (isFALSE(ci) && step == "hc") {
+      boot <- intersect(axes, c("nboot", "ci_method", "parametric"))
+      if (length(boot)) {
+        chk::abort_chk(
+          "`",
+          arg,
+          "$hc` names bootstrap-only ",
+          if (length(boot) > 1L) "axes " else "axis ",
+          chk::cc(encodeString(boot, quote = "\""), conj = " and "),
+          ", which cannot be a partition or bundle axis when `ci = FALSE` ",
+          "(",
+          if (length(boot) > 1L) "they are" else "it is",
+          " canonically `NA`). ",
+          "Set `ci = TRUE` to enable bootstrap, or drop the ",
+          if (length(boot) > 1L) "axes" else "axis",
+          ".",
+          call = call
+        )
+      }
     }
   }
   invisible(NULL)

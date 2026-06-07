@@ -128,6 +128,10 @@ step's axis vocabulary: \code{sample} = \code{dataset}, \code{sim}, \code{replac
 \code{nrow}, \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix},
 \code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{nboot}, \code{est_method},
 \code{ci_method}, \code{parametric} (\code{ci} is a scalar hc flag, not an axis).
+When \code{ci = FALSE} the bootstrap-only hc axes (\code{nboot}, \code{ci_method},
+\code{parametric}) are canonically \code{NA} and are rejected as \code{hc} path or inner
+axes (set \code{ci = TRUE} or drop them) — the layout-knob counterpart of the
+bootstrap-knob guard on the hc arguments.
 \code{"nrow"} is rejected only for \code{sample} (the
 shared draw carries no \code{nrow} axis; the \code{fit} step truncates it inline), and
 is a valid path axis for \code{fit}/\code{hc}. Steps partition \strong{independently} -
