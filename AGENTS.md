@@ -65,6 +65,14 @@ chk::chk_character(dataset_names)
   `rlang::is_function()` over `get()` / `getExportedValue()` / `is.function()`.
 - Reserve the `with_`/`local_` prefixes for RAII (withr-style) scope helpers; do
   not use them for ordinary transforms (e.g. name a column-adder `add_*()`).
+- **Canonical argument order**: at every call site, pass arguments in signature
+  order. In particular, lead `ssd_define_scenario()` calls with its three
+  required arguments — `data` (positional), then `nsim =`, then `seed =` — before
+  any `...` knob (`nrow`, `dists`, `rescale`, …). `seed` is the scenario's RNG
+  root (an RNG term, **not** a simulation setting/grid knob — see `GLOSSARY.md`),
+  so it belongs up front with `data`/`nsim`, never wedged between knobs like
+  `nrow`. A full package-wide sweep of remaining call sites for this and the
+  other public constructors is a `TARGETS-DESIGN.md` §12 cleanup item.
 - Permissions for the common tooling (`air`, `R`, `Rscript`, read-only `git`/`gh`,
   `quarto`, `Skill`) are pre-approved in `.claude/settings.json`, so these run
   without a prompt.

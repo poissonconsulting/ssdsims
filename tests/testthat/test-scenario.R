@@ -52,8 +52,8 @@ test_that("scenario-definition: minimal construction stores declarative fields",
   s <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 100L,
-    nrow = c(5L, 10L),
-    seed = 42L
+    seed = 42L,
+    nrow = c(5L, 10L)
   )
   expect_s3_class(s, "ssdsims_scenario")
   expect_identical(s$seed, 42L)
@@ -236,15 +236,15 @@ test_that("scenario-accessors: materialisation does not change fit-task primers"
   s_a <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = 6L,
     seed = 1L,
+    nrow = 6L,
     min_pmix = list(shared = f_a)
   )
   s_b <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
-    nrow = 6L,
     seed = 1L,
+    nrow = 6L,
     min_pmix = list(shared = f_b)
   )
   # The stored functions differ, but the name (the identity surface) does not.
@@ -534,8 +534,8 @@ test_that("scenario-definition: ssd_data() collection plus name= is an error", {
     ssd_define_scenario(
       ssd_data(boron = ssddata::ccme_boron),
       nsim = 2L,
-      name = "x",
-      seed = 1L
+      seed = 1L,
+      name = "x"
     )
   })
 })
@@ -549,8 +549,8 @@ test_that("scenario-definition: single data frame accepts an explicit name", {
   s <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
-    name = "boron_data",
-    seed = 1L
+    seed = 1L,
+    name = "boron_data"
   )
   expect_identical(s$datasets, "boron_data")
 })
@@ -588,8 +588,8 @@ test_that("scenario-definition: named list plus name= is an error", {
     ssd_define_scenario(
       list(boron = ssddata::ccme_boron),
       nsim = 2L,
-      name = "x",
-      seed = 1L
+      seed = 1L,
+      name = "x"
     )
   })
 })
@@ -718,8 +718,8 @@ test_that("scenario-definition: print is stable for a single dataset", {
     ssd_define_scenario(
       ssddata::ccme_boron,
       nsim = 100L,
-      nrow = c(5L, 10L),
-      seed = 42L
+      seed = 42L,
+      nrow = c(5L, 10L)
     )
   )
 })
@@ -729,8 +729,8 @@ test_that("scenario-definition: print is stable for multiple datasets and vector
     ssd_define_scenario(
       list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
       nsim = 50L,
-      nrow = c(5L, 6L, 10L),
       seed = 1L,
+      nrow = c(5L, 6L, 10L),
       rescale = c(FALSE, TRUE),
       computable = c(FALSE, TRUE),
       at_boundary_ok = c(TRUE, FALSE),

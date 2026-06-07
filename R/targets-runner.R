@@ -17,6 +17,16 @@
 # results (a `fitdists` object) are serialised to an ASCII string column via
 # `encode_obj()`/`decode_obj()` - duckplyr cannot store a raw/list column, and
 # an ASCII serialisation round-trips losslessly through a Parquet `VARCHAR`.
+#
+# This ASCII-`VARCHAR` encoding is the deliberate, benchmark-backed choice for
+# the blob (the `blob-storage-format` change): on a representative `fitdists` it
+# is lossless (the byte-identity oracle), it is a plain string column duckplyr
+# can store *and project out* without decoding, and it needs no extra
+# dependency. The two alternatives lost on those constraints - binary
+# `serialize(ascii = FALSE)` as base64 text came in ~1.5x *larger* (base64's
+# 4/3 expansion plus Parquet's own column compression of the ASCII string
+# erased any binary win), and `jsonlite::serializeJSON()` is not lossless (it
+# cannot reconstruct the TMB objective closure carried in `model$fn`).
 
 #' Write a data frame to a single Parquet file (creating parent dirs).
 #' @noRd
@@ -43,6 +53,11 @@ ssd_read_parquet <- function(path) {
 }
 
 #' Serialise an arbitrary R object to an ASCII string (Parquet-storable).
+#'
+#' The single encode/decode seam through which a non-tabular per-task result
+#' enters and leaves the shard Parquet. The encoding is lossless
+#' (`decode_obj(encode_obj(x))` recovers `x`) and yields a single string-column
+#' value the duckplyr engine can store and project out without decoding.
 #' @noRd
 encode_obj <- function(x) {
   rawToChar(serialize(x, connection = NULL, ascii = TRUE))
