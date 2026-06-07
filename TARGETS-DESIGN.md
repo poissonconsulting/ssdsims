@@ -2317,6 +2317,27 @@ public-API or ergonomics gaps.
   `exploration/`. Independent new capability; not on the dependency DAG (reads
   the archived `task-tables` expansion, no dependants).
 
+- **`nrow-max-setting`** — Add an explicit `nrow_max` simulation setting (the
+  fixed shared-draw size, default a reasonably high `1000L`) replacing the
+  derived `n_max = max(scenario$nrow)`, and complete *Direction B* — a task row
+  carries only its identity. The effective per-dataset draw is
+  `min(nrow_max, nrow(data))` for `replace = FALSE` (a high default ⇒ the full
+  permutation) and `nrow_max` rows for `replace = TRUE`; because the draw size is
+  now fixed, extending `nrow` (within the draw size) never re-draws — the
+  `sample` shard stays cached and only new `nrow`-keyed `fit` shards mint,
+  retiring the §5 "widened `max(nrow)` re-draws the sample shard" churn. In the
+  same sweep the last two carried columns leave the task tables: `n_max` (the
+  draw size is now computed in the runner from `nrow_max` + the dataset) and `ci`
+  both move into the scenario slice, so every task row is purely
+  `task_axes(step)` + `<step>_id` + parent FK (+ the per-row `seed`/`primer` the
+  shard path already attaches). No primer/partition change (neither was ever in
+  `task_axes()`); pure storage/plumbing. **Breaking** pre-release: the realised
+  `sample` draw changes for a fixed seed (now `nrow_max`/full-permutation rows,
+  not `max(nrow)`), so downstream re-baselines; the §5 `head(., nrow)` prefix
+  property is preserved. Same "axis/row → setting" family as `scalar-ci-flag` /
+  `dists-simulation-setting` / `est-method-setting`. Independent tidy-up; not on
+  the dependency DAG.
+
 ### Archived
 
 Completed steps that have landed and been archived (full artifacts under `openspec/changes/archive/`; their requirements are synced into `openspec/specs/`). Listed in the dependency order they were implemented; the Mermaid graph below colours these nodes green inside `archived_box`.
@@ -2710,6 +2731,15 @@ dependency DAG (prose bullets above, no Mermaid nodes): `est-method-setting`
 capability that reads the archived `task-tables` expansion). Both grew out of
 the `ci = TRUE` performance investigation recorded in their `exploration/`
 scripts.
+
+A third off-DAG tidy-up, `nrow-max-setting`, has since been **proposed** (prose
+bullet above, no Mermaid node): it adds the explicit `nrow_max` draw-size setting
+(default `1000L`, decoupling the draw from the `nrow` axis to retire the §5
+re-draw churn) and completes *Direction B* by moving the last two carried columns
+(`n_max`, `ci`) off the task tables into the scenario slice, so a task row carries
+only its identity. Same "axis/row → setting" family; it modifies
+`scenario-definition`, `task-lists`, `parallel-safe-seeding`,
+`scenario-accessors`, and `task-shards`, with no DAG prerequisites or dependants.
 
 `manifest` has since been **implemented (#114), synced, and archived** — the
 writer/reader/recorder/assembler live in `R/manifest.R` (with the shared
