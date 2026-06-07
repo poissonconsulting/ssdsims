@@ -227,19 +227,23 @@ manifest_session_info <- function() {
 
 # Walk the results tree under `dir`, building `completed_shards` keyed by each
 # shard Parquet's partition path (its directory relative to `dir`). A shard's
-# sidecar is preferred where present; otherwise the Parquet is hashed.
+# sidecar is preferred where present; otherwise the Parquet is hashed. Keys come
+# straight from `list.files(full.names = FALSE)` - always forward-slash relative
+# paths - so the key is platform-stable (on Windows `dir` may carry backslashes
+# while `list.files()` returns forward slashes, so stripping `dir` as a string
+# prefix would not match and would leak the absolute path into the key).
 assemble_completed_shards <- function(dir) {
-  parquets <- list.files(
+  rel_parquets <- list.files(
     dir,
     pattern = "^part\\.parquet$",
     recursive = TRUE,
-    full.names = TRUE
+    full.names = FALSE
   )
-  prefix <- paste0(sub("/+$", "", dir), "/")
   completed_shards <- list()
-  for (parquet in parquets) {
-    shard_dir <- dirname(parquet)
-    key <- sub(prefix, "", shard_dir, fixed = TRUE)
+  for (rel_parquet in rel_parquets) {
+    key <- dirname(rel_parquet)
+    shard_dir <- file.path(dir, key)
+    parquet <- file.path(dir, rel_parquet)
     completed_shards[[key]] <- shard_entry(shard_dir, parquet)
   }
   completed_shards
