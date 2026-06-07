@@ -27,10 +27,12 @@ churn.
   `replace = TRUE`. Because the draw size is now **fixed**, adding `nrow` values
   (up to the effective draw size) never re-draws — the `sample` shard stays
   cached and only new `fit` shards (keyed by `nrow`) mint.
-- **`nrow_max` is a simulation setting**, placed in the contiguous
-  simulation-settings block of `ssd_define_scenario()` (near `proportion`/`ci`/
-  `samples`). `nrow` is validated at construction against the effective draw
-  size (`nrow <= nrow(data)` for `replace = FALSE`, `nrow <= nrow_max` for
+- **`nrow_max` is a simulation setting**, placed among the non-`ci`-gated
+  simulation settings of `ssd_define_scenario()` — leading the block as the
+  sample-level setting, before `dists` (fit) and `est_method`/`proportion` (hc)
+  and ahead of `ci` (the draw happens regardless of `ci`; cf. the #139 ci-gating
+  grouping). `nrow` is validated at construction against the effective draw size
+  (`nrow <= nrow(data)` for `replace = FALSE`, `nrow <= nrow_max` for
   `replace = TRUE`).
 - **Direction B — a task row carries only its identity.** The `sample` task
   table drops the `n_max` column and the `hc` task table drops the `ci` column;

@@ -54,9 +54,11 @@ storage/plumbing change, not an identity one.
 ### Decision: `nrow_max` is a scenario-level simulation setting, default high
 
 `nrow_max` is a single `chk_whole_number`, default `1000L`, stored on the
-scenario and placed in the contiguous simulation-settings block of
-`ssd_define_scenario()` (with `proportion`/`ci`/`samples`). It is **not** an axis
-(absent from `task_axes()`), so it never multiplies tasks or enters a primer.
+scenario and placed among the non-`ci`-gated simulation settings of
+`ssd_define_scenario()` — leading them as the sample-level setting, before
+`dists` (fit) and `est_method`/`proportion` (hc), and ahead of `ci` (it is not
+`ci`-gated; the draw happens regardless). It is **not** an axis (absent from
+`task_axes()`), so it never multiplies tasks or enters a primer.
 
 *Rationale:* the draw + fit are cheap, so a generous fixed draw costs almost
 nothing in compute (the fit still operates on `head(draw, nrow)` = `nrow` rows,

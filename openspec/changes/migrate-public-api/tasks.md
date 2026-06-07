@@ -19,7 +19,7 @@
 ## 4. Migrate `ssd_hc_sims()` (`R/hc-sims.R`)
 
 - [ ] 4.1 Open a reentrant `local_dqrng_backend()` scope; resolve `seed` per D4.
-- [ ] 4.2 Replace the `hc_seed()` call in the `pmap` body with `hc_data_task_primer()`, deriving `primer = task_primer()` over the hc task identity `(stream, sim, nboot, est_method, ci_method, parametric)` — the scalar `ci` flag is applied uniformly and excluded from the primer (D6).
+- [ ] 4.2 Replace the `hc_seed()` call in the `pmap` body with `hc_data_task_primer()`, deriving `primer = task_primer()` over the hc task identity `(stream, sim, nboot, ci_method, parametric)` — the scalar `ci` flag and the `est_method` setting are applied uniformly and excluded from the primer (D6).
 - [ ] 4.3 Preserve the `min_pboot`-is-reserved guard, empty-input handling, `save_to`, the scalar `ci` flag handling (`chk_flag`, applied uniformly, absent from the primer), and the public signature.
 
 ## 5. Deprecate the L'Ecuyer shim (`R/internal.R`)
