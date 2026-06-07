@@ -1,13 +1,15 @@
 # Derive the hc Task Table from a Scenario
 
 Crosses each fit-task identity with each row of the scenario's `hc`
-argument grid (`nboot`, `est_method`, `ci_method`, `parametric`). The
-scenario's scalar `ci` flag is applied uniformly to every hc row - it is
-not a cross-join axis (it is absent from `task_axes("hc")`) and rides as
-a carried column. When `ci = FALSE`, the bootstrap-only knobs (`nboot`,
-`ci_method`, `parametric`) are canonically `NA`, leaving `est_method` as
-the only fan-out axis; when `ci = TRUE`, the grid fans out across
-`nboot x est_method x ci_method x parametric`.
+argument grid (`nboot`, `ci_method`, `parametric`). The scenario's
+scalar `ci` flag and the `est_method` setting are applied uniformly to
+every hc row - neither is a cross-join axis (both are absent from
+`task_axes("hc")`); `ci` rides as a carried column and every requested
+`est_method` is summarised within each task from its single bootstrap
+sample set. When `ci = FALSE`, the bootstrap-only knobs (`nboot`,
+`ci_method`, `parametric`) are canonically `NA` and there is no fan-out
+axis, so the grid is exactly one hc row per fit task; when `ci = TRUE`,
+the grid fans out across `nboot x ci_method x parametric`.
 
 ## Usage
 
@@ -44,16 +46,15 @@ scenario <- ssd_define_scenario(
 )
 ssd_scenario_hc_tasks(scenario)
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 4
-#> # A tibble: 4 × 17
+#> # A tibble: 4 × 16
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>   <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #> 1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
 #> 2 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
 #> 3 ccme_boron     2 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
 #> 4 ccme_boron     2 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, est_method <chr>, ci_method <chr>, parametric <lgl>,
-#> #   hc_id <chr>, fit_id <chr>
+#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
+#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 ```

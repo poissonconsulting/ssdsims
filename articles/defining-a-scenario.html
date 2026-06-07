@@ -153,10 +153,10 @@
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span>, <span class="fl">20L</span><span class="op">)</span>,</span>
 <span>  dists <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lnorm"</span>, <span class="st">"gamma"</span><span class="op">)</span>,</span>
+<span>  est_method <span class="op">=</span> <span class="st">"multi"</span>,</span>
 <span>  proportion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  nboot <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10L</span>, <span class="fl">100L</span><span class="op">)</span>,</span>
-<span>  est_method <span class="op">=</span> <span class="st">"multi"</span>,</span>
 <span>  ci_method <span class="op">=</span> <span class="st">"weighted_samples"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">scenario</span></span>
@@ -167,21 +167,21 @@
 <span><span class="co">#&gt;   nrow:     5, 10, 20</span></span>
 <span><span class="co">#&gt;   replace:  FALSE</span></span>
 <span><span class="co">#&gt;   fit grid:</span></span>
-<span><span class="co">#&gt;     dists: lnorm, gamma</span></span>
 <span><span class="co">#&gt;     rescale: FALSE</span></span>
 <span><span class="co">#&gt;     computable: FALSE</span></span>
 <span><span class="co">#&gt;     at_boundary_ok: TRUE</span></span>
 <span><span class="co">#&gt;     min_pmix: ssd_min_pmix</span></span>
 <span><span class="co">#&gt;     range_shape1: {0.05, 20}</span></span>
 <span><span class="co">#&gt;     range_shape2: {0.05, 20}</span></span>
+<span><span class="co">#&gt;     dists: lnorm, gamma (setting)</span></span>
 <span><span class="co">#&gt;   hc grid:</span></span>
+<span><span class="co">#&gt;     est_method: multi (setting)</span></span>
+<span><span class="co">#&gt;     proportion: 0.05, 0.2 (setting)</span></span>
+<span><span class="co">#&gt;     ci: TRUE (setting)</span></span>
 <span><span class="co">#&gt;     nboot: 10, 100</span></span>
-<span><span class="co">#&gt;     est_method: multi</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
-<span><span class="co">#&gt;     proportion: 0.05, 0.2</span></span>
-<span><span class="co">#&gt;     ci: TRUE</span></span>
-<span><span class="co">#&gt;     samples: FALSE</span></span>
+<span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
 <span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
 <span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
@@ -189,7 +189,7 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric</span></span></code></pre></div>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span></code></pre></div>
 </div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method shows the declarative fields: the scalar <code>seed</code> and <code>nsim</code>, the <code>nrow</code> sample sizes, the dataset names, and the two argument grids (<code>fit</code> and <code>hc</code>). Note what is <em>not</em> shown — the data frames themselves are retained for the local runner but are not part of the declarative identity; the cluster path carries only the names.</p>
 <section class="level3"><h3 id="dataset-input-is-flexible">Dataset input is flexible<a class="anchor" aria-label="anchor" href="#dataset-input-is-flexible"></a>
@@ -206,21 +206,21 @@
 <span><span class="co">#&gt;   nrow:     6</span></span>
 <span><span class="co">#&gt;   replace:  FALSE</span></span>
 <span><span class="co">#&gt;   fit grid:</span></span>
-<span><span class="co">#&gt;     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull</span></span>
 <span><span class="co">#&gt;     rescale: FALSE</span></span>
 <span><span class="co">#&gt;     computable: FALSE</span></span>
 <span><span class="co">#&gt;     at_boundary_ok: TRUE</span></span>
 <span><span class="co">#&gt;     min_pmix: ssd_min_pmix</span></span>
 <span><span class="co">#&gt;     range_shape1: {0.05, 20}</span></span>
 <span><span class="co">#&gt;     range_shape2: {0.05, 20}</span></span>
+<span><span class="co">#&gt;     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)</span></span>
 <span><span class="co">#&gt;   hc grid:</span></span>
+<span><span class="co">#&gt;     est_method: multi (setting)</span></span>
+<span><span class="co">#&gt;     proportion: 0.05 (setting)</span></span>
+<span><span class="co">#&gt;     ci: FALSE (setting)</span></span>
 <span><span class="co">#&gt;     nboot: 1000</span></span>
-<span><span class="co">#&gt;     est_method: multi</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
-<span><span class="co">#&gt;     proportion: 0.05</span></span>
-<span><span class="co">#&gt;     ci: FALSE</span></span>
-<span><span class="co">#&gt;     samples: FALSE</span></span>
+<span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
 <span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
 <span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
@@ -228,10 +228,10 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric</span></span>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
 <span></span>
 <span><span class="co"># 2. A single data frame with an explicit name.</span></span>
-<span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, name <span class="op">=</span> <span class="st">"boron"</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span>, name <span class="op">=</span> <span class="st">"boron"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_scenario&gt;</span></span>
 <span><span class="co">#&gt;   seed:     1</span></span>
 <span><span class="co">#&gt;   nsim:     2</span></span>
@@ -239,21 +239,21 @@
 <span><span class="co">#&gt;   nrow:     6</span></span>
 <span><span class="co">#&gt;   replace:  FALSE</span></span>
 <span><span class="co">#&gt;   fit grid:</span></span>
-<span><span class="co">#&gt;     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull</span></span>
 <span><span class="co">#&gt;     rescale: FALSE</span></span>
 <span><span class="co">#&gt;     computable: FALSE</span></span>
 <span><span class="co">#&gt;     at_boundary_ok: TRUE</span></span>
 <span><span class="co">#&gt;     min_pmix: ssd_min_pmix</span></span>
 <span><span class="co">#&gt;     range_shape1: {0.05, 20}</span></span>
 <span><span class="co">#&gt;     range_shape2: {0.05, 20}</span></span>
+<span><span class="co">#&gt;     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)</span></span>
 <span><span class="co">#&gt;   hc grid:</span></span>
+<span><span class="co">#&gt;     est_method: multi (setting)</span></span>
+<span><span class="co">#&gt;     proportion: 0.05 (setting)</span></span>
+<span><span class="co">#&gt;     ci: FALSE (setting)</span></span>
 <span><span class="co">#&gt;     nboot: 1000</span></span>
-<span><span class="co">#&gt;     est_method: multi</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
-<span><span class="co">#&gt;     proportion: 0.05</span></span>
-<span><span class="co">#&gt;     ci: FALSE</span></span>
-<span><span class="co">#&gt;     samples: FALSE</span></span>
+<span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
 <span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
 <span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
@@ -261,7 +261,7 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric</span></span></code></pre></div>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span></code></pre></div>
 </div>
 <p>A named list (<code>list(boron = ..., cadmium = ...)</code>) takes names from the list; an unnamed list derives them per element. Supplying both a named list and <code>name=</code> is an error.</p>
 </section><section class="level3"><h3 id="min_pmix-is-referenced-by-name">
@@ -333,14 +333,14 @@
 <span><span class="co">#&gt; 5 cadmium     2 FALSE      20 dataset=cadmium/sim=2/replace=FALSE</span></span>
 <span><span class="co">#&gt; 6 cadmium     3 FALSE      20 dataset=cadmium/sim=3/replace=FALSE</span></span></code></pre></div>
 </div>
-<p>The scalar <code>ci</code> is carried uniformly on the <code>hc</code> table (it is not an axis). With <code>ci = TRUE</code> the bootstrap knobs fan out fully; a <code>ci = FALSE</code> scenario would instead give one row per <code>est_method</code>, carrying <code>NA</code> for the bootstrap-only knobs.</p>
+<p>The scalar <code>ci</code> is carried uniformly on the <code>hc</code> table (it is not an axis), as is the <code>est_method</code> setting. With <code>ci = TRUE</code> the bootstrap knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) fan out fully; a <code>ci = FALSE</code> scenario would instead give exactly one <code>hc</code> row per fit task, carrying <code>NA</code> for those bootstrap-only knobs (every requested <code>est_method</code> is summarised within each task from a single bootstrap, so it never fans out into separate tasks).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
-<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric</span></span>
+<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
 <span><span class="co">#&gt;   tasks: 36</span></span>
-<span><span class="co">#&gt; # A tibble: 36 × 17</span></span>
+<span><span class="co">#&gt; # A tibble: 36 × 16</span></span>
 <span><span class="co">#&gt;    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    </span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;lgl&gt;      &lt;lgl&gt;          &lt;chr&gt;       </span></span>
 <span><span class="co">#&gt;  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
@@ -354,9 +354,8 @@
 <span><span class="co">#&gt;  9 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt; 10 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt; # ℹ 26 more rows</span></span>
-<span><span class="co">#&gt; # ℹ 9 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, ci &lt;lgl&gt;,</span></span>
-<span><span class="co">#&gt; #   nboot &lt;int&gt;, est_method &lt;chr&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;,</span></span>
-<span><span class="co">#&gt; #   hc_id &lt;chr&gt;, fit_id &lt;chr&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; # ℹ 8 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, ci &lt;lgl&gt;,</span></span>
+<span><span class="co">#&gt; #   nboot &lt;int&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;</span></span></code></pre></div>
 </div>
 <p>The per-step derivations are also available individually (<code><a href="../reference/ssd_scenario_sample_tasks.html">ssd_scenario_sample_tasks()</a></code>, <code><a href="../reference/ssd_scenario_fit_tasks.html">ssd_scenario_fit_tasks()</a></code>, <code><a href="../reference/ssd_scenario_hc_tasks.html">ssd_scenario_hc_tasks()</a></code>) when you only need one table.</p>
 </section><section class="level2"><h2 id="stage-4-run-the-baseline-loop">Stage 4: run the baseline loop<a class="anchor" aria-label="anchor" href="#stage-4-run-the-baseline-loop"></a>
@@ -374,9 +373,9 @@
 <div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
-<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric</span></span>
+<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
 <span><span class="co">#&gt;   tasks: 36</span></span>
-<span><span class="co">#&gt; # A tibble: 36 × 18</span></span>
+<span><span class="co">#&gt; # A tibble: 36 × 17</span></span>
 <span><span class="co">#&gt;    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    </span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;lgl&gt;      &lt;lgl&gt;          &lt;chr&gt;       </span></span>
 <span><span class="co">#&gt;  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
@@ -390,32 +389,32 @@
 <span><span class="co">#&gt;  9 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt; 10 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt; # ℹ 26 more rows</span></span>
-<span><span class="co">#&gt; # ℹ 10 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, ci &lt;lgl&gt;,</span></span>
-<span><span class="co">#&gt; #   nboot &lt;int&gt;, est_method &lt;chr&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;,</span></span>
-<span><span class="co">#&gt; #   hc_id &lt;chr&gt;, fit_id &lt;chr&gt;, hc &lt;list&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; # ℹ 9 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, ci &lt;lgl&gt;,</span></span>
+<span><span class="co">#&gt; #   nboot &lt;int&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;,</span></span>
+<span><span class="co">#&gt; #   hc &lt;list&gt;</span></span></code></pre></div>
 </div>
-<p>Unnest the hazard-concentration estimates back onto their task identities to get a tidy results table. <code>proportion</code> is not a task axis — it is passed whole to each <code>hc</code> call, so every result already carries its own <code>proportion</code> column:</p>
+<p>Unnest the hazard-concentration estimates back onto their task identities to get a tidy results table. <code>proportion</code> and <code>est_method</code> are not task axes — they are passed whole to each <code>hc</code> call (one row per value, from a single bootstrap), so every result already carries its own <code>proportion</code> and <code>est_method</code> columns:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hcs</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/unnest.html" class="external-link">unnest</a></span><span class="op">(</span></span>
-<span>  <span class="va">out</span><span class="op">$</span><span class="va">hc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"ci"</span>, <span class="st">"est_method"</span>, <span class="st">"hc"</span><span class="op">)</span><span class="op">]</span>,</span>
+<span>  <span class="va">out</span><span class="op">$</span><span class="va">hc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"ci"</span>, <span class="st">"hc"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  <span class="va">hc</span>,</span>
 <span>  names_sep <span class="op">=</span> <span class="st">"_"</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">hcs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"ci"</span>, <span class="st">"hc_proportion"</span>, <span class="st">"hc_est"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt; # A tibble: 72 × 6</span></span>
-<span><span class="co">#&gt;    dataset   sim  nrow ci    hc_proportion hc_est</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;lgl&gt;         &lt;dbl&gt;  &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 boron       1     5 TRUE           0.05   2.65</span></span>
-<span><span class="co">#&gt;  2 boron       1     5 TRUE           0.2    6.54</span></span>
-<span><span class="co">#&gt;  3 boron       1     5 TRUE           0.05   2.65</span></span>
-<span><span class="co">#&gt;  4 boron       1     5 TRUE           0.2    6.54</span></span>
-<span><span class="co">#&gt;  5 boron       1    10 TRUE           0.05   1.63</span></span>
-<span><span class="co">#&gt;  6 boron       1    10 TRUE           0.2    4.91</span></span>
-<span><span class="co">#&gt;  7 boron       1    10 TRUE           0.05   1.63</span></span>
-<span><span class="co">#&gt;  8 boron       1    10 TRUE           0.2    4.91</span></span>
-<span><span class="co">#&gt;  9 boron       1    20 TRUE           0.05   1.16</span></span>
-<span><span class="co">#&gt; 10 boron       1    20 TRUE           0.2    4.31</span></span>
+<span><span class="va">hcs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"ci"</span>, <span class="st">"hc_est_method"</span>, <span class="st">"hc_proportion"</span>, <span class="st">"hc_est"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; # A tibble: 72 × 7</span></span>
+<span><span class="co">#&gt;    dataset   sim  nrow ci    hc_est_method hc_proportion hc_est</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt;                 &lt;dbl&gt;  &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 boron       1     5 TRUE  multi                  0.05   2.65</span></span>
+<span><span class="co">#&gt;  2 boron       1     5 TRUE  multi                  0.2    6.54</span></span>
+<span><span class="co">#&gt;  3 boron       1     5 TRUE  multi                  0.05   2.65</span></span>
+<span><span class="co">#&gt;  4 boron       1     5 TRUE  multi                  0.2    6.54</span></span>
+<span><span class="co">#&gt;  5 boron       1    10 TRUE  multi                  0.05   1.63</span></span>
+<span><span class="co">#&gt;  6 boron       1    10 TRUE  multi                  0.2    4.91</span></span>
+<span><span class="co">#&gt;  7 boron       1    10 TRUE  multi                  0.05   1.63</span></span>
+<span><span class="co">#&gt;  8 boron       1    10 TRUE  multi                  0.2    4.91</span></span>
+<span><span class="co">#&gt;  9 boron       1    20 TRUE  multi                  0.05   1.16</span></span>
+<span><span class="co">#&gt; 10 boron       1    20 TRUE  multi                  0.2    4.31</span></span>
 <span><span class="co">#&gt; # ℹ 62 more rows</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="next-shards-and-the-targets-pipeline">Next: shards and the targets pipeline<a class="anchor" aria-label="anchor" href="#next-shards-and-the-targets-pipeline"></a>

@@ -19,19 +19,19 @@ ssd_define_scenario(
   name = NULL,
   nrow = 6L,
   replace = FALSE,
-  dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
-  nboot = 1000,
+  dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
-  ci_method = "weighted_samples",
-  parametric = TRUE,
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
+  ci_method = "weighted_samples",
+  parametric = TRUE,
   samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
@@ -77,10 +77,6 @@ ssd_define_scenario(
 - replace:
 
   A logical vector specifying whether to sample with replacement.
-
-- dists:
-
-  A character vector of the distribution names.
 
 - rescale:
 
@@ -129,11 +125,9 @@ ssd_define_scenario(
   A list of numeric vectors of length two of the lower and upper bounds
   for the shape2 parameter.
 
-- nboot:
+- dists:
 
-  A count of the number of bootstrap samples to use to estimate the
-  confidence limits. A value of 10,000 is recommended for official
-  guidelines.
+  A character vector of the distribution names.
 
 - est_method:
 
@@ -143,6 +137,22 @@ ssd_define_scenario(
   estimates from the individual cumulative distribution functions
   weighted by the AICc derived weights (`est_method = 'arithmetic'`) or
   or to use the geometric mean instead (`est_method = 'geometric'`).
+
+- proportion:
+
+  A numeric vector of proportion values to estimate hazard
+  concentrations for.
+
+- ci:
+
+  A flag specifying whether to estimate confidence intervals (by
+  bootstrapping).
+
+- nboot:
+
+  A count of the number of bootstrap samples to use to estimate the
+  confidence limits. A value of 10,000 is recommended for official
+  guidelines.
 
 - ci_method:
 
@@ -173,16 +183,6 @@ ssd_define_scenario(
   opposed to non-parametrically resampling the original data with
   replacement.
 
-- proportion:
-
-  A numeric vector of proportion values to estimate hazard
-  concentrations for.
-
-- ci:
-
-  A flag specifying whether to estimate confidence intervals (by
-  bootstrapping).
-
 - samples:
 
   A logical scalar (default `FALSE`): retain the bootstrap draws in the
@@ -204,15 +204,15 @@ ssd_define_scenario(
   a subset of that step's axis vocabulary: `sample` = `dataset`, `sim`,
   `replace`; `fit` adds `nrow`, `rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc`
-  adds `nboot`, `est_method`, `ci_method`, `parametric` (`ci` is a
-  scalar hc flag, not an axis). `"nrow"` is rejected only for `sample`
-  (the shared draw carries no `nrow` axis; the `fit` step truncates it
-  inline), and is a valid path axis for `fit`/`hc`. Steps partition
-  **independently** - there is no cross-step constraint; a step may be
-  finer or coarser than its neighbour on a shared axis (the m:n
-  parent-shard relationship is resolved at the read layer). Steps left
-  unnamed take their documented defaults
-  (`sample = c("dataset", "sim", "replace")`,
+  adds `nboot`, `ci_method`, `parametric` (`ci` and `est_method` are hc
+  simulation settings, not axes; `dists` is the fit-level simulation
+  setting). `"nrow"` is rejected only for `sample` (the shared draw
+  carries no `nrow` axis; the `fit` step truncates it inline), and is a
+  valid path axis for `fit`/`hc`. Steps partition **independently** -
+  there is no cross-step constraint; a step may be finer or coarser than
+  its neighbour on a shared axis (the m:n parent-shard relationship is
+  resolved at the read layer). Steps left unnamed take their documented
+  defaults (`sample = c("dataset", "sim", "replace")`,
   `fit = c("dataset", "sim", "nrow", "rescale")`,
   `hc = c("dataset", "sim")`; these supersede `TARGETS-DESIGN.md`
   section 5's pre-fold table). The split is orthogonal to the per-task
@@ -289,6 +289,20 @@ confidence intervals. When `ci = FALSE`, the bootstrap-only knobs
 them in that case is an error, so set `ci = TRUE` to enable bootstrap,
 or omit the knobs.
 
+## `dists` and `est_method`
+
+`dists` and `est_method` are **simulation settings**, not cross-join
+axes - they are absent from `task_axes("fit")`/`task_axes("hc")`, so
+they never multiply tasks or enter the per-task RNG primer. `dists` is
+the *fit*-level setting: the whole character vector is handed to one
+`ssd_fit_dists()` call per fit task (fanning out per distribution would
+dissolve the model averaging that defines a fit). `est_method` is an
+*hc*-level setting: every requested method is summarised from each hc
+task's **single** bootstrap sample set rather than re-bootstrapping per
+method (the CI is est_method-invariant and the point `est` is
+analytical), so a vector `est_method` yields one row per method within a
+task without fanning out into separate tasks.
+
 ## Examples
 
 ``` r
@@ -300,21 +314,21 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 1
 #>   nrow:     5, 10
 #>   replace:  FALSE
 #>   fit grid:
-#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
 #>     rescale: FALSE
 #>     computable: FALSE
 #>     at_boundary_ok: TRUE
 #>     min_pmix: ssd_min_pmix
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
+#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
 #>   hc grid:
+#>     est_method: multi (setting)
+#>     proportion: 0.05 (setting)
+#>     ci: FALSE (setting)
 #>     nboot: 1000
-#>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
-#>     proportion: 0.05
-#>     ci: FALSE
-#>     samples: FALSE
+#>     samples: FALSE (setting)
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -322,5 +336,5 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 1
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 ```

@@ -70,13 +70,13 @@ scenario <- ssd_define_scenario(
 out <- ssd_run_scenario_baseline(scenario)
 out$hc
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 1
-#> # A tibble: 1 × 18
+#> # A tibble: 1 × 17
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>   <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #> 1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 10 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, est_method <chr>, ci_method <chr>, parametric <lgl>,
-#> #   hc_id <chr>, fit_id <chr>, hc <list>
+#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
+#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>,
+#> #   hc <list>
 ```

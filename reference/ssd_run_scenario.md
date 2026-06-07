@@ -303,17 +303,17 @@ A tibble of nested data sets.
 
 ``` r
 ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
-#> # A tibble: 2 × 17
+#> # A tibble: 2 × 16
 #>     sim stream  nrow replace data     rescale computable at_boundary_ok min_pmix
 #>   <int>  <int> <int> <lgl>   <list>   <lgl>   <lgl>      <lgl>          <list>  
 #> 1     1      1     6 FALSE   <tibble> FALSE   FALSE      TRUE           <fn>    
 #> 2     2      1     6 FALSE   <tibble> FALSE   FALSE      TRUE           <fn>    
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, fits <list>,
-#> #   nboot <dbl>, est_method <chr>, ci_method <chr>, parametric <lgl>, hc <list>
+#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, fits <list>,
+#> #   nboot <dbl>, ci_method <chr>, parametric <lgl>, hc <list>
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
-#> # A tibble: 6 × 17
+#> # A tibble: 6 × 16
 #>     sim stream  nrow dist_sim data             rescale computable at_boundary_ok
 #>   <int>  <int> <int> <chr>    <list>           <lgl>   <lgl>      <lgl>         
 #> 1     1      1     6 lnorm    <tibble [6 × 1]> FALSE   FALSE      TRUE          
@@ -322,39 +322,39 @@ ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
 #> 4     2      1     6 top      <tibble [6 × 1]> FALSE   FALSE      TRUE          
 #> 5     3      1     6 lnorm    <tibble [6 × 1]> FALSE   FALSE      TRUE          
 #> 6     3      1     6 top      <tibble [6 × 1]> FALSE   FALSE      TRUE          
-#> # ℹ 9 more variables: min_pmix <list>, range_shape1 <list>,
-#> #   range_shape2 <list>, fits <list>, nboot <dbl>, est_method <chr>,
-#> #   ci_method <chr>, parametric <lgl>, hc <list>
+#> # ℹ 8 more variables: min_pmix <list>, range_shape1 <list>,
+#> #   range_shape2 <list>, fits <list>, nboot <dbl>, ci_method <chr>,
+#> #   parametric <lgl>, hc <list>
 
 fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 ssd_run_scenario(fit[[1]], nsim = 3)
-#> # A tibble: 3 × 17
+#> # A tibble: 3 × 16
 #>     sim stream  nrow args             data     rescale computable at_boundary_ok
 #>   <int>  <int> <int> <list>           <list>   <lgl>   <lgl>      <lgl>         
 #> 1     1      1     6 <named list [2]> <tibble> FALSE   FALSE      TRUE          
 #> 2     2      1     6 <named list [2]> <tibble> FALSE   FALSE      TRUE          
 #> 3     3      1     6 <named list [2]> <tibble> FALSE   FALSE      TRUE          
-#> # ℹ 9 more variables: min_pmix <list>, range_shape1 <list>,
-#> #   range_shape2 <list>, fits <list>, nboot <dbl>, est_method <chr>,
-#> #   ci_method <chr>, parametric <lgl>, hc <list>
+#> # ℹ 8 more variables: min_pmix <list>, range_shape1 <list>,
+#> #   range_shape2 <list>, fits <list>, nboot <dbl>, ci_method <chr>,
+#> #   parametric <lgl>, hc <list>
 
 ssd_run_scenario("rlnorm", nsim = 3)
-#> # A tibble: 3 × 17
+#> # A tibble: 3 × 16
 #>     sim stream  nrow args   data     rescale computable at_boundary_ok min_pmix
 #>   <int>  <int> <int> <list> <list>   <lgl>   <lgl>      <lgl>          <list>  
 #> 1     1      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
 #> 2     2      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
 #> 3     3      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, fits <list>,
-#> #   nboot <dbl>, est_method <chr>, ci_method <chr>, parametric <lgl>, hc <list>
+#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, fits <list>,
+#> #   nboot <dbl>, ci_method <chr>, parametric <lgl>, hc <list>
 
 ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
-#> # A tibble: 3 × 17
+#> # A tibble: 3 × 16
 #>     sim stream  nrow args   data     rescale computable at_boundary_ok min_pmix
 #>   <int>  <int> <int> <list> <list>   <lgl>   <lgl>      <lgl>          <list>  
 #> 1     1      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
 #> 2     2      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
 #> 3     3      1     6 <list> <tibble> FALSE   FALSE      TRUE           <fn>    
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, fits <list>,
-#> #   nboot <dbl>, est_method <chr>, ci_method <chr>, parametric <lgl>, hc <list>
+#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, fits <list>,
+#> #   nboot <dbl>, ci_method <chr>, parametric <lgl>, hc <list>
 ```

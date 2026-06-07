@@ -124,10 +124,10 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = c(5L, 10L, 20L),
   dists = c("lnorm", "gamma"),
+  est_method = "multi",
   proportion = c(0.05, 0.2),
   ci = TRUE,
   nboot = c(10L, 100L),
-  est_method = "multi",
   ci_method = "weighted_samples"
 )
 scenario
@@ -138,21 +138,21 @@ scenario
 #>   nrow:     5, 10, 20
 #>   replace:  FALSE
 #>   fit grid:
-#>     dists: lnorm, gamma
 #>     rescale: FALSE
 #>     computable: FALSE
 #>     at_boundary_ok: TRUE
 #>     min_pmix: ssd_min_pmix
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
+#>     dists: lnorm, gamma (setting)
 #>   hc grid:
+#>     est_method: multi (setting)
+#>     proportion: 0.05, 0.2 (setting)
+#>     ci: TRUE (setting)
 #>     nboot: 10, 100
-#>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
-#>     proportion: 0.05, 0.2
-#>     ci: TRUE
-#>     samples: FALSE
+#>     samples: FALSE (setting)
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -160,7 +160,7 @@ scenario
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 ```
 
 The [`print()`](https://rdrr.io/r/base/print.html) method shows the
@@ -189,21 +189,21 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
 #>   nrow:     6
 #>   replace:  FALSE
 #>   fit grid:
-#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
 #>     rescale: FALSE
 #>     computable: FALSE
 #>     at_boundary_ok: TRUE
 #>     min_pmix: ssd_min_pmix
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
+#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
 #>   hc grid:
+#>     est_method: multi (setting)
+#>     proportion: 0.05 (setting)
+#>     ci: FALSE (setting)
 #>     nboot: 1000
-#>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
-#>     proportion: 0.05
-#>     ci: FALSE
-#>     samples: FALSE
+#>     samples: FALSE (setting)
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -211,10 +211,10 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 
 # 2. A single data frame with an explicit name.
-ssd_define_scenario(ssddata::ccme_boron, name = "boron", nsim = 2L, seed = 1L)
+ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, name = "boron")
 #> <ssdsims_scenario>
 #>   seed:     1
 #>   nsim:     2
@@ -222,21 +222,21 @@ ssd_define_scenario(ssddata::ccme_boron, name = "boron", nsim = 2L, seed = 1L)
 #>   nrow:     6
 #>   replace:  FALSE
 #>   fit grid:
-#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
 #>     rescale: FALSE
 #>     computable: FALSE
 #>     at_boundary_ok: TRUE
 #>     min_pmix: ssd_min_pmix
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
+#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
 #>   hc grid:
+#>     est_method: multi (setting)
+#>     proportion: 0.05 (setting)
+#>     ci: FALSE (setting)
 #>     nboot: 1000
-#>     est_method: multi
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
-#>     proportion: 0.05
-#>     ci: FALSE
-#>     samples: FALSE
+#>     samples: FALSE (setting)
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -244,7 +244,7 @@ ssd_define_scenario(ssddata::ccme_boron, name = "boron", nsim = 2L, seed = 1L)
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 ```
 
 A named list (`list(boron = ..., cadmium = ...)`) takes names from the
@@ -371,17 +371,20 @@ tasks$sample
 ```
 
 The scalar `ci` is carried uniformly on the `hc` table (it is not an
-axis). With `ci = TRUE` the bootstrap knobs fan out fully; a
-`ci = FALSE` scenario would instead give one row per `est_method`,
-carrying `NA` for the bootstrap-only knobs.
+axis), as is the `est_method` setting. With `ci = TRUE` the bootstrap
+knobs (`nboot`, `ci_method`, `parametric`) fan out fully; a `ci = FALSE`
+scenario would instead give exactly one `hc` row per fit task, carrying
+`NA` for those bootstrap-only knobs (every requested `est_method` is
+summarised within each task from a single bootstrap, so it never fans
+out into separate tasks).
 
 ``` r
 
 tasks$hc
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 36
-#> # A tibble: 36 × 17
+#> # A tibble: 36 × 16
 #>    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>    <chr>   <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #>  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
@@ -395,9 +398,8 @@ tasks$hc
 #>  9 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
 #> 10 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
 #> # ℹ 26 more rows
-#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, est_method <chr>, ci_method <chr>, parametric <lgl>,
-#> #   hc_id <chr>, fit_id <chr>
+#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
+#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 ```
 
 The per-step derivations are also available individually
@@ -437,9 +439,9 @@ tibbles (the `fit` step truncates its sample inline before fitting):
 
 out$hc
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, est_method, ci_method, parametric
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 36
-#> # A tibble: 36 × 18
+#> # A tibble: 36 × 17
 #>    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>    <chr>   <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #>  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
@@ -453,37 +455,38 @@ out$hc
 #>  9 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
 #> 10 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
 #> # ℹ 26 more rows
-#> # ℹ 10 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, est_method <chr>, ci_method <chr>, parametric <lgl>,
-#> #   hc_id <chr>, fit_id <chr>, hc <list>
+#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
+#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>,
+#> #   hc <list>
 ```
 
 Unnest the hazard-concentration estimates back onto their task
-identities to get a tidy results table. `proportion` is not a task axis
-— it is passed whole to each `hc` call, so every result already carries
-its own `proportion` column:
+identities to get a tidy results table. `proportion` and `est_method`
+are not task axes — they are passed whole to each `hc` call (one row per
+value, from a single bootstrap), so every result already carries its own
+`proportion` and `est_method` columns:
 
 ``` r
 
 hcs <- tidyr::unnest(
-  out$hc[c("dataset", "sim", "nrow", "ci", "est_method", "hc")],
+  out$hc[c("dataset", "sim", "nrow", "ci", "hc")],
   hc,
   names_sep = "_"
 )
-hcs[c("dataset", "sim", "nrow", "ci", "hc_proportion", "hc_est")]
-#> # A tibble: 72 × 6
-#>    dataset   sim  nrow ci    hc_proportion hc_est
-#>    <chr>   <int> <int> <lgl>         <dbl>  <dbl>
-#>  1 boron       1     5 TRUE           0.05   2.65
-#>  2 boron       1     5 TRUE           0.2    6.54
-#>  3 boron       1     5 TRUE           0.05   2.65
-#>  4 boron       1     5 TRUE           0.2    6.54
-#>  5 boron       1    10 TRUE           0.05   1.63
-#>  6 boron       1    10 TRUE           0.2    4.91
-#>  7 boron       1    10 TRUE           0.05   1.63
-#>  8 boron       1    10 TRUE           0.2    4.91
-#>  9 boron       1    20 TRUE           0.05   1.16
-#> 10 boron       1    20 TRUE           0.2    4.31
+hcs[c("dataset", "sim", "nrow", "ci", "hc_est_method", "hc_proportion", "hc_est")]
+#> # A tibble: 72 × 7
+#>    dataset   sim  nrow ci    hc_est_method hc_proportion hc_est
+#>    <chr>   <int> <int> <lgl> <chr>                 <dbl>  <dbl>
+#>  1 boron       1     5 TRUE  multi                  0.05   2.65
+#>  2 boron       1     5 TRUE  multi                  0.2    6.54
+#>  3 boron       1     5 TRUE  multi                  0.05   2.65
+#>  4 boron       1     5 TRUE  multi                  0.2    6.54
+#>  5 boron       1    10 TRUE  multi                  0.05   1.63
+#>  6 boron       1    10 TRUE  multi                  0.2    4.91
+#>  7 boron       1    10 TRUE  multi                  0.05   1.63
+#>  8 boron       1    10 TRUE  multi                  0.2    4.91
+#>  9 boron       1    20 TRUE  multi                  0.05   1.16
+#> 10 boron       1    20 TRUE  multi                  0.2    4.31
 #> # ℹ 62 more rows
 ```
 
