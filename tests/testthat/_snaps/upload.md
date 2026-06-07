@@ -20,7 +20,7 @@
       ssd_test_upload(upload)
     Condition
       Error:
-      ! Azure credentials are incomplete: the environment variable `AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) together with one of `AZURE_STORAGE_KEY`, `AZURE_STORAGE_SAS`, or the service-principal trio `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`.
+      ! Azure credentials are incomplete: the environment variable `SSDSIMS_AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) together with one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`.
 
 # cloud-upload: an account with no secret names the auth options
 
@@ -28,7 +28,7 @@
       resolve_azure_credentials()
     Condition
       Error:
-      ! Azure credentials are incomplete: `AZURE_STORAGE_ACCOUNT` is set, but no authentication secret was found. Set `AZURE_STORAGE_KEY` (account-key auth), or `AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio (missing: 'AZURE_TENANT_ID', 'AZURE_CLIENT_ID' and 'AZURE_CLIENT_SECRET').
+      ! Azure credentials are incomplete: `SSDSIMS_AZURE_STORAGE_ACCOUNT` is set, but no authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio (missing: 'SSDSIMS_AZURE_TENANT_ID', 'SSDSIMS_AZURE_CLIENT_ID' and 'SSDSIMS_AZURE_CLIENT_SECRET').
 
 # cloud-upload: Azure ssd_upload_shard() with absent credentials fails loud
 
@@ -36,7 +36,7 @@
       ssd_upload_shard(path, upload)
     Condition
       Error:
-      ! Azure credentials are incomplete: the environment variable `AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) together with one of `AZURE_STORAGE_KEY`, `AZURE_STORAGE_SAS`, or the service-principal trio `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`.
+      ! Azure credentials are incomplete: the environment variable `SSDSIMS_AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) together with one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`.
 
 # cloud-upload: unknown upload object aborts on every generic
 

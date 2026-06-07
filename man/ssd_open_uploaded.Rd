@@ -25,7 +25,7 @@ destination it returns a \strong{lazy} \code{duckplyr}/DuckDB table over the Hiv
 extension (predicate pushdown straight against blob storage - \strong{no
 download}), composable with \code{dplyr} verbs so a one-line
 \code{ssd_open_uploaded(upload, step) |> dplyr::count()} is the immediate
-post-upload smoke test. It resolves the \strong{same} front-end \verb{AZURE_*}
+post-upload smoke test. It resolves the \strong{same} front-end \verb{SSDSIMS_AZURE_*}
 credentials as the write path and remaps them into a DuckDB \code{azure} secret
 for the backend read, aborting (naming the missing requirement) when the
 \code{azure} extension or a required credential is absent. For a dry-run

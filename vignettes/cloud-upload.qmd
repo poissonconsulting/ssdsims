@@ -73,8 +73,8 @@ unclass(azure)
 ```
 
 Credentials stay **external**: the Azure methods resolve them from the
-environment (`AZURE_STORAGE_ACCOUNT` plus one of `AZURE_STORAGE_KEY`,
-`AZURE_STORAGE_SAS`, or the service-principal trio) at call time, and the object
+environment (`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of `SSDSIMS_AZURE_STORAGE_KEY`,
+`SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio) at call time, and the object
 itself holds no secrets.
 
 ## Run it locally with a dry run
@@ -170,12 +170,12 @@ ssd_scenario_targets(
 
 Run the credentials/connectivity probe as an interactive **preflight** before
 `tar_make()` --- it lists the container and writes then deletes a marker blob,
-aborting loudly (naming the missing `AZURE_*` variable) if your wiring is wrong:
+aborting loudly (naming the missing `SSDSIMS_AZURE_*` variable) if your wiring is wrong:
 
 ```{r}
 #| label: azure-preflight
 #| eval: false
-Sys.setenv(AZURE_STORAGE_ACCOUNT = "<account>", AZURE_STORAGE_KEY = "<key>")
+Sys.setenv(SSDSIMS_AZURE_STORAGE_ACCOUNT = "<account>", SSDSIMS_AZURE_STORAGE_KEY = "<key>")
 ssd_test_upload(ssd_upload_azure("https://<account>.blob.core.windows.net", "ssdsims-results"))
 # silent on success; aborts naming the missing variable otherwise
 ```
@@ -186,7 +186,7 @@ Right after an upload, read the results **back in place** to confirm they landed
 --- no download. `ssd_open_uploaded(upload, step)` returns a lazy
 `duckplyr`/DuckDB table over the `<container>/<step>/**/part.parquet` Hive glob,
 read straight against blob storage via DuckDB's `azure` extension (it remaps your
-`AZURE_*` credentials into a DuckDB `azure` secret for you). Because it is lazy
+`SSDSIMS_AZURE_*` credentials into a DuckDB `azure` secret for you). Because it is lazy
 and `dplyr`-composable, a one-line `count()` is the immediate smoke test:
 
 ```{r}
@@ -207,7 +207,7 @@ shards.)
 ::: {.callout-important}
 - **Credentials must reach the *workers*.** `ssd_test_upload()` is easy to run
   interactively on the login node, but the shards upload **on the compute
-  nodes**. Set `AZURE_*` so the workers see them --- via the controller's
+  nodes**. Set `SSDSIMS_AZURE_*` so the workers see them --- via the controller's
   `script_lines`/module loads, or your scheduler's environment propagation ---
   not just on the login node.
 - **The Azure client and the DuckDB `azure` extension must be on the workers.**

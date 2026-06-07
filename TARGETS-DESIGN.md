@@ -1229,7 +1229,7 @@ back in place), and construction-time validation. A new backend (S3/GCS) is a
 constructor plus those three methods — no edit to existing methods.
 
 **Fail loud on absent credentials.** Azure with missing credentials **errors**
-(naming the missing `AZURE_*` variable), at probe time and as a per-shard
+(naming the missing `SSDSIMS_AZURE_*` variable), at probe time and as a per-shard
 backstop — never a silent no-op. Intent to skip the network is expressed only by
 `ssd_upload_dryrun()`.
 
@@ -1296,7 +1296,7 @@ The local shard stays on disk so `targets`' `format = "file"`
 tracking is unaffected; the cloud copy is an additional artefact.
 
 **Auth is external.** Credentials come from environment variables
-(`AZURE_STORAGE_ACCOUNT` plus one of `AZURE_STORAGE_KEY`, `AZURE_STORAGE_SAS`,
+(`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`,
 or the service-principal trio). The upload object does **not** carry secrets —
 it carries only the destination URL and container name. Their absence is a
 **loud error** (naming the missing variable), not a silent no-op — skipping the
@@ -1305,7 +1305,7 @@ network is `ssd_upload_dryrun()`'s job.
 **Connectivity probe up front.** `ssd_test_upload(upload)` performs a minimal
 round-trip (list the container, write and delete a small marker blob) and either
 returns silently or errors with the backend's diagnostic — resolving the
-credentials first and aborting, naming the missing `AZURE_*` variable, when one
+credentials first and aborting, naming the missing `SSDSIMS_AZURE_*` variable, when one
 is absent. The factory `ssd_scenario_targets()` runs it **once up front** (when
 the target list is built, i.e. when `_targets.R` is sourced — before
 `tar_make()` builds anything), so an auth/network failure aborts before any

@@ -44,12 +44,12 @@ test_that("cloud-upload: ssd_test_upload() Azure names the missing credential", 
   local_mocked_bindings(azure_check_installed = function() invisible(NULL))
   upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
   withr::local_envvar(
-    AZURE_STORAGE_ACCOUNT = NA,
-    AZURE_STORAGE_KEY = NA,
-    AZURE_STORAGE_SAS = NA,
-    AZURE_TENANT_ID = NA,
-    AZURE_CLIENT_ID = NA,
-    AZURE_CLIENT_SECRET = NA
+    SSDSIMS_AZURE_STORAGE_ACCOUNT = NA,
+    SSDSIMS_AZURE_STORAGE_KEY = NA,
+    SSDSIMS_AZURE_STORAGE_SAS = NA,
+    SSDSIMS_AZURE_TENANT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_SECRET = NA
   )
   expect_snapshot(error = TRUE, {
     ssd_test_upload(upload)
@@ -58,12 +58,12 @@ test_that("cloud-upload: ssd_test_upload() Azure names the missing credential", 
 
 test_that("cloud-upload: an account with no secret names the auth options", {
   withr::local_envvar(
-    AZURE_STORAGE_ACCOUNT = "acct",
-    AZURE_STORAGE_KEY = NA,
-    AZURE_STORAGE_SAS = NA,
-    AZURE_TENANT_ID = NA,
-    AZURE_CLIENT_ID = NA,
-    AZURE_CLIENT_SECRET = NA
+    SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct",
+    SSDSIMS_AZURE_STORAGE_KEY = NA,
+    SSDSIMS_AZURE_STORAGE_SAS = NA,
+    SSDSIMS_AZURE_TENANT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_SECRET = NA
   )
   expect_snapshot(error = TRUE, {
     resolve_azure_credentials()
@@ -72,25 +72,25 @@ test_that("cloud-upload: an account with no secret names the auth options", {
 
 test_that("cloud-upload: credential resolution honours key/SAS/principal precedence", {
   withr::with_envvar(
-    c(AZURE_STORAGE_ACCOUNT = "acct", AZURE_STORAGE_KEY = "k"),
+    c(SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct", SSDSIMS_AZURE_STORAGE_KEY = "k"),
     expect_identical(resolve_azure_credentials()$mode, "key")
   )
   withr::with_envvar(
     c(
-      AZURE_STORAGE_ACCOUNT = "acct",
-      AZURE_STORAGE_KEY = NA,
-      AZURE_STORAGE_SAS = "s"
+      SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct",
+      SSDSIMS_AZURE_STORAGE_KEY = NA,
+      SSDSIMS_AZURE_STORAGE_SAS = "s"
     ),
     expect_identical(resolve_azure_credentials()$mode, "sas")
   )
   withr::with_envvar(
     c(
-      AZURE_STORAGE_ACCOUNT = "acct",
-      AZURE_STORAGE_KEY = NA,
-      AZURE_STORAGE_SAS = NA,
-      AZURE_TENANT_ID = "t",
-      AZURE_CLIENT_ID = "c",
-      AZURE_CLIENT_SECRET = "x"
+      SSDSIMS_AZURE_STORAGE_ACCOUNT = "acct",
+      SSDSIMS_AZURE_STORAGE_KEY = NA,
+      SSDSIMS_AZURE_STORAGE_SAS = NA,
+      SSDSIMS_AZURE_TENANT_ID = "t",
+      SSDSIMS_AZURE_CLIENT_ID = "c",
+      SSDSIMS_AZURE_CLIENT_SECRET = "x"
     ),
     expect_identical(resolve_azure_credentials()$mode, "service_principal")
   )
@@ -114,12 +114,12 @@ test_that("cloud-upload: Azure ssd_upload_shard() with absent credentials fails 
   file.create(path)
   upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
   withr::local_envvar(
-    AZURE_STORAGE_ACCOUNT = NA,
-    AZURE_STORAGE_KEY = NA,
-    AZURE_STORAGE_SAS = NA,
-    AZURE_TENANT_ID = NA,
-    AZURE_CLIENT_ID = NA,
-    AZURE_CLIENT_SECRET = NA
+    SSDSIMS_AZURE_STORAGE_ACCOUNT = NA,
+    SSDSIMS_AZURE_STORAGE_KEY = NA,
+    SSDSIMS_AZURE_STORAGE_SAS = NA,
+    SSDSIMS_AZURE_TENANT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_SECRET = NA
   )
   expect_snapshot(error = TRUE, {
     ssd_upload_shard(path, upload)

@@ -26,9 +26,9 @@
 #'
 #' Credentials stay **external** to the object: the Azure methods
 #' ([ssd_test_upload()], [ssd_upload_shard()], [ssd_open_uploaded()]) resolve
-#' them from the environment at call time (`AZURE_STORAGE_ACCOUNT` plus one of
-#' `AZURE_STORAGE_KEY`, `AZURE_STORAGE_SAS`, or the service-principal trio
-#' `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`), and abort with a
+#' them from the environment at call time (`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of
+#' `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio
+#' `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`), and abort with a
 #' loud error naming the missing variable when a required one is absent.
 #'
 #' @param url The Azure Blob Storage account endpoint, e.g.
@@ -147,7 +147,7 @@ ssd_upload_shard <- function(path, upload) {
 #' extension (predicate pushdown straight against blob storage - **no
 #' download**), composable with `dplyr` verbs so a one-line
 #' `ssd_open_uploaded(upload, step) |> dplyr::count()` is the immediate
-#' post-upload smoke test. It resolves the **same** front-end `AZURE_*`
+#' post-upload smoke test. It resolves the **same** front-end `SSDSIMS_AZURE_*`
 #' credentials as the write path and remaps them into a DuckDB `azure` secret
 #' for the backend read, aborting (naming the missing requirement) when the
 #' `azure` extension or a required credential is absent. For a dry-run
@@ -278,7 +278,7 @@ azure_check_installed <- function() {
 
 # Resolve the external Azure credentials from the environment, in precedence:
 # account key, then SAS, then an AAD service principal - each alongside
-# `AZURE_STORAGE_ACCOUNT`. Returns a `list(mode, account, ...)`; aborts in the
+# `SSDSIMS_AZURE_STORAGE_ACCOUNT`. Returns a `list(mode, account, ...)`; aborts in the
 # context of `call` with a loud error naming the missing variable when no
 # complete credential set is present, so the failure surfaces at the prompt (or
 # the pipeline's up-front probe) rather than deep in the DAG on a worker.
@@ -287,28 +287,28 @@ resolve_azure_credentials <- function(call = rlang::caller_env()) {
     value <- Sys.getenv(name, unset = NA_character_)
     if (is.na(value) || !nzchar(value)) NULL else value
   }
-  account <- env("AZURE_STORAGE_ACCOUNT")
+  account <- env("SSDSIMS_AZURE_STORAGE_ACCOUNT")
   if (is.null(account)) {
     chk::abort_chk(
       "Azure credentials are incomplete: the environment variable ",
-      "`AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) ",
-      "together with one of `AZURE_STORAGE_KEY`, `AZURE_STORAGE_SAS`, or the ",
-      "service-principal trio `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/",
-      "`AZURE_CLIENT_SECRET`.",
+      "`SSDSIMS_AZURE_STORAGE_ACCOUNT` is not set. Set it (the storage account name) ",
+      "together with one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the ",
+      "service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/",
+      "`SSDSIMS_AZURE_CLIENT_SECRET`.",
       call = call
     )
   }
-  key <- env("AZURE_STORAGE_KEY")
+  key <- env("SSDSIMS_AZURE_STORAGE_KEY")
   if (!is.null(key)) {
     return(list(mode = "key", account = account, key = key))
   }
-  sas <- env("AZURE_STORAGE_SAS")
+  sas <- env("SSDSIMS_AZURE_STORAGE_SAS")
   if (!is.null(sas)) {
     return(list(mode = "sas", account = account, sas = sas))
   }
-  tenant <- env("AZURE_TENANT_ID")
-  client <- env("AZURE_CLIENT_ID")
-  secret <- env("AZURE_CLIENT_SECRET")
+  tenant <- env("SSDSIMS_AZURE_TENANT_ID")
+  client <- env("SSDSIMS_AZURE_CLIENT_ID")
+  secret <- env("SSDSIMS_AZURE_CLIENT_SECRET")
   if (!is.null(tenant) && !is.null(client) && !is.null(secret)) {
     return(list(
       mode = "service_principal",
@@ -319,14 +319,14 @@ resolve_azure_credentials <- function(call = rlang::caller_env()) {
     ))
   }
   missing <- c(
-    if (is.null(tenant)) "AZURE_TENANT_ID",
-    if (is.null(client)) "AZURE_CLIENT_ID",
-    if (is.null(secret)) "AZURE_CLIENT_SECRET"
+    if (is.null(tenant)) "SSDSIMS_AZURE_TENANT_ID",
+    if (is.null(client)) "SSDSIMS_AZURE_CLIENT_ID",
+    if (is.null(secret)) "SSDSIMS_AZURE_CLIENT_SECRET"
   )
   chk::abort_chk(
-    "Azure credentials are incomplete: `AZURE_STORAGE_ACCOUNT` is set, but no ",
-    "authentication secret was found. Set `AZURE_STORAGE_KEY` (account-key ",
-    "auth), or `AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio ",
+    "Azure credentials are incomplete: `SSDSIMS_AZURE_STORAGE_ACCOUNT` is set, but no ",
+    "authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key ",
+    "auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio ",
     "(missing: ",
     chk::cc(missing, conj = " and "),
     ").",

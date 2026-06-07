@@ -36,9 +36,9 @@ travels unchanged to \code{crew} workers and through \code{targets}.
 
 Credentials stay \strong{external} to the object: the Azure methods
 (\code{\link[=ssd_test_upload]{ssd_test_upload()}}, \code{\link[=ssd_upload_shard]{ssd_upload_shard()}}, \code{\link[=ssd_open_uploaded]{ssd_open_uploaded()}}) resolve
-them from the environment at call time (\code{AZURE_STORAGE_ACCOUNT} plus one of
-\code{AZURE_STORAGE_KEY}, \code{AZURE_STORAGE_SAS}, or the service-principal trio
-\code{AZURE_TENANT_ID}/\code{AZURE_CLIENT_ID}/\code{AZURE_CLIENT_SECRET}), and abort with a
+them from the environment at call time (\code{SSDSIMS_AZURE_STORAGE_ACCOUNT} plus one of
+\code{SSDSIMS_AZURE_STORAGE_KEY}, \code{SSDSIMS_AZURE_STORAGE_SAS}, or the service-principal trio
+\code{SSDSIMS_AZURE_TENANT_ID}/\code{SSDSIMS_AZURE_CLIENT_ID}/\code{SSDSIMS_AZURE_CLIENT_SECRET}), and abort with a
 loud error naming the missing variable when a required one is absent.
 }
 \examples{

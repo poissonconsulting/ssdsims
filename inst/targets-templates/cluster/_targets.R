@@ -74,7 +74,7 @@ scenario <- ssd_define_scenario(
 # produced (so results are readable off the cluster), pass an `upload`
 # destination by name. It pairs each shard with an `upload_<step>` target
 # (content-hashed, so unchanged shards are not re-uploaded) and runs the
-# `ssd_test_upload()` preflight up front. Credentials stay external (`AZURE_*`
+# `ssd_test_upload()` preflight up front. Credentials stay external (`SSDSIMS_AZURE_*`
 # env vars) and must reach the WORKERS, not just the login node — set them via
 # the controller's `script_lines` (above). A missing credential fails loud. See
 # the "Uploading Shards to Cloud Storage" vignette.

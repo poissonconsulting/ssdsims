@@ -4,11 +4,11 @@
 - [x] 1.2 Implement `ssd_upload_azure(url, container)` returning `structure(list(url, container), class = c("ssdsims_upload_azure_blob", "ssdsims_upload"))` with `chk`-style construction-time validation of `url`/`container` (non-empty strings), aborting in the user-facing call context
 - [x] 1.3 Implement `ssd_upload_dryrun()` returning `structure(list(), class = c("ssdsims_upload_dryrun", "ssdsims_upload"))`
 - [x] 1.4 Define the three generics (`UseMethod`): `ssd_upload_shard(path, upload)`, `ssd_test_upload(upload)`, and `ssd_open_uploaded(upload, step)`; each with a default method that aborts on an unknown class
-- [x] 1.5 Implement `ssd_test_upload.ssdsims_upload_azure_blob()` over `AzureStor`/`AzureRMR`: `rlang::check_installed(c("AzureStor", "AzureRMR"))`, resolve env credentials (account-key, SAS, or AAD service principal), abort with a loud error **naming the missing `AZURE_*` variable**, then list container + write/delete a marker blob
+- [x] 1.5 Implement `ssd_test_upload.ssdsims_upload_azure_blob()` over `AzureStor`/`AzureRMR`: `rlang::check_installed(c("AzureStor", "AzureRMR"))`, resolve env credentials (account-key, SAS, or AAD service principal), abort with a loud error **naming the missing `SSDSIMS_AZURE_*` variable**, then list container + write/delete a marker blob
 - [x] 1.6 Implement `ssd_test_upload.ssdsims_upload_dryrun()` as a trivial success (no credential resolution, no network)
 - [x] 1.7 Implement `ssd_upload_shard.ssdsims_upload_azure_blob(path, upload)` via `AzureStor::upload_blob()`: put the Parquet at `<url>/<container>/<step>/<partition-path>/part.parquet`, return local `path`; abort loudly when credentials are absent (no silent no-op)
 - [x] 1.8 Implement `ssd_upload_shard.ssdsims_upload_dryrun(path, upload)`: no network I/O, record a skip, return local `path`
-- [x] 1.9 Implement `ssd_open_uploaded.ssdsims_upload_azure_blob(upload, step)`: `INSTALL azure; LOAD azure;` on a DuckDB/`duckplyr` connection, resolve the **same** front-end `AZURE_*` credentials as the write path and remap them into a DuckDB `azure` secret (`CREATE SECRET`) for the backend (fail loud naming the missing requirement if the extension or a credential is absent), and return a lazy `duckplyr` table over `<container>/<step>/**/part.parquet` read **in place** (no download); accept `step ∈ {sample, fit, hc}` and offer the uploaded `summary`
+- [x] 1.9 Implement `ssd_open_uploaded.ssdsims_upload_azure_blob(upload, step)`: `INSTALL azure; LOAD azure;` on a DuckDB/`duckplyr` connection, resolve the **same** front-end `SSDSIMS_AZURE_*` credentials as the write path and remap them into a DuckDB `azure` secret (`CREATE SECRET`) for the backend (fail loud naming the missing requirement if the extension or a credential is absent), and return a lazy `duckplyr` table over `<container>/<step>/**/part.parquet` read **in place** (no download); accept `step ∈ {sample, fit, hc}` and offer the uploaded `summary`
 - [x] 1.10 Implement `ssd_open_uploaded.ssdsims_upload_dryrun(upload, step)`: abort with an informative error (a dry run uploads nothing — read the local shards directly), never returning an empty/local table
 - [x] 1.11 Compute and surface the cloud copy's sha256 from `ssd_upload_shard()` for the manifest to record alongside the local sha256
 - [x] 1.12 Roxygen-document all constructors and the three generics; on `?ssd_upload_shard` document the extension contract (constructor + the three generics `ssd_upload_shard()`/`ssd_test_upload()`/`ssd_open_uploaded()`, no edit to existing methods); `@export` the public functions and run `devtools::document()` to update `NAMESPACE`/`man/`
@@ -32,7 +32,7 @@
 ## 4. Tests
 
 - [x] 4.1 Unit-test constructors: classes set, fields stored, `ssd_upload_azure()` validation aborts on bad `url`/`container`, objects carry no credentials
-- [x] 4.2 Test `ssd_test_upload()`: dry-run trivially OK; Azure with a missing `AZURE_*` var aborts naming the variable (mock/skip the live round-trip)
+- [x] 4.2 Test `ssd_test_upload()`: dry-run trivially OK; Azure with a missing `SSDSIMS_AZURE_*` var aborts naming the variable (mock/skip the live round-trip)
 - [x] 4.3 Test `ssd_upload_shard()`: dry-run records a skip and reaches no network; Azure with absent creds aborts loudly (no silent path return)
 - [x] 4.4 Test the factory: `upload = NULL` yields no `upload_<step>` targets; `ssd_upload_dryrun()` yields one paired target per shard; `check_dots_empty()` rejects positional/misspelled args
 - [x] 4.5 Test that per-task results are byte-identical across `upload = NULL`, `ssd_upload_dryrun()`, and (mocked) Azure runs
@@ -48,7 +48,7 @@
 - [x] 5.5 Described (non-evaluated) section — verify the upload: show `ssd_open_uploaded(upload, step)` reading the results back **in place** and a one-line `dplyr::count()` round-trip as the immediate post-upload test
 - [x] 5.6 "What to pay attention to" callout: credentials must reach the **workers** (controller `script_lines`/module loads or scheduler env propagation, not just the login node); the Azure client + DuckDB `azure` extension must be available on workers (ManyLinux path); a missing credential **fails loud** (`error = "null"` keeps the rest shipping); unchanged shards are not re-uploaded (content-hash skip); the read-back is **in place** (no download)
 - [x] 5.7 Add forward links to the new vignette from `vignettes/sharded-pipeline.qmd` and `vignettes/cluster-pipeline.qmd`
-- [x] 5.8 Render the vignette offline (no `AZURE_*` set) to confirm it builds with no network/credentials
+- [x] 5.8 Render the vignette offline (no `SSDSIMS_AZURE_*` set) to confirm it builds with no network/credentials
 
 ## 6. Docs and design sync
 
