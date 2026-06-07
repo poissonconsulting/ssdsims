@@ -237,6 +237,9 @@
 </div>
 <div class="section level2">
 <h2 id="pull-requests">Pull Requests<a class="anchor" aria-label="anchor" href="#pull-requests"></a></h2>
+<blockquote>
+<p><strong>The PR title MUST be a Conventional Commit</strong> — <code>&lt;type&gt;(&lt;scope&gt;): &lt;summary&gt;</code> — because the squash-merge makes it the lone commit on <code>main</code> that <code>fledge</code> turns into the <code>NEWS.md</code> entry. Write e.g. <code>ci(covr): bump codecov-action to v7</code>, <strong>not</strong> a bare sentence like <code>Update codecov-action to v7</code>. This holds even when an external tool (e.g. the PR-creation UI) drafts a title for you: rewrite it to match before merge.</p>
+</blockquote>
 <ul><li>
 <strong>Always update PR title and description</strong> when opening the PR and after committing. The description must capture the change’s <em>current</em> state, not a revision/process log.</li>
 <li>

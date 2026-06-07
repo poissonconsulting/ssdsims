@@ -319,6 +319,14 @@ conventionally-typed commit message (see Pull Requests below).
 
 ## Pull Requests
 
+> **The PR title MUST be a Conventional Commit** —
+> `<type>(<scope>): <summary>` — because the squash-merge makes it the
+> lone commit on `main` that `fledge` turns into the `NEWS.md` entry.
+> Write e.g. `ci(covr): bump codecov-action to v7`, **not** a bare
+> sentence like `Update codecov-action to v7`. This holds even when an
+> external tool (e.g. the PR-creation UI) drafts a title for you:
+> rewrite it to match before merge.
+
 - **Always update PR title and description** when opening the PR and
   after committing. The description must capture the change’s *current*
   state, not a revision/process log.
