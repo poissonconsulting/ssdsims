@@ -220,10 +220,12 @@ joinable:
 tasks$sample
 ```
 
-The scalar `ci` is carried uniformly on the `hc` table (it is not an axis). With
-`ci = TRUE` the bootstrap knobs fan out fully; a `ci = FALSE` scenario would
-instead give one row per `est_method`, carrying `NA` for the bootstrap-only
-knobs.
+The scalar `ci` is carried uniformly on the `hc` table (it is not an axis), as
+is the `est_method` setting. With `ci = TRUE` the bootstrap knobs (`nboot`,
+`ci_method`, `parametric`) fan out fully; a `ci = FALSE` scenario would instead
+give exactly one `hc` row per fit task, carrying `NA` for those bootstrap-only
+knobs (every requested `est_method` is summarised within each task from a single
+bootstrap, so it never fans out into separate tasks).
 
 ```{r}
 #| label: hc-table
@@ -263,18 +265,19 @@ out$hc
 ```
 
 Unnest the hazard-concentration estimates back onto their task identities to
-get a tidy results table. `proportion` is not a task axis --- it is passed
-whole to each `hc` call, so every result already carries its own `proportion`
-column:
+get a tidy results table. `proportion` and `est_method` are not task axes ---
+they are passed whole to each `hc` call (one row per value, from a single
+bootstrap), so every result already carries its own `proportion` and
+`est_method` columns:
 
 ```{r}
 #| label: unnest
 hcs <- tidyr::unnest(
-  out$hc[c("dataset", "sim", "nrow", "ci", "est_method", "hc")],
+  out$hc[c("dataset", "sim", "nrow", "ci", "hc")],
   hc,
   names_sep = "_"
 )
-hcs[c("dataset", "sim", "nrow", "ci", "hc_proportion", "hc_est")]
+hcs[c("dataset", "sim", "nrow", "ci", "hc_est_method", "hc_proportion", "hc_est")]
 ```
 
 ## Next: shards and the targets pipeline
