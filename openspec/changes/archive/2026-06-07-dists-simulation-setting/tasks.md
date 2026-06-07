@@ -4,8 +4,10 @@
 > signature reorder + call-site sweep. The combined end-state once both land is
 > `… parametric, dists, est_method, proportion, ci, samples, partition_by, …`;
 > the `est_method` slot is the sibling change's task. Archive this change first.
+> (The trailing `upload` formal has since been removed by the `cloud-upload`
+> change — it is now a runner argument of `ssd_scenario_targets()`.)
 
-- [x] 1.1 In `R/scenario.R`, move the `dists` formal out of the fit-axis block of `ssd_define_scenario()` to lead the simulation-settings block: `… parametric, dists, proportion, ci, samples, partition_by, bundle, upload`
+- [x] 1.1 In `R/scenario.R`, move the `dists` formal out of the fit-axis block of `ssd_define_scenario()` to lead the simulation-settings block: `… parametric, dists, proportion, ci, samples, partition_by, bundle`
 - [x] 1.2 Confirm storage is unchanged — `dists` still validated as a unique character vector and stored at `scenario$fit$dists`; no change to `scenario$hc`
 - [x] 1.3 Confirm `task_axes()` is untouched (it already excludes `dists`); no change to `R/task-lists.R`, primers, identities, or shard layout
 

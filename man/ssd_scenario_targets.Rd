@@ -6,15 +6,26 @@
 \usage{
 ssd_scenario_targets(
   scenario,
+  ...,
   root = scenario_results_dir(scenario),
+  upload = NULL,
   cue = NULL
 )
 }
 \arguments{
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
 
+\item{...}{Unused; must be empty. Its presence forces \code{root}, \code{upload}, and
+\code{cue} to be passed \strong{by name} (\code{rlang::check_dots_empty()} aborts on a
+positional or misspelled argument), since \code{root} and \code{upload} are both
+path-shaped and easy to transpose.}
+
 \item{root}{The results root the shards and summary are written under;
 defaults to the per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}}.}
+
+\item{upload}{An optional upload destination (the remote-destination sibling
+of \code{root}) from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}, or \code{NULL}
+(default) for no upload targets. See the section above.}
 
 \item{cue}{An optional \code{targets::tar_cue()} applied to every shard target
 (e.g. \code{targets::tar_cue(depend = FALSE)} to pin trusted shards against code
@@ -39,7 +50,7 @@ ssd_scenario_targets(scenario)
 
 The shard and summary targets carry \code{error = "null"} so a shard whose body
 fails entirely goes \code{NULL} (its error readable via \code{tar_meta()}) without
-aborting the run, and \code{ssd_summarize()} unions whatever landed
+aborting the run, and \code{ssd_summarise()} unions whatever landed
 (TARGETS-DESIGN.md section 6.2). The shipped \verb{_targets.R} templates pair this
 with a pipeline-wide \strong{keep-going} default (\code{tar_option_set(error = "continue")}, the \code{make -k} analogue) so an errored target skips only its
 dependents while the rest of the shards still build; fail-fast pre-flight
@@ -102,6 +113,24 @@ To parallelise the shards, set a controller (e.g. a mirai-backed
 \verb{_targets.R} before calling this - the target set is unchanged.
 }
 
+\section{Uploading shards to cloud storage (\code{upload})}{
+
+\code{upload} is the \strong{remote-destination sibling of \code{root}} (default \code{NULL}).
+With \code{upload = NULL} the pipeline contains \strong{no} \verb{upload_<step>} targets -
+the clean default DAG for a non-uploader. With a non-\code{NULL} upload object the
+factory pairs each step shard with an \verb{upload_<step>} target in the same
+\code{tar_map} (\code{format = "file"}, \code{error = "null"}), so an unchanged shard is
+never re-uploaded (content-hash skip) and a per-shard upload failure isolates
+to its own branch. Pass \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}} for no-op upload targets that
+reach no network (exercising the DAG shape offline / in CI) or
+\code{\link[=ssd_upload_azure]{ssd_upload_azure()}} to ship to Azure. The destination's
+\code{\link[=ssd_test_upload]{ssd_test_upload()}} probe is run \strong{once up front} (when the factory is
+called, before \code{tar_make()}), so missing credentials or an unreachable
+destination abort before any compute. The per-task results are byte-identical
+across all three \code{upload} modes; only the presence and behaviour of the
+\verb{upload_<step>} targets differ.
+}
+
 \examples{
 \dontrun{
 # _targets.R
@@ -110,9 +139,12 @@ library(tarchetypes)
 library(ssdsims)
 scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
+
+# Pair each shard with a (no-op) upload target, exercised offline:
+ssd_scenario_targets(scenario, upload = ssd_upload_dryrun())
 }
 }
 \seealso{
 \code{\link[=scenario_results_dir]{scenario_results_dir()}}, \code{\link[=ssd_run_scenario_shards]{ssd_run_scenario_shards()}} (the
-single-core, \code{targets}-free equivalent).
+single-core, \code{targets}-free equivalent), \code{\link[=ssd_upload_azure]{ssd_upload_azure()}}.
 }

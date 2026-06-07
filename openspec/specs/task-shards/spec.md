@@ -51,11 +51,11 @@ The package SHALL ship a `targets` pipeline template that builds the scenario as
 - **THEN** the scenario SHALL be a construction-time object and the per-step shard tables SHALL be computed at sourcing time to feed `tar_map()`'s `values`
 
 ### Requirement: A failing whole shard does not abort the run
-The step targets SHALL carry `error = "null"` so that a shard whose body fails entirely records its error (readable via `tar_meta()` after the run) and yields a `NULL` target without aborting `tar_make()`; the remaining shard targets SHALL still build and `ssd_summarize()` SHALL union whatever shards landed (`TARGETS-DESIGN.md` §6.2). Finer *partial* survival (a single bad task yielding a shorter shard) is out of scope here (`shard-failure-survival`).
+The step targets SHALL carry `error = "null"` so that a shard whose body fails entirely records its error (readable via `tar_meta()` after the run) and yields a `NULL` target without aborting `tar_make()`; the remaining shard targets SHALL still build and `ssd_summarise()` SHALL union whatever shards landed (`TARGETS-DESIGN.md` §6.2). Finer *partial* survival (a single bad task yielding a shorter shard) is out of scope here (`shard-failure-survival`).
 
 #### Scenario: One failing shard leaves the others built
 - **WHEN** one shard's body fails entirely during `tar_make()` and the other shards succeed
-- **THEN** the run SHALL NOT abort, the failed shard's error SHALL be readable via `tar_meta()`, the other shards' Parquets SHALL be written, and `ssd_summarize()` SHALL union the shards that landed
+- **THEN** the run SHALL NOT abort, the failed shard's error SHALL be readable via `tar_meta()`, the other shards' Parquets SHALL be written, and `ssd_summarise()` SHALL union the shards that landed
 
 ### Requirement: Targets results match the single-core baseline runner
 The per-task results produced by the targets pipeline SHALL be byte-identical (as read-back R values) to those produced by the single-core `ssd_run_scenario_baseline()` for the same scenario, because both install the same per-task `(seed, primer)` via the same primitives and results are order-independent (`TARGETS-DESIGN.md` §5/§6). The baseline runner thereby serves as the reference oracle that validates the targets-based runner.
@@ -65,10 +65,10 @@ The per-task results produced by the targets pipeline SHALL be byte-identical (a
 - **THEN** the per-task `sample`, `fit`, and `hc` results SHALL be equal across the two runs
 
 ### Requirement: A summary fan-in reads the result layers without re-running upstream
-The package SHALL provide `ssd_summarize()` that reads the `sample`, `fit`, and `hc` result directories (via `duckplyr`) and writes a combined `results/summary.parquet`, without depending on each shard target's value and without re-running upstream steps (`TARGETS-DESIGN.md` §6).
+The package SHALL provide `ssd_summarise()` that reads the `sample`, `fit`, and `hc` result directories (via `duckplyr`) and writes a combined `results/summary.parquet`, without depending on each shard target's value and without re-running upstream steps (`TARGETS-DESIGN.md` §6).
 
 #### Scenario: Summary reads landed shards
-- **WHEN** `ssd_summarize()` is run after the shard Parquets are written
+- **WHEN** `ssd_summarise()` is run after the shard Parquets are written
 - **THEN** it SHALL read the result layers from disk and write a combined summary, without recomputing any shard
 
 #### Scenario: Summary does not pull every shard value into R via targets

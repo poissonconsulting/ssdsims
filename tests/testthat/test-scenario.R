@@ -529,9 +529,9 @@ test_that("scenario-definition: all-axes-in-path yields no inner axes", {
   expect_length(scenario_partition_axes(s, "hc")$inner, 0L)
 })
 
-test_that("scenario-definition: upload defaults to NULL", {
+test_that("scenario-definition: no upload field on the scenario", {
   s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
-  expect_null(s$upload)
+  expect_false("upload" %in% names(s))
 })
 
 test_that("scenario-definition: construction leaves .Random.seed unchanged", {

@@ -118,8 +118,6 @@
 #'   may be partial. Use `partition_by` when you want few path axes, `bundle`
 #'   when you want fine sharding and only a few inner axes. Both normalise into
 #'   the single stored `partition_by` path list.
-#' @param upload An optional upload specification (a list), or `NULL` for no
-#'   upload.
 #' @param ... Unused; must be empty.
 #' @return An S3 object of class `ssdsims_scenario`.
 #' @export
@@ -148,8 +146,7 @@ ssd_define_scenario <- function(
   parametric = TRUE,
   samples = FALSE,
   partition_by = NULL,
-  bundle = NULL,
-  upload = NULL
+  bundle = NULL
 ) {
   data_expr <- rlang::enexpr(data)
   min_pmix_expr <- rlang::enexpr(min_pmix)
@@ -188,7 +185,6 @@ ssd_define_scenario <- function(
   chk::chk_length(replace, upper = 2L)
 
   chk::chk_null_or(name, vld = chk::vld_string)
-  chk::chk_null_or(upload, vld = chk::vld_list)
   # `partition_by`/`bundle` are validated and normalised below.
 
   # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
@@ -324,8 +320,7 @@ ssd_define_scenario <- function(
         parametric = parametric,
         samples = samples
       ),
-      partition_by = partition_by,
-      upload = upload
+      partition_by = partition_by
     ),
     class = "ssdsims_scenario"
   )

@@ -20,7 +20,7 @@ source("scenario.R")
 # Single core: writes one Parquet per shard under results-serial/<step>/...,
 # the same Hive layout the targets pipeline writes to results/.
 run <- ssd_run_scenario_shards(scenario, dir = "results-serial")
-serial_summary <- ssd_summarize(
+serial_summary <- ssd_summarise(
   file.path(run$dir, "sample"),
   file.path(run$dir, "fit"),
   file.path(run$dir, "hc"),
