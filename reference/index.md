@@ -86,6 +86,22 @@ assemble those into the manifest’s `completed_shards` map.
 
   Assemble `completed_shards` from the Shards on Disk
 
+## Cost estimation
+
+Predict, before launching, roughly how much compute a scenario costs and
+how long its single longest task runs. Calibrate the per-task cost model
+on the target machine (or use the shipped default), then apply it to a
+scenario read-only - no fit, bootstrap, or RNG.
+
+- [`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md)
+  : Estimate a Scenario's Compute Cost and Longest Task
+- [`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md)
+  : Calibrate the Per-task Cost Model on the Current Machine
+- [`ssd_cost_calibration()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration.md)
+  : Default Cost Calibration
+- [`ssd_cost_calibration_default`](https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration_default.md)
+  : Default Cost Calibration Object
+
 ## Scenario accessors
 
 A technical detail of the pipelines: isolate an already-materialised

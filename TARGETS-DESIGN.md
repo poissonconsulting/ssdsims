@@ -2430,12 +2430,15 @@ public-API or ergonomics gaps.
   `est_method` axis. Independent tidy-up; not on the dependency DAG.
 
 - **`cost-estimation`** — New `cost-estimation` capability: a
-  calibration harness (`ssd_calibrate_cost()`) that re-measures a
-  per-task cost model on the target architecture and an estimator
-  (`ssd_estimate_cost()`) that reads a scenario’s hc task expansion
-  (read-only, no run) to predict ballpark total cost and the longest
-  single task. Model: the hc bootstrap dominates `ci = TRUE`; per-call
-  time ≈ `base + slope(ci_method) × max(nboot, n0)`, with
+  calibration harness
+  ([`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md))
+  that re-measures a per-task cost model on the target architecture and
+  an estimator
+  ([`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md))
+  that reads a scenario’s hc task expansion (read-only, no run) to
+  predict ballpark total cost and the longest single task. Model: the hc
+  bootstrap dominates `ci = TRUE`; per-call time ≈
+  `base + slope(ci_method) × max(nboot, n0)`, with
   `proportion`/`est_method` free and a bounded non-monotonic `nrow`
   factor (calibrated this session at ~430 single-core hours for the
   motivating scenario). Ships a default calibration with provenance; the

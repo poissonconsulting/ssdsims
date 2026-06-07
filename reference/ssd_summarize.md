@@ -68,6 +68,6 @@ ssd_summarize(
   file.path(run$dir, "hc"),
   file.path(run$dir, "summary.parquet")
 )
-#> [1] "/tmp/RtmpvQt0m0/ssdsims-shards-390466917967/summary.parquet"
+#> [1] "/tmp/Rtmp9WLFp3/ssdsims-shards-39b84d98bb12/summary.parquet"
 # }
 ```

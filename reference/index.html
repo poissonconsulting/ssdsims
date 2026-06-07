@@ -18,9 +18,10 @@
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
-    <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
+    <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -248,6 +249,43 @@
 
         </dt>
         <dd>Assemble <code>completed_shards</code> from the Shards on Disk</dd>
+      </dl></div><div class="section level2">
+      <h2 id="cost-estimation">Cost estimation<a class="anchor" aria-label="anchor" href="#cost-estimation"></a></h2>
+
+      <div class="section-desc"><p>Predict, before launching, roughly how much compute a scenario costs and how long its single longest task runs. Calibrate the per-task cost model on the target machine (or use the shipped default), then apply it to a scenario read-only - no fit, bootstrap, or RNG.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ssd_estimate_cost.html">ssd_estimate_cost()</a></code>
+
+        </dt>
+        <dd>Estimate a Scenario's Compute Cost and Longest Task</dd>
+
+        <dt>
+
+          <code><a href="ssd_calibrate_cost.html">ssd_calibrate_cost()</a></code>
+
+        </dt>
+        <dd>Calibrate the Per-task Cost Model on the Current Machine</dd>
+
+        <dt>
+
+          <code><a href="ssd_cost_calibration.html">ssd_cost_calibration()</a></code>
+
+        </dt>
+        <dd>Default Cost Calibration</dd>
+
+        <dt>
+
+          <code><a href="ssd_cost_calibration_default.html">ssd_cost_calibration_default</a></code>
+
+        </dt>
+        <dd>Default Cost Calibration Object</dd>
       </dl></div><div class="section level2">
       <h2 id="scenario-accessors">Scenario accessors<a class="anchor" aria-label="anchor" href="#scenario-accessors"></a></h2>
 
