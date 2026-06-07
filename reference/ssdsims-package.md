@@ -26,3 +26,4 @@ Authors:
   ([ORCID](https://orcid.org/0000-0002-7683-4592))
 
 - Rebecca Fisher <R.Fisher@aims.gov.au>
+  ([ORCID](https://orcid.org/0000-0001-5148-6731))
