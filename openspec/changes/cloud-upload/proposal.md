@@ -14,6 +14,7 @@ The data/fit/hc shards must be readable **from outside the cluster** — laptops
 - **Two no-upload modes, both supported:** `upload = NULL` (default — **no** `upload_<step>` nodes in the DAG, for non-uploaders) and `upload = ssd_upload_dryrun()` (`upload_<step>` nodes present but no-op, to exercise the DAG shape offline/in CI).
 - **Per-shard upload targets.** When `upload` is non-`NULL`, the factory pairs each step shard with an `upload_<step>` target (`format = "file"`, `error = "null"`) via the same `tar_map`, content-hashed so unchanged shards never re-upload; the upload's cloud sha256 is recorded in the manifest.
 - **Documented extension contract** on `?ssd_upload_shard`: to add S3/GCS, write a constructor + the three methods. No speculative backends are added now.
+- **New vignette** ("Uploading Shards to Cloud Storage", `vignettes/cloud-upload.qmd`) chained after the shard and cluster vignettes: it runs the upload **locally** (live chunks use `ssd_upload_dryrun()` so the build needs no network or credentials), then shows how to **extend the same factory call to a real Azure destination on a cluster** and what to watch for — credentials on the *workers* (not just the login node), the `ssd_test_upload()` preflight, the fail-loud behaviour, and the content-hash re-upload skip. Forward links are added from `sharded-pipeline.qmd` and `cluster-pipeline.qmd`.
 
 ## Capabilities
 
@@ -27,6 +28,7 @@ The data/fit/hc shards must be readable **from outside the cluster** — laptops
 ## Impact
 
 - **New code**: `R/upload.R` (the constructors, generics, Azure + dryrun methods, `ssd_test_upload()`), exported in `NAMESPACE`, with `man/` docs.
+- **New docs**: `vignettes/cloud-upload.qmd` (local dry-run run + cluster/Azure extension guide), cross-linked with the `sharded-pipeline` and `cluster-pipeline` vignettes (which gain a forward link).
 - **Changed code**: `R/scenario.R` (drop `upload` arg/field/validation/print), `R/targets-runner.R` (`ssd_scenario_targets()` signature + `upload_<step>` target wiring).
 - **Dependencies**: an Azure object-store client (e.g. `AzureStor`) and DuckDB's `azure` extension for in-place read-back, added to `Suggests` (the upload path is opt-in; the package builds and tests without cloud creds via `ssd_upload_dryrun()`). Auth stays external (`AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, or a service principal) — the upload object carries only the destination, never secrets.
 - **Design docs**: `TARGETS-DESIGN.md` §6.1 is updated (destination on the runner, fail-loud creds, explicit dryrun) and §13's `cloud-upload` node is realised.

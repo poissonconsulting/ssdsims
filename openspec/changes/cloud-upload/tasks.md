@@ -36,9 +36,19 @@
 - [ ] 4.5 Test that per-task results are byte-identical across `upload = NULL`, `ssd_upload_dryrun()`, and (mocked) Azure runs
 - [ ] 4.6 Test content-hash skip: a re-driven dry-run pipeline with unchanged shards re-runs no `upload_<step>` target; a partial extension runs only the new shards' upload targets
 
-## 5. Docs and design sync
+## 5. Vignette ("Uploading Shards to Cloud Storage", `vignettes/cloud-upload.qmd`)
 
-- [ ] 5.1 Update `TARGETS-DESIGN.md` §6.1 (destination on the runner, fail-loud creds, explicit `ssd_upload_dryrun()`) and mark §13's `cloud-upload` node realised
-- [ ] 5.2 Reconcile with `dists-simulation-setting`: drop the `upload` reference from the "arguments grouped by role" ordering (whichever change lands second)
-- [ ] 5.3 Add a `NEWS.md` entry for the new upload API and the BREAKING removal of `scenario$upload`
-- [ ] 5.4 Run `air format`, `devtools::document()`, `devtools::check()`, and `pkgdown` reference build; ensure no cloud credentials are needed for the default test/check run
+- [ ] 5.1 Create `vignettes/cloud-upload.qmd` with the gerund title, `quarto::html` engine, and the `requireNamespace()`-guarded `eval` setup mirroring `sharded-pipeline.qmd` (skip gracefully without the fitting/storage suggests)
+- [ ] 5.2 Write the intro that chains off the shard + cluster vignettes (link back to `sharded-pipeline.html` and `cluster-pipeline.html`) and states the model: upload is a runner argument (sibling of `root`), live chunks use `ssd_upload_dryrun()` so the build needs no network or credentials
+- [ ] 5.3 Live (evaluated) section — local run: build a scenario, call `ssd_scenario_targets(scenario, root = <tmp>, upload = ssd_upload_dryrun())`, show `ssd_test_upload(ssd_upload_dryrun())` succeeding and the no-op `upload_<step>` targets in the graph; contrast `upload = NULL` (no upload nodes)
+- [ ] 5.4 Described (non-evaluated) section — Azure on a cluster: show the same factory call with `upload = ssd_upload_azure(url, container)` dropped into the cluster template's `_targets.R`, and `ssd_test_upload()` as an interactive preflight
+- [ ] 5.5 "What to pay attention to" callout: credentials must reach the **workers** (controller `script_lines`/module loads or scheduler env propagation, not just the login node); the Azure client + DuckDB `azure` extension must be installed on workers (ManyLinux path); a missing credential **fails loud** (`error = "null"` keeps the rest shipping); unchanged shards are not re-uploaded (content-hash skip)
+- [ ] 5.6 Add forward links to the new vignette from `vignettes/sharded-pipeline.qmd` and `vignettes/cluster-pipeline.qmd`
+- [ ] 5.7 Render the vignette offline (no `AZURE_*` set) to confirm it builds with no network/credentials
+
+## 6. Docs and design sync
+
+- [ ] 6.1 Update `TARGETS-DESIGN.md` §6.1 (destination on the runner, fail-loud creds, explicit `ssd_upload_dryrun()`) and mark §13's `cloud-upload` node realised
+- [ ] 6.2 Reconcile with `dists-simulation-setting`: drop the `upload` reference from the "arguments grouped by role" ordering (whichever change lands second)
+- [ ] 6.3 Add a `NEWS.md` entry for the new upload API and the BREAKING removal of `scenario$upload`
+- [ ] 6.4 Run `air format`, `devtools::document()`, `devtools::check()`, and `pkgdown` reference + articles build; ensure no cloud credentials are needed for the default test/check/vignette run

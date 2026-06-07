@@ -85,3 +85,18 @@ The package SHALL document, on the `ssd_upload_shard()` generic's help page, the
 #### Scenario: No speculative backends are shipped
 - **WHEN** the package's exported upload constructors are enumerated
 - **THEN** only `ssd_upload_azure()` and `ssd_upload_dryrun()` SHALL be present
+
+### Requirement: A vignette demonstrates local upload and the cluster/Azure extension
+The package SHALL ship a vignette ("Uploading Shards to Cloud Storage") that chains after the sharded-pipeline and cluster-pipeline vignettes and demonstrates the upload hook. Its **live** (evaluated) chunks SHALL run the pipeline locally with `ssd_upload_dryrun()` so the vignette builds with **no network access and no credentials** (guarded by `requireNamespace()` like the sibling vignettes), exercising `ssd_test_upload()` and the no-op `upload_<step>` targets. The vignette SHALL then show — as **described, non-evaluated** chunks — how to retarget the same `ssd_scenario_targets(scenario, ..., upload = ssd_upload_azure(...))` call to a real Azure destination on a cluster, and SHALL call out what to pay attention to: credentials must be present on the **workers** (not only the login/submit node), `ssd_test_upload()` SHALL be run as a preflight, a missing credential **fails loud** (per the credential requirement above), and unchanged shards are **not re-uploaded** (the content-hash skip). The sharded-pipeline and cluster-pipeline vignettes SHALL gain a forward link to this vignette, so the three form a chain (define → shard → cluster → upload).
+
+#### Scenario: Vignette builds offline with no credentials
+- **WHEN** the vignette is rendered in an environment with no cloud credentials and no network
+- **THEN** its live chunks SHALL complete using `ssd_upload_dryrun()` (skipping gracefully if the fitting/storage suggested packages are absent), and SHALL NOT require any `AZURE_*` variable
+
+#### Scenario: Vignette documents the cluster extension and its caveats
+- **WHEN** a reader follows the vignette past the local run
+- **THEN** it SHALL show the same factory call retargeted to `ssd_upload_azure(...)` and SHALL state that credentials must reach the workers, that `ssd_test_upload()` is the preflight, that a missing credential fails loud, and that unchanged shards are not re-uploaded
+
+#### Scenario: The vignette chain is cross-linked
+- **WHEN** the `sharded-pipeline` and `cluster-pipeline` vignettes are read
+- **THEN** each SHALL link forward to the "Uploading Shards to Cloud Storage" vignette, and that vignette SHALL link back to both

@@ -18,6 +18,7 @@ The `ssd_scenario_targets()` factory (`R/targets-runner.R:625`, owned by the `ta
 - Relocate the destination from the scenario to `ssd_scenario_targets(scenario, ..., root, upload, cue)`, with `check_dots_empty()` forcing named args, supporting both `upload = NULL` (no upload nodes) and `ssd_upload_dryrun()` (no-op nodes).
 - Per-shard `upload_<step>` targets (`format = "file"`, `error = "null"`), content-hashed, recording the cloud sha256 in the manifest.
 - A documented "constructor + three methods" extension contract for future S3/GCS.
+- A vignette ("Uploading Shards to Cloud Storage") that runs locally with `ssd_upload_dryrun()` and documents the cluster/Azure extension, chained after the shard and cluster vignettes.
 
 **Non-Goals:**
 
@@ -55,6 +56,12 @@ Move `upload` off the scenario onto `ssd_scenario_targets(scenario, ..., root, u
 ### Decision: upload is a per-shard `format = "file"` target, not an inline side effect
 
 Following §6.1, the `upload_<step>` target takes the shard's local path (`format = "file"`) so `targets` re-runs it only when the shard's content hash changes — a re-driven `tar_make()` that rebuilt nothing uploads nothing; a partial extension uploads only new/rewritten shards. `error = "null"` isolates a per-shard upload failure. The local shard stays on disk (compute-step tracking unaffected); the cloud copy is an additional artefact whose sha256 the manifest records beside the local sha256.
+
+### Decision: the vignette runs locally with dry-run and *describes* the cluster/Azure path
+
+The new vignette mirrors the convention already set by its siblings: the `sharded-pipeline` vignette runs locally and shows the `targets`/cluster pipeline "but does not run it," and the `cluster-pipeline` vignette's scheduler chunks are not evaluated (no SLURM at build time). The upload vignette does the same for the network: its **live** chunks run `ssd_scenario_targets(..., upload = ssd_upload_dryrun())` on a local root, so the vignette builds in CI with **no credentials and no network** (guarded by `requireNamespace()` exactly like `sharded-pipeline.qmd`), exercising `ssd_test_upload()` and the no-op `upload_<step>` targets end to end. The Azure destination and the cluster wiring are shown as **described, non-evaluated** chunks. This is the cleanest place the dry-run object pays off — it is what makes a network-free vignette possible while still walking every node of the upload DAG. *Alternative considered:* a vignette that talks to a live Azure account — rejected; it cannot run in CI, contradicts the "builds offline" property, and would leak/require credentials.
+
+The vignette's cluster section is deliberately a *delta on the existing cluster vignette*, not a re-teaching of `crew`/SLURM: it adds the one line (`upload = ssd_upload_azure(...)` in the cluster template's `_targets.R`) and the operational caveats that only matter once a real backend is involved — credentials must reach the **workers** (set via the controller's `script_lines`/module loads or the scheduler's env propagation, not just the login node where `ssd_test_upload()` is easy to run interactively); the Azure client and DuckDB `azure` extension must be installed on the workers (the ManyLinux binary path the cluster vignette already covers); a missing credential **fails loud** on the shard's upload branch (`error = "null"` keeps the rest shipping); and the content-hash skip means a re-driven run re-uploads only changed shards. It forward-links from `sharded-pipeline.qmd` and `cluster-pipeline.qmd` so the four-vignette chain reads define → shard → cluster → upload.
 
 ## Risks / Trade-offs
 
