@@ -4,7 +4,7 @@
 \alias{ssd_summarise}
 \title{Summarise a Run's hc Estimates Across Shards}
 \usage{
-ssd_summarise(dir_sample, dir_fit, dir_hc, path)
+ssd_summarise(dir_sample, dir_fit, dir_hc, path, path_with_samples = NULL)
 }
 \arguments{
 \item{dir_sample}{The \code{sample} results root.}
@@ -13,10 +13,16 @@ ssd_summarise(dir_sample, dir_fit, dir_hc, path)
 
 \item{dir_hc}{The \code{hc} results root.}
 
-\item{path}{The output Parquet path for the combined summary.}
+\item{path}{The output Parquet path for the compact summary (\code{dists}/\code{samples}
+projected out).}
+
+\item{path_with_samples}{Optional output Parquet path for a full summary that
+retains the \code{dists}/\code{samples} list-columns. \code{NULL} (the default) writes only
+the compact summary.}
 }
 \value{
-The summary Parquet path (the \code{format = "file"} contract).
+The summary Parquet path(s) (the \code{format = "file"} contract): \code{path}
+when \code{path_with_samples} is \code{NULL}, otherwise \code{c(path, path_with_samples)}.
 }
 \description{
 Fans in the run's results without pulling shard target values back into R or
@@ -30,6 +36,14 @@ three result layers; the \code{sample} draws and serialised \code{fit} objects a
 summary material, so the combined summary is the \code{hc} layer.
 }
 \details{
+The compact summary at \code{path} projects the \code{dists}/\code{samples} list-columns out
+at the DuckDB level, so the potentially-large retained bootstrap draws are
+never pulled into R. Supply \code{path_with_samples} to \strong{also} write a full
+summary that retains those list-columns: that write reuses the same lazy
+DuckDB read, so the draws never materialise in R there either. The draws are
+populated only when the scenario set \code{samples = TRUE}, so the full summary is
+the analysis-ready estimates plus the per-row draws.
+
 In a \code{targets} pipeline a directory read carries no dependency edge, so
 \code{\link[=ssd_scenario_targets]{ssd_scenario_targets()}} orders \code{summary} after the shards by naming every
 \code{hc} shard target in its command (it re-runs when any \code{hc} shard's bytes

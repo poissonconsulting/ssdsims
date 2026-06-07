@@ -2305,6 +2305,23 @@ public-API or ergonomics gaps.
   property is preserved. Same "axis/row → setting" family as `scalar-ci-flag` /
   `dists-simulation-setting` / `est-method-setting`. Independent tidy-up; not on
   the dependency DAG.
+
+- **`dual-summary-outputs`** — Give the §6 fan-in a second, optional output.
+  `ssd_summarise()` keeps writing the compact `summary.parquet` (the
+  analysis-ready estimate table, `dists`/`samples` projected out at the DuckDB
+  level and never pulled into R) and gains a trailing `path_with_samples = NULL`: when
+  supplied it **also** writes a *full* hc union that **retains** the
+  `dists`/`samples` list-columns, via the same directory read kept lazy in DuckDB
+  (read glob → write Parquet) so the draws never materialise in R either.
+  `ssd_scenario_targets()` passes `path_with_samples = <root>/summary-samples.parquet`
+  **iff** `scenario$hc$samples` is `TRUE` (the case where the retained draws carry
+  information the compact summary cannot) and the `summary` target returns the
+  path vector so `targets` tracks both files; with `samples = FALSE` the pipeline
+  is unchanged. Additive and backward-compatible (`path_with_samples` defaults to `NULL`);
+  `task-shards` delta. Pairs with the cloud-upload `ssd_summarise_uploaded(...,
+  drop_samples =)` knob (the uploaded-read analogue). Independent tidy-up; not on
+  the dependency DAG.
+
 ### Archived
 
 Completed steps that have landed and been archived (full artifacts under `openspec/changes/archive/`; their requirements are synced into `openspec/specs/`). Listed in the dependency order they were implemented; the Mermaid graph below colours these nodes green inside `archived_box`.

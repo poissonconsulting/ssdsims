@@ -215,6 +215,140 @@ test_that("task-shards: ssd_summarise unions landed hc shards without recomputat
   expect_gt(nrow(summary), 0L)
 })
 
+# ---- dual summary outputs (dual-summary-outputs change) --------------------
+
+# Materialise every sample/fit/hc shard for `scenario` under `dir`.
+materialise_shards <- function(scenario, dir) {
+  ss <- ssd_scenario_sample_shards(scenario)
+  fs <- ssd_scenario_fit_shards(scenario)
+  hs <- ssd_scenario_hc_shards(scenario)
+  for (i in seq_len(nrow(ss))) {
+    ssd_run_sample_step(ss$tasks[[i]], scenario, file.path(dir, "sample"))
+  }
+  for (i in seq_len(nrow(fs))) {
+    ssd_run_fit_step(
+      fs$tasks[[i]],
+      scenario,
+      file.path(dir, "sample"),
+      file.path(dir, "fit")
+    )
+  }
+  for (i in seq_len(nrow(hs))) {
+    ssd_run_hc_step(
+      hs$tasks[[i]],
+      scenario,
+      file.path(dir, "fit"),
+      file.path(dir, "hc")
+    )
+  }
+}
+
+test_that("dual-summary-outputs: path_with_samples writes a full summary retaining samples", {
+  dir <- withr::local_tempdir()
+  scenario <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm",
+    ci = TRUE,
+    nboot = 10L,
+    samples = TRUE
+  )
+  materialise_shards(scenario, dir)
+  compact_path <- file.path(dir, "summary.parquet")
+  full_path <- file.path(dir, "summary-samples.parquet")
+  out <- ssd_summarise(
+    file.path(dir, "sample"),
+    file.path(dir, "fit"),
+    file.path(dir, "hc"),
+    compact_path,
+    path_with_samples = full_path
+  )
+  # both paths returned and written
+  expect_identical(out, c(compact_path, full_path))
+  expect_true(all(file.exists(out)))
+
+  compact <- ssd_read_parquet(compact_path)
+  full <- ssd_read_parquet(full_path)
+  # compact projects the heavy list-columns out; full retains them
+  expect_false(any(c("dists", "samples") %in% names(compact)))
+  expect_true(all(c("dists", "samples") %in% names(full)))
+  # the full summary's draws are populated (samples = TRUE)
+  expect_true(any(lengths(full$samples) > 0L))
+  # same rows and identical estimates across the two files (the union read is
+  # unordered, so compare sorted)
+  expect_identical(nrow(compact), nrow(full))
+  expect_equal(sort(compact$est), sort(full$est))
+  expect_equal(sort(compact$lcl), sort(full$lcl))
+  expect_equal(sort(compact$ucl), sort(full$ucl))
+})
+
+test_that("dual-summary-outputs: path_with_samples = NULL writes only the compact summary", {
+  dir <- withr::local_tempdir()
+  scenario <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm"
+  )
+  materialise_shards(scenario, dir)
+  out <- ssd_summarise(
+    file.path(dir, "sample"),
+    file.path(dir, "fit"),
+    file.path(dir, "hc"),
+    file.path(dir, "summary.parquet")
+  )
+  expect_identical(out, file.path(dir, "summary.parquet"))
+  expect_true(file.exists(out))
+  expect_false(file.exists(file.path(dir, "summary-samples.parquet")))
+})
+
+test_that("dual-summary-outputs: the pipeline gates the full summary on samples", {
+  skip_targets()
+  root <- withr::local_tempdir()
+  with_samples <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm",
+    ci = TRUE,
+    nboot = 10L,
+    samples = TRUE
+  )
+  without_samples <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm"
+  )
+  # the summary target is the last element of the factory's list
+  summary_cmd <- function(scenario) {
+    tgts <- ssd_scenario_targets(scenario, root = root)
+    tgts[[length(tgts)]]$command$string
+  }
+  expect_match(
+    summary_cmd(with_samples),
+    "summary-samples.parquet",
+    fixed = TRUE
+  )
+  expect_match(summary_cmd(with_samples), "path_with_samples = ", fixed = TRUE)
+  # samples = FALSE injects `path_with_samples = NULL` and no second file path
+  expect_no_match(
+    summary_cmd(without_samples),
+    "summary-samples.parquet",
+    fixed = TRUE
+  )
+  expect_match(
+    summary_cmd(without_samples),
+    "path_with_samples = NULL",
+    fixed = TRUE
+  )
+})
+
 # ---- targets pipeline integration (task 7.4) -------------------------------
 
 test_that("task-shards: the shipped template tar_make()s every shard", {
