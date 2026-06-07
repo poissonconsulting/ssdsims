@@ -7,7 +7,10 @@ PR titles **must** be valid Conventional Commits — `<type>: <summary>` or
 `refactor`, `test`, `chore`, etc. (e.g.
 `feat: add scenario-scoped dqrng pcg64 RNG backend`,
 `docs(openspec): propose registry, manifest, and task-tables changes`). Use the
-imperative mood and keep the summary concise.
+imperative mood and keep the summary concise — e.g. `ci(covr): bump
+codecov-action to v7`, **not** a bare sentence like `Update codecov-action to
+v7`. This holds even when an external tool (e.g. the PR-creation UI) drafts a
+title for you: rewrite it to match before merge.
 
 This is load-bearing: **PRs are squash-merged**, so the PR title becomes the
 single commit on `main`, and that commit is what `fledge` reads to build

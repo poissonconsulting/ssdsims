@@ -193,20 +193,14 @@ See `DESCRIPTION` for versions and imports.
 
 ## Pull Requests
 
-> **The PR title MUST be a Conventional Commit** — `<type>(<scope>): <summary>`
-> — because the squash-merge makes it the lone commit on `main` that `fledge`
-> turns into the `NEWS.md` entry. Write e.g. `ci(covr): bump codecov-action to
-> v7`, **not** a bare sentence like `Update codecov-action to v7`. This holds
-> even when an external tool (e.g. the PR-creation UI) drafts a title for you:
-> rewrite it to match before merge.
+> **PR titles MUST be valid Conventional Commits** — `<type>(<scope>):
+> <summary>`. The canonical rule, examples, and rationale (squash-merge → the
+> title is the lone commit on `main` that `fledge` turns into `NEWS.md`) live in
+> the *Pull Requests* section of `CLAUDE.md`.
 
 - **Always update PR title and description** when opening the PR and after committing.
   The description must capture the
 change's *current* state, not a revision/process log.
-- **PR titles must be valid Conventional Commits** — see the *Pull Requests*
-  section of `CLAUDE.md` for the rule and its rationale (PRs are squash-merged,
-  so the title becomes the single commit on `main` that `fledge` reads to build
-  `NEWS.md`).
 - **Escape function, object, and file names in backticks** in PR titles and
   descriptions (e.g. `local_dqrng_backend()`, `run_scenario()`, `DESCRIPTION`).
 - **Reference the related issue** in the title where one exists (e.g. `(#64)`)
