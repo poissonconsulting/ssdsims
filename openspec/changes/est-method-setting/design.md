@@ -132,10 +132,11 @@ exploration record:
   archive time, this delta is **rebased onto the `dists` end-state**: its
   role-grouping requirement already has `dists` removed from the axes clause and
   named in the settings block, so the two deltas **compose**. (Per PR review the
-  final grouping leads with `ci` — the gate — followed by the bootstrap axes
-  `nboot`/`ci_method`/`parametric` and the within-task hc settings it gates:
-  `… range_shape2, dists, ci, nboot, ci_method, parametric, est_method,
-  proportion, samples, partition_by …`.) `dists-simulation-setting`
+  non-`ci`-gated settings `dists`/`est_method`/`proportion` — valid when
+  `ci = FALSE` — precede `ci`, and the knobs `ci` gates follow it (the bootstrap
+  axes `nboot`/`ci_method`/`parametric` and `samples`):
+  `… range_shape2, dists, est_method, proportion, ci, nboot, ci_method,
+  parametric, samples, partition_by …`.) `dists-simulation-setting`
   **owns** the behaviour-preserving signature reorder + call-site sweep
   groundwork (it establishes the contiguous settings block); this change only
   slots `est_method` into that block on top of the real bootstrap-collapse work.

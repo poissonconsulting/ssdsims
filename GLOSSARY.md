@@ -69,7 +69,7 @@ Terminology used throughout `ssdsims`.
   `fit` adds the fit-grid axes (`rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`);
   `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`).
-  `ci`, `est_method`, `proportion`, and `samples` are **not** hc axes —
+  `est_method`, `proportion`, `ci`, and `samples` are **not** hc axes —
   they are *simulation settings* (below), consumed within each task rather
   than multiplying it. Contrast a *carried column* (e.g. `n_max`), which is
   data on the row but is **not** fanned out over:
@@ -87,12 +87,13 @@ Terminology used throughout `ssdsims`.
   and `est_method` (vector-valued) and for `dists` (a character vector) — all
   non-scalar yet still not axes. Settings attach at different **steps**: `dists`
   is a **fit**-level setting (the `dists` vector handed to every fit task), while
-  `ci`, `est_method`, `proportion`, and `samples` are **hc**-level. In the
-  `ssd_define_scenario()` signature `ci` leads its group — the bootstrap axes
-  (`nboot`/`ci_method`/`parametric`) and the within-task hc settings
-  (`est_method`/`proportion`/`samples`) it gates follow it — with `dists` (the
-  fit setting) just before. Reclassifying `dists` and `est_method` lands via the
-  `dists-simulation-setting` and `est-method-setting` changes.
+  `est_method`, `proportion`, `ci`, and `samples` are **hc**-level. In the
+  `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`dists`,
+  `est_method`, `proportion` — each valid and meaningful when `ci = FALSE`) come
+  before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
+  `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
+  (which only retains bootstrap draws). Reclassifying `dists` and `est_method`
+  lands via the `dists-simulation-setting` and `est-method-setting` changes.
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is
   a *read-side* concept — query engines (duckplyr / DuckDB)

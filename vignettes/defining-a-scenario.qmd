@@ -99,12 +99,12 @@ scenario <- ssd_define_scenario(
   nsim = 3L,
   seed = 42L,
   nrow = c(5L, 10L, 20L),
-  nboot = c(10L, 100L),
-  ci_method = "weighted_samples",
   dists = c("lnorm", "gamma"),
   est_method = "multi",
   proportion = c(0.05, 0.2),
-  ci = TRUE
+  ci = TRUE,
+  nboot = c(10L, 100L),
+  ci_method = "weighted_samples"
 )
 scenario
 ```
@@ -127,7 +127,7 @@ routed through the same `Conc` validation, in several forms:
 ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
 
 # 2. A single data frame with an explicit name.
-ssd_define_scenario(ssddata::ccme_boron, name = "boron", nsim = 2L, seed = 1L)
+ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, name = "boron")
 ```
 
 A named list (`list(boron = ..., cadmium = ...)`) takes names from the list; an

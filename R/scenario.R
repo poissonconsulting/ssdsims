@@ -140,12 +140,12 @@ ssd_define_scenario <- function(
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   dists = ssdtools::ssd_dists_bcanz(),
+  est_method = "multi",
+  proportion = 0.05,
   ci = FALSE,
   nboot = 1000,
   ci_method = "weighted_samples",
   parametric = TRUE,
-  est_method = "multi",
-  proportion = 0.05,
   samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
@@ -306,22 +306,22 @@ ssd_define_scenario <- function(
       nrow = as.integer(nrow),
       replace = replace,
       fit = list(
-        dists = dists,
         rescale = rescale,
         computable = computable,
         at_boundary_ok = at_boundary_ok,
         min_pmix = min_pmix_spec$names,
         range_shape1 = range_shape1,
-        range_shape2 = range_shape2
+        range_shape2 = range_shape2,
+        dists = dists
       ),
       min_pmix_fns = min_pmix_spec$fns,
       hc = list(
+        est_method = est_method,
+        proportion = proportion,
         ci = ci,
         nboot = nboot,
         ci_method = ci_method,
         parametric = parametric,
-        est_method = est_method,
-        proportion = proportion,
         samples = samples
       ),
       partition_by = partition_by,
@@ -790,31 +790,19 @@ print.ssdsims_scenario <- function(x, ...) {
   invisible(x)
 }
 
-#' Print a step's argument grid by role. `ci` leads its group (it is the gate:
-#' the bootstrap axes `nboot`/`ci_method`/`parametric` and the within-task
-#' settings that follow are only meaningful when `ci = TRUE`); then the
-#' cross-join axes, then the remaining simulation settings (the knobs absent
-#' from `task_axes(step)`), each flagged `(setting)`. So the hc grid renders
-#' `ci`, `nboot`, `ci_method`, `parametric`, `est_method`, `proportion`,
+#' Print a step's argument grid in stored (signature) order, flagging the
+#' simulation settings (the knobs absent from `task_axes(step)`) with
+#' `(setting)`. Stored order mirrors the signature grouping: the non-`ci`-gated
+#' settings (`dists`, `est_method`, `proportion`) come first, then `ci`, then the
+#' knobs it gates (`nboot`/`ci_method`/`parametric`, `samples`). So the hc grid
+#' renders `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`,
 #' `samples`, and the fit grid renders `dists` after its axes.
 #' @noRd
 print_grid <- function(grid, step) {
-  nms <- names(grid)
-  is_setting <- !nms %in% task_axes(step)
-  lead <- which(nms == "ci")
-  axes <- setdiff(which(!is_setting), lead)
-  settings <- setdiff(which(is_setting), lead)
-  for (i in c(lead, axes, settings)) {
-    marker <- if (is_setting[i]) " (setting)" else ""
-    cat(
-      "    ",
-      nms[i],
-      ": ",
-      fmt_grid_value(grid[[nms[i]]]),
-      marker,
-      "\n",
-      sep = ""
-    )
+  axes <- task_axes(step)
+  for (nm in names(grid)) {
+    marker <- if (nm %in% axes) "" else " (setting)"
+    cat("    ", nm, ": ", fmt_grid_value(grid[[nm]]), marker, "\n", sep = "")
   }
 }
 

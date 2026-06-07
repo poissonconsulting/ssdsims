@@ -100,9 +100,10 @@ colliding edits to the role-grouping requirement and the signature, this
 (behaviour-preserving) change **leads**: it establishes the contiguous settings
 block and **owns** the signature reorder + the call-site sweep. `est-method-setting`
 is rebased on top — its role-grouping delta already assumes `dists` has moved, so
-the two deltas compose. (Per PR review the final grouping leads with `ci`:
-`… range_shape2, dists, ci, nboot, ci_method, parametric, est_method,
-proportion, samples, partition_by, …`.) **Archive order:
+the two deltas compose. (Per PR review the non-`ci`-gated settings precede `ci`
+and the knobs `ci` gates follow it:
+`… range_shape2, dists, est_method, proportion, ci, nboot, ci_method,
+parametric, samples, partition_by, …`.) **Archive order:
 `dists-simulation-setting` first, then `est-method-setting`** (the last-synced
 delta wins the requirement text, and only the rebased `est-method-setting` delta
 carries both knobs moved). From this change's own standpoint the end-state is

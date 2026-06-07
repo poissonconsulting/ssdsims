@@ -93,9 +93,9 @@ test_that("task-lists: hc table has K * H rows, not multiplied by est_method", {
     ssddata::ccme_boron,
     nsim = 2L,
     seed = 42L,
+    est_method = c("arithmetic", "multi"),
     ci = TRUE,
-    nboot = c(10L, 100L),
-    est_method = c("arithmetic", "multi")
+    nboot = c(10L, 100L)
   )
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
   hc_tasks <- ssd_scenario_hc_tasks(scenario)
@@ -115,8 +115,8 @@ test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
     ssddata::ccme_boron,
     nsim = 2L,
     seed = 42L,
-    ci = FALSE,
-    est_method = c("arithmetic", "multi")
+    est_method = c("arithmetic", "multi"),
+    ci = FALSE
   )
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
   hc_tasks <- ssd_scenario_hc_tasks(scenario)
@@ -236,9 +236,9 @@ test_that("hazard-concentrations: a vector est_method is summarised within one h
     nsim = 1L,
     seed = 42L,
     dists = "lnorm",
+    est_method = c("arithmetic", "geometric", "multi"),
     ci = TRUE,
-    nboot = 10L,
-    est_method = c("arithmetic", "geometric", "multi")
+    nboot = 10L
   )
   out <- ssd_run_scenario_baseline(scenario)
   # est_method does not fan out: exactly one hc task.

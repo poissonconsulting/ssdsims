@@ -11,6 +11,9 @@ scenario <- ssd_define_scenario(
   nsim = 2L,
   seed = 42L,
   nrow = c(5L, 10L), # c(5L, 6L, 10L, 20L, 50L),
+  est_method = c("arithmetic", "geometric", "multi"),
+  proportion = c(0.01, 0.05, 0.1, 0.2),
+  ci = TRUE,
   nboot = c(5, 50), # c(1, 5, 10, 50, 100, 500), # * 100,
   ci_method = c(
     "arithmetic_samples",
@@ -22,12 +25,7 @@ scenario <- ssd_define_scenario(
     "weighted_samples"
   ),
   parametric = TRUE,
-  est_method = c("arithmetic", "geometric", "multi"),
-  proportion = c(0.01, 0.05, 0.1, 0.2),
-  ci = TRUE,
   samples = TRUE,
-  # `est_method` is an hc simulation setting (summarised within each task from a
-  # single bootstrap), not an axis, so it cannot be bundled - only `ci_method`.
   bundle = list(
     hc = "ci_method"
   )
