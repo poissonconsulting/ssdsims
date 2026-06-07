@@ -171,7 +171,10 @@
 <strong><code>/opsx:apply &lt;change-name&gt;</code></strong> — Implement tasks from a change.</li>
 <li>
 <strong><code>/opsx:archive &lt;change-name&gt;</code></strong> — Finalize a completed change.</li>
-</ul><p>Changes live in <code>openspec/changes/&lt;name&gt;/</code> with: - <code>proposal.md</code> — What and why. - <code>design.md</code> — How. - <code>specs/&lt;capability&gt;/spec.md</code> — Detailed requirements (WHEN/THEN scenarios). - <code>tasks.md</code> — Implementation checklist.</p>
+</ul><blockquote>
+<p><strong>Working a change includes updating the roadmap.</strong> Whenever you create, apply, or archive a change (via <code>/opsx:propose</code>, <code>/opsx:ff</code>, <code>/opsx:apply</code>, <code>/opsx:archive</code>, or by hand), reflect it in <code>TARGETS-DESIGN.md</code> §12 and keep its node status colour in sync (red = proposed, yellow = done/implemented, green = archived; move an archived node into the <code>archived_box</code> subgraph). On first proposal, add a Mermaid node + edges coloured <code>proposed</code> for a DAG step, or an off-DAG prose bullet for an independent tidy-up / new capability. See “Architectural Notes → The targets redesign” below for the full rule.</p>
+</blockquote>
+<p>Changes live in <code>openspec/changes/&lt;name&gt;/</code> with: - <code>proposal.md</code> — What and why. - <code>design.md</code> — How. - <code>specs/&lt;capability&gt;/spec.md</code> — Detailed requirements (WHEN/THEN scenarios). - <code>tasks.md</code> — Implementation checklist.</p>
 </div>
 <div class="section level3">
 <h3 id="capability-specs">Capability Specs<a class="anchor" aria-label="anchor" href="#capability-specs"></a></h3>

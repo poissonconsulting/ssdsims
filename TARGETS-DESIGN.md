@@ -2268,6 +2268,35 @@ public-API or ergonomics gaps.
   heading (`nboot` **is** an hc axis). Independent tidy-up; not on the
   dependency DAG.
 
+- **`est-method-setting`** — Reclassify `est_method` from an hc
+  cross-join axis to an hc-level **simulation setting** (the same shape
+  as `dists-simulation-setting` / `scalar-ci-flag`:
+  `scenario-definition` + `task-lists` + `hazard-concentrations`
+  deltas). `est_method` is removed from `task_axes("hc")`; the hc
+  fan-out becomes `nboot × ci_method × parametric` and a single
+  bootstrap per cell yields every requested `est_method` (the analytical
+  `est` differs; the CI is est_method-invariant — verified at a fixed
+  seed in the change’s `exploration/`). Unlike the other
+  reclassifications this is **not** byte-preserving: because the hc
+  primer hashes the hc-grid row including `est_method` (§2), dropping
+  the axis **re-seeds** every hc task, so bootstrap CIs change
+  numerically (point estimates unchanged). ~3× cost reduction on the
+  `est_method` axis. Independent tidy-up; not on the dependency DAG.
+
+- **`cost-estimation`** — New `cost-estimation` capability: a
+  calibration harness (`ssd_calibrate_cost()`) that re-measures a
+  per-task cost model on the target architecture and an estimator
+  (`ssd_estimate_cost()`) that reads a scenario’s hc task expansion
+  (read-only, no run) to predict ballpark total cost and the longest
+  single task. Model: the hc bootstrap dominates `ci = TRUE`; per-call
+  time ≈ `base + slope(ci_method) × max(nboot, n0)`, with
+  `proportion`/`est_method` free and a bounded non-monotonic `nrow`
+  factor (calibrated this session at ~430 single-core hours for the
+  motivating scenario). Ships a default calibration with provenance; the
+  model-form discovery is preserved in the change’s `exploration/`.
+  Independent new capability; not on the dependency DAG (reads the
+  archived `task-tables` expansion, no dependants).
+
 ### Archived
 
 Completed steps that have landed and been archived (full artifacts under
@@ -2660,3 +2689,11 @@ is the previously-latent reuse dependency — `partition-by` reads
 Three “wait points” (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not chained by
 an arrow can be worked on in parallel.
+
+**Addendum (2026-06-07).** Two further changes were proposed, both off
+the dependency DAG (prose bullets above, no Mermaid nodes):
+`est-method-setting` (an axis→setting reclassification in the
+`dists-simulation-setting` / `scalar-ci-flag` family) and
+`cost-estimation` (a new, independent capability that reads the archived
+`task-tables` expansion). Both grew out of the `ci = TRUE` performance
+investigation recorded in their `exploration/` scripts.
