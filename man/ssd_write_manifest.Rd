@@ -35,12 +35,6 @@ guessable. It does not \emph{enforce} a version on read - a mismatch is a signal
 for the replay/verify layer, not an abort here. Falls back to
 \code{\link[utils:sessionInfo]{utils::sessionInfo()}} when \code{sessioninfo} is unavailable.
 }
-\examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-dir <- withr::local_tempdir()
-ssd_write_manifest(scenario, dir)
-ssd_read_manifest(dir)$seed
-}
 \seealso{
 \code{\link[=ssd_read_manifest]{ssd_read_manifest()}}, \code{\link[=ssd_record_shard]{ssd_record_shard()}},
 \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}}.

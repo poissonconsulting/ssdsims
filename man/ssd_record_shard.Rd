@@ -32,10 +32,6 @@ The shard directory is \strong{supplied by the caller} (composed from the row's
 Hive partition path and the step's result root); the manifest computes no
 Parquet paths itself.
 }
-\examples{
-dir <- withr::local_tempdir()
-ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", strrep("a", 64))
-}
 \seealso{
 \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}}, \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}.
 }

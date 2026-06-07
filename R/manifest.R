@@ -41,11 +41,6 @@
 #' @seealso [ssd_read_manifest()], [ssd_record_shard()],
 #'   [ssd_assemble_manifest()].
 #' @keywords internal
-#' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-#' dir <- withr::local_tempdir()
-#' ssd_write_manifest(scenario, dir)
-#' ssd_read_manifest(dir)$seed
 ssd_write_manifest <- function(scenario, dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   chk::chk_string(dir)
@@ -73,12 +68,6 @@ ssd_write_manifest <- function(scenario, dir) {
 #'   written scenario restored.
 #' @seealso [ssd_write_manifest()].
 #' @keywords internal
-#' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-#' dir <- withr::local_tempdir()
-#' ssd_write_manifest(scenario, dir)
-#' manifest <- ssd_read_manifest(dir)
-#' manifest$partition_by
 ssd_read_manifest <- function(dir) {
   chk::chk_string(dir)
   path <- file.path(dir, "manifest.json")
@@ -119,9 +108,6 @@ ssd_read_manifest <- function(dir) {
 #' @return The path to the written sidecar, invisibly.
 #' @seealso [ssd_assemble_manifest()], [ssd_write_manifest()].
 #' @keywords internal
-#' @examples
-#' dir <- withr::local_tempdir()
-#' ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", strrep("a", 64))
 ssd_record_shard <- function(dir, partition_key, sha256) {
   chk::chk_string(dir)
   chk::chk_string(partition_key)
@@ -153,11 +139,6 @@ ssd_record_shard <- function(dir, partition_key, sha256) {
 #'   invisibly.
 #' @seealso [ssd_record_shard()], [ssd_write_manifest()].
 #' @keywords internal
-#' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-#' dir <- withr::local_tempdir()
-#' ssd_write_manifest(scenario, dir)
-#' ssd_assemble_manifest(dir)$completed_shards
 ssd_assemble_manifest <- function(dir) {
   chk::chk_string(dir)
   completed_shards <- assemble_completed_shards(dir)

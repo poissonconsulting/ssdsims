@@ -2068,8 +2068,10 @@ The **forward-looking backlog** (the not-yet-landed steps, their priorities, and
 the independent tidy-ups) now lives in [`ROADMAP.md`](ROADMAP.md), in the
 `initiative`-template `Now` / `Next` / `Later` / `Bluesky` style. This section
 retains the steps that have **landed and been archived** (`### Archived`, in the
-dependency order they were implemented) and the dependency DAG, which still
-shows the not-yet-landed nodes so the shape of the remaining work stays visible.
+dependency order they were implemented) and the dependency DAG. The DAG now
+holds **only** those landed (green) nodes — the dependency record of what
+shipped; not-yet-landed work lives as prose in `ROADMAP.md` and re-enters the
+DAG as a `proposed` (red) node only when a new DAG step is proposed.
 Keep the two in step: when a change lands, move its DAG node to green (and into
 `archived_box`), add its `### Archived` bullet here, and move its `ROADMAP.md`
 line to `## Done`.
@@ -2360,8 +2362,10 @@ Mermaid (renders inline on GitHub):
 
 ```mermaid
 flowchart TD
-    %% Archived (green) nodes live in this box — move a node in here when it
-    %% is archived, so the box always holds exactly the `archived`-class nodes.
+    %% This DAG is the dependency record of the **landed (archived)** steps —
+    %% every node here is green and lives in `archived_box`. Not-yet-landed work
+    %% is tracked as prose in ROADMAP.md; when a new DAG step is proposed it is
+    %% added here as a `proposed` (red) node and moves into the box on archive.
     subgraph archived_box [archived]
         define[ssd-define-scenario]
         baseline[task-list-loop-baseline]
@@ -2383,19 +2387,8 @@ flowchart TD
         postcheck[task-rng-postcheck]
     end
 
-    inputs[scenario-input-types]
-    migrate[migrate-public-api]
-
-    survive[shard-failure-survival]
-    assert[shard-completeness-assert]
-    replay[replay-helper]
-    lockin[mixed-code-lockin]
-    cleanup[cleanup-lecuyer]
-
     define --> baseline
     define --> partby
-    define --> inputs
-    primer --> inputs
     define --> acc
     dqinit --> dqstate
     dqstate --> primer
@@ -2415,9 +2408,7 @@ flowchart TD
 
     tt --> hive
     tt --> cluster
-    tt --> survive
     tt --> cloud
-    tt --> replay
     tt --> rewrite
     tt --> pathgrow
     tt --> slice
@@ -2426,14 +2417,7 @@ flowchart TD
     %% scenario (head) and feeds the verification layer; it does NOT gate
     %% task-tables (see the manifest roadmap bullet).
     define --> manif
-    manif --> replay
-    manif --> assert
     manif --> cloud
-
-    survive --> assert
-    cluster --> survive
-    rewrite --> lockin
-    lockin --> cleanup
 
     %% hive-partitioning pins the invalidation model (§8); the three
     %% minimal-rebuild contracts finalise their cached-vs-rebuilt
@@ -2447,17 +2431,13 @@ flowchart TD
     %% dataset-growth contract therefore depends on the slice landing (hard edge).
     slice --> pathgrow
 
-    inputs --> migrate
-    prims --> migrate
-    migrate --> cleanup
-
-    %% --- node status colouring (keep in sync as each change progresses) ---
+    %% --- node status colouring (palette kept for future proposed nodes) ---
     %% green = archived, yellow = done (implemented, not yet archived),
     %% red = proposed (artifacts exist, not implemented),
-    %% blue = ready (no artifacts yet, but every prerequisite has landed — ready to propose),
-    %% unfilled = open (roadmap only, still blocked by an un-landed prerequisite)
-    %% When a node becomes archived, give it the `archived` class AND move its
-    %% declaration into the `archived_box` subgraph above.
+    %% blue = ready (every prerequisite landed — ready to propose),
+    %% unfilled = open (still blocked by an un-landed prerequisite).
+    %% Every current node is archived (green); add a new DAG step as a red
+    %% `proposed` node, then move it into `archived_box` (green) on archive.
     classDef archived fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
     classDef done fill:#fff9c4,stroke:#f9a825,color:#5f4300
     classDef proposed fill:#ffcdd2,stroke:#c62828,color:#7f1414
@@ -2465,19 +2445,14 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow,manif,cluster,cloud,postcheck archived
-    class inputs,migrate proposed
-    class replay,survive,lockin ready
-    class assert,cleanup open
 ```
 
-**Node colours track each step's status** — green = archived, yellow = done
-(implemented, not yet archived), red = proposed (artifacts exist, not yet
-implemented), blue = ready (no artifacts yet, but every prerequisite has
-landed — ready to propose), unfilled = open (roadmap only, still blocked by
-an un-landed prerequisite). Keep the colouring in sync as changes progress,
-and **keep the archived (green) nodes collected inside the `archived_box`
-subgraph** — when a step is archived, move its node declaration into that box
-as well as giving it the `archived` class.
+**Every node here is archived (green)** — the DAG is the dependency record of
+the landed steps. The colour palette (green = archived, yellow = done, red =
+proposed, blue = ready, unfilled = open) and the `archived_box` rule still apply
+**when a new DAG step is proposed**: add it as a red `proposed` node, then move
+it to green inside `archived_box` on archive. Not-yet-landed steps are not drawn
+here — they live in [`ROADMAP.md`](ROADMAP.md) until they are proposed.
 
 **Status snapshot (2026-06-07).** The dependency-DAG steps that have **landed
 and been archived** are green inside `archived_box`: the scenario/RNG/task-table
@@ -2491,13 +2466,11 @@ split). Off the DAG, the independent tidy-ups `scalar-ci-flag`,
 `cost-estimation`, and `dual-summary-outputs` are likewise archived (prose
 bullets above, no Mermaid nodes).
 
-With `cluster-pipeline` landed, `shard-failure-survival` is unblocked (blue —
-ready to propose); with `shard-atomic-rewrite` landed, `mixed-code-lockin` is
-ready (blue); `replay-helper` stays ready (its `task-tables` + `manifest`
-prereqs are archived). The still-blocked nodes: `scenario-input-types` and
-`migrate-public-api` carry artifacts but are unimplemented (red/proposed);
+The **not-yet-landed** steps are no longer drawn in this DAG. Their dependency
+shape: `shard-failure-survival` is unblocked by `cluster-pipeline`, and
+`mixed-code-lockin` by `shard-atomic-rewrite`; `replay-helper` is unblocked
+(`task-tables` + `manifest` archived); `scenario-input-types` and
+`migrate-public-api` carry artifacts but are unimplemented;
 `shard-completeness-assert` waits on `shard-failure-survival`, and
-`cleanup-lecuyer` waits on `migrate-public-api` + `mixed-code-lockin` (both
-open). The prose, priorities, and queue position for every not-yet-landed node
-live in [`ROADMAP.md`](ROADMAP.md); the DAG colours here are the single source
-of node *status*.
+`cleanup-lecuyer` on `migrate-public-api` + `mixed-code-lockin`. Priorities and
+queue position for all of these live in [`ROADMAP.md`](ROADMAP.md).
