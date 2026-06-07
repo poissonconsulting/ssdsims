@@ -269,30 +269,15 @@ See `DESCRIPTION` for versions and imports.
 
 ## Pull Requests
 
-> **The PR title MUST be a Conventional Commit** —
-> `<type>(<scope>): <summary>` — because the squash-merge makes it the
-> lone commit on `main` that `fledge` turns into the `NEWS.md` entry.
-> Write e.g. `ci(covr): bump codecov-action to v7`, **not** a bare
-> sentence like `Update codecov-action to v7`. This holds even when an
-> external tool (e.g. the PR-creation UI) drafts a title for you:
-> rewrite it to match before merge.
+> **PR titles MUST be valid Conventional Commits** —
+> `<type>(<scope>): <summary>`. The canonical rule, examples, and
+> rationale (squash-merge → the title is the lone commit on `main` that
+> `fledge` turns into `NEWS.md`) live in the *Pull Requests* section of
+> `CLAUDE.md`.
 
 - **Always update PR title and description** when opening the PR and
   after committing. The description must capture the change’s *current*
   state, not a revision/process log.
-- **PRs are squash-merged**, so the **PR title becomes the single commit
-  on `main`** — and that commit is what `fledge` reads to build
-  `NEWS.md` (see *Common Tasks → Version & news* above). The PR title is
-  therefore the load-bearing message: it **must** be a valid
-  Conventional Commit. Individual commits on the branch are squashed
-  away, so their messages are not consumed by `fledge` — a clean history
-  still helps review, but the title is what ships.
-- **Titles follow Conventional Commits** — `<type>: <summary>` or
-  `<type>(<scope>): <summary>`, where `type` is one of `feat`, `fix`,
-  `docs`, `refactor`, `test`, `chore`, etc. (e.g.
-  `feat: add scenario-scoped dqrng pcg64 RNG backend`,
-  `docs(openspec): propose registry, manifest, and task-tables changes`).
-  Use the imperative mood and keep the summary concise.
 - **Escape function, object, and file names in backticks** in PR titles
   and descriptions
   (e.g. [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md),
