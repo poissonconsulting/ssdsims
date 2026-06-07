@@ -107,6 +107,19 @@ Terminology used throughout `ssdsims`.
   results, one row per task, with `task_id` as a column. In our
   design **one shard ≡ one partition leaf** (no `part-N` style
   splitting); the leaf file is always named `part.parquet`.
+- **sidecar**: A small auxiliary metadata file written *beside* the
+  data it describes (in the same directory), rather than embedded in
+  it — human-readable, diffable JSON kept separate from the bulk
+  Parquet results. ssdsims writes two (TARGETS-DESIGN.md §8.5): the
+  per-scenario **manifest** (`<results>/manifest.json` — the scenario's
+  declarative fields, session info, and `completed_shards`), and a
+  per-**shard** sha256 record (`meta.json`) written next to each
+  shard's `part.parquet` at write time, recording that shard's
+  trusted-as-produced sha256. One writer per sidecar file, so parallel
+  shard targets never race on a shared manifest; the manifest assembler
+  later unions the per-shard sidecars into `completed_shards`. The shard
+  sidecar is uploaded with its Parquet, so a download can be verified by
+  re-hashing it against the recorded sha256.
 - **path axis / inner axis**: The two halves of a step's
   `task_axes(step)` under a given partitioning. **Path axes** become
   Hive directory levels; **inner axes** are the complement — ordinary

@@ -45,6 +45,18 @@ reference:
   - ssd_summarize
   - scenario_results_dir
 
+- title: Manifest
+  desc: >
+    A per-scenario JSON manifest: write the declarative head (scenario fields
+    plus complete session info for the bit-stability contract), record each
+    completed shard's sha256 in a per-shard sidecar, and assemble those into
+    the manifest's `completed_shards` map.
+  contents:
+  - ssd_write_manifest
+  - ssd_read_manifest
+  - ssd_record_shard
+  - ssd_assemble_manifest
+
 - title: Scenario accessors
   desc: >
     A technical detail of the pipelines: isolate an already-materialised value
