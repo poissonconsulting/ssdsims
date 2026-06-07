@@ -129,8 +129,11 @@ ssd_upload_dryrun <- function() {
 #' The front-door check, dispatched on the upload object's class, that confirms
 #' **before any compute** whether the destination is reachable and the
 #' credentials are in the right place (`TARGETS-DESIGN.md` section 6.1). Run it
-#' as a one-liner at the prompt before `tar_make()`, or let
-#' [ssd_scenario_targets()] run it once up front for you.
+#' as a one-liner at the prompt before `tar_make()` - it is the user's explicit
+#' preflight. [ssd_scenario_targets()] deliberately does **not** call it (the
+#' factory does no network I/O, so sourcing `_targets.R` stays side-effect
+#' free); a missing credential still fails loud per-shard at
+#' [ssd_upload_shard()] time as a backstop.
 #'
 #' For an Azure destination it resolves the credentials from the environment
 #' and, when a required variable is **absent**, aborts with a loud error
@@ -468,8 +471,8 @@ azure_account_from_url <- function(url, domain, call = rlang::caller_env()) {
 # is derived from the destination `url` (see `azure_account_from_url()`), not the
 # environment. Aborts in the context of `call` with a loud error naming the
 # missing variable when no complete secret is present, so the failure surfaces at
-# the prompt (or the pipeline's up-front probe) rather than deep in the DAG on a
-# worker.
+# the prompt (the user's `ssd_test_upload()` preflight) or, as a backstop, on the
+# shard's upload branch - rather than silently.
 resolve_azure_credentials <- function(call = rlang::caller_env()) {
   env <- function(name) {
     value <- Sys.getenv(name, unset = NA_character_)
