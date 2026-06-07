@@ -502,8 +502,9 @@ hc_data_task <- function(
 #
 # `est_method` is an hc simulation setting, not a bootstrap axis: the bootstrap
 # CI (`se`/`lcl`/`ucl`, and any retained `samples`) is est_method-invariant and
-# each method's point `est` is analytical and seed-independent (verified in
-# `exploration/est-method-invariance.R`). So when `ci = TRUE` we bootstrap once,
+# each method's point `est` is analytical and seed-independent (verified in the
+# `est-method-setting` change's `exploration/est-method-invariance.R`). So when
+# `ci = TRUE` we bootstrap once,
 # with the first requested method, to obtain the shared CI (and samples), then
 # attach each method's analytical point estimate -- its bootstrap-free
 # `ci = FALSE` `est`, byte-identical to that method's `ci = TRUE` `est`. Rows are
