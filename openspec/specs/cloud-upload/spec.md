@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Ship a scenario's per-shard Parquet results to cloud object storage (Azure Blob, with an open backend contract) as an opt-in runner concern. Upload destinations are typed, serialisable, credential-free S3 objects; a front-door probe verifies connectivity and fails loud on absent credentials; per-shard upload targets are content-hashed and record the cloud sha256 in the manifest; and uploaded results are readable and summarisable **in place** via DuckDB's `azure` extension (`TARGETS-DESIGN.md` §6.1).
+Ship a scenario's per-shard Parquet results to cloud object storage (Azure Blob, with an open backend contract) as an opt-in runner concern. Upload destinations are typed, serialisable, credential-free S3 objects; a front-door probe verifies connectivity and fails loud on absent credentials; per-shard upload targets are content-hashed (so unchanged shards are not re-uploaded); and uploaded results are readable and summarisable **in place** via DuckDB's `azure` extension (`TARGETS-DESIGN.md` §6.1). (Upload sha256 / transfer-corruption hashing is deferred with the parked `manifest` — see `ROADMAP.md`.)
 
 ## Requirements
 
@@ -74,8 +74,8 @@ The cloud-upload behaviour SHALL be selected by the runner's `upload` argument (
 - **WHEN** the same scenario is run with `upload = NULL`, with `ssd_upload_dryrun()`, and with `ssd_upload_azure(...)`
 - **THEN** the per-task result rows SHALL be byte-identical across the three runs
 
-### Requirement: Per-shard upload targets are content-hashed and record the cloud sha256
-When `upload` is non-`NULL`, the factory SHALL pair each step shard target with an `upload_<step>` target in the same `tar_map`, with `format = "file"` and `error = "null"`, taking the shard's local path as input. Because the upload target depends on the shard's content hash, an unchanged shard SHALL NOT be re-uploaded on a re-driven `tar_make()`, and a partial extension SHALL upload only the new or rewritten shards. The upload SHALL record the cloud copy's sha256 in the manifest (paired with the local sha256), so a transfer corruption is detectable as a mismatch; the local shard SHALL remain on disk so `targets`' `format = "file"` tracking of the compute step is unaffected.
+### Requirement: Per-shard upload targets are content-hashed
+When `upload` is non-`NULL`, the factory SHALL pair each step shard target with an `upload_<step>` target in the same `tar_map`, with `format = "file"` and `error = "null"`, taking the shard's local path as input. Because the upload target depends on the shard's content hash, an unchanged shard SHALL NOT be re-uploaded on a re-driven `tar_make()`, and a partial extension SHALL upload only the new or rewritten shards. The local shard SHALL remain on disk so `targets`' `format = "file"` tracking of the compute step is unaffected. (Recording an upload sha256 for transfer-corruption detection is **deferred** with the parked `manifest` concept — see the `manifest-revival` task in `ROADMAP.md`; the upload path records no hash for now.)
 
 #### Scenario: Unchanged shards are not re-uploaded
 - **WHEN** a pipeline with a non-`NULL` `upload` is `tar_make()`'d, then re-driven with no shard content changed
@@ -84,10 +84,6 @@ When `upload` is non-`NULL`, the factory SHALL pair each step shard target with 
 #### Scenario: Only changed shards re-upload
 - **WHEN** a scenario is extended so that only some shards are new or rewritten, and `tar_make()` is re-driven
 - **THEN** only the `upload_<step>` targets for the new or rewritten shards SHALL run
-
-#### Scenario: The cloud sha256 is recorded
-- **WHEN** a shard is uploaded
-- **THEN** the cloud copy's sha256 SHALL be recorded in the manifest alongside the local sha256, so a mismatch flags a corrupted transfer
 
 ### Requirement: Uploaded results are readable in place via a destination-dispatched generic
 The package SHALL provide `ssd_open_uploaded(upload, step)`, a generic dispatching on the upload object's class, that opens the **uploaded** results for querying — so that right after an upload a user can read the data back and confirm it landed. For an Azure destination it SHALL return a lazy `duckplyr`/DuckDB table over the Hive glob `<container>[/<prefix>]/<step>/**/part.parquet` at the destination (honouring the destination's optional `prefix` subdirectory), read **in place** via DuckDB's `azure` extension (predicate pushdown straight against blob storage, **no download** of the Parquet). It SHALL resolve the **same** front-end secret as the write path (one of the `SSDSIMS_AZURE_*` secret environment variables) and **remap** it — together with the account name derived from `url` — into a DuckDB `azure` secret (`CREATE SECRET`) for the backend read — one credential source, translated, never a second source — and SHALL abort with a loud error (naming the missing requirement) when the `azure` extension or a required credential is absent. `step` SHALL select one of the step layers (`sample`/`fit`/`hc`), and the package SHALL offer a path to the uploaded `summary` as well. For a dry-run destination, `ssd_open_uploaded()` SHALL abort with an informative error stating that a dry run uploads nothing and that the local shards should be read directly — it SHALL NOT silently return an empty or local table. The result of `ssd_open_uploaded()` SHALL be composable with `dplyr` verbs (e.g. `dplyr::count()`) so a one-line round-trip check verifies the upload.

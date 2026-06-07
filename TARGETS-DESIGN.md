@@ -1216,17 +1216,21 @@ laptop, dashboards, downstream R/Python scripts.
 
 **The destination is a typed runner argument.** Two constructors return plain,
 serialisable, classed S3 objects carrying **only** the destination (never
-credentials): `ssd_upload_azure(url, container)` (class
-`c("ssdsims_upload_azure_blob", "ssdsims_upload")`) and `ssd_upload_dryrun()`
-(class `c("ssdsims_upload_dryrun", "ssdsims_upload")`), validated at
-construction. They are passed by name to the factory — `upload = NULL` (default;
-**no** `upload_<step>` nodes), `ssd_upload_dryrun()` (no-op nodes, exercised
-offline/in CI), or `ssd_upload_azure(...)` (ship to Azure). Four generics
-dispatch on the object's class: `ssd_test_upload()` (the front-door
-creds/connectivity probe, run once up front), `ssd_upload_shard(path, upload)`
-(ship one shard), `ssd_open_uploaded(upload, step)` (read the uploaded results
-back in place), and construction-time validation. A new backend (S3/GCS) is a
-constructor plus those three methods — no edit to existing methods.
+credentials): `ssd_upload_azure(url, container, ..., prefix = NULL, domain =
+"blob.core.windows.net")` (class `c("ssdsims_upload_azure_blob",
+"ssdsims_upload")`; the storage **account** is derived from `url`, and an
+optional `prefix` writes the shards under a subdirectory of the container) and
+`ssd_upload_dryrun()` (class `c("ssdsims_upload_dryrun", "ssdsims_upload")`),
+validated at construction. They are passed by name to the factory — `upload =
+NULL` (default; **no** `upload_<step>` nodes), `ssd_upload_dryrun()` (no-op
+nodes, exercised offline/in CI), or `ssd_upload_azure(...)` (ship to Azure).
+Four generics dispatch on the object's class: `ssd_test_upload()` (the
+front-door creds/connectivity probe, run once up front), `ssd_upload_shard(path,
+upload)` (ship one shard), `ssd_open_uploaded(upload, step)` (read the uploaded
+results back in place), and `ssd_summarise_uploaded(upload, step, drop_samples)`
+(the in-place fan-in summary, the cloud counterpart of `ssd_summarise()`). A new
+backend (S3/GCS) is a constructor plus those four methods — no edit to existing
+methods.
 
 **Fail loud on absent credentials.** Azure with missing credentials **errors**
 (naming the missing `SSDSIMS_AZURE_*` variable), at probe time and as a per-shard
@@ -1288,19 +1292,19 @@ Per-shard flow when `upload` is non-NULL:
                             (own target; runs only if the shard hash changed;
                              with ssd_upload_dryrun() it no-ops, never touching
                              the network)
-        │
-        ▼ records the upload's sha256 in the result manifest
 ```
 
 The local shard stays on disk so `targets`' `format = "file"`
 tracking is unaffected; the cloud copy is an additional artefact.
 
-**Auth is external.** Credentials come from environment variables
-(`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`,
-or the service-principal trio). The upload object does **not** carry secrets —
-it carries only the destination URL and container name. Their absence is a
-**loud error** (naming the missing variable), not a silent no-op — skipping the
-network is `ssd_upload_dryrun()`'s job.
+**Auth is external.** The storage **account** is derived from the destination
+`url` (not an environment variable); the **secret** comes from the environment
+(one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`, or the
+service-principal trio). The upload object does **not** carry secrets — it
+carries only the destination (URL, container, optional `prefix`/`domain`, and
+the account derived from `url`). A missing secret is a **loud error** (naming
+the missing variable), not a silent no-op — skipping the network is
+`ssd_upload_dryrun()`'s job.
 
 **Connectivity probe up front.** `ssd_test_upload(upload)` performs a minimal
 round-trip (list the container, write and delete a small marker blob) and either
@@ -1322,14 +1326,15 @@ ssd_scenario_targets(scenario, upload = upload)   # runs the probe up front too
 **Failure mode.** A per-shard upload error becomes that
 `upload_<step>` branch's error (and, under `error = "null"`, leaves
 the rest uploading); the local shard remains, so `tar_make()` can be
-re-driven and only the failed uploads retried. Each shard's `meta.json`
-sidecar (the manifest's per-shard sha256 record, §8.5) is uploaded
-**alongside** its Parquet, so the trusted-as-produced sha256 travels with
-the data; a downloaded copy is verified by re-hashing it against that
-recorded sha256, and a mismatch flags a corrupted transfer. The manifest
-itself carries no separate cloud-copy sha256 — under a faithful byte copy
-it would equal the recorded sha256, so `cloud-upload` needs nothing added
-to the manifest (the two are decoupled).
+re-driven and only the failed uploads retried.
+
+**No upload hashing for now.** The upload path records **no** sha256 — a shard
+is shipped and read back **in place** (`ssd_open_uploaded()` /
+`ssd_summarise_uploaded()`), with the row data itself the round-trip check.
+Hash-based transfer-corruption detection (an upload sha256, or shipping the
+manifest's per-shard `meta.json` sidecar alongside the blob) is **deferred**
+together with the parked `manifest` concept, to be revisited when the manifest
+is picked up (the `manifest-revival` task in `ROADMAP.md`).
 
 ### 6.2 Surviving a failed shard
 
@@ -2322,11 +2327,12 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   `ssdsims_scenario` — both **BREAKING**). Fail-loud credentials (Azure with
   absent creds errors; skip-the-network intent is expressed only by
   `ssd_upload_dryrun()`); per-shard content-hashed `upload_<step>` targets
-  (`format = "file"`, `error = "null"`) recording the cloud sha256 in the
-  manifest; in-place read-back via DuckDB's `azure` extension (no download).
-  Landed as `R/upload.R`, the `upload` wiring in `ssd_scenario_targets()`, the
-  `cloud-upload.qmd` vignette, and `AzureStor`/`AzureRMR` in `Suggests`
-  (#114/#129).
+  (`format = "file"`, `error = "null"`); in-place read-back and summary via
+  DuckDB's `azure` extension (`ssd_open_uploaded()` / `ssd_summarise_uploaded()`,
+  no download). Landed as `R/upload.R`, the `upload` wiring in
+  `ssd_scenario_targets()`, the `cloud-upload.qmd` vignette, and
+  `AzureStor`/`AzureRMR` in `Suggests` (#114/#129). Upload sha256 recording was
+  dropped, deferred with the parked `manifest` (see `ROADMAP.md`).
 - **`dual-summary-outputs`** — Optional second `ssd_summarise()` output: a
   trailing `path_with_samples = NULL` that, when supplied, **also** writes a
   *full* hc union **retaining** the `dists`/`samples` list-columns (read lazily

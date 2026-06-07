@@ -54,6 +54,14 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
   and the pkgdown reference; the code, tests, and `manifest` spec stay). The
   decision to re-export and wire them in is deferred to the
   `manifest-revival` task below, to be taken with the first real consumer.
+- **2026-06-07 — Hashing dropped from the cloud-upload path, deferred with the
+  manifest.** With no verification consumer yet, `ssd_upload_shard()` no longer
+  computes a cloud sha256, and `TARGETS-DESIGN.md` §6.1 / the `cloud-upload`
+  spec record no upload hash — a shard is shipped and read back **in place**
+  (`ssd_open_uploaded()` / `ssd_summarise_uploaded()`), the row data itself the
+  round-trip check. Hash-based transfer-corruption detection returns with
+  `manifest-revival`. The parked `manifest`'s own per-shard sha256 (in
+  `R/manifest.R`, §7/§8.5) is untouched — it stays kept-but-internal.
 
 ## Now
 
@@ -82,7 +90,7 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
 - 😀 [cleanup-as-ssd-data] Add a public `as_ssd_data()` coercing the already-named input forms into a validated `ssd_data()` collection. Proposed; independent (off the DAG).
 - 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Independent (off the DAG).
 - 😀 [canonical-call-sites] Sweep the remaining public constructors (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments are passed in signature order, as the `ssd_define_scenario()` pass already did. Independent (off the DAG).
-- 🐢 [manifest-revival] Revisit the parked `manifest` concept (see _Decisions_): wire it into a real consumer and re-export the writer/reader/recorder/assembler, or fold it down further. Take this up with the first of `replay-helper` / `shard-completeness-assert` that needs trusted per-shard provenance.
+- 🐢 [manifest-revival] Revisit the parked `manifest` concept (see _Decisions_): wire it into a real consumer and re-export the writer/reader/recorder/assembler, or fold it down further. Take this up with the first of `replay-helper` / `shard-completeness-assert` that needs trusted per-shard provenance. **Hashing is revisited here too** — the cloud-upload sha256 (recording an upload hash / shipping the per-shard `meta.json` sidecar alongside the blob for transfer-corruption detection) was dropped with the manifest and comes back with it.
 
 ## Bluesky
 
