@@ -1,6 +1,6 @@
 ## Context
 
-`ssd_summarize(dir_sample, dir_fit, dir_hc, path)` (`R/targets-runner.R:457-472`)
+`ssd_summarise(dir_sample, dir_fit, dir_hc, path)` (`R/targets-runner.R:457-472`)
 is the §6 fan-in: it reads the `hc` shard glob with duckplyr, projects out the
 `dists`/`samples` list-columns with `select(-any_of(c("dists", "samples")))`
 **before** collecting into R, and writes the compact estimate table to `path`.
@@ -17,7 +17,7 @@ from Parquet is cheap, so writing a second, wider projection alongside the
 compact one is near-free.
 
 The pipeline call site (`ssd_scenario_targets()`, `R/targets-runner.R:742-749`)
-wraps `ssd_summarize()` in a single `format = "file"` `summary` target that names
+wraps `ssd_summarise()` in a single `format = "file"` `summary` target that names
 every `hc` shard (so it re-runs on any shard change and survives a partial
 failure) and returns `summary_path`.
 
@@ -47,12 +47,12 @@ failure) and returns `summary_path`.
 
 ### Decision: an optional `path_full = NULL` argument, not a new function or a flag
 
-`ssd_summarize()` grows a trailing `path_full = NULL`. `NULL` ⇒ today's
+`ssd_summarise()` grows a trailing `path_full = NULL`. `NULL` ⇒ today's
 behaviour, so the four-positional call sites
 (`inst/targets-templates/`, the vignette) are untouched. A non-`NULL` value adds
 the second write.
 
-- *Why not a separate `ssd_summarize_full()`?* It would duplicate the glob read
+- *Why not a separate `ssd_summarise_full()`?* It would duplicate the glob read
   and the partial-failure-survival wording for one differing line (the
   projection). One function reading the directory once and emitting one or two
   projections is the smaller surface.
@@ -114,5 +114,5 @@ are exactly as today.
   is negligible against the simulation cost the summary fans in, and only the
   `samples = TRUE` path pays for the second read.
 - **Two artifacts can drift in consumers' minds** → Mitigation: doc the contract
-  (`?ssd_summarize`, the vignette) — same rows/estimates, the full one adds the
+  (`?ssd_summarise`, the vignette) — same rows/estimates, the full one adds the
   retained list-columns; `tar_read("summary")` returns the vector when both exist.

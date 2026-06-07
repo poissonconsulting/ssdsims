@@ -1,6 +1,6 @@
 ## Why
 
-`ssd_summarize()` writes a single `summary.parquet` that **projects out** the
+`ssd_summarise()` writes a single `summary.parquet` that **projects out** the
 `dists` and `samples` list-columns at the DuckDB level
 (`R/targets-runner.R:457-472`): the potentially-large per-row bootstrap draws are
 never pulled into R, and the summary is the compact, analysis-ready estimate
@@ -12,7 +12,7 @@ from Parquet is cheap, so there is no reason to make the run choose: it can writ
 
 ## What Changes
 
-- **`ssd_summarize()` gains an optional second output.** A new trailing
+- **`ssd_summarise()` gains an optional second output.** A new trailing
   `path_full = NULL` argument: when supplied, the function **also** writes a
   *full* hc union to `path_full` that **retains** the `dists`/`samples`
   list-columns, in addition to the compact `path` (whose projection is
@@ -33,7 +33,7 @@ from Parquet is cheap, so there is no reason to make the run choose: it can writ
   `hc` glob and `hive_partitioning = FALSE` read as the compact one, so it
   inherits the partial-failure-survival property (`error = "null"`, §6.2) — it is
   the same fan-in with a wider projection.
-- **Sweep docs and templates** (`?ssd_summarize`, the sharded-pipeline vignette,
+- **Sweep docs and templates** (`?ssd_summarise`, the sharded-pipeline vignette,
   `inst/targets-templates/`) to describe the two outputs and the
   `samples = TRUE` trigger.
 
@@ -52,12 +52,12 @@ from Parquet is cheap, so there is no reason to make the run choose: it can writ
 ## Impact
 
 - **Specs**: `task-shards` delta.
-- **Code**: `R/targets-runner.R` — `ssd_summarize()` (`path_full` argument and the
+- **Code**: `R/targets-runner.R` — `ssd_summarise()` (`path_full` argument and the
   lazy full write); `ssd_scenario_targets()` (conditional `path_full`, the
   `summary` target returning a path vector).
 - **API**: additive, backward-compatible (`path_full` defaults to `NULL`); no
   change to the compact `summary.parquet` bytes or path.
-- **Docs/templates**: `man/ssd_summarize.Rd` (roxygen), `vignettes/sharded-pipeline.qmd`,
+- **Docs/templates**: `man/ssd_summarise.Rd` (roxygen), `vignettes/sharded-pipeline.qmd`,
   `inst/targets-templates/` run scripts/READMEs, `GLOSSARY.md`/`TARGETS-DESIGN.md`
   as needed.
 - **Tests**: a scenario with `samples = TRUE` yields both files (full retains a

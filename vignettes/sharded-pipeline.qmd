@@ -138,7 +138,13 @@ all.equal(base_est, shard_est)
 
 `ssd_summarise()` fans the `hc` layer in across shards (via duckplyr) into a
 single `summary.parquet` --- the analysis-ready table --- without recomputing
-anything.
+anything. It projects the `dists`/`samples` list-columns out at the DuckDB level,
+so the (potentially large) retained bootstrap draws are never pulled into R. Pass
+`path_full =` to **also** write a full summary that keeps those columns; that
+write stays lazy in DuckDB, so the draws never materialise in R there either. In
+the `targets` pipeline the full `summary-samples.parquet` is written
+automatically when the scenario set `samples = TRUE` (the case where the retained
+draws carry information the compact summary cannot).
 
 ## Scaling up: the `targets` pipeline
 
