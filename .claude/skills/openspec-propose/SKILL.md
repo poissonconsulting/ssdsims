@@ -93,18 +93,6 @@ After completing all artifacts, summarize:
 - What's ready: "All artifacts created! Ready for implementation."
 - Prompt: "Run `/opsx:apply` or ask me to implement to start working on the tasks."
 
-**Project rule — update the roadmap (`TARGETS-DESIGN.md` §12)**
-
-Per `AGENTS.md` ("Architectural Notes → The targets redesign"), keeping the
-roadmap in sync is part of *proposing* a change, not a later step. Before
-finishing, reflect the new change in `TARGETS-DESIGN.md` §12:
-- A DAG step (has prerequisites and/or dependants) → add a Mermaid **node and
-  edges**, and colour it `proposed` (red) via a `class` line.
-- An independent tidy-up / new capability (no prereqs, no dependants) → add a
-  **prose bullet** in the §12 roadmap list and keep it **off** the Mermaid DAG,
-  matching `dists-simulation-setting` / `error-call-origin` / `scalar-ci-flag`.
-Mention the roadmap edit in the summary.
-
 **Artifact Creation Guidelines**
 
 - Follow the `instruction` field from `openspec instructions` for each artifact type
@@ -121,4 +109,3 @@ Mention the roadmap edit in the summary.
 - If context is critically unclear, ask the user - but prefer making reasonable decisions to keep momentum
 - If a change with that name already exists, ask if user wants to continue it or create a new one
 - Verify each artifact file exists after writing before proceeding to next
-- Update `TARGETS-DESIGN.md` §12 to reflect the proposed change (see the project rule above) — this is a required part of proposing, per `AGENTS.md`
