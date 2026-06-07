@@ -1280,22 +1280,26 @@ flips `ssd_upload_shard()` into its dry-run no-op.
 `ssd_test_upload(scenario)` performs a minimal round-trip (list the
 container, write and delete a small marker blob) and either returns
 silently or errors with the backend's diagnostic. It is a **fail-fast
-guard run *before* `tar_make()`, not a target inside the DAG** — the
-driver script (`run.R`) sources a standalone `preflight.R` first, so an
-auth or network failure aborts before any compute starts, *independent of
-the pipeline's keep-going error mode* (§6.2). Keeping it outside the DAG
-is deliberate and now the established pattern: the `cluster/` template
-does exactly this for its SLURM connectivity + worker-prerequisite probe
-(a standalone `preflight.R` sourced by `run.R`, kept out of `_targets.R`
-so that stays a clean scenario-and-factory definition), and the upload
-probe follows the same shape. A credentials check is a pre-condition for
-the *whole* run, not a per-shard concern, so it must not live in a target
-that `error = "continue"`/`"null"` would let slide past. The same call
-works interactively:
+guard the user runs *before* `tar_make()`, not a target inside the
+DAG** — running it is the **user's responsibility**, a documented
+pre-condition the pipeline neither contains nor can enforce. The
+standalone `preflight.R` carries the probe; the `run.R` driver runs it
+ahead of `tar_make()` as a convenience, but a bare `tar_make()` (or an
+interactive re-run) does not, so the user must ensure the pre-flight has
+run. Either way the check happens *independent of the pipeline's
+keep-going error mode* (§6.2). Keeping it outside the DAG is deliberate
+and now the established pattern: the `cluster/` template does exactly
+this for its SLURM connectivity + worker-prerequisite probe (a standalone
+`preflight.R` the user runs — `run.R` sources it as a convenience — kept
+out of `_targets.R` so that stays a clean scenario-and-factory
+definition), and the upload probe follows the same shape. A credentials
+check is a pre-condition for the *whole* run, not a per-shard concern, so
+it must not live in a target that `error = "continue"`/`"null"` would let
+slide past. The same call works interactively:
 
 ```r
 scenario <- ssd_scenario(..., upload = list(backend = "azure_blob", ...))
-ssd_test_upload(scenario)   # silent on success, throws on failure — run before tar_make()
+ssd_test_upload(scenario)   # silent on success, throws on failure — the user runs this before tar_make()
 tar_make()
 ```
 
@@ -1358,8 +1362,9 @@ explicit override (e.g. an unexpected error in `summary` or a
 user-added target skips its dependents instead of aborting the run).
 Guards that *should* abort the whole run — the upload/cluster pre-flight
 (§6.1, §4) — deliberately live **outside** the DAG, in a separate
-pre-flight script run before `tar_make()`, so the keep-going default
-never swallows them. The trade we accept: under keep-going a *systemic*
+pre-flight script the **user runs** before `tar_make()` (a documented
+pre-condition, not a target the pipeline enforces), so the keep-going
+default never swallows them. The trade we accept: under keep-going a *systemic*
 failure (every shard red because a package won't load) does not stop the
 pipeline on its own — but the operator watches the first few minutes,
 where a wall of red surfaces immediately, so optimising for *not losing a

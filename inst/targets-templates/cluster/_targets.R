@@ -28,8 +28,8 @@ library(ssdsims)
 # `error = "continue"` is the cluster-independent keep-going (`make -k`) default:
 # one failed shard/job skips only its dependents while the rest of the sweep
 # still runs (TARGETS-DESIGN.md §6.2). The connectivity/prerequisite fail-fast
-# guard is the separate `preflight.R` that `run.R` sources before `tar_make()`,
-# NOT a target here.
+# guard is the separate `preflight.R` the user runs before `tar_make()` (the
+# `run.R` driver runs it for you), NOT a target here.
 source("controller.R")
 tar_option_set(controller = controller, error = "continue")
 

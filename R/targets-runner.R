@@ -556,8 +556,8 @@ edge_block <- function(names) {
 #' with a pipeline-wide **keep-going** default (`tar_option_set(error =
 #' "continue")`, the `make -k` analogue) so an errored target skips only its
 #' dependents while the rest of the shards still build; fail-fast pre-flight
-#' checks (upload/cluster connectivity) belong in a separate script run *before*
-#' `tar_make()`, not in this DAG.
+#' checks (upload/cluster connectivity) belong in a separate script the user
+#' runs *before* `tar_make()`, not in this DAG.
 #'
 #' For each step it `tarchetypes::tar_map()`s one named, `format = "file"`,
 #' `error = "null"` target per `partition_by` path cell (the `names` are the

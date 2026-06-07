@@ -23,8 +23,8 @@ library(tarchetypes)
 #     its dependents while every other reachable shard still builds, so one bad
 #     branch never aborts the parallel run — it just leaves a gap the summary
 #     unions over. The factory's shard targets carry the stronger `error =
-#     "null"` on top; fail-fast pre-flight checks belong in a separate script run
-#     before `tar_make()`, not here (TARGETS-DESIGN.md §6.2).
+#     "null"` on top; fail-fast pre-flight checks belong in a separate script the
+#     user runs before `tar_make()`, not here (TARGETS-DESIGN.md §6.2).
 tar_option_set(
   controller = crew::crew_controller_local(workers = 8L),
   error = "continue"

@@ -17,7 +17,7 @@ library(tarchetypes)
 # its dependents while every other reachable shard still builds, so one bad
 # branch never aborts the run — it just leaves a gap the summary unions over.
 # The factory's shard targets carry the stronger `error = "null"` on top.
-# Fail-fast pre-flight checks belong in a separate script run before
+# Fail-fast pre-flight checks belong in a separate script the user runs before
 # `tar_make()`, not here (TARGETS-DESIGN.md §6.2).
 tar_option_set(error = "continue")
 
