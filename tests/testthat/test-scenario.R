@@ -63,28 +63,51 @@ test_that("scenario-definition: minimal construction stores declarative fields",
   expect_named(
     s$fit,
     c(
-      "dists",
       "rescale",
       "computable",
       "at_boundary_ok",
       "min_pmix",
       "range_shape1",
-      "range_shape2"
+      "range_shape2",
+      "dists"
     )
   )
   expect_named(
     s$hc,
     c(
-      "nboot",
       "est_method",
-      "ci_method",
-      "parametric",
       "proportion",
       "ci",
+      "nboot",
+      "ci_method",
+      "parametric",
       "samples"
     )
   )
   expect_identical(s$hc$ci, FALSE)
+})
+
+test_that("scenario-definition: non-ci-gated settings precede ci, gated knobs follow", {
+  fmls <- names(formals(ssd_define_scenario))
+  # The non-`ci`-gated settings (`dists`, `est_method`, `proportion` — all valid
+  # and meaningful when `ci = FALSE`) come first, then `ci`, then the knobs it
+  # gates: the bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when
+  # `ci = FALSE`) and `samples` (only retains bootstrap draws). Contiguous, after
+  # the last structural axis (`range_shape2`) and before the partitioning args.
+  group <- c(
+    "dists",
+    "est_method",
+    "proportion",
+    "ci",
+    "nboot",
+    "ci_method",
+    "parametric",
+    "samples"
+  )
+  idx <- match(group, fmls)
+  expect_identical(idx, seq(idx[[1L]], length.out = length(group)))
+  expect_identical(fmls[[idx[[1L]] - 1L]], "range_shape2")
+  expect_identical(fmls[[max(idx) + 1L]], "partition_by")
 })
 
 test_that("scenario-definition: stores dataset names, not data frames", {
@@ -735,10 +758,10 @@ test_that("scenario-definition: print is stable for multiple datasets and vector
       computable = c(FALSE, TRUE),
       at_boundary_ok = c(TRUE, FALSE),
       range_shape1 = list(c(0.05, 20), c(0.1, 10)),
+      est_method = c("multi", "geometric"),
       proportion = c(0.05, 0.1),
       ci = TRUE,
       nboot = c(100, 1000),
-      est_method = c("multi", "geometric"),
       ci_method = c("weighted_samples", "MACL"),
       parametric = c(TRUE, FALSE)
     )

@@ -93,6 +93,24 @@ unchanged and step-based: `dists` stays in `scenario$fit`, the hc settings in
 `scenario$hc`. All reordered formals follow `...`, so call sites name them and
 the reorder is behaviour-preserving.
 
+## Sequencing with `est-method-setting`
+
+This change ships in the **same PR** as `est-method-setting`, which moves
+`est_method` out of the hc axes into the same settings block. To avoid two
+colliding edits to the role-grouping requirement and the signature, this
+(behaviour-preserving) change **leads**: it establishes the contiguous settings
+block and **owns** the signature reorder + the call-site sweep. `est-method-setting`
+is rebased on top — its role-grouping delta already assumes `dists` has moved, so
+the two deltas compose. (Per PR review the non-`ci`-gated settings precede `ci`
+and the knobs `ci` gates follow it:
+`… range_shape2, dists, est_method, proportion, ci, nboot, ci_method,
+parametric, samples, partition_by, …`.) **Archive order:
+`dists-simulation-setting` first, then `est-method-setting`** (the last-synced
+delta wins the requirement text, and only the rebased `est-method-setting` delta
+carries both knobs moved). From this change's own standpoint the end-state is
+just `dists, proportion, ci, samples` with `est_method` still an axis; the
+`est_method` move is the sibling change's responsibility.
+
 ## Alternatives considered
 
 - **Leave `dists` in the fit-axis block, just fix the prose.** Rejected: the

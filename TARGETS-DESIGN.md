@@ -316,9 +316,9 @@ the bootstrap:
 
 - If `ci = FALSE`, those knobs are meaningless: supplying any of them aborts at
   scenario construction (set `ci = TRUE` or omit them), and the hc-task table
-  stores them as `NA`, leaving `est_method` as the only fan-out axis.
-- If `ci = TRUE`, the hc grid fans out across `nboot × est_method × ci_method ×
-  parametric` as usual.
+  stores them as `NA`. `est_method` is an hc simulation setting (not an axis), so
+  this leaves no fan-out axis at all — exactly one hc row per fit task.
+- If `ci = TRUE`, the hc grid fans out across `nboot × ci_method × parametric`.
 
 In the hc task table (here a `ci = TRUE` scenario with two `nboot` values):
 
@@ -327,8 +327,9 @@ In the hc task table (here a `ci = TRUE` scenario with two `nboot` values):
 | 1   | 5    | FALSE   | TRUE | 100   | weighted_samples | TRUE       |
 | 1   | 5    | FALSE   | TRUE | 1000  | weighted_samples | TRUE       |
 
-A `ci = FALSE` scenario instead yields one row per `est_method` with `nboot` /
-`ci_method` / `parametric` all `NA`. The hash of an `NA`-bearing row is
+A `ci = FALSE` scenario instead yields exactly one hc row per fit task with
+`nboot` / `ci_method` / `parametric` all `NA` (every requested `est_method` is
+summarised within that single task). The hash of an `NA`-bearing row is
 well-defined as long as `NA` is encoded canonically — `task_primer()` does this
 via `rlang::hash()` on the named list — so the `NA` bootstrap knobs never
 allocate phantom streams to combinations that don't exist in practice.
@@ -438,9 +439,10 @@ value is sub-truncation of the same `n_max`-row sample (§5). For a
 fit task: data-task identity plus the fit-arg-grid row (`rescale`,
 `computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
 `range_shape2`). For an hc task: fit-task identity plus the hc-arg-
-grid row (`nboot`, `est_method`, `ci_method`, `parametric`). `ci` is a
-scalar flag, **not** in the hash (§1.2); when `ci = FALSE` the bootstrap-only
-knobs are `NA` in that row (canonically encoded).
+grid row (`nboot`, `ci_method`, `parametric`). `ci` and `est_method` are
+hc simulation settings, **not** in the hash (§1.2; `est_method` is summarised
+within the task from a single bootstrap sample set); when `ci = FALSE` the
+bootstrap-only knobs are `NA` in that row (canonically encoded).
 
 Function-valued parameters (`min_pmix`) are referenced **by name**
 (§1.1) so that a recompile/JIT does not move the task to a different
@@ -2521,12 +2523,12 @@ flowchart TD
         slice[step-scenario-slice]
         rewrite[shard-atomic-rewrite]
         pathgrow[path-axis-growth]
+        manif[manifest]
     end
 
     inputs[scenario-input-types]
     postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
-    manif[manifest]
 
     cluster[cluster-pipeline]
     survive[shard-failure-survival]
@@ -2608,10 +2610,11 @@ flowchart TD
     classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow,manif archived
     class inputs,postcheck,migrate proposed
-    class manif,cluster,cloud done
-    class survive,assert,replay,lockin,cleanup open
+    class cluster,cloud done
+    class replay ready
+    class survive,assert,lockin,cleanup open
 ```
 
 **Node colours track each step's status** — green = archived, yellow = done
@@ -2637,8 +2640,8 @@ task lists). The four original proposals:
   L'Ecuyer-CMRG lattice; only the prerequisite `*_data_task_primer()` wrappers
   (from the archived `primer-primitives`) exist, so the change itself is
   essentially un-started.
-- `manifest` — no `R/manifest.R`; `jsonlite`/`digest`/`sessioninfo` absent
-  from `Imports`.
+- `manifest` — *(superseded by the 2026-06-07 addendum: now implemented in
+  `R/manifest.R` (#114), synced, and archived).*
 
 Eight further changes were proposed in this round (all `openspec validate
 --strict`-clean):
@@ -2684,23 +2687,25 @@ and retires the §1.2 collapse; also off the dependency DAG. It has since been
 main specs and the change now lives in `openspec/changes/archive/`, so it
 appears under `### Archived` above rather than among the active changes.
 
-`cloud-upload` has since been **implemented** (the `cloud-upload` capability plus
-`scenario-definition`/`task-shards` deltas): it moves the upload destination
-onto the runner (`ssd_scenario_targets(..., upload)`, the sibling of `root`)
-and replaces the original §6.1 silent dry-run with a fail-loud credential
-contract, and adds an in-place `ssd_open_uploaded()` read-back. It landed as
-`R/upload.R` (the typed constructors and four generics), the `upload` wiring in
-`ssd_scenario_targets()`, the BREAKING removal of `upload` from
-`ssd_define_scenario()`/`ssdsims_scenario`, the `cloud-upload.qmd` vignette, and
-`AzureStor`/`AzureRMR` in `Suggests` (it records the cloud sha256 through the
-manifest).
+With `manifest` archived (#114, see the 2026-06-07 addendum), the verification
+layer it feeds is unblocked. `cloud-upload` has since been **implemented** (the
+`cloud-upload` capability plus `scenario-definition`/`task-shards` deltas): it
+moves the upload destination onto the runner (`ssd_scenario_targets(...,
+upload)`, the sibling of `root`) and replaces the original §6.1 silent dry-run
+with a fail-loud credential contract, and adds an in-place `ssd_open_uploaded()`
+read-back. It landed as `R/upload.R` (the typed constructors and four generics),
+the `upload` wiring in `ssd_scenario_targets()`, the BREAKING removal of
+`upload` from `ssd_define_scenario()`/`ssdsims_scenario`, the `cloud-upload.qmd`
+vignette, and `AzureStor`/`AzureRMR` in `Suggests` (it records the cloud sha256
+through the manifest).
 
-With `manifest` landed, `replay-helper` is unblocked (ready to propose). The
-remaining open nodes stay blocked: `shard-failure-survival` on
-`cluster-pipeline`, `shard-completeness-assert` on `shard-failure-survival`,
-`mixed-code-lockin` on `shard-atomic-rewrite`, and `cleanup-lecuyer` on
-`migrate-public-api` + `mixed-code-lockin`. (`dataset-provenance` remains
-roadmap-only, deliberately deferred.)
+`replay-helper` is also unblocked (`task-tables` and `manifest` both archived)
+but carries no artifacts yet, so it moves to **ready** (blue) — ready to
+propose. The remaining open nodes stay blocked: `shard-failure-survival` on
+`cluster-pipeline`, `shard-completeness-assert` on both `manifest` and
+`shard-failure-survival`, `mixed-code-lockin` on `shard-atomic-rewrite`, and
+`cleanup-lecuyer` on `migrate-public-api` + `mixed-code-lockin`.
+(`dataset-provenance` remains roadmap-only, deliberately deferred.)
 
 `migrate-public-api` depends on `scenario-input-types` (its
 byte-equivalence re-run must exercise the full input surface) and on
@@ -2728,3 +2733,14 @@ dependency DAG (prose bullets above, no Mermaid nodes): `est-method-setting`
 capability that reads the archived `task-tables` expansion). Both grew out of
 the `ci = TRUE` performance investigation recorded in their `exploration/`
 scripts.
+
+`manifest` has since been **implemented (#114), synced, and archived** — the
+writer/reader/recorder/assembler live in `R/manifest.R` (with the shared
+`ssd_file_sha256()` in `R/utils.R`), `jsonlite`/`digest`/`sessioninfo` are in
+`Imports`, its delta spec is folded into the new `openspec/specs/manifest/`
+main spec, and the change now lives in `openspec/changes/archive/`. Its node
+is therefore **green (archived)** and moved into the `archived_box`. Because
+`task-tables` was already archived, this lands the last prerequisite for
+`cloud-upload` and `replay-helper`: `cloud-upload` has since been proposed
+(#122), so it is **proposed** (red); `replay-helper` has no artifacts yet, so
+it moves to **ready** (blue).
