@@ -2,9 +2,18 @@
 % Please edit documentation in R/task-lists.R
 \name{ssd_scenario_tasks}
 \alias{ssd_scenario_tasks}
-\title{Expand a Scenario into all Three Task Tables}
+\alias{ssd_scenario_sample_tasks}
+\alias{ssd_scenario_fit_tasks}
+\alias{ssd_scenario_hc_tasks}
+\title{Expand a Scenario into Task Tables}
 \usage{
 ssd_scenario_tasks(scenario, step = NULL)
+
+ssd_scenario_sample_tasks(scenario)
+
+ssd_scenario_fit_tasks(scenario)
+
+ssd_scenario_hc_tasks(scenario)
 }
 \arguments{
 \item{scenario}{An \code{ssdsims_scenario} from \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.}
@@ -17,20 +26,80 @@ matching \verb{ssd_scenario_*_tasks()}); when \code{NULL} (default) returns the 
 \value{
 An \code{ssdsims_task_set} object (a list with \code{sample}, \code{fit}, and \code{hc}
 elements, each an \code{ssdsims_tasks} table), or - when \code{step} is supplied - the
-single \code{ssdsims_tasks} table for that step.
+single \code{ssdsims_tasks} table for that step. Each \code{ssdsims_tasks} table is a
+classed tibble recording one step, with one row per cell of that step's
+cross-join.
 }
 \description{
-The canonical expansion entry point (\code{TARGETS-DESIGN.md} section 1/section 2): derives the
-\code{sample}, \code{fit}, and \code{hc} task tables from a scenario in one call and
-bundles them into an \code{ssdsims_task_set}. The per-step derivations
-(\code{\link[=ssd_scenario_sample_tasks]{ssd_scenario_sample_tasks()}}, \code{\link[=ssd_scenario_fit_tasks]{ssd_scenario_fit_tasks()}},
+The canonical expansion entry point (\code{TARGETS-DESIGN.md} section 1/section 2):
+\code{\link[=ssd_scenario_tasks]{ssd_scenario_tasks()}} derives the \code{sample}, \code{fit}, and \code{hc} task tables from a
+scenario in one call and bundles them into an \code{ssdsims_task_set}. The per-step
+derivations (\code{\link[=ssd_scenario_sample_tasks]{ssd_scenario_sample_tasks()}}, \code{\link[=ssd_scenario_fit_tasks]{ssd_scenario_fit_tasks()}},
 \code{\link[=ssd_scenario_hc_tasks]{ssd_scenario_hc_tasks()}}) remain available for callers that need a single
-table.
+table; each is equivalent to \code{ssd_scenario_tasks(scenario, step)} for the
+matching step.
+
+All derivations are RNG-free: they perform no random-number generation and add
+no \code{seed}/\code{primer}/\code{stream} columns (those arrive in later roadmap steps; see
+\code{TARGETS-DESIGN.md} section 2). Each row carries a path-style \verb{<step>_id}
+primary key (the Hive partition path) and, for non-root steps, its parent
+step's \verb{<parent>_id} as a joinable foreign key, so a child task references its
+parent by a single column.
 }
+\section{Functions}{
+\itemize{
+\item \code{ssd_scenario_sample_tasks()}: Derive just the \code{sample} task table: one row per
+cell of the cross-join of the scenario's dataset names, replicate index
+(\code{1:nsim}), and \code{replace} values, keyed by \code{sample_id}. Each row is the
+single random draw of \code{n_max = max(nrow)} rows that every \code{nrow} value
+sub-truncates (\code{TARGETS-DESIGN.md} section 5), so \code{nrow} is \strong{not} a sample
+axis - the draw is shared - and \code{n_max} is carried as an ordinary integer
+column.
+
+\item \code{ssd_scenario_fit_tasks()}: Derive just the \code{fit} task table: cross each
+sample-task identity (\code{dataset}, \code{sim}, \code{replace}) with the scenario's \code{nrow}
+values and each row of the scenario's \code{fit} argument grid (\code{rescale},
+\code{computable}, \code{at_boundary_ok}, \code{min_pmix} name, \code{range_shape1},
+\code{range_shape2}). \code{nrow} is a genuine \code{fit} cross-join axis: the \code{fit} step
+truncates its parent sample inline (\code{head(sample, nrow)}, RNG-free) before
+fitting, so the shared draw is sub-truncated without a separate \code{data} step
+(\code{TARGETS-DESIGN.md} section 5). \code{min_pmix} is referenced by name, not by
+function value (\code{TARGETS-DESIGN.md} section 1.1). Each row carries a \code{fit_id}
+primary key and a \code{sample_id} foreign key referencing its parent sample task.
+
+\item \code{ssd_scenario_hc_tasks()}: Derive just the \code{hc} task table: cross each
+fit-task identity with each row of the scenario's \code{hc} argument grid
+(\code{nboot}, \code{ci_method}, \code{parametric}). The scenario's scalar \code{ci} flag and the
+\code{est_method} setting are applied uniformly to every hc row - neither is a
+cross-join axis; \code{ci} rides as a carried column and every requested
+\code{est_method} is summarised within each task from its single bootstrap sample
+set. When \code{ci = FALSE} the bootstrap-only knobs (\code{nboot}, \code{ci_method},
+\code{parametric}) are canonically \code{NA} and there is no fan-out axis, so the grid
+is exactly one hc row per fit task; when \code{ci = TRUE} the grid fans out across
+\verb{nboot x ci_method x parametric}. Each row carries an \code{hc_id} primary key and
+a \code{fit_id} foreign key referencing its parent fit task.
+
+}}
 \examples{
 scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
 tasks <- ssd_scenario_tasks(scenario)
 tasks
 tasks$hc
 ssd_scenario_tasks(scenario, "hc")
+ssd_scenario_sample_tasks(scenario)
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 3L,
+  seed = 42L,
+  rescale = c(FALSE, TRUE)
+)
+ssd_scenario_fit_tasks(scenario)
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  seed = 42L,
+  ci = TRUE,
+  nboot = c(10L, 100L)
+)
+ssd_scenario_hc_tasks(scenario)
 }

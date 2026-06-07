@@ -172,7 +172,7 @@ test_that("task-shards: step runners write one Parquet and read upstream by path
 
 # ---- summary fan-in (task 7.6) ---------------------------------------------
 
-test_that("task-shards: ssd_summarize unions landed hc shards without recomputation", {
+test_that("task-shards: ssd_summarise unions landed hc shards without recomputation", {
   skip_if_not_installed("dqrng")
   dir <- withr::local_tempdir()
   scenario <- ssd_define_scenario(
@@ -204,7 +204,7 @@ test_that("task-shards: ssd_summarize unions landed hc shards without recomputat
       file.path(dir, "hc")
     )
   }
-  out <- ssd_summarize(
+  out <- ssd_summarise(
     file.path(dir, "sample"),
     file.path(dir, "fit"),
     file.path(dir, "hc"),
@@ -378,6 +378,10 @@ declared_edges <- function(target, candidates) {
 }
 
 test_that("hive: each child shard names exactly the parent shards it reads (m:n)", {
+  # `ssd_scenario_targets()` builds with both `tarchetypes::tar_map()` and
+  # `targets::tar_target_raw()`, so both Suggests must be installed.
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
   # sample/fit per-sim; hc coarse (dataset only) so its one shard reads BOTH fits.
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
@@ -434,6 +438,8 @@ all_target_names <- function(x) {
 }
 
 test_that("hive: per-child edges replace the coarse step barrier; no data step", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
   scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
   tg <- ssd_scenario_targets(scenario)
   all_names <- all_target_names(tg)
@@ -444,6 +450,9 @@ test_that("hive: per-child edges replace the coarse step barrier; no data step",
 })
 
 test_that("hive: cue is threaded onto every shard target", {
+  # Needs `targets` for `tar_cue()` here and `tarchetypes` inside the factory.
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
   scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
   tg <- ssd_scenario_targets(scenario, cue = targets::tar_cue(depend = FALSE))
   shard_targets <- c(
@@ -460,6 +469,8 @@ test_that("hive: cue is threaded onto every shard target", {
 })
 
 test_that("hive: widening max(nrow) changes the sample shard command (rewrite trigger)", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
   # The sample draw's n_max = max(nrow) is a sample task column, so widening nrow
   # changes the (inlined) sample shard command -> the sample shard rebuilds and
   # the per-child edge propagates to the fit shards that read it (task 4.5). The

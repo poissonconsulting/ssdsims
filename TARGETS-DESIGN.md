@@ -96,17 +96,24 @@ The most consequential design choices, with section refs:
   `results/<step>/dataset=.../sim=.../`; downstream shards open the
   upstream shard by partition path (`format = "file"`), and
   duckplyr predicate-pushes filters into the partition columns.
-- **Cloud upload as a separate target (§6.1).** When
-  `scenario$upload` is set, an `upload_<step>` target sits
-  downstream of each shard file and pushes it to Azure Blob (or
-  another object store). Because it is its own `format = "file"`
-  target, content-hashing skips re-uploading shards that did not
-  change; `ssd_test_upload()` probes the backend at pipeline init,
-  and the graph still builds and dry-runs with no credentials.
-- **Partial failures survive and stay visible (§6.2).** A shard body
+- **Cloud upload as a separate target (§6.1).** When the runner's
+  `upload` argument is set (`ssd_scenario_targets(..., upload = ...)`),
+  an `upload_<step>` target sits downstream of each shard file and
+  pushes it to Azure Blob (or another object store). Because it is its
+  own `format = "file"` target, content-hashing skips re-uploading
+  shards that did not change; `ssd_test_upload()` probes the backend at
+  pipeline init, and `ssd_upload_dryrun()` builds and dry-runs the DAG
+  with no credentials.
+- **Partial failures survive and stay visible (§6.2).** The pipeline
+  runs **keep-going by default** — the shipped `_targets.R` templates set
+  `tar_option_set(error = "continue")`, the `make -k` analogue, so one
+  errored target skips only its dependents while every other reachable
+  shard still builds (a long parallel run is never lost to one bad
+  branch). On top of that, a shard body
   writes as many rows as ran successfully, so a bad task yields a
   *shorter* shard, not an abort; the step target errors (and carries
-  `error = "null"`) only in exceptional cases. A downstream
+  `error = "null"`, stronger still — its NULL flows downstream) only in
+  exceptional cases. A downstream
   `assert_<step>` target — sibling to `upload_<step>` — compares the
   shard's row count to the expected count and goes red on any
   shortfall, making incompleteness a first-class DAG node and the
@@ -160,15 +167,17 @@ ssdsims_scenario
 │                  flag (not an axis, §1.2) — when ci = FALSE the
 │                  bootstrap-only knobs (nboot, ci_method, parametric)
 │                  are stored as NA on the hc tasks
-├── partition_by ← list(data = ..., fit = ..., hc = ...) of character
-│                  vectors picking the Hive partition axes per step;
-│                  one shard per (step, partition-cell). Default:
-│                  data=(dataset,sim,replace), fit=(dataset,sim,rescale),
-│                  hc=(dataset,sim). See §5.
-└── upload       ← NULL (no upload) or list(backend, url, …) (§6.1)
+└── partition_by ← list(data = ..., fit = ..., hc = ...) of character
+                   vectors picking the Hive partition axes per step;
+                   one shard per (step, partition-cell). Default:
+                   data=(dataset,sim,replace), fit=(dataset,sim,rescale),
+                   hc=(dataset,sim). See §5.
 ```
 
-There is no `parent` field. Extension never needs one: plain growth
+There is no `upload` field. The upload destination is a **runner argument**
+(`ssd_scenario_targets(..., upload = ...)`), the sibling of `root`, not part of
+the scenario's declarative identity (the single-core runner deliberately has no
+upload; §6.1). There is no `parent` field. Extension never needs one: plain growth
 (more datasets, more `nsim`) reuses shards by file existence
 (`file existence ⇒ cache hit`, §8.1), inner-axis growth rewrites the
 affected shards (§8.2), and pinning shards against a code change is
@@ -307,9 +316,9 @@ the bootstrap:
 
 - If `ci = FALSE`, those knobs are meaningless: supplying any of them aborts at
   scenario construction (set `ci = TRUE` or omit them), and the hc-task table
-  stores them as `NA`, leaving `est_method` as the only fan-out axis.
-- If `ci = TRUE`, the hc grid fans out across `nboot × est_method × ci_method ×
-  parametric` as usual.
+  stores them as `NA`. `est_method` is an hc simulation setting (not an axis), so
+  this leaves no fan-out axis at all — exactly one hc row per fit task.
+- If `ci = TRUE`, the hc grid fans out across `nboot × ci_method × parametric`.
 
 In the hc task table (here a `ci = TRUE` scenario with two `nboot` values):
 
@@ -318,8 +327,9 @@ In the hc task table (here a `ci = TRUE` scenario with two `nboot` values):
 | 1   | 5    | FALSE   | TRUE | 100   | weighted_samples | TRUE       |
 | 1   | 5    | FALSE   | TRUE | 1000  | weighted_samples | TRUE       |
 
-A `ci = FALSE` scenario instead yields one row per `est_method` with `nboot` /
-`ci_method` / `parametric` all `NA`. The hash of an `NA`-bearing row is
+A `ci = FALSE` scenario instead yields exactly one hc row per fit task with
+`nboot` / `ci_method` / `parametric` all `NA` (every requested `est_method` is
+summarised within that single task). The hash of an `NA`-bearing row is
 well-defined as long as `NA` is encoded canonically — `task_primer()` does this
 via `rlang::hash()` on the named list — so the `NA` bootstrap knobs never
 allocate phantom streams to combinations that don't exist in practice.
@@ -429,9 +439,10 @@ value is sub-truncation of the same `n_max`-row sample (§5). For a
 fit task: data-task identity plus the fit-arg-grid row (`rescale`,
 `computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
 `range_shape2`). For an hc task: fit-task identity plus the hc-arg-
-grid row (`nboot`, `est_method`, `ci_method`, `parametric`). `ci` is a
-scalar flag, **not** in the hash (§1.2); when `ci = FALSE` the bootstrap-only
-knobs are `NA` in that row (canonically encoded).
+grid row (`nboot`, `ci_method`, `parametric`). `ci` and `est_method` are
+hc simulation settings, **not** in the hash (§1.2; `est_method` is summarised
+within the task from a single bootstrap sample set); when `ci = FALSE` the
+bootstrap-only knobs are `NA` in that row (canonically encoded).
 
 Function-valued parameters (`min_pmix`) are referenced **by name**
 (§1.1) so that a recompile/JIT does not move the task to a different
@@ -537,8 +548,9 @@ parallel; none is downstream of the others. Roles:
   ssdsims logic is involved** — proves the cluster wiring works.
 
 - **C — working scenario object** contributes the *content*:
-  `seed`, dataset names, fit/hc argument vectors, optional
-  `upload` (§6.1). Already exercised
+  `seed`, dataset names, fit/hc argument vectors. (The optional cloud
+  `upload` is a **runner argument** of `ssd_scenario_targets()`, not a
+  scenario field — §6.1.) Already exercised
   locally with `ssd_run_scenario()` (§3) so the only remaining
   unknown when assembling the three is the cluster wiring itself.
 
@@ -1010,7 +1022,7 @@ list(
 
   tar_target(
     summary,
-    ssd_summarize(dir_data = "results/data",
+    ssd_summarise(dir_data = "results/data",
                   dir_fit  = "results/fit",
                   dir_hc   = "results/hc",
                   path     = "results/summary.parquet"),
@@ -1192,20 +1204,37 @@ branch receives a string and hands it straight to duckplyr
 
 The data/fit/hc shards are the user-facing artefacts and they need
 to be readable **from outside the cluster** — analysis notebooks on a
-laptop, dashboards, downstream R/Python scripts. The scenario carries
-an optional `upload` field describing a destination object store.
+laptop, dashboards, downstream R/Python scripts.
 
-```
-   scenario$upload (NULL by default; non-NULL example):
-     list(
-       backend   = "azure_blob",
-       url       = "https://<acct>.blob.core.windows.net",
-       container = "ssdsims-results"
-     )
-```
+> **Implemented** (the `cloud-upload` capability) with three departures from the
+> original sketch below: the destination is a **runner argument** of
+> `ssd_scenario_targets(scenario, ..., root, upload, cue)` (the sibling of
+> `root`), **not** a `scenario` field; it is a **typed, self-validating** object
+> rather than an untyped list; and absent Azure credentials **fail loud** rather
+> than silently dry-running. See the realised contract immediately below; the
+> historical sketch follows for context.
+
+**The destination is a typed runner argument.** Two constructors return plain,
+serialisable, classed S3 objects carrying **only** the destination (never
+credentials): `ssd_upload_azure(url, container)` (class
+`c("ssdsims_upload_azure_blob", "ssdsims_upload")`) and `ssd_upload_dryrun()`
+(class `c("ssdsims_upload_dryrun", "ssdsims_upload")`), validated at
+construction. They are passed by name to the factory — `upload = NULL` (default;
+**no** `upload_<step>` nodes), `ssd_upload_dryrun()` (no-op nodes, exercised
+offline/in CI), or `ssd_upload_azure(...)` (ship to Azure). Four generics
+dispatch on the object's class: `ssd_test_upload()` (the front-door
+creds/connectivity probe, run once up front), `ssd_upload_shard(path, upload)`
+(ship one shard), `ssd_open_uploaded(upload, step)` (read the uploaded results
+back in place), and construction-time validation. A new backend (S3/GCS) is a
+constructor plus those three methods — no edit to existing methods.
+
+**Fail loud on absent credentials.** Azure with missing credentials **errors**
+(naming the missing `SSDSIMS_AZURE_*` variable), at probe time and as a per-shard
+backstop — never a silent no-op. Intent to skip the network is expressed only by
+`ssd_upload_dryrun()`.
 
 **Upload is its own target, not an inline side effect.** When
-`upload` is non-NULL the pipeline adds one `upload_<step>` target per
+`upload` is non-NULL the factory adds one `upload_<step>` target per
 shard, paired with its step target by the same `tar_map`:
 
 ```r
@@ -1213,7 +1242,7 @@ tar_map(
   values = fit_shards, names = c(dataset, sim, rescale),
   tar_target(fit_step, ssd_run_fit_step(tasks, scenario, ...),
              format = "file", error = "null"),
-  tar_target(upload_fit, ssd_upload_shard(fit_step, scenario$upload),
+  tar_target(upload_fit, ssd_upload_shard(fit_step, upload),
              format = "file", error = "null")   # fit_step = the shard path
 )
 ```
@@ -1229,11 +1258,12 @@ from inside `ssd_run_<step>_step()` right after the local write:
   pipeline composes this with `error = "null"` and a pinning cue:
   fixing one failed branch becomes a *minimal* re-upload, not a full
   redo.)
-- **The graph builds and dry-runs with no credentials.**
-  `ssd_upload_shard()` checks for credentials and, when absent,
-  returns the local path as a no-op (a dry run) instead of erroring —
-  so the same pipeline is runnable offline and against real cloud
-  storage, and the upload nodes still appear in the DAG.
+- **The graph builds and dry-runs with no credentials — explicitly.**
+  Passing `ssd_upload_dryrun()` gives `upload_<step>` nodes that no-op
+  (reach no network and return the local path), so the same DAG shape
+  runs offline and in CI without credentials. This is now an **explicit
+  opt-in**, not a silent fallback on absent credentials (see *fail loud*
+  above): `ssd_upload_azure(...)` with missing credentials **errors**.
 - **Concerns stay separated by dependency.** The compute manifest
   depends only on the shard targets (what was produced); the upload
   manifest depends on the `upload_<step>` targets (what was shipped).
@@ -1255,8 +1285,9 @@ Per-shard flow when `upload` is non-NULL:
         │                  (local shard; targets tracks it, format = "file")
         ▼
    upload_<step> branch ──▶ <url>/<container>/<step>/<partition-path>/part.parquet
-                            (own target; runs only if the shard hash changed,
-                             dry-run no-op when credentials are absent)
+                            (own target; runs only if the shard hash changed;
+                             with ssd_upload_dryrun() it no-ops, never touching
+                             the network)
         │
         ▼ records the upload's sha256 in the result manifest
 ```
@@ -1265,30 +1296,40 @@ The local shard stays on disk so `targets`' `format = "file"`
 tracking is unaffected; the cloud copy is an additional artefact.
 
 **Auth is external.** Credentials come from environment variables
-(`AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, or a service-principal
-combo). The scenario object does **not** carry secrets — it carries
-only the destination URL and container name. Their absence is what
-flips `ssd_upload_shard()` into its dry-run no-op.
+(`SSDSIMS_AZURE_STORAGE_ACCOUNT` plus one of `SSDSIMS_AZURE_STORAGE_KEY`, `SSDSIMS_AZURE_STORAGE_SAS`,
+or the service-principal trio). The upload object does **not** carry secrets —
+it carries only the destination URL and container name. Their absence is a
+**loud error** (naming the missing variable), not a silent no-op — skipping the
+network is `ssd_upload_dryrun()`'s job.
 
-**Connectivity probe up front.** `ssd_test_upload(scenario)` performs
-a minimal round-trip (list the container, write and delete a small
-marker blob) and either returns silently or errors with the
-backend's diagnostic. The pipeline calls it once at the start of
-`tar_make()` so an auth or network failure aborts before any
-compute starts. Easy to run interactively too:
+**Connectivity probe up front.** `ssd_test_upload(upload)` performs a minimal
+round-trip (list the container, write and delete a small marker blob) and either
+returns silently or errors with the backend's diagnostic — resolving the
+credentials first and aborting, naming the missing `SSDSIMS_AZURE_*` variable, when one
+is absent. The factory `ssd_scenario_targets()` runs it **once up front** (when
+the target list is built, i.e. when `_targets.R` is sourced — before
+`tar_make()` builds anything), so an auth/network failure aborts before any
+compute rather than deep in the DAG on a worker. The same one-liner works
+interactively as the user's "are my credentials in the right place?" check:
 
 ```r
-scenario <- ssd_scenario(..., upload = list(backend = "azure_blob", ...))
-ssd_test_upload(scenario)   # silent on success, throws on failure
-tar_make()
+upload <- ssd_upload_azure(url = "https://<acct>.blob.core.windows.net",
+                           container = "ssdsims-results")
+ssd_test_upload(upload)   # silent on success, throws (naming the missing var) on failure
+ssd_scenario_targets(scenario, upload = upload)   # runs the probe up front too
 ```
 
 **Failure mode.** A per-shard upload error becomes that
 `upload_<step>` branch's error (and, under `error = "null"`, leaves
 the rest uploading); the local shard remains, so `tar_make()` can be
-re-driven and only the failed uploads retried. The scenario's
-manifest records, per shard, the local sha256 and the cloud sha256; a
-mismatch flags a corrupted transfer.
+re-driven and only the failed uploads retried. Each shard's `meta.json`
+sidecar (the manifest's per-shard sha256 record, §8.5) is uploaded
+**alongside** its Parquet, so the trusted-as-produced sha256 travels with
+the data; a downloaded copy is verified by re-hashing it against that
+recorded sha256, and a mismatch flags a corrupted transfer. The manifest
+itself carries no separate cloud-copy sha256 — under a faithful byte copy
+it would equal the recorded sha256, so `cloud-upload` needs nothing added
+to the manifest (the two are decoupled).
 
 ### 6.2 Surviving a failed shard
 
@@ -1323,6 +1364,34 @@ So "see partial shard failures clearly" is the assert layer's job;
 (the exceptional case) is always out of date, so a re-driven
 `tar_make()` after a fix retries it (§8.4); a short shard is found by
 its red `assert_<step>` (also §8.4).
+
+**Keep-going is the pipeline default (`make -k`), and it is layered.**
+The shipped `_targets.R` templates set `tar_option_set(error =
+"continue")` — the `make -k` analogue — so a target that errors skips
+only its own dependents while every other reachable shard still builds;
+one bad branch never tears down a long parallel run. (It is a
+pipeline-wide *option*, so it sits in `_targets.R` next to the controller
+block, not in the `ssd_scenario_targets()` factory — which owns the
+*per-target* settings instead.) The shard, `assert_<step>`, and
+`upload_<step>` targets carry the stronger per-target `error = "null"`,
+which is *more* permissive than `make -k`: the errored target's value
+becomes `NULL` and its downstream still runs (a short/`NULL` shard flows
+on and is reported, above), where plain `make -k` would skip it. The two
+settings compose cleanly — a per-target `error` overrides the global
+default — so the global `continue` only governs the targets that carry no
+explicit override (e.g. an unexpected error in `summary` or a
+user-added target skips its dependents instead of aborting the run).
+Guards that *should* abort the whole run — the upload/cluster pre-flight
+(§6.1, §4) — deliberately live **outside** the DAG, in a separate
+pre-flight script the **user runs** before `tar_make()` (a documented
+pre-condition, not a target the pipeline enforces), so the keep-going
+default never swallows them. The trade we accept: under keep-going a *systemic*
+failure (every shard red because a package won't load) does not stop the
+pipeline on its own — but the operator watches the first few minutes,
+where a wall of red surfaces immediately, so optimising for *not losing a
+long run to one bad branch* beats stop-on-first-error. Override with an
+explicit `tar_option_set(error = "stop")` in `_targets.R` if a hard stop
+is ever wanted.
 
 Two constraints, both confirmed by the targets lab's failure spike:
 
@@ -1750,14 +1819,64 @@ directory):
 - `fit`, `hc` — the argument-vector grids.
 - `partition_by` — the per-shard path axes (§5).
 - `completed_shards` — set of shard partition paths whose Parquet
-  exists and is trusted, with each shard's sha256 (recorded at
-  write time, including the cloud copy's sha256 if `upload` is
-  set; see §6.1, §7).
+  exists and is trusted, with each shard's sha256 (the
+  trusted-as-produced value, recorded at write time in a per-shard
+  `meta.json` sidecar; see §6.1, §7). No separate cloud-copy sha256:
+  the sidecar is uploaded with the shard and a download is verified by
+  re-hashing against this sha256 (§6.1).
 - `r_version`, `dqrng_version`, `ssdtools_version` — versions
   pinned for bit-stability across re-runs (§9).
 
 Restart property for dqrng (same `(seed, state)` ⇒ same draw
 sequence) is verified by `scripts/experiment-dqrng-hash.R`.
+
+### 8.6 The incremental loop — run, assemble, expand, re-assemble
+
+The pieces above compose into one repeatable cycle: **run a scenario,
+assemble, expand the scenario, run only the missing pieces, assemble
+again** — with no redundant recomputation. It works because every step is
+a pure function of the *current* state, never an accumulation of edits:
+
+1. **Run.** `tar_make()` writes one Parquet per shard under the scenario's
+   layout root (§5). Path-axis growth and inner-axis rewrite (§8.1–§8.2)
+   are exactly the rules that decide which shards a *later* run rebuilds.
+2. **Assemble.** `ssd_assemble_manifest()` walks the results tree and
+   rebuilds `completed_shards` from whatever Parquets exist (§8.5),
+   preferring each shard's `meta.json` sidecar and hashing the rest. It
+   reads the manifest head left by `ssd_write_manifest()` and replaces
+   only the tail.
+3. **Expand.** Edit the scenario object — append a dataset, grow `nsim`,
+   add a `min_pmix`, widen `nrow` — and re-source `_targets.R`. The shard
+   set is re-derived from the expanded scenario at sourcing time (§6
+   static branching).
+4. **Run the missing pieces.** `tar_make()` again. Path-axis growth mints
+   and builds *only* the new shards and skips the rest (cache-by-
+   existence, §8.1); inner-axis growth atomically rewrites *only* the
+   affected shards (§8.2). Nothing else recomputes.
+5. **Assemble again.** `ssd_assemble_manifest()` re-walks the tree. Because
+   it rebuilds the tail from disk every call, the second assembly is
+   **idempotent and monotone under growth**: the new shards appear, the
+   untouched ones keep their (byte-identical) entries, and the result is
+   their union — no merge bookkeeping, no stale entries to prune.
+
+**Two ordering facts make the loop safe.**
+
+- *Write the head before you assemble.* The head is a pure function of the
+  scenario (§8.5), and `ssd_write_manifest()` rewrites the *whole* file
+  with the head alone — it does not preserve a previous tail. So after an
+  **expansion** the head must be re-written from the *expanded* scenario
+  (otherwise it still describes the smaller grid), and the assemble must
+  follow it to rebuild the tail from disk. The runner's contract is
+  therefore *write-head-then-assemble-tail* on every (re-)run: the head
+  always matches the current scenario, the tail always matches the shards
+  on disk, and the two cannot drift across runs (the within-run case is §6
+  static branching).
+- *Growth keeps the layout root; re-layout starts a fresh tree.* The
+  results root is keyed by `partition_by` (`layout=<hash>`, §5), so growing
+  along existing axes accretes into the *same* tree and reuses its cache
+  and manifest. Changing `partition_by` itself is not growth — it mints a
+  new layout root with its own (initially empty) manifest, leaving the old
+  tree intact rather than migrating it.
 
 ---
 
@@ -1876,7 +1995,7 @@ the methods mid-session (not inside a scenario runner) use the same
 | Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci` is a scalar flag (not an axis); under `ci=FALSE` the bootstrap-only knobs are rejected at construction and stored `NA`, so they never fan out. |
 | Branch failure unreproducible off the cluster        | §7 — task row + upstream shard replays the failing task via `_state` primitives.          |
 | Code fix re-runs every branch by hash invalidation   | §8.3 — `tar_cue(depend = FALSE)` pins shards against the edit; §8.4 — `tar_invalidate()` / `unlink()` refreshes only the chosen shards. |
-| Off-cluster access to Parquet outputs                | §6.1 — `scenario$upload` adds a per-shard `upload_<step>` target (content-hashed, dry-run offline) to a configurable object store (e.g. Azure Blob). |
+| Off-cluster access to Parquet outputs                | §6.1 — the runner's `upload` argument adds a per-shard `upload_<step>` target (content-hashed, `ssd_upload_dryrun()` offline) to a configurable object store (e.g. Azure Blob), and `ssd_open_uploaded()` reads it back in place. |
 | Phantom local repros (regenerated upstream ≠ cluster's actual) | §7 — manifest's per-shard sha256 lets the lightweight recipe verify the local upstream before running the failing task. |
 
 The RNGkind side-effect bug and the independent data/fit/hc substream
@@ -2007,9 +2126,13 @@ already ran end to end (see §4, §6). These steps are therefore
   shards' existence (`completed_shards`), never the reverse — the
   `task-tables` runner reads nothing from it. The `completed_shards`
   assembler hashes the shards on disk; recording each shard's sha256
-  *at write time* (and the cloud copy's sha256) is the
+  *at write time* (in a per-shard `meta.json` sidecar) is the
   trusted-as-produced enhancement wired in by the consumers that need
   it (`replay-helper`, `cloud-upload`), not by the happy-path pipeline.
+  It records **one** trusted sha256 per shard and nothing cloud-specific,
+  so `manifest` and `cloud-upload` are **decoupled**: `cloud-upload`
+  uploads the sidecar with the shard and verifies a download by
+  re-hashing against that sha256, needing nothing added to the manifest.
   Land it before its first consumer (`replay-helper` /
   `shard-completeness-assert`), and operationally before the first
   expensive cluster run whose results you intend to trust/reproduce;
@@ -2038,13 +2161,33 @@ already ran end to end (see §4, §6). These steps are therefore
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
   `crew.cluster::crew_controller_slurm()`. End-to-end `tar_make()`
   on a real (or sandboxed) Slurm queue.
-- **`cloud-upload`** — §6.1 — per-shard `upload_<step>` target +
-  `ssd_test_upload()` probe + `ssd_upload_shard()` with a credential
-  check that dry-runs (no-op) when secrets are absent. Hello-Azure
-  round trip from interactive R; the connectivity probe is
-  `tar_make()`'s first target. Test: a second `tar_make()` with no
-  shard changes uploads nothing (content-hash skip); the graph
-  builds offline.
+- **`cloud-upload`** — §6.1 — typed, self-validating destination objects
+  (`ssd_upload_azure(url, container)`, `ssd_upload_dryrun()`; class
+  `ssdsims_upload`) dispatched by three generics — `ssd_upload_shard()`
+  (ships one shard), `ssd_test_upload()` (the front-door
+  creds/connectivity probe), and construction-time validation. The
+  destination is a **runner argument**, the sibling of `root` on
+  `ssd_scenario_targets(scenario, ..., root, upload, cue)` (with
+  `rlang::check_dots_empty()` forcing named args), **not** a `scenario`
+  field — so it is dropped from `ssd_define_scenario()` and the
+  `ssdsims_scenario` object (both **BREAKING**). Fail-loud: Azure with
+  absent credentials **errors** (no silent no-op); intent to skip the
+  network is expressed only by `ssd_upload_dryrun()`. Both `upload = NULL`
+  (no `upload_<step>` nodes) and `ssd_upload_dryrun()` (no-op nodes,
+  exercised offline/in CI) are supported. Per-shard `upload_<step>` target
+  (`format = "file"`, `error = "null"`), content-hashed so a second
+  `tar_make()` with no shard changes uploads nothing; the cloud sha256 is
+  recorded in the `manifest`. The `ssd_test_upload()` probe is
+  `tar_make()`'s first target; the hello-Azure round trip runs from
+  interactive R, and `ssd_open_uploaded(upload, step)` reads the uploaded
+  shards back **in place** via DuckDB's `azure` extension (no download) for an
+  immediate round-trip check. **Departs from the original §6.1 sketch** (silent
+  dry-run on absent creds → now a loud error) and **moves `upload` off the
+  scenario**. **Implemented** (the `cloud-upload` change): `R/upload.R` (the
+  constructors and four generics), `upload` wired into `ssd_scenario_targets()`,
+  `upload` removed from `ssd_define_scenario()`/`ssdsims_scenario` (BREAKING),
+  the `vignettes/cloud-upload.qmd` vignette, and `AzureStor`/`AzureRMR` added to
+  `Suggests`.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and
   `ssd_input_hash()` for the lightweight recipe. Tests simulate a
   branch failure and reproduce locally.
@@ -2119,22 +2262,6 @@ public-API or ergonomics gaps.
   delegate to a public `as_ssd_data()` because the bare-data-frame and
   unnamed-list forms derive names by **symbol capture**, which must happen
   in the `ssd_define_scenario()` frame. Surfaced in PR #80.
-- **`blob-storage-format`** — Review how per-task non-tabular results
-  (the `fit` step's `fitdists` objects) are stored in their shard Parquet.
-  `shard-runner-baseline` ships an interim `encode_obj()`/`decode_obj()`
-  pair (`R/targets-runner.R`) that `serialize(ascii = TRUE)`s the object to
-  an **ASCII string** carried in a Parquet `VARCHAR` column, chosen because
-  duckplyr cannot store a raw/list column and an ASCII serialisation
-  round-trips losslessly. ASCII serialisation is ~2× the size of the binary
-  form and is CPU-heavier to encode/decode, so for many or large fits the
-  blob layer dominates shard size. Evaluate alternatives — a binary
-  `serialize(ascii = FALSE)` in a base64/BLOB column, an Arrow-native nested
-  representation, or writing the fit objects to a sidecar store keyed by
-  `fit_id` rather than inline — against the byte-identity oracle, the
-  duckplyr/Parquet column-type constraints, and the §6 summary read path
-  (which already projects the blob column out). Surfaced by the
-  `shard-runner-baseline` / `task-tables` verification. Independent tidy-up
-  with no dependants; not on the dependency DAG.
 - **`tidyverse-rlang-alignment`** — Align the package's code with the
   tidyverse design: prefer **rlang** over base-R idioms throughout, especially
   metaprogramming — `rlang::expr()`/`!!`/`inject()`/`call2()`/`sym()`/`syms()`
@@ -2158,18 +2285,26 @@ public-API or ergonomics gaps.
   same ordering. Independent tidy-up with no dependants; not on the dependency
   DAG.
 
-- **`dists-simulation-setting`** — Reconcile `dists`'s classification across the
-  spec, signature, and docs. `dists` is absent from `task_axes("fit")` — a
-  fit-level **simulation setting** (one model-averaged `ssd_fit_dists()` per
-  task, applied uniformly), not a cross-join axis — but the `scenario-definition`
-  role-grouping requirement lists it among the axes and the signature wedges it
-  in the fit-axis block. This change moves `dists` to lead the contiguous
-  simulation-settings block (`… parametric, dists, proportion, ci, samples`),
-  corrects the spec, and sweeps call sites. Behaviour-preserving (no task-graph,
-  primer, or shard change); pairs with the §9 / GLOSSARY corrections that also
-  fixed the stale *"`dists` and `nboot` are not fit/hc grid axes"* heading
-  (`nboot` **is** an hc axis). Independent tidy-up; not on the dependency DAG.
-
+- **`nrow-max-setting`** — Add an explicit `nrow_max` simulation setting (the
+  fixed shared-draw size, default a reasonably high `1000L`) replacing the
+  derived `n_max = max(scenario$nrow)`, and complete *Direction B* — a task row
+  carries only its identity. The effective per-dataset draw is
+  `min(nrow_max, nrow(data))` for `replace = FALSE` (a high default ⇒ the full
+  permutation) and `nrow_max` rows for `replace = TRUE`; because the draw size is
+  now fixed, extending `nrow` (within the draw size) never re-draws — the
+  `sample` shard stays cached and only new `nrow`-keyed `fit` shards mint,
+  retiring the §5 "widened `max(nrow)` re-draws the sample shard" churn. In the
+  same sweep the last two carried columns leave the task tables: `n_max` (the
+  draw size is now computed in the runner from `nrow_max` + the dataset) and `ci`
+  both move into the scenario slice, so every task row is purely
+  `task_axes(step)` + `<step>_id` + parent FK (+ the per-row `seed`/`primer` the
+  shard path already attaches). No primer/partition change (neither was ever in
+  `task_axes()`); pure storage/plumbing. **Breaking** pre-release: the realised
+  `sample` draw changes for a fixed seed (now `nrow_max`/full-permutation rows,
+  not `max(nrow)`), so downstream re-baselines; the §5 `head(., nrow)` prefix
+  property is preserved. Same "axis/row → setting" family as `scalar-ci-flag` /
+  `dists-simulation-setting` / `est-method-setting`. Independent tidy-up; not on
+  the dependency DAG.
 ### Archived
 
 Completed steps that have landed and been archived (full artifacts under `openspec/changes/archive/`; their requirements are synced into `openspec/specs/`). Listed in the dependency order they were implemented; the Mermaid graph below colours these nodes green inside `archived_box`.
@@ -2331,6 +2466,57 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   primer-identity enumeration). Surfaced verifying the `ci` axis against
   `ssdtools`. Independent tidy-up with no dependants; not on the dependency
   DAG.
+- **`blob-storage-format`** — Evaluated how the `fit` step's non-tabular
+  per-task result (a `fitdists` object) is stored in its shard Parquet. The
+  interim `encode_obj()`/`decode_obj()` seam (`R/targets-runner.R`) carries the
+  object as an `serialize(ascii = TRUE)` **ASCII string** in a `VARCHAR` column,
+  because duckplyr cannot store a `raw`/list column and an ASCII serialisation
+  round-trips losslessly. Benchmarked the alternatives against the three
+  constraints (byte-identity oracle, duckplyr/Parquet column type, §6
+  projectable-blob read path): binary `serialize(ascii = FALSE)` as base64 text
+  proved **larger** (~1.5× on disk — the object is mostly compact doubles and
+  Parquet already compresses the `VARCHAR` for free) and `jsonlite::serializeJSON()`
+  was **not lossless** on the embedded model fits, so neither cleared the swap
+  gate. **Decision: keep the interim ASCII-`VARCHAR` encoding** and instead
+  tighten the `shard-runner` spec — the byte-identity, string-column, and
+  projectable-blob contracts are now stated explicitly. No code change beyond
+  the spec; the benchmark is preserved in the change's `exploration` (the
+  `benchmark-blob-encoding.R` script). Independent tidy-up with no dependants;
+  not on the dependency DAG.
+- **`dists-simulation-setting`** — Reconcile `dists`'s classification across the
+  spec, signature, and docs. `dists` is absent from `task_axes("fit")` — a
+  fit-level **simulation setting** (one model-averaged `ssd_fit_dists()` per
+  task, applied uniformly), not a cross-join axis — but the `scenario-definition`
+  role-grouping requirement listed it among the axes and the signature wedged it
+  in the fit-axis block. This change moved `dists` to lead the contiguous
+  simulation-settings block (`… parametric, dists, proportion, ci, samples`),
+  corrected the spec, and swept call sites. Behaviour-preserving (no task-graph,
+  primer, or shard change); paired with the §9 / GLOSSARY corrections that also
+  fixed the stale *"`dists` and `nboot` are not fit/hc grid axes"* heading
+  (`nboot` **is** an hc axis). Independent tidy-up; not on the dependency DAG.
+- **`est-method-setting`** — Reclassify `est_method` from an hc cross-join axis
+  to an hc-level **simulation setting** (the same shape as `dists-simulation-setting`
+  / `scalar-ci-flag`: `scenario-definition` + `task-lists` + `hazard-concentrations`
+  deltas). `est_method` is removed from `task_axes("hc")`; the hc fan-out becomes
+  `nboot × ci_method × parametric` and a single bootstrap per cell yields every
+  requested `est_method` (the analytical `est` differs; the CI is est_method-invariant
+  — verified at a fixed seed in the change's `exploration/`). Unlike the other
+  reclassifications this is **not** byte-preserving: because the hc primer hashes
+  the hc-grid row including `est_method` (§2), dropping the axis **re-seeds** every
+  hc task, so bootstrap CIs change numerically (point estimates unchanged). ~3×
+  cost reduction on the `est_method` axis. Independent tidy-up; not on the
+  dependency DAG.
+- **`cost-estimation`** — New `cost-estimation` capability: a calibration harness
+  (`ssd_calibrate_cost()`) that re-measures a per-task cost model on the target
+  architecture and an estimator (`ssd_estimate_cost()`) that reads a scenario's
+  hc task expansion (read-only, no run) to predict ballpark total cost and the
+  longest single task. Model: the hc bootstrap dominates `ci = TRUE`; per-call
+  time ≈ `base + slope(ci_method) × max(nboot, n0)`, with `proportion`/`est_method`
+  free and a bounded non-monotonic `nrow` factor (calibrated this session at
+  ~430 single-core hours for the motivating scenario). Ships a default calibration
+  with provenance; the model-form discovery is preserved in the change's
+  `exploration/`. Independent new capability; not on the dependency DAG (reads
+  the archived `task-tables` expansion, no dependants).
 
 ### Dependency DAG (parallel streams)
 
@@ -2355,12 +2541,12 @@ flowchart TD
         slice[step-scenario-slice]
         rewrite[shard-atomic-rewrite]
         pathgrow[path-axis-growth]
+        manif[manifest]
     end
 
     inputs[scenario-input-types]
     postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
-    manif[manifest]
 
     cluster[cluster-pipeline]
     survive[shard-failure-survival]
@@ -2442,10 +2628,11 @@ flowchart TD
     classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate proposed
-    class cluster done
-    class survive,assert,cloud,replay,lockin,cleanup open
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow,manif archived
+    class inputs,postcheck,migrate proposed
+    class cluster,cloud done
+    class replay ready
+    class survive,assert,lockin,cleanup open
 ```
 
 **Node colours track each step's status** — green = archived, yellow = done
@@ -2471,8 +2658,8 @@ task lists). The four original proposals:
   L'Ecuyer-CMRG lattice; only the prerequisite `*_data_task_primer()` wrappers
   (from the archived `primer-primitives`) exist, so the change itself is
   essentially un-started.
-- `manifest` — no `R/manifest.R`; `jsonlite`/`digest`/`sessioninfo` absent
-  from `Imports`.
+- `manifest` — *(superseded by the 2026-06-07 addendum: now implemented in
+  `R/manifest.R` (#114), synced, and archived).*
 
 Eight further changes were proposed in this round (all `openspec validate
 --strict`-clean):
@@ -2507,7 +2694,8 @@ Eight further changes were proposed in this round (all `openspec validate
   single-core oracle. The real-SLURM end-to-end run remains the documented
   manual/lab step.
 - `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
-  (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta)
+  (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta —
+  *since synced and archived; see the closing 2026-06-07 addendum*)
   — the independent tidy-ups, kept **off** the dependency DAG per convention
   (no prerequisites, no dependants).
 
@@ -2518,12 +2706,25 @@ and retires the §1.2 collapse; also off the dependency DAG. It has since been
 main specs and the change now lives in `openspec/changes/archive/`, so it
 appears under `### Archived` above rather than among the active changes.
 
-The remaining open nodes stay blocked: `cloud-upload`/`replay-helper` wait on
-`manifest` landing, `shard-failure-survival` on `cluster-pipeline`,
-`shard-completeness-assert` on both `manifest` and `shard-failure-survival`,
-`mixed-code-lockin` on `shard-atomic-rewrite`, and `cleanup-lecuyer` on
-`migrate-public-api` + `mixed-code-lockin`. (`dataset-provenance` remains
-roadmap-only, deliberately deferred.)
+With `manifest` archived (#114, see the 2026-06-07 addendum), the verification
+layer it feeds is unblocked. `cloud-upload` has since been **implemented** (the
+`cloud-upload` capability plus `scenario-definition`/`task-shards` deltas): it
+moves the upload destination onto the runner (`ssd_scenario_targets(...,
+upload)`, the sibling of `root`) and replaces the original §6.1 silent dry-run
+with a fail-loud credential contract, and adds an in-place `ssd_open_uploaded()`
+read-back. It landed as `R/upload.R` (the typed constructors and four generics),
+the `upload` wiring in `ssd_scenario_targets()`, the BREAKING removal of
+`upload` from `ssd_define_scenario()`/`ssdsims_scenario`, the `cloud-upload.qmd`
+vignette, and `AzureStor`/`AzureRMR` in `Suggests` (it records the cloud sha256
+through the manifest).
+
+`replay-helper` is also unblocked (`task-tables` and `manifest` both archived)
+but carries no artifacts yet, so it moves to **ready** (blue) — ready to
+propose. The remaining open nodes stay blocked: `shard-failure-survival` on
+`cluster-pipeline`, `shard-completeness-assert` on both `manifest` and
+`shard-failure-survival`, `mixed-code-lockin` on `shard-atomic-rewrite`, and
+`cleanup-lecuyer` on `migrate-public-api` + `mixed-code-lockin`.
+(`dataset-provenance` remains roadmap-only, deliberately deferred.)
 
 `migrate-public-api` depends on `scenario-input-types` (its
 byte-equivalence re-run must exercise the full input surface) and on
@@ -2543,3 +2744,50 @@ write/read + m:n loop in plain R, then feeds `hive-partitioning`
 Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not
 chained by an arrow can be worked on in parallel.
+
+**Addendum (2026-06-07).** Three off-DAG changes have since been **synced and
+archived** (prose bullets now under `### Archived`, no Mermaid nodes, graph
+unchanged): `dists-simulation-setting` (the `dists` axis→setting reclassification
+and signature reorder), `est-method-setting` (the matching `est_method`
+reclassification — `scenario-definition` + `task-lists` + `hazard-concentrations`
+deltas, removing `est_method` from `task_axes("hc")`), and `cost-estimation` (a
+new, independent capability that reads the archived `task-tables` expansion). The
+two reclassifications grew out of the `ci = TRUE` performance investigation
+recorded in their `exploration/` scripts; their deltas are folded into the main
+specs and the GLOSSARY's forward-reference note is resolved. `cluster-pipeline`
+is **intentionally held back** (still active, done/yellow): its implementation and
+scheduler-free validation have landed, but the real-SLURM end-to-end run (tasks
+4.1/4.2 — see its `design.md` Risks) remains the documented manual/lab step, so
+the change is not archived until that runs.
+
+The off-DAG tidy-up `blob-storage-format` (`shard-runner` delta) has since been
+**synced and archived**. Its benchmark (`benchmark-blob-encoding.R`, preserved
+in the change's `exploration`) found that neither candidate cleared the swap
+gate — binary `serialize(ascii = FALSE)` as base64 text is ~1.5× larger on disk
+(the fit is mostly compact doubles and Parquet already compresses the `VARCHAR`),
+and `jsonlite::serializeJSON()` is not lossless on the embedded model fits — so
+the interim ASCII-`VARCHAR` `encode_obj()`/`decode_obj()` encoding is **kept** and
+the change instead tightens the `shard-runner` spec with the byte-identity,
+string-column, and projectable-blob contracts. It carried no Mermaid node
+(off the dependency DAG), so its bullet simply moves from `### Cleanup` to
+`### Archived`; the graph is unchanged.
+
+A further off-DAG tidy-up, `nrow-max-setting`, has since been **proposed** (prose
+bullet above, no Mermaid node): it adds the explicit `nrow_max` draw-size setting
+(default `1000L`, decoupling the draw from the `nrow` axis to retire the §5
+re-draw churn) and completes *Direction B* by moving the last two carried columns
+(`n_max`, `ci`) off the task tables into the scenario slice, so a task row carries
+only its identity. Same "axis/row → setting" family; it modifies
+`scenario-definition`, `task-lists`, `parallel-safe-seeding`,
+`scenario-accessors`, and `task-shards`, with no DAG prerequisites or dependants.
+
+`manifest` has since been **implemented (#114), synced, and archived** — the
+writer/reader/recorder/assembler live in `R/manifest.R` (with the shared
+`ssd_file_sha256()` in `R/utils.R`), `jsonlite`/`digest`/`sessioninfo` are in
+`Imports`, its delta spec is folded into the new `openspec/specs/manifest/`
+main spec, and the change now lives in `openspec/changes/archive/`. Its node
+is therefore **green (archived)** and moved into the `archived_box`. Because
+`task-tables` was already archived, this lands the last prerequisite for
+`cloud-upload` and `replay-helper`: `cloud-upload` has since been proposed
+(#122), so it is **proposed** (red); `replay-helper` has no artifacts yet, so
+it moves to **ready** (blue).

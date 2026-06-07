@@ -110,20 +110,26 @@ hc_state <- function(
     ci = ci,
     state = state
   )
+  # `est_method` is an hc simulation setting summarised within the cell from a
+  # single bootstrap sample set (see `hc_collapse_est_methods()`); the bootstrap
+  # is the only RNG consumer, so it runs inside the seeded state. `nboot` and
+  # `ci_method` ride as outer columns on the `ssd_hc_sims()` factorial grid and
+  # are dropped here; `est_method` is now retained as the within-cell method
+  # identifier (one row per requested method).
   with_lecuyer_cmrg_state(state, {
-    hc <- ssdtools::ssd_hc(
-      data,
+    hc <- hc_collapse_est_methods(
+      fits = data,
       proportion = proportion,
       ci = ci,
       nboot = nboot,
       est_method = est_method,
       ci_method = ci_method,
       parametric = parametric,
-      min_pboot = 0,
+      samples = FALSE,
       ...
     )
   })
-  dplyr::select(hc, !c("nboot", "est_method", "ci_method"))
+  dplyr::select(hc, !dplyr::any_of(c("nboot", "ci_method")))
 }
 
 hc_seed <- function(

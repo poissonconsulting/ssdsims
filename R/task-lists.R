@@ -18,116 +18,34 @@
 # step's id as a foreign key, so a child task references its parent by a single
 # joinable column.
 
-#' Derive the sample Task Table from a Scenario
+#' Expand a Scenario into Task Tables
 #'
-#' Expands an `ssdsims_scenario` into the `sample` task table: one row per cell
-#' of the cross-join of the scenario's dataset names, replicate index (`1:nsim`),
-#' and `replace` values. Each row is the single random draw of `n_max =
-#' max(nrow)` rows that every `nrow` value sub-truncates (`TARGETS-DESIGN.md`
-#' section 5), so `nrow` is **not** a sample axis - the draw is shared. `n_max` is
-#' carried as an ordinary integer column. The derivation performs no
-#' random-number generation and adds no `seed`/`primer`/`stream` columns (those
-#' arrive in later roadmap steps; see `TARGETS-DESIGN.md` section 2).
+#' @description
+#' The canonical expansion entry point (`TARGETS-DESIGN.md` section 1/section 2):
+#' [ssd_scenario_tasks()] derives the `sample`, `fit`, and `hc` task tables from a
+#' scenario in one call and bundles them into an `ssdsims_task_set`. The per-step
+#' derivations ([ssd_scenario_sample_tasks()], [ssd_scenario_fit_tasks()],
+#' [ssd_scenario_hc_tasks()]) remain available for callers that need a single
+#' table; each is equivalent to `ssd_scenario_tasks(scenario, step)` for the
+#' matching step.
 #'
-#' Each row carries a path-style `sample_id` primary key.
+#' All derivations are RNG-free: they perform no random-number generation and add
+#' no `seed`/`primer`/`stream` columns (those arrive in later roadmap steps; see
+#' `TARGETS-DESIGN.md` section 2). Each row carries a path-style `<step>_id`
+#' primary key (the Hive partition path) and, for non-root steps, its parent
+#' step's `<parent>_id` as a joinable foreign key, so a child task references its
+#' parent by a single column.
 #'
 #' @param scenario An `ssdsims_scenario` from [ssd_define_scenario()].
-#' @return An `ssdsims_tasks` object (a classed tibble recording the `"sample"`
-#'   step) with one row per `(dataset, sim, replace)` cell, a `sample_id` key,
-#'   and a carried `n_max` column.
-#' @export
-#' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
-#' ssd_scenario_sample_tasks(scenario)
-ssd_scenario_sample_tasks <- function(scenario) {
-  chk::chk_s3_class(scenario, "ssdsims_scenario")
-  new_ssdsims_tasks(sample_task_grid(scenario), step = "sample")
-}
-
-#' Derive the fit Task Table from a Scenario
-#'
-#' Crosses each sample-task identity (`dataset`, `sim`, `replace`) with the
-#' scenario's `nrow` values and each row of the scenario's `fit` argument grid
-#' (`rescale`, `computable`, `at_boundary_ok`, `min_pmix` name, `range_shape1`,
-#' `range_shape2`). `nrow` is a genuine `fit` cross-join axis: the `fit` step
-#' truncates its parent sample inline (`head(sample, nrow)`, RNG-free) before
-#' fitting, so the shared draw is sub-truncated without a separate `data` step
-#' (`TARGETS-DESIGN.md` section 5). Parent-identity columns are preserved
-#' verbatim so the table can be grouped directly downstream. `min_pmix` is
-#' referenced by name, not by function value (`TARGETS-DESIGN.md` section 1.1).
-#'
-#' Each row carries a `fit_id` primary key and a `sample_id` foreign key
-#' referencing its parent sample task.
-#'
-#' @inheritParams ssd_scenario_sample_tasks
-#' @return An `ssdsims_tasks` object recording the `"fit"` step, with one row per
-#'   `(dataset, sim, replace, nrow)` identity crossed with the fit grid.
-#' @export
-#' @examples
-#' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
-#'   nsim = 3L,
-#'   seed = 42L,
-#'   rescale = c(FALSE, TRUE)
-#' )
-#' ssd_scenario_fit_tasks(scenario)
-ssd_scenario_fit_tasks <- function(scenario) {
-  chk::chk_s3_class(scenario, "ssdsims_scenario")
-  new_ssdsims_tasks(fit_task_table(scenario), step = "fit")
-}
-
-#' Derive the hc Task Table from a Scenario
-#'
-#' Crosses each fit-task identity with each row of the scenario's `hc` argument
-#' grid (`nboot`, `est_method`, `ci_method`, `parametric`). The scenario's
-#' scalar `ci` flag is applied uniformly to every hc row - it is not a cross-join
-#' axis (it is absent from `task_axes("hc")`) and rides as a carried column. When
-#' `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`, `parametric`)
-#' are canonically `NA`, leaving `est_method` as the only fan-out axis; when
-#' `ci = TRUE`, the grid fans out across `nboot x est_method x ci_method x
-#' parametric`.
-#'
-#' Each row carries an `hc_id` primary key and a `fit_id` foreign key
-#' referencing its parent fit task.
-#'
-#' @inheritParams ssd_scenario_sample_tasks
-#' @return An `ssdsims_tasks` object recording the `"hc"` step, with one row per
-#'   fit-task identity crossed with the hc grid.
-#' @export
-#' @examples
-#' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
-#'   nsim = 2L,
-#'   seed = 42L,
-#'   ci = TRUE,
-#'   nboot = c(10L, 100L)
-#' )
-#' ssd_scenario_hc_tasks(scenario)
-ssd_scenario_hc_tasks <- function(scenario) {
-  chk::chk_s3_class(scenario, "ssdsims_scenario")
-  new_ssdsims_tasks(
-    dplyr::cross_join(fit_task_table(scenario), hc_grid_tbl(scenario)),
-    step = "hc"
-  )
-}
-
-#' Expand a Scenario into all Three Task Tables
-#'
-#' The canonical expansion entry point (`TARGETS-DESIGN.md` section 1/section 2): derives the
-#' `sample`, `fit`, and `hc` task tables from a scenario in one call and
-#' bundles them into an `ssdsims_task_set`. The per-step derivations
-#' ([ssd_scenario_sample_tasks()], [ssd_scenario_fit_tasks()],
-#' [ssd_scenario_hc_tasks()]) remain available for callers that need a single
-#' table.
-#'
-#' @inheritParams ssd_scenario_sample_tasks
 #' @param step Optional single step name (`"sample"`, `"fit"`, or `"hc"`). When
 #'   supplied, returns just that step's `ssdsims_tasks` table (the same as the
 #'   matching `ssd_scenario_*_tasks()`); when `NULL` (default) returns the full
 #'   `ssdsims_task_set`.
 #' @return An `ssdsims_task_set` object (a list with `sample`, `fit`, and `hc`
 #'   elements, each an `ssdsims_tasks` table), or - when `step` is supplied - the
-#'   single `ssdsims_tasks` table for that step.
+#'   single `ssdsims_tasks` table for that step. Each `ssdsims_tasks` table is a
+#'   classed tibble recording one step, with one row per cell of that step's
+#'   cross-join.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
@@ -154,6 +72,74 @@ ssd_scenario_tasks <- function(scenario, step = NULL) {
       hc = ssd_scenario_hc_tasks(scenario)
     ),
     class = "ssdsims_task_set"
+  )
+}
+
+#' @describeIn ssd_scenario_tasks Derive just the `sample` task table: one row per
+#'   cell of the cross-join of the scenario's dataset names, replicate index
+#'   (`1:nsim`), and `replace` values, keyed by `sample_id`. Each row is the
+#'   single random draw of `n_max = max(nrow)` rows that every `nrow` value
+#'   sub-truncates (`TARGETS-DESIGN.md` section 5), so `nrow` is **not** a sample
+#'   axis - the draw is shared - and `n_max` is carried as an ordinary integer
+#'   column.
+#' @export
+#' @examples
+#' ssd_scenario_sample_tasks(scenario)
+ssd_scenario_sample_tasks <- function(scenario) {
+  chk::chk_s3_class(scenario, "ssdsims_scenario")
+  new_ssdsims_tasks(sample_task_grid(scenario), step = "sample")
+}
+
+#' @describeIn ssd_scenario_tasks Derive just the `fit` task table: cross each
+#'   sample-task identity (`dataset`, `sim`, `replace`) with the scenario's `nrow`
+#'   values and each row of the scenario's `fit` argument grid (`rescale`,
+#'   `computable`, `at_boundary_ok`, `min_pmix` name, `range_shape1`,
+#'   `range_shape2`). `nrow` is a genuine `fit` cross-join axis: the `fit` step
+#'   truncates its parent sample inline (`head(sample, nrow)`, RNG-free) before
+#'   fitting, so the shared draw is sub-truncated without a separate `data` step
+#'   (`TARGETS-DESIGN.md` section 5). `min_pmix` is referenced by name, not by
+#'   function value (`TARGETS-DESIGN.md` section 1.1). Each row carries a `fit_id`
+#'   primary key and a `sample_id` foreign key referencing its parent sample task.
+#' @export
+#' @examples
+#' scenario <- ssd_define_scenario(
+#'   ssddata::ccme_boron,
+#'   nsim = 3L,
+#'   seed = 42L,
+#'   rescale = c(FALSE, TRUE)
+#' )
+#' ssd_scenario_fit_tasks(scenario)
+ssd_scenario_fit_tasks <- function(scenario) {
+  chk::chk_s3_class(scenario, "ssdsims_scenario")
+  new_ssdsims_tasks(fit_task_table(scenario), step = "fit")
+}
+
+#' @describeIn ssd_scenario_tasks Derive just the `hc` task table: cross each
+#'   fit-task identity with each row of the scenario's `hc` argument grid
+#'   (`nboot`, `ci_method`, `parametric`). The scenario's scalar `ci` flag and the
+#'   `est_method` setting are applied uniformly to every hc row - neither is a
+#'   cross-join axis; `ci` rides as a carried column and every requested
+#'   `est_method` is summarised within each task from its single bootstrap sample
+#'   set. When `ci = FALSE` the bootstrap-only knobs (`nboot`, `ci_method`,
+#'   `parametric`) are canonically `NA` and there is no fan-out axis, so the grid
+#'   is exactly one hc row per fit task; when `ci = TRUE` the grid fans out across
+#'   `nboot x ci_method x parametric`. Each row carries an `hc_id` primary key and
+#'   a `fit_id` foreign key referencing its parent fit task.
+#' @export
+#' @examples
+#' scenario <- ssd_define_scenario(
+#'   ssddata::ccme_boron,
+#'   nsim = 2L,
+#'   seed = 42L,
+#'   ci = TRUE,
+#'   nboot = c(10L, 100L)
+#' )
+#' ssd_scenario_hc_tasks(scenario)
+ssd_scenario_hc_tasks <- function(scenario) {
+  chk::chk_s3_class(scenario, "ssdsims_scenario")
+  new_ssdsims_tasks(
+    dplyr::cross_join(fit_task_table(scenario), hc_grid_tbl(scenario)),
+    step = "hc"
   )
 }
 
@@ -186,7 +172,7 @@ ssd_scenario_tasks <- function(scenario, step = NULL) {
 #' (resolved once, at construction), not by a runtime `ssdtools`/global-env
 #' search.
 #'
-#' @inheritParams ssd_scenario_sample_tasks
+#' @inheritParams ssd_scenario_tasks
 #' @return A named list with `sample`, `fit`, and `hc` elements: each the
 #'   corresponding task table augmented with a list column of per-task results
 #'   (`sample` draws, `fits` objects, and `hc` tibbles).
@@ -259,16 +245,19 @@ ssd_run_scenario_baseline <- function(scenario) {
   fit_out <- rlang::set_names(fit_tbl$fits, fit_tbl$fit_id)
 
   # --- hc step: seed then estimate hc for each fit against its hc-grid row ---
-  # `ci` is a carried column (single-valued, not an hc axis), read here just
-  # like the `n_max` carried column on `sample` tasks.
+  # `ci`, `est_method`, `proportion`, and `samples` are hc *settings* (not axes):
+  # read from the scenario and applied uniformly, not pulled from the task row.
+  # Only the bootstrap axes (`nboot`/`ci_method`/`parametric`) vary per task.
   hc_tbl <- tasks$hc
-  hc_args <- hc_tbl[c("ci", "nboot", "est_method", "ci_method", "parametric")]
+  hc_args <- hc_tbl[c("nboot", "ci_method", "parametric")]
   hc_args$fits <- fit_out[hc_tbl$fit_id]
   hc_args$primer <- task_primers(hc_tbl, "hc")
   hc_tbl$hc <- purrr::pmap(
     hc_args,
     hc_data_task_primer,
+    ci = scenario$hc$ci,
     proportion = scenario$hc$proportion,
+    est_method = scenario$hc$est_method,
     samples = scenario$hc$samples,
     seed = seed
   )
@@ -335,12 +324,11 @@ hc_grid_tbl <- function(scenario) {
   # it is not an hc axis, so it never enters the per-task primer.
   if (isFALSE(hc$ci)) {
     # Bootstrap-only knobs are canonically NA when ci = FALSE so they cannot
-    # enter task identity; est_method stays a fan-out axis as it affects the
-    # point estimate.
+    # enter task identity; with `est_method` now an hc setting (not an axis),
+    # there is no fan-out axis, so this is exactly one hc row per fit task.
     tidyr::expand_grid(
       ci = FALSE,
       nboot = NA_integer_,
-      est_method = hc$est_method,
       ci_method = NA_character_,
       parametric = NA
     )
@@ -348,7 +336,6 @@ hc_grid_tbl <- function(scenario) {
     tidyr::expand_grid(
       ci = TRUE,
       nboot = as.integer(hc$nboot),
-      est_method = hc$est_method,
       ci_method = hc$ci_method,
       parametric = hc$parametric
     )
@@ -372,11 +359,13 @@ task_axes <- function(step) {
     "range_shape1",
     "range_shape2"
   )
-  # `ci` is a scalar hc flag, not an axis: the point estimate is invariant to
-  # `ci`, so it carries no task-distinguishing information and is excluded from
-  # the hc vocabulary (and thus the primer/partition split). It rides as a
-  # carried column on the hc task table, like `n_max` on `sample` tasks.
-  hc <- c(fit, "nboot", "est_method", "ci_method", "parametric")
+  # `ci` and `est_method` are hc simulation settings, not axes. `ci` is a scalar
+  # flag (the point estimate is invariant to it) and `est_method` is summarised
+  # within a task from its single bootstrap sample set (the CI is
+  # est_method-invariant, the point `est` analytical), so neither carries
+  # task-distinguishing information; both are excluded from the hc vocabulary
+  # (and thus the primer/partition split) and ride as settings rather than axes.
+  hc <- c(fit, "nboot", "ci_method", "parametric")
   switch(step, sample = sample, fit = fit, hc = hc)
 }
 
@@ -482,32 +471,92 @@ hc_data_task <- function(
   parametric,
   samples = FALSE
 ) {
-  if (isTRUE(ci)) {
-    ssdtools::ssd_hc(
-      fits,
-      proportion = proportion,
-      ci = TRUE,
-      nboot = nboot,
-      est_method = est_method,
-      ci_method = ci_method,
-      parametric = parametric,
-      samples = samples,
-      min_pboot = 0
-    )
-  } else {
-    # `samples` retains the *bootstrap* draws, which only exist when `ci = TRUE`.
-    # Without CI there is nothing to keep, and ssdtools' model-averaging cleanup
-    # errors if asked to retain a non-existent `samples` column, so the no-CI
-    # path never requests them regardless of the scenario's `samples` flag.
+  hc_collapse_est_methods(
+    fits = fits,
+    proportion = proportion,
+    ci = ci,
+    nboot = nboot,
+    est_method = est_method,
+    ci_method = ci_method,
+    parametric = parametric,
+    samples = samples
+  )
+}
+
+# Summarise every requested `est_method` from a SINGLE bootstrap per hc cell.
+#
+# `est_method` is an hc simulation setting, not a bootstrap axis: the bootstrap
+# CI (`se`/`lcl`/`ucl`, and any retained `samples`) is est_method-invariant and
+# each method's point `est` is analytical and seed-independent (verified in the
+# `est-method-setting` change's `exploration/est-method-invariance.R`). So when
+# `ci = TRUE` we bootstrap once,
+# with the first requested method, to obtain the shared CI (and samples), then
+# attach each method's analytical point estimate -- its bootstrap-free
+# `ci = FALSE` `est`, byte-identical to that method's `ci = TRUE` `est`. Rows are
+# emitted one block per requested `est_method`, in order; when `ci = FALSE` there
+# is no bootstrap and each block is the method's analytical estimate. Per method,
+# the output reproduces exactly what a single-method `ssdtools::ssd_hc()` call
+# seeded the same way would return, while bootstrapping only once.
+#
+# `samples` retains the *bootstrap* draws, which only exist when `ci = TRUE`;
+# without CI there is nothing to keep, and ssdtools' model-averaging cleanup
+# errors if asked to retain a non-existent `samples` column, so the no-CI path
+# never requests them regardless of the scenario's `samples` flag.
+hc_collapse_est_methods <- function(
+  fits,
+  proportion,
+  ci,
+  nboot,
+  est_method,
+  ci_method,
+  parametric,
+  samples = FALSE,
+  ...
+) {
+  analytical_est <- function(m) {
     ssdtools::ssd_hc(
       fits,
       proportion = proportion,
       ci = FALSE,
-      est_method = est_method,
+      est_method = m,
       samples = FALSE,
-      min_pboot = 0
-    )
+      min_pboot = 0,
+      ...
+    )$est
   }
+  if (isTRUE(ci)) {
+    boot <- ssdtools::ssd_hc(
+      fits,
+      proportion = proportion,
+      ci = TRUE,
+      nboot = nboot,
+      est_method = est_method[[1L]],
+      ci_method = ci_method,
+      parametric = parametric,
+      samples = samples,
+      min_pboot = 0,
+      ...
+    )
+    rows <- purrr::map(est_method, function(m) {
+      out <- boot
+      out$est <- analytical_est(m)
+      out$est_method <- m
+      out
+    })
+  } else {
+    rows <- purrr::map(est_method, function(m) {
+      ssdtools::ssd_hc(
+        fits,
+        proportion = proportion,
+        ci = FALSE,
+        est_method = m,
+        samples = FALSE,
+        min_pboot = 0,
+        ...
+      )
+    })
+  }
+  purrr::list_rbind(rows)
 }
 
 # ---- seed-and-run wrappers (dqrng + primer) --------------------------------

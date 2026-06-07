@@ -1,3 +1,11 @@
+# hc_sims 1 sim ci bootstrap interval (dev withr only)
+
+    Code
+      ci
+    Output
+            se      lcl      ucl 
+      0.219423 0.289166 0.583962 
+
 # hazard-concentrations: a vector ci is rejected
 
     Code

@@ -68,8 +68,8 @@ Terminology used throughout `ssdsims`.
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
   `fit` adds the fit-grid axes (`rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`);
-  `hc` adds the hc-grid axes (`nboot`, `est_method`, `ci_method`,
-  `parametric`). `proportion`, `ci`, and `samples` are **not** hc axes —
+  `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`).
+  `est_method`, `proportion`, `ci`, and `samples` are **not** hc axes —
   they are *simulation settings* (below), consumed within each task rather
   than multiplying it. Contrast a *carried column* (e.g. `n_max`), which is
   data on the row but is **not** fanned out over:
@@ -80,18 +80,19 @@ Terminology used throughout `ssdsims`.
   absent from `task_axes(step)`, so it never creates a task, enters the
   per-task **primer**, or becomes a **shard**/**partition** level. Its effect
   is realised *inside* each task: it either fans out within the task's own
-  output (`proportion` → one HC row per value) or is applied uniformly to
-  every task (`dists`, `ci`, `samples`). Where an **axis** multiplies the
-  *task graph*, a simulation setting only shapes the *contents* of a task's
-  result. "Scalar" is a near-synonym but a misnomer for `proportion` (which is
-  vector-valued) and for `dists` (a character vector) — both are non-scalar
-  yet still not axes. Settings attach at different **steps**: `dists` is a
-  **fit**-level setting (the `dists` vector handed to every fit task), while
-  `proportion`, `ci`, and `samples` are **hc**-level. In the
-  `ssd_define_scenario()` signature the simulation settings (`dists`,
-  `proportion`, `ci`, `samples`) are grouped together, after the axes and
-  before the partitioning arguments (moving `dists` out of the fit-axis block
-  lands via the `dists-simulation-setting` change).
+  output (`est_method`, `proportion` → one HC row per value) or is applied
+  uniformly to every task (`ci`, `dists`, `samples`). Where an **axis**
+  multiplies the *task graph*, a simulation setting only shapes the *contents*
+  of a task's result. "Scalar" is a near-synonym but a misnomer for `proportion`
+  and `est_method` (vector-valued) and for `dists` (a character vector) — all
+  non-scalar yet still not axes. Settings attach at different **steps**: `dists`
+  is a **fit**-level setting (the `dists` vector handed to every fit task), while
+  `est_method`, `proportion`, `ci`, and `samples` are **hc**-level. In the
+  `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`dists`,
+  `est_method`, `proportion` — each valid and meaningful when `ci = FALSE`) come
+  before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
+  `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
+  (which only retains bootstrap draws).
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is
   a *read-side* concept — query engines (duckplyr / DuckDB)
@@ -107,6 +108,19 @@ Terminology used throughout `ssdsims`.
   results, one row per task, with `task_id` as a column. In our
   design **one shard ≡ one partition leaf** (no `part-N` style
   splitting); the leaf file is always named `part.parquet`.
+- **sidecar**: A small auxiliary metadata file written *beside* the
+  data it describes (in the same directory), rather than embedded in
+  it — human-readable, diffable JSON kept separate from the bulk
+  Parquet results. ssdsims writes two (TARGETS-DESIGN.md §8.5): the
+  per-scenario **manifest** (`<results>/manifest.json` — the scenario's
+  declarative fields, session info, and `completed_shards`), and a
+  per-**shard** sha256 record (`meta.json`) written next to each
+  shard's `part.parquet` at write time, recording that shard's
+  trusted-as-produced sha256. One writer per sidecar file, so parallel
+  shard targets never race on a shared manifest; the manifest assembler
+  later unions the per-shard sidecars into `completed_shards`. The shard
+  sidecar is uploaded with its Parquet, so a download can be verified by
+  re-hashing it against the recorded sha256.
 - **path axis / inner axis**: The two halves of a step's
   `task_axes(step)` under a given partitioning. **Path axes** become
   Hive directory levels; **inner axes** are the complement — ordinary

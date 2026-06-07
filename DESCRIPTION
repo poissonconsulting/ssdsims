@@ -4,7 +4,8 @@ Version: 0.0.0.9013
 Authors@R: c(
     person("Joe", "Thorley", , "joe@poissonconsulting.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7683-4592")),
-    person("Rebecca", "Fisher", , "R.Fisher@aims.gov.au", role = "aut")
+    person("Rebecca", "Fisher", , "R.Fisher@aims.gov.au", role = "aut",
+           comment = c(ORCID = "0000-0001-5148-6731"))
   )
 Description: Runs reproducible simulation studies for species sensitivity
     distribution (SSD) models built on the 'ssdtools' package. Expands a
@@ -19,18 +20,23 @@ Depends:
     R (>= 4.3)
 Imports: 
     chk,
+    digest,
     dplyr,
     duckplyr,
+    jsonlite,
     methods,
     parallel,
     purrr,
     rlang,
+    sessioninfo,
     ssdtools (>= 2.6.0),
     stats,
     tibble,
     tidyr,
     withr
 Suggests: 
+    AzureRMR,
+    AzureStor,
     crew,
     crew.cluster,
     dqrng (>= 0.4.1),
@@ -52,3 +58,4 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE, roclets = c("collate", "namespace", "rd",
     "roxyglobals::global_roclet"))
 Config/roxygen2/version: 8.0.0.9000
+LazyData: true

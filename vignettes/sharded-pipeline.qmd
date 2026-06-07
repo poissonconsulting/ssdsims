@@ -128,7 +128,7 @@ with `ssd_run_scenario_baseline()` joined on the task identity:
 base <- ssd_run_scenario_baseline(scenario)
 base_est <- sort(do.call(rbind, base$hc$hc)$est)
 
-summary_path <- ssd_summarize(
+summary_path <- ssd_summarise(
   file.path(run$dir, "sample"),
   file.path(run$dir, "fit"),
   file.path(run$dir, "hc"),
@@ -140,7 +140,7 @@ shard_est <- sort(summary_tbl$est)
 all.equal(base_est, shard_est)
 ```
 
-`ssd_summarize()` fans the `hc` layer in across shards (via duckplyr) into a
+`ssd_summarise()` fans the `hc` layer in across shards (via duckplyr) into a
 single `summary.parquet` --- the analysis-ready table --- without recomputing
 anything.
 
@@ -228,7 +228,10 @@ that fits the run.
 
 - ["Defining a Scenario"](defining-a-scenario.html) --- the scenario object and
   the baseline runner.
+- ["Running on a SLURM Cluster"](cluster-pipeline.html) --- the same pipeline on
+  a cluster, and ["Uploading Shards to Cloud Storage"](cloud-upload.html) ---
+  shipping the shards to an object store so they are readable off the cluster.
 - `TARGETS-DESIGN.md` §5 (tasks into shards), §6 (inter-shard linking, the Hive
   layout, the `targets` sketch).
 - `?ssd_run_scenario_shards`, `?ssd_scenario_fit_shards`, `?ssd_run_fit_step`,
-  `?ssd_summarize`.
+  `?ssd_summarise`.

@@ -1,0 +1,199 @@
+---
+title: "Estimating a Scenario's Compute Cost"
+vignette: >
+  %\VignetteIndexEntry{Estimating a Scenario's Compute Cost}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+---
+
+```{r}
+#| label: setup
+#| include: false
+# The vignette exercises the live API, so it needs the optional fitting
+# dependencies. Skip evaluation gracefully if they are unavailable (e.g. on a
+# minimal CI runner) rather than failing the build.
+evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+  requireNamespace("ssdtools", quietly = TRUE)
+knitr::opts_chunk$set(eval = evaluate)
+```
+
+```{r}
+#| label: library
+library(ssdsims)
+```
+
+## Why estimate cost?
+
+A scenario is *declarative*: a few knobs can fan out into a multi-day run with
+no warning. The motivating example in `ssd_define_scenario()`'s docs --- 10
+simulations × 4 sample sizes × 7 `ci_method`s × 4 `nboot` values (up to 50 000),
+with `ci = TRUE` --- was measured at roughly **430 single-core hours** (about 18
+days), dominated by the hazard-concentration (hc) bootstrap, with a single
+`multi_free` + `nboot = 50 000` task taking about 44 minutes on its own.
+
+Before launching such a run you want two numbers:
+
+- the **total** compute it costs (to size a budget), and
+- the **single longest task** (the irreducible wall-time floor --- no amount of
+  parallelism finishes the job faster than its slowest task).
+
+`ssd_estimate_cost()` predicts both by *reading* the scenario's task expansion
+and applying a calibrated cost model. It never fits a distribution, runs a
+bootstrap, draws a random number, or writes a file.
+
+## The cost model
+
+Session benchmarking established that for `ci = TRUE` the hc bootstrap
+dominates: the fit and data-sampling steps are comparatively cheap. Per-task
+time follows a simple model, fit separately for each `ci_method`:
+
+$$
+\text{time} = \bigl(\text{base} + \text{slope} \times \max(\text{nboot}, n_0)\bigr) \times \text{nrow\_factor}(\text{nrow})
+$$
+
+Three properties make this tractable:
+
+- **`proportion` and `est_method` are free.** One bootstrap per
+  `nboot × ci_method × parametric` cell serves every `proportion` and
+  `est_method`, so adding values along those axes does **not** multiply the
+  cost. (`proportion` is vectorised into a single `ssd_hc()` call; `est_method`
+  is a post-hoc aggregation of the same bootstrap.)
+- **A bootstrap floor `n0`.** Below `n0` draws the per-call time is roughly
+  constant (fixed overhead dominates); above it the time grows linearly in
+  `nboot`. The model uses `max(nboot, n0)`.
+- **A bounded, non-monotonic `nrow` factor.** Sample size has a weak,
+  data-dependent effect --- cheap at `nrow = 5` (where most `bcanz`
+  distributions fail to fit), peaking around 10--20, easing again at 50. It is
+  captured as a bounded lookup, **not** extrapolated as a linear term, and is
+  the least precise part of the model.
+
+The per-`ci_method` slopes span roughly 9× --- `weighted_samples` is the
+cheapest, the `multi_*` methods the most expensive --- so the `ci_method` grid
+is by far the dominant cost driver.
+
+The one-time research that *discovered* this model's form (which axes are free,
+the `max(nboot, n0)` shape, the non-monotonic `nrow` factor) is preserved under
+the change's `exploration/` directory. Those scripts are illustrative; you never
+rerun them. Recalibrating for a new machine is a single function call, described
+below.
+
+## The calibration object
+
+The coefficients are **architecture-specific** --- a slope measured on one CPU
+will not match another. The package therefore ships both a *default*
+calibration (fitted during development) and a *method* to re-measure it. The
+default is returned by `ssd_cost_calibration()`:
+
+```{r}
+#| label: calibration
+calibration <- ssd_cost_calibration()
+calibration
+```
+
+The printed object carries the fitted per-`ci_method` coefficients, the `nrow`
+factor, a fixed sample+fit per-task addend, and its **provenance** --- the CPU,
+R version, `ssdtools` version, date, and sweep grid it was measured on. A stale
+default is therefore visible in any estimate built from it, and the printed
+caveat is explicit: the estimate is a *ballpark*.
+
+## Estimating a scenario
+
+`ssd_estimate_cost()` takes a scenario and (optionally) a calibration. Here is
+the motivating ~430-hour scenario:
+
+```{r}
+#| label: scenario
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 10L,
+  seed = 42L,
+  ci = TRUE,
+  nboot = c(1000L, 5000L, 10000L, 50000L),
+  nrow = c(5L, 10L, 20L, 50L),
+  ci_method = ssdtools::ssd_ci_methods()
+)
+
+estimate <- ssd_estimate_cost(scenario)
+estimate
+```
+
+The estimate reports the serial **total** and the **longest single task**, both
+as time quantities, plus a breakdown by `ci_method × nboot` ordered by total
+cost --- so you can see at a glance which cells dominate (here, the `multi_*`
+methods at `nboot = 50000`). The exact figures track the calibration's machine;
+on a different CPU, recalibrate (below) for trustworthy numbers.
+
+`proportion` and `est_method` are free, so widening them leaves the total
+unchanged:
+
+```{r}
+#| label: free-axes
+wider <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 10L,
+  seed = 42L,
+  ci = TRUE,
+  nboot = c(1000L, 5000L, 10000L, 50000L),
+  nrow = c(5L, 10L, 20L, 50L),
+  ci_method = ssdtools::ssd_ci_methods(),
+  est_method = ssdtools::ssd_est_methods(),
+  proportion = c(0.01, 0.05, 0.1, 0.2)
+)
+
+identical(
+  ssd_estimate_cost(wider)$total,
+  ssd_estimate_cost(scenario)$total
+)
+```
+
+### From serial total to wall-time
+
+The estimator deliberately reports *serial* numbers. Under `n` parallel
+workers, wall-time is roughly
+
+```r
+max(longest_task, total / n_workers)
+```
+
+The longest task is the floor: it cannot be split, so it sets the minimum
+wall-time and the per-shard time budget regardless of how many workers you
+throw at the job.
+
+## Recalibrating for your machine
+
+Producing an architecture-specific estimator is a **single call** ---
+`ssd_calibrate_cost()`. It runs a small, fixed benchmark sweep on the current
+machine (tiny `nboot` values over all `ci_method`s and a couple of `nrow`
+values), times each `ssd_hc()` call, fits the model, and returns a fresh
+`ssdsims_cost_calibration` carrying that machine's coefficients and provenance.
+There is no separate analysis script to run.
+
+```{r}
+#| label: recalibrate
+#| eval: false
+# Takes minutes (tiny nboot), not the hours a real scenario costs.
+my_calibration <- ssd_calibrate_cost()
+
+# Pass it to the estimator for trustworthy, machine-specific numbers.
+ssd_estimate_cost(scenario, calibration = my_calibration)
+```
+
+The shipped default (`data-raw/cost_calibration.R`) is produced by exactly this
+call --- the function *is* the reproducibility mechanism, and this vignette only
+documents and demonstrates it.
+
+## Caveats
+
+- Estimates are **ballpark** and **machine-specific**; treat them as
+  order-of-magnitude / wall-time sizing, not stopwatch timing. Ship-default
+  estimates carry the development machine's provenance --- recalibrate for your
+  own.
+- The `nrow` factor is the least precise part of the model (real, but weak and
+  data-dependent).
+- `ssdtools` performance can change across versions; the calibration's
+  provenance records the version it was measured against, and recalibration
+  corrects drift.

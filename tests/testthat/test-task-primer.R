@@ -90,6 +90,17 @@ test_that("parallel-safe-seeding: task_primer matches a recorded primer", {
   )
 })
 
+test_that("parallel-safe-seeding: task_primer is name-order sensitive", {
+  # `rlang::hash()` is order-sensitive, so a canonical name order is a caller
+  # contract (owned by task-tables), NOT normalised inside `task_primer()`.
+  # This pins that contract: reordering the same names yields a different
+  # primer, so a future "helpful" sort in `normalize_task_row()` cannot
+  # silently change it.
+  p1 <- list(dataset = "boron", sim = 1L, replace = FALSE)
+  p2 <- list(sim = 1L, replace = FALSE, dataset = "boron")
+  expect_false(identical(task_primer(p1), task_primer(p2)))
+})
+
 test_that("parallel-safe-seeding: row and equivalent list agree", {
   p <- list(dataset = "boron", sim = 1L, replace = FALSE)
   row <- tibble::tibble_row(dataset = "boron", sim = 1L, replace = FALSE)
