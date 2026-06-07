@@ -553,11 +553,12 @@ parallel; none is downstream of the others. Roles:
   lab’s published targets+crew repo.
 
 - **B — toy pipeline for our target cluster** contributes the *backend*:
-  a `crew.cluster::crew_controller_slurm()` (or equivalent for the
-  actual scheduler) configured with the right queue, module loads, and
-  scratch paths. Drafted with LLM help and validated by submitting one
-  trivial job end-to-end **before any ssdsims logic is involved** —
-  proves the cluster wiring works.
+  a
+  [`crew.cluster::crew_controller_slurm()`](https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html)
+  (or equivalent for the actual scheduler) configured with the right
+  queue, module loads, and scratch paths. Drafted with LLM help and
+  validated by submitting one trivial job end-to-end **before any
+  ssdsims logic is involved** — proves the cluster wiring works.
 
 - **C — working scenario object** contributes the *content*: `seed`,
   dataset names, fit/hc argument vectors, optional `upload` (§6.1).
@@ -573,9 +574,10 @@ scheduler-independent.
 **Validated by the crew labs.** Ingredients A and B are no longer
 hypothetical: the project’s crew labs (in the sister planning repo) have
 assembled and run them end to end on a SLURM cluster. One lab is the
-bare shape (A) — a `crew.cluster::crew_controller_slurm()` dispatching a
-no-op workload — and a second drives the real ssdsims per-sim pipeline
-(C) through that same controller, with a
+bare shape (A) — a
+[`crew.cluster::crew_controller_slurm()`](https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html)
+dispatching a no-op workload — and a second drives the real ssdsims
+per-sim pipeline (C) through that same controller, with a
 [`crew::crew_controller_local()`](https://wlandau.github.io/crew/reference/crew_controller_local.html)
 fallback for off-cluster smoke tests. The labs also pinned down the
 operational backend (B): a ManyLinux binary install path so worker nodes
@@ -2101,7 +2103,8 @@ validated behaviour into the package, not discovering it.
   sibling-target shape) and `manifest` (records expected-vs-actual per
   shard).
 - **`cluster-pipeline`** — `inst/targets-templates/cluster/` with
-  `crew.cluster::crew_controller_slurm()`. End-to-end
+  [`crew.cluster::crew_controller_slurm()`](https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html).
+  End-to-end
   [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
   on a real (or sandboxed) Slurm queue.
 - **`cloud-upload`** — §6.1 — per-shard `upload_<step>` target +
@@ -2551,7 +2554,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate,cluster proposed
+    class inputs,postcheck,manif,migrate proposed
+    class cluster done
     class survive,assert,cloud,replay,lockin,cleanup open
 ```
 
@@ -2604,7 +2608,20 @@ slice is precisely what makes `path-axis-growth`’s dataset-growth
 contract hold, so `path-axis-growth` now **depends on**
 `step-scenario-slice` (the solid `slice --> pathgrow` edge), not merely
 pairs with it. - `cluster-pipeline` — new `cluster-pipeline` capability
-(crew.cluster SLURM template via the existing factory). -
+(crew.cluster SLURM template via the existing factory). **Now done
+(yellow):** the minimal `inst/targets-templates/cluster/` template ships
+four files — the controller in one editable `controller.R`
+(`crew_controller_slurm()`), a clean `_targets.R` (controller + inline
+scenario + factory, no probe target), a standalone `preflight.R`
+connectivity + worker-prerequisite check (carrying the probe body), and
+`run.R` — plus a “zero to a running cluster job” README. `run.R` runs
+the preflight before
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+(so a wiring failure blocks the shards) and aborts cleanly off-cluster
+(pointing at `large/` for local runs). A scheduler-free test covers the
+preflight probe function and asserts the pipeline graph stays clean; the
+shape is byte-identical to the `large/` single-core oracle. The
+real-SLURM end-to-end run remains the documented manual/lab step. -
 `error-call-origin` (new `error-origin` capability),
 `cleanup-as-ssd-data` (`scenario-definition` delta),
 `blob-storage-format` (`shard-runner` delta) — the independent tidy-ups,

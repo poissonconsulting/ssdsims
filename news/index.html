@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9012</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9013</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,7 +18,8 @@
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
-  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
+    <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -37,6 +38,85 @@
       <small>Source: <a href="https://github.com/poissonconsulting/ssdsims/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9013" id="ssdsims-0009013">ssdsims 0.0.0.9013<a class="anchor" aria-label="anchor" href="#ssdsims-0009013"></a></h2>
+<div class="section level3">
+<h3 id="features-0-0-0-9013">Features<a class="anchor" aria-label="anchor" href="#features-0-0-0-9013"></a></h3>
+<div class="section level4">
+<h4 id="targets-0-0-0-9013">targets<a class="anchor" aria-label="anchor" href="#targets-0-0-0-9013"></a></h4>
+<ul><li>Per-step minimal scenario slice for shard invalidation (<a href="https://github.com/poissonconsulting/ssdsims/issues/102" class="external-link">#102</a>).</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="chore-0-0-0-9013">Chore<a class="anchor" aria-label="anchor" href="#chore-0-0-0-9013"></a></h3>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9013">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9013"></a></h4>
+<ul><li>Sync and archive <code>scalar-ci-flag</code>; tidy roadmap (<a href="https://github.com/poissonconsulting/ssdsims/issues/112" class="external-link">#112</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9013-1">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9013-1"></a></h4>
+<ul><li>Archive <code>path-axis-growth</code> and <code>shard-atomic-rewrite</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/111" class="external-link">#111</a>).</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="continuous-integration-0-0-0-9013">Continuous integration<a class="anchor" aria-label="anchor" href="#continuous-integration-0-0-0-9013"></a></h3>
+<ul><li>Require R &gt;= 4.3 and fix Windows Quarto vignette builds (<a href="https://github.com/poissonconsulting/ssdsims/issues/100" class="external-link">#100</a>).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-0-0-0-9013">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-0-0-9013"></a></h3>
+<ul><li>Reclassify <code>dists</code> as fit-level simulation setting (<a href="https://github.com/poissonconsulting/ssdsims/issues/119" class="external-link">#119</a>).</li>
+</ul><div class="section level4">
+<h4 id="roadmap-0-0-0-9013">roadmap<a class="anchor" aria-label="anchor" href="#roadmap-0-0-0-9013"></a></h4>
+<ul><li><p>Sync DAG status and surface ready-to-propose changes (<a href="https://github.com/poissonconsulting/ssdsims/issues/101" class="external-link">#101</a>).</p></li>
+<li><p>Demote ci to scalar flag, retire ci = FALSE collapse (<a href="https://github.com/poissonconsulting/ssdsims/issues/104" class="external-link">#104</a>).</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9013-2">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9013-2"></a></h4>
+<ul><li>Sync and archive hive-partitioning change (<a href="https://github.com/poissonconsulting/ssdsims/issues/103" class="external-link">#103</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9013-3">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9013-3"></a></h4>
+<ul><li>Sync and archive step-scenario-slice change (<a href="https://github.com/poissonconsulting/ssdsims/issues/106" class="external-link">#106</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="roadmap-0-0-0-9013-1">roadmap<a class="anchor" aria-label="anchor" href="#roadmap-0-0-0-9013-1"></a></h4>
+<ul><li>Sync DAG status and surface ready-to-propose changes (<a href="https://github.com/poissonconsulting/ssdsims/issues/101" class="external-link">#101</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9013-4">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9013-4"></a></h4>
+<ul><li>Sync specs and archive five completed changes (<a href="https://github.com/poissonconsulting/ssdsims/issues/98" class="external-link">#98</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9013-5">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9013-5"></a></h4>
+<ul><li>Propose migrate-public-api change (<a href="https://github.com/poissonconsulting/ssdsims/issues/96" class="external-link">#96</a>).</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="refactoring-0-0-0-9013">Refactoring<a class="anchor" aria-label="anchor" href="#refactoring-0-0-0-9013"></a></h3>
+<ul><li><p>Canonicalise <code>seed</code> position in <code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> call sites (<a href="https://github.com/poissonconsulting/ssdsims/issues/116" class="external-link">#116</a>).</p></li>
+<li><p>Make <code>ci</code> a scalar flag, not a grid axis (<a href="https://github.com/poissonconsulting/ssdsims/issues/109" class="external-link">#109</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="testing-0-0-0-9013">Testing<a class="anchor" aria-label="anchor" href="#testing-0-0-0-9013"></a></h3>
+<div class="section level4">
+<h4 id="shard-runner-0-0-0-9013">shard-runner<a class="anchor" aria-label="anchor" href="#shard-runner-0-0-0-9013"></a></h4>
+<ul><li>Pin blob-encoding contracts; keep the ASCII VARCHAR (benchmark-gated) (<a href="https://github.com/poissonconsulting/ssdsims/issues/113" class="external-link">#113</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="task-shards-0-0-0-9013">task-shards<a class="anchor" aria-label="anchor" href="#task-shards-0-0-0-9013"></a></h4>
+<ul><li><p>Pin inner-axis-growth atomic byte-stable rewrite (shard-atomic-rewrite) (<a href="https://github.com/poissonconsulting/ssdsims/issues/107" class="external-link">#107</a>).</p></li>
+<li><p>Add end-to-end path-axis growth tests (<a href="https://github.com/poissonconsulting/ssdsims/issues/108" class="external-link">#108</a>).</p></li>
+<li><p>Use minimal nboot in bootstrap-executing tests (<a href="https://github.com/poissonconsulting/ssdsims/issues/105" class="external-link">#105</a>).</p></li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="uncategorized-0-0-0-9013">Uncategorized<a class="anchor" aria-label="anchor" href="#uncategorized-0-0-0-9013"></a></h3>
+<ul><li>
+<p>Merge pull request <a href="https://github.com/poissonconsulting/ssdsims/issues/97" class="external-link">#97</a> from poissonconsulting/add-codeowners.</p>
+<p>Add CODEOWNERS assigning <a href="https://github.com/joethorley" class="external-link">@joethorley</a></p>
+</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9012" id="ssdsims-0009012">ssdsims 0.0.0.9012<a class="anchor" aria-label="anchor" href="#ssdsims-0009012"></a></h2>
 <div class="section level3">

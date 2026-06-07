@@ -13,13 +13,13 @@ Source:
 [`DESCRIPTION`](https://github.com/poissonconsulting/ssdsims/blob/main/DESCRIPTION)
 
 Thorley J, Fisher R (2026). *ssdsims: Simulation Analyses for Species
-Sensitivity Distributions*. R package version 0.0.0.9012,
+Sensitivity Distributions*. R package version 0.0.0.9013,
 <https://poissonconsulting.github.io/ssdsims/>.
 
     @Manual{,
       title = {ssdsims: Simulation Analyses for Species Sensitivity Distributions},
       author = {Joe Thorley and Rebecca Fisher},
       year = {2026},
-      note = {R package version 0.0.0.9012},
+      note = {R package version 0.0.0.9013},
       url = {https://poissonconsulting.github.io/ssdsims/},
     }

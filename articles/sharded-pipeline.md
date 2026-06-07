@@ -114,7 +114,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmpOkz17v/ssdsims-shards-3a672e710798
+#>   dir: /tmp/RtmpLciQRq/ssdsims-shards-3b7c1e076fa6
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -185,13 +185,20 @@ a cluster), the same building blocks plug into a static-branching
 `targets` pipeline:
 [`tarchetypes::tar_map()`](https://docs.ropensci.org/tarchetypes/reference/tar_map.html)
 mints one named target per shard, so `targets` caches, invalidates, and
-reruns each shard independently. Two ready example projects ship with
-the package — a minimal `small` one and a fuller `large` one (adapted
-from `scripts/example.R`, sweeping `nrow`, `proportion`, and the
-estimation / CI methods). The `large` project parallelises its shards
-across local workers with a mirai-backed `crew` controller
-(`tar_option_set(controller = crew::crew_controller_local())`); swap in
-a `crew.cluster` controller for SLURM/PBS:
+reruns each shard independently. Three ready example projects ship with
+the package — a minimal `small` one, a fuller `large` one (adapted from
+`scripts/example.R`, sweeping `nrow`, `proportion`, and the estimation /
+CI methods), and a `cluster` one for SLURM. The `large` project
+parallelises its shards across local workers with a mirai-backed `crew`
+controller
+(`tar_option_set(controller = crew::crew_controller_local())`); the
+`cluster` project is the same pipeline under a
+[`crew.cluster::crew_controller_slurm()`](https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html)
+controller, with a connectivity + worker-prerequisite preflight — see
+the [“Running on a SLURM
+Cluster”](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
+vignette, a “zero to a running cluster job” guide that maps your site’s
+own SLURM instructions onto the controller:
 
 ``` r
 
@@ -199,10 +206,13 @@ list.files(system.file("targets-templates", "small", package = "ssdsims"))
 #> [1] "_targets.R"   "run-serial.R" "run.R"        "scenario.R"
 ```
 
-Each directory holds `scenario.R` (the study, shared by both drivers),
-`_targets.R` (the pipeline), `run.R` (the **targets** driver), and
-`run-serial.R` (the **single-core** driver). The whole `_targets.R` is
-just *build a scenario and call the
+The `small` and `large` directories each hold `scenario.R` (the study,
+shared by both drivers), `_targets.R` (the pipeline), `run.R` (the
+**targets** driver), and `run-serial.R` (the **single-core** driver);
+the `cluster` directory is a minimal four-file variant (the scenario is
+inline in `_targets.R`, and a separate `controller.R` holds the SLURM
+controller). The whole `_targets.R` is just *build a scenario and call
+the
 [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
 factory* —
 
