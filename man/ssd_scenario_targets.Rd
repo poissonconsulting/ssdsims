@@ -37,6 +37,15 @@ scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
 }\if{html}{\out{</div>}}
 
+The shard and summary targets carry \code{error = "null"} so a shard whose body
+fails entirely goes \code{NULL} (its error readable via \code{tar_meta()}) without
+aborting the run, and \code{ssd_summarize()} unions whatever landed
+(TARGETS-DESIGN.md section 6.2). The shipped \verb{_targets.R} templates pair this
+with a pipeline-wide \strong{keep-going} default (\code{tar_option_set(error = "continue")}, the \code{make -k} analogue) so an errored target skips only its
+dependents while the rest of the shards still build; fail-fast pre-flight
+checks (upload/cluster connectivity) belong in a separate script run \emph{before}
+\code{tar_make()}, not in this DAG.
+
 For each step it \code{tarchetypes::tar_map()}s one named, \code{format = "file"},
 \code{error = "null"} target per \code{partition_by} path cell (the \code{names} are the
 step's path axes), and writes every shard and the summary under the

@@ -25,8 +25,13 @@ library(tarchetypes)
 library(ssdsims)
 
 # Ingredient B — the SLURM controller (the one editable block; see controller.R).
+# `error = "continue"` is the cluster-independent keep-going (`make -k`) default:
+# one failed shard/job skips only its dependents while the rest of the sweep
+# still runs (TARGETS-DESIGN.md §6.2). The connectivity/prerequisite fail-fast
+# guard is the separate `preflight.R` that `run.R` sources before `tar_make()`,
+# NOT a target here.
 source("controller.R")
-tar_option_set(controller = controller)
+tar_option_set(controller = controller, error = "continue")
 
 # Ingredient C — THE SCENARIO. Edit to taste. The same shape as
 # `large/scenario.R`: a wider study sweeping sample sizes, hazard proportions,

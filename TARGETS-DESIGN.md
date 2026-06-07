@@ -103,10 +103,16 @@ The most consequential design choices, with section refs:
   target, content-hashing skips re-uploading shards that did not
   change; `ssd_test_upload()` probes the backend at pipeline init,
   and the graph still builds and dry-runs with no credentials.
-- **Partial failures survive and stay visible (§6.2).** A shard body
+- **Partial failures survive and stay visible (§6.2).** The pipeline
+  runs **keep-going by default** — the shipped `_targets.R` templates set
+  `tar_option_set(error = "continue")`, the `make -k` analogue, so one
+  errored target skips only its dependents while every other reachable
+  shard still builds (a long parallel run is never lost to one bad
+  branch). On top of that, a shard body
   writes as many rows as ran successfully, so a bad task yields a
   *shorter* shard, not an abort; the step target errors (and carries
-  `error = "null"`) only in exceptional cases. A downstream
+  `error = "null"`, stronger still — its NULL flows downstream) only in
+  exceptional cases. A downstream
   `assert_<step>` target — sibling to `upload_<step>` — compares the
   shard's row count to the expected count and goes red on any
   shortfall, making incompleteness a first-class DAG node and the
@@ -1270,16 +1276,26 @@ combo). The scenario object does **not** carry secrets — it carries
 only the destination URL and container name. Their absence is what
 flips `ssd_upload_shard()` into its dry-run no-op.
 
-**Connectivity probe up front.** `ssd_test_upload(scenario)` performs
-a minimal round-trip (list the container, write and delete a small
-marker blob) and either returns silently or errors with the
-backend's diagnostic. The pipeline calls it once at the start of
-`tar_make()` so an auth or network failure aborts before any
-compute starts. Easy to run interactively too:
+**Connectivity probe up front, in a separate pre-flight script.**
+`ssd_test_upload(scenario)` performs a minimal round-trip (list the
+container, write and delete a small marker blob) and either returns
+silently or errors with the backend's diagnostic. It is a **fail-fast
+guard run *before* `tar_make()`, not a target inside the DAG** — the
+driver script (`run.R`) sources a standalone `preflight.R` first, so an
+auth or network failure aborts before any compute starts, *independent of
+the pipeline's keep-going error mode* (§6.2). Keeping it outside the DAG
+is deliberate and now the established pattern: the `cluster/` template
+does exactly this for its SLURM connectivity + worker-prerequisite probe
+(a standalone `preflight.R` sourced by `run.R`, kept out of `_targets.R`
+so that stays a clean scenario-and-factory definition), and the upload
+probe follows the same shape. A credentials check is a pre-condition for
+the *whole* run, not a per-shard concern, so it must not live in a target
+that `error = "continue"`/`"null"` would let slide past. The same call
+works interactively:
 
 ```r
 scenario <- ssd_scenario(..., upload = list(backend = "azure_blob", ...))
-ssd_test_upload(scenario)   # silent on success, throws on failure
+ssd_test_upload(scenario)   # silent on success, throws on failure — run before tar_make()
 tar_make()
 ```
 
@@ -1323,6 +1339,33 @@ So "see partial shard failures clearly" is the assert layer's job;
 (the exceptional case) is always out of date, so a re-driven
 `tar_make()` after a fix retries it (§8.4); a short shard is found by
 its red `assert_<step>` (also §8.4).
+
+**Keep-going is the pipeline default (`make -k`), and it is layered.**
+The shipped `_targets.R` templates set `tar_option_set(error =
+"continue")` — the `make -k` analogue — so a target that errors skips
+only its own dependents while every other reachable shard still builds;
+one bad branch never tears down a long parallel run. (It is a
+pipeline-wide *option*, so it sits in `_targets.R` next to the controller
+block, not in the `ssd_scenario_targets()` factory — which owns the
+*per-target* settings instead.) The shard, `assert_<step>`, and
+`upload_<step>` targets carry the stronger per-target `error = "null"`,
+which is *more* permissive than `make -k`: the errored target's value
+becomes `NULL` and its downstream still runs (a short/`NULL` shard flows
+on and is reported, above), where plain `make -k` would skip it. The two
+settings compose cleanly — a per-target `error` overrides the global
+default — so the global `continue` only governs the targets that carry no
+explicit override (e.g. an unexpected error in `summary` or a
+user-added target skips its dependents instead of aborting the run).
+Guards that *should* abort the whole run — the upload/cluster pre-flight
+(§6.1, §4) — deliberately live **outside** the DAG, in a separate
+pre-flight script run before `tar_make()`, so the keep-going default
+never swallows them. The trade we accept: under keep-going a *systemic*
+failure (every shard red because a package won't load) does not stop the
+pipeline on its own — but the operator watches the first few minutes,
+where a wall of red surfaces immediately, so optimising for *not losing a
+long run to one bad branch* beats stop-on-first-error. Override with an
+explicit `tar_option_set(error = "stop")` in `_targets.R` if a hard stop
+is ever wanted.
 
 Two constraints, both confirmed by the targets lab's failure spike:
 

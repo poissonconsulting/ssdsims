@@ -549,6 +549,16 @@ edge_block <- function(names) {
 #' ssd_scenario_targets(scenario)
 #' ```
 #'
+#' The shard and summary targets carry `error = "null"` so a shard whose body
+#' fails entirely goes `NULL` (its error readable via `tar_meta()`) without
+#' aborting the run, and `ssd_summarize()` unions whatever landed
+#' (TARGETS-DESIGN.md section 6.2). The shipped `_targets.R` templates pair this
+#' with a pipeline-wide **keep-going** default (`tar_option_set(error =
+#' "continue")`, the `make -k` analogue) so an errored target skips only its
+#' dependents while the rest of the shards still build; fail-fast pre-flight
+#' checks (upload/cluster connectivity) belong in a separate script run *before*
+#' `tar_make()`, not in this DAG.
+#'
 #' For each step it `tarchetypes::tar_map()`s one named, `format = "file"`,
 #' `error = "null"` target per `partition_by` path cell (the `names` are the
 #' step's path axes), and writes every shard and the summary under the

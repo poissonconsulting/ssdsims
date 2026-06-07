@@ -12,13 +12,22 @@
 library(targets)
 library(tarchetypes)
 
-# Parallelise the (independent) shard targets across local workers with a
-# mirai-backed `crew` controller. `targets` dispatches each ready shard target
-# to a worker, so the fit/hc shards of this wider study run concurrently. Tune
-# `workers` to your machine; swap in `crew.cluster` controllers for SLURM/PBS
-# etc. (`cluster-pipeline`, section 11). Needs the `crew` package installed.
+# Two pipeline-wide options:
+#   * controller — parallelise the (independent) shard targets across local
+#     workers with a mirai-backed `crew` controller. `targets` dispatches each
+#     ready shard target to a worker, so the fit/hc shards of this wider study
+#     run concurrently. Tune `workers` to your machine; swap in `crew.cluster`
+#     controllers for SLURM/PBS etc. (`cluster-pipeline`, section 11). Needs the
+#     `crew` package installed.
+#   * error = "continue" — keep-going (`make -k`): an errored target skips only
+#     its dependents while every other reachable shard still builds, so one bad
+#     branch never aborts the parallel run — it just leaves a gap the summary
+#     unions over. The factory's shard targets carry the stronger `error =
+#     "null"` on top; fail-fast pre-flight checks belong in a separate script run
+#     before `tar_make()`, not here (TARGETS-DESIGN.md §6.2).
 tar_option_set(
-  controller = crew::crew_controller_local(workers = 8L)
+  controller = crew::crew_controller_local(workers = 8L),
+  error = "continue"
 )
 
 # `scenario` is defined in scenario.R — shared with run-serial.R so both drivers
