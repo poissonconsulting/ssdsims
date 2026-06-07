@@ -1,0 +1,67 @@
+# ssdsims cluster targets pipeline (TARGETS-DESIGN.md section 4 / section 12
+# `cluster-pipeline`).
+#
+# COPY-EDIT-RUN. Copy this directory's files (`controller.R`, `_targets.R`,
+# `preflight.R`, `run.R`) to your project root, edit `controller.R` for your
+# cluster, then `source("run.R")`. The "zero to a running cluster job" guide in
+# this directory's README walks the whole path, from your site's own (non-R)
+# SLURM instructions to a running job. (To run the same study *locally* without
+# a scheduler, use the `large/` template instead — same factory + scenario, a
+# local controller.)
+#
+# Three ingredients assemble into the cluster run (TARGETS-DESIGN.md section 4);
+# only the second is cluster-specific:
+#   A. SHAPE   — the per-shard targets, built verbatim by `ssd_scenario_targets()`
+#                (the same factory call `large/` uses). THIS FILE.
+#   B. BACKEND — the SLURM `crew` controller. `controller.R` (the one block you
+#                edit); the connectivity/prerequisite check lives in `preflight.R`.
+#   C. CONTENT — the scenario object, defined inline below.
+# Because only B changes between clusters, the per-task `sample`/`fit`/`hc`
+# results are byte-identical to the local `large/` pipeline for the same
+# scenario (the storage layout is a free re-layout).
+
+library(targets)
+library(tarchetypes)
+library(ssdsims)
+
+# Ingredient B — the SLURM controller (the one editable block; see controller.R).
+source("controller.R")
+tar_option_set(controller = controller)
+
+# Ingredient C — THE SCENARIO. Edit to taste. The same shape as
+# `large/scenario.R`: a wider study sweeping sample sizes, hazard proportions,
+# estimation and CI methods, with bootstrap CIs. Scheduler-independent.
+#
+# MINIMAL FIRST JOB: for your first cluster run, follow the README's step 3 and
+# shrink this block (e.g. a single `nrow`, one method) to a cheap, fast job that
+# confirms the controller + preflight before launching the full sweep. Then
+# (step 4) expand it to your own study, leaving the controller untouched.
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  nrow = c(5L, 10L), # c(5L, 6L, 10L, 20L, 50L),
+  proportion = c(0.01, 0.05, 0.1, 0.2),
+  est_method = c("arithmetic", "geometric", "multi"),
+  ci = TRUE,
+  ci_method = c(
+    "arithmetic_samples",
+    "geometric_samples",
+    "GMACL",
+    "MACL",
+    "multi_fixed",
+    "multi_free",
+    "weighted_samples"
+  ),
+  parametric = TRUE,
+  nboot = c(5, 50), # c(1, 5, 10, 50, 100, 500), # * 100,
+  samples = TRUE,
+  seed = 42L,
+  bundle = list(
+    hc = c("ci_method", "est_method")
+  )
+)
+
+# Ingredient A — the whole per-shard pipeline, reused VERBATIM from the shared
+# factory (one `format = "file"`, `error = "null"` target per `partition_by`
+# cell per step, ordered sample -> fit -> hc -> summary). Scheduler-independent.
+ssd_scenario_targets(scenario)
