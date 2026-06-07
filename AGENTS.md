@@ -234,19 +234,10 @@ See **`tests/testthat/AGENTS.md`** for the full test-suite conventions
 - **Always update PR title and description** when opening the PR and after committing.
   The description must capture the
 change's *current* state, not a revision/process log.
-- **PRs are squash-merged**, so the **PR title becomes the single commit on
-  `main`** — and that commit is what `fledge` reads to build `NEWS.md` (see
-  *Update package version and news* above). The PR title is therefore the
-  load-bearing message: it **must** be a valid Conventional Commit. Individual
-  commits on the branch are squashed away, so their messages are not
-  consumed by `fledge` — a clean history still helps review, but the title is
-  what ships.
-- **Titles follow Conventional Commits** — `<type>: <summary>` or
-  `<type>(<scope>): <summary>`, where `type` is one of `feat`, `fix`, `docs`,
-  `refactor`, `test`, `chore`, etc. (e.g.
-  `feat: add scenario-scoped dqrng pcg64 RNG backend`,
-  `docs(openspec): propose registry, manifest, and task-tables changes`). Use
-  the imperative mood and keep the summary concise.
+- **PR titles must be valid Conventional Commits** — see the *Pull Requests*
+  section of `CLAUDE.md` for the rule and its rationale (PRs are squash-merged,
+  so the title becomes the single commit on `main` that `fledge` reads to build
+  `NEWS.md`).
 - **Escape function, object, and file names in backticks** in PR titles and
   descriptions (e.g. `local_dqrng_backend()`, `run_scenario()`, `DESCRIPTION`).
 - **Reference the related issue** in the title where one exists (e.g. `(#64)`)
