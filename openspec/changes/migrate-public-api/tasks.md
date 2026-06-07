@@ -19,8 +19,8 @@
 ## 4. Migrate `ssd_hc_sims()` (`R/hc-sims.R`)
 
 - [ ] 4.1 Open a reentrant `local_dqrng_backend()` scope; resolve `seed` per D4.
-- [ ] 4.2 Replace the `hc_seed()` call in the `pmap` body with `hc_data_task_primer()`, deriving `primer = task_primer()` over the hc task identity `(stream, sim, ci, nboot, est_method, ci_method, parametric)`.
-- [ ] 4.3 Preserve the `min_pboot`-is-reserved guard, empty-input handling, `save_to`, the `ci = FALSE` collapse, and the public signature.
+- [ ] 4.2 Replace the `hc_seed()` call in the `pmap` body with `hc_data_task_primer()`, deriving `primer = task_primer()` over the hc task identity `(stream, sim, nboot, est_method, ci_method, parametric)` — the scalar `ci` flag is applied uniformly and excluded from the primer (D6).
+- [ ] 4.3 Preserve the `min_pboot`-is-reserved guard, empty-input handling, `save_to`, the scalar `ci` flag handling (`chk_flag`, applied uniformly, absent from the primer), and the public signature.
 
 ## 5. Deprecate the L'Ecuyer shim (`R/internal.R`)
 
@@ -36,7 +36,7 @@
 
 - [ ] 7.1 `test-simulate-data.R`: same `(seed, stream)` ⇒ identical; different `stream` ⇒ different; `head(., nrow)` is a prefix of the `n_max` draw; standalone vs. in-grid task identical (order-independence); global `.Random.seed`/`RNGkind()` unchanged across a call.
 - [ ] 7.2 `test-fit-dists-sims.R`: deterministic fits for a fixed `seed`; order-independent fits; `min_pmix` accepted as a name and resolved via `resolve_min_pmix()` (incl. a custom function found in the global env); an unresolvable name aborts informatively; the primer keys on the name; empty-input path preserved.
-- [ ] 7.3 `test-hc-sims.R`: deterministic bootstrap for a fixed `seed` with `ci = TRUE`; order-independence; `min_pboot` guard; `ci = FALSE` collapse preserved.
+- [ ] 7.3 `test-hc-sims.R`: deterministic bootstrap for a fixed `seed` with `ci = TRUE`; order-independence; `min_pboot` guard; scalar `ci` flag (a vector `ci` aborts; the primer is identical across `ci` values for a fixed identity since `ci` is excluded).
 - [ ] 7.4 Add a byte-equivalence test mirroring `scripts/example-expanded.R` (migrated public path == loop-free dqrng expansion).
 - [ ] 7.5 Refresh any snapshots tied to the previous L'Ecuyer numeric output.
 

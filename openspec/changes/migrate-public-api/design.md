@@ -35,7 +35,7 @@ The `sample` and `hc` steps map cleanly onto `sample_data_task_primer()` and `hc
 Each function hashes the task identity it already has. To stay consistent with the §2 / `parallel-safe-seeding` keying:
 - **sample**: `task_primer(list(stream, sim, replace))` — **not** `nrow` (the shared-draw / `head` property, §5).
 - **fit**: parent `(stream, sim)` extended with the fit-grid row (`nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix` **name**, `range_shape1`, `range_shape2`).
-- **hc**: parent `(stream, sim)` extended with the hc-grid row (`ci`, `nboot`, `est_method`, `ci_method`, `parametric`).
+- **hc**: parent `(stream, sim)` extended with the hc-grid row (`nboot`, `est_method`, `ci_method`, `parametric`); the scalar `ci` flag is applied uniformly and excluded from the identity (D6).
 
 The legacy schema uses `stream`/`sim` where the declarative tables use `dataset`/`sim`; the legacy functions have no `dataset` name, so `stream` stands in as the per-run lattice coordinate. `min_pmix` is keyed by its **name** (D1), so JIT/recompile does not move the primer. Byte-equivalence in `example-expanded.R` only requires *internal* consistency between the public path and its expansion, both built from these identities — so the exact identity composition is a free choice as long as both sides agree.
 
@@ -47,6 +47,9 @@ The three functions are exported and callable standalone, so each must activate 
 
 ### D5 — Keep the L'Ecuyer helpers as a deprecated shim; rewrite the reference scripts
 `slice_sample_state()`, `fit_dists_state()`, `fit_dists_seed()`, `hc_state()`, `hc_seed()`, `do_call_seed()`, and `get_lecuyer_cmrg_stream_state(s)()` stay defined (Roxygen-noted as deprecated, removed by `cleanup-lecuyer`) — they still back the generator `ssd_sim_data` methods and the `*-grids` scripts/tests. `scripts/example-expanded.R` is rewritten to build its three per-step lists from `sample_data_task_primer()`/`fit_data_task_primer()`/`hc_data_task_primer()` and to compare against the migrated `ssd_run_scenario()` (`data`/`hc` by `identical()`, `fits` by `ssdtools::estimates()`, as today). The `example-expanded-grids*.R` variants — which explored independent-per-call sub-streams — are reconciled with the dqrng model, where each task already has its own primer (the "independent" design *is* the dqrng model), or annotated as historical.
+
+### D6 — `ci` is excluded from the hc per-task primer (reconcile with `scalar-ci-flag`)
+The archived `scalar-ci-flag` change demoted `ci` from a grid/task axis to a scenario-wide scalar **simulation setting**, removing it from `task_axes("hc")` and the per-task identity. Its cross-reference decision pinned that *whichever of the two changes lands second drops `ci` from the hc primer enumeration*; `scalar-ci-flag` is now archived, so this change is second and drops it. The hc primer therefore keys on `(stream, sim, nboot, est_method, ci_method, parametric)` only — `est` is invariant to `ci`, so a constant `ci` term carries no task-distinguishing information and would only obscure the hash. `ssd_hc_sims()` already applies `ci` as a scalar pass-through (no factorial expansion over it, and no `ci = FALSE`-to-`NA` "collapse" — that machinery lived in the declarative `hc_grid_tbl()` and was retired by `scalar-ci-flag`), so migrating its seeding requires only that `ci` stay out of the primer identity.
 
 ## Risks / Trade-offs
 
