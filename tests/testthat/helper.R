@@ -51,6 +51,16 @@ skip_targets <- function() {
   testthat::skip_if_not_installed("ssdsims")
 }
 
+# Gate the tests that only build the `targets` object to inspect its structure
+# (commands, edges, cues) without running a pipeline: they call
+# `ssd_scenario_targets()`, which constructs `targets`/`tarchetypes` objects, so
+# both Suggests must be installed - but they need neither an installed `ssdsims`
+# worker nor a `tar_make()`, so they stay light (no `skip_on_cran()`).
+skip_no_targets_pkgs <- function() {
+  testthat::skip_if_not_installed("targets")
+  testthat::skip_if_not_installed("tarchetypes")
+}
+
 # A small numeric-only dataset: avoids factor/character columns so a draw
 # round-trips through Parquet byte-identically (the byte-identity oracle).
 numeric_dataset <- function() {
