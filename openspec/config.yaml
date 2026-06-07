@@ -9,8 +9,11 @@ context: |
   Conventional Commits — the squash-merge PR title is what `fledge` reads to
   build NEWS.md, so it is the load-bearing message.
 
-  Roadmap upkeep is part of PROPOSING a change, not a later step. Whenever a
-  change is created, reflect it in TARGETS-DESIGN.md §12:
+  Roadmap upkeep spans a change's whole lifecycle. Whenever a change is created,
+  applied, or archived, reflect it in TARGETS-DESIGN.md §12 and keep its node
+  status colour in sync (red = proposed, yellow = done/implemented, green =
+  archived; move an archived node into the `archived_box` subgraph). When a
+  change is first proposed:
     - a step with prerequisites and/or dependants -> add a Mermaid node + edges
       and colour it `proposed` (red) via a `class` line;
     - an independent tidy-up or new capability (no prereqs, no dependants) ->
@@ -27,4 +30,4 @@ rules:
       prose bullet for an independent tidy-up / new capability), per AGENTS.md.
   tasks:
     - Before finishing, confirm TARGETS-DESIGN.md §12 has been updated for this
-      change — roadmap upkeep is part of proposing, per AGENTS.md.
+      change — roadmap upkeep is part of the change lifecycle, per AGENTS.md.
