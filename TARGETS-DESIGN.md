@@ -2243,22 +2243,6 @@ public-API or ergonomics gaps.
   delegate to a public `as_ssd_data()` because the bare-data-frame and
   unnamed-list forms derive names by **symbol capture**, which must happen
   in the `ssd_define_scenario()` frame. Surfaced in PR #80.
-- **`blob-storage-format`** — Review how per-task non-tabular results
-  (the `fit` step's `fitdists` objects) are stored in their shard Parquet.
-  `shard-runner-baseline` ships an interim `encode_obj()`/`decode_obj()`
-  pair (`R/targets-runner.R`) that `serialize(ascii = TRUE)`s the object to
-  an **ASCII string** carried in a Parquet `VARCHAR` column, chosen because
-  duckplyr cannot store a raw/list column and an ASCII serialisation
-  round-trips losslessly. ASCII serialisation is ~2× the size of the binary
-  form and is CPU-heavier to encode/decode, so for many or large fits the
-  blob layer dominates shard size. Evaluate alternatives — a binary
-  `serialize(ascii = FALSE)` in a base64/BLOB column, an Arrow-native nested
-  representation, or writing the fit objects to a sidecar store keyed by
-  `fit_id` rather than inline — against the byte-identity oracle, the
-  duckplyr/Parquet column-type constraints, and the §6 summary read path
-  (which already projects the blob column out). Surfaced by the
-  `shard-runner-baseline` / `task-tables` verification. Independent tidy-up
-  with no dependants; not on the dependency DAG.
 - **`tidyverse-rlang-alignment`** — Align the package's code with the
   tidyverse design: prefer **rlang** over base-R idioms throughout, especially
   metaprogramming — `rlang::expr()`/`!!`/`inject()`/`call2()`/`sym()`/`syms()`
@@ -2480,6 +2464,23 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   primer-identity enumeration). Surfaced verifying the `ci` axis against
   `ssdtools`. Independent tidy-up with no dependants; not on the dependency
   DAG.
+- **`blob-storage-format`** — Evaluated how the `fit` step's non-tabular
+  per-task result (a `fitdists` object) is stored in its shard Parquet. The
+  interim `encode_obj()`/`decode_obj()` seam (`R/targets-runner.R`) carries the
+  object as an `serialize(ascii = TRUE)` **ASCII string** in a `VARCHAR` column,
+  because duckplyr cannot store a `raw`/list column and an ASCII serialisation
+  round-trips losslessly. Benchmarked the alternatives against the three
+  constraints (byte-identity oracle, duckplyr/Parquet column type, §6
+  projectable-blob read path): binary `serialize(ascii = FALSE)` as base64 text
+  proved **larger** (~1.5× on disk — the object is mostly compact doubles and
+  Parquet already compresses the `VARCHAR` for free) and `jsonlite::serializeJSON()`
+  was **not lossless** on the embedded model fits, so neither cleared the swap
+  gate. **Decision: keep the interim ASCII-`VARCHAR` encoding** and instead
+  tighten the `shard-runner` spec — the byte-identity, string-column, and
+  projectable-blob contracts are now stated explicitly. No code change beyond
+  the spec; the benchmark is preserved in the change's `exploration` (the
+  `benchmark-blob-encoding.R` script). Independent tidy-up with no dependants;
+  not on the dependency DAG.
 
 ### Dependency DAG (parallel streams)
 
@@ -2657,7 +2658,8 @@ Eight further changes were proposed in this round (all `openspec validate
   single-core oracle. The real-SLURM end-to-end run remains the documented
   manual/lab step.
 - `error-call-origin` (new `error-origin` capability), `cleanup-as-ssd-data`
-  (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta)
+  (`scenario-definition` delta), `blob-storage-format` (`shard-runner` delta —
+  *since synced and archived; see the closing 2026-06-07 addendum*)
   — the independent tidy-ups, kept **off** the dependency DAG per convention
   (no prerequisites, no dependants).
 
@@ -2712,6 +2714,18 @@ dependency DAG (prose bullets above, no Mermaid nodes): `est-method-setting`
 capability that reads the archived `task-tables` expansion). Both grew out of
 the `ci = TRUE` performance investigation recorded in their `exploration/`
 scripts.
+
+The off-DAG tidy-up `blob-storage-format` (`shard-runner` delta) has since been
+**synced and archived**. Its benchmark (`benchmark-blob-encoding.R`, preserved
+in the change's `exploration`) found that neither candidate cleared the swap
+gate — binary `serialize(ascii = FALSE)` as base64 text is ~1.5× larger on disk
+(the fit is mostly compact doubles and Parquet already compresses the `VARCHAR`),
+and `jsonlite::serializeJSON()` is not lossless on the embedded model fits — so
+the interim ASCII-`VARCHAR` `encode_obj()`/`decode_obj()` encoding is **kept** and
+the change instead tightens the `shard-runner` spec with the byte-identity,
+string-column, and projectable-blob contracts. It carried no Mermaid node
+(off the dependency DAG), so its bullet simply moves from `### Cleanup` to
+`### Archived`; the graph is unchanged.
 
 `manifest` has since been **implemented (#114), synced, and archived** — the
 writer/reader/recorder/assembler live in `R/manifest.R` (with the shared
