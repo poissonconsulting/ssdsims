@@ -13,13 +13,14 @@ The data/fit/hc shards must be readable **from outside the cluster** — laptops
 - **`upload` becomes a runner argument**, the remote-destination sibling of `root`: `ssd_scenario_targets(scenario, ..., root, upload, cue)`. `...` + `rlang::check_dots_empty()` force `root`/`upload`/`cue` to be passed by name.
 - **Two no-upload modes, both supported:** `upload = NULL` (default — **no** `upload_<step>` nodes in the DAG, for non-uploaders) and `upload = ssd_upload_dryrun()` (`upload_<step>` nodes present but no-op, to exercise the DAG shape offline/in CI).
 - **Per-shard upload targets.** When `upload` is non-`NULL`, the factory pairs each step shard with an `upload_<step>` target (`format = "file"`, `error = "null"`) via the same `tar_map`, content-hashed so unchanged shards never re-upload; the upload's cloud sha256 is recorded in the manifest.
-- **Documented extension contract** on `?ssd_upload_shard`: to add S3/GCS, write a constructor + the three methods. No speculative backends are added now.
+- **Read the results back, in place.** A fourth generic `ssd_results(upload, step)` opens the **uploaded** results for querying so a user can verify the upload immediately: for Azure it returns a lazy `duckplyr`/DuckDB table over the `<container>/<step>/**/part.parquet` Hive glob read **in place** via DuckDB's `azure` extension (predicate pushdown, **no download**), composable with `dplyr` (a one-line `count()` round-trip checks the upload). Dry-run aborts (nothing uploaded — read the local shards). (Previously deferred; pulled into scope.)
+- **Documented extension contract** on `?ssd_upload_shard`: to add S3/GCS, write a constructor + the three generics (`ssd_upload_shard()`, `ssd_test_upload()`, `ssd_results()`). No speculative backends are added now.
 - **New vignette** ("Uploading Shards to Cloud Storage", `vignettes/cloud-upload.qmd`) chained after the shard and cluster vignettes: it runs the upload **locally** (live chunks use `ssd_upload_dryrun()` so the build needs no network or credentials), then shows how to **extend the same factory call to a real Azure destination on a cluster** and what to watch for — credentials on the *workers* (not just the login node), the `ssd_test_upload()` preflight, the fail-loud behaviour, and the content-hash re-upload skip. Forward links are added from `sharded-pipeline.qmd` and `cluster-pipeline.qmd`.
 
 ## Capabilities
 
 ### New Capabilities
-- `cloud-upload`: typed upload destination objects (`ssd_upload_azure()`, `ssd_upload_dryrun()`), the three class-dispatched generics (`ssd_upload_shard()`, `ssd_test_upload()`, plus construction-time validation), the fail-loud credential contract, the per-shard `upload_<step>` targets paired with each step shard, and the documented backend-extension contract.
+- `cloud-upload`: typed upload destination objects (`ssd_upload_azure()`, `ssd_upload_dryrun()`), the class-dispatched generics (`ssd_upload_shard()`, `ssd_test_upload()`, `ssd_results()`, plus construction-time validation), the fail-loud credential contract, the per-shard `upload_<step>` targets paired with each step shard, the in-place `ssd_results()` read-back for verifying uploads, and the documented backend-extension contract.
 
 ### Modified Capabilities
 - `scenario-definition`: remove `upload` from the `ssd_define_scenario()` signature and from the declarative `ssdsims_scenario` field set (the "Upload defaults to none" behaviour is removed; the destination now lives on the runner).
@@ -27,7 +28,7 @@ The data/fit/hc shards must be readable **from outside the cluster** — laptops
 
 ## Impact
 
-- **New code**: `R/upload.R` (the constructors, generics, Azure + dryrun methods, `ssd_test_upload()`), exported in `NAMESPACE`, with `man/` docs.
+- **New code**: `R/upload.R` (the constructors, the four generics — `ssd_upload_shard()`, `ssd_test_upload()`, `ssd_results()` — and their Azure + dryrun methods), exported in `NAMESPACE`, with `man/` docs.
 - **New docs**: `vignettes/cloud-upload.qmd` (local dry-run run + cluster/Azure extension guide), cross-linked with the `sharded-pipeline` and `cluster-pipeline` vignettes (which gain a forward link).
 - **Changed code**: `R/scenario.R` (drop `upload` arg/field/validation/print), `R/targets-runner.R` (`ssd_scenario_targets()` signature + `upload_<step>` target wiring).
 - **Dependencies**: `AzureStor` (blob put/list/delete) and `AzureRMR` (the AAD / service-principal auth layer) — decided elsewhere — plus DuckDB's `azure` extension for in-place read-back, all added to `Suggests` (the upload path is opt-in; the package builds and tests without cloud creds via `ssd_upload_dryrun()`). Auth stays external (`AZURE_STORAGE_ACCOUNT`, `AZURE_STORAGE_KEY`, or a service principal) — the upload object carries only the destination, never secrets.

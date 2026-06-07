@@ -75,19 +75,38 @@ When `upload` is non-`NULL`, the factory SHALL pair each step shard target with 
 - **WHEN** a shard is uploaded
 - **THEN** the cloud copy's sha256 SHALL be recorded in the manifest alongside the local sha256, so a mismatch flags a corrupted transfer
 
+### Requirement: Uploaded results are readable in place via a destination-dispatched generic
+The package SHALL provide `ssd_results(upload, step)`, a generic dispatching on the upload object's class, that opens the **uploaded** results for querying — so that right after an upload a user can read the data back and confirm it landed. For an Azure destination it SHALL return a lazy `duckplyr`/DuckDB table over the Hive glob `<container>/<step>/**/part.parquet` at the destination, read **in place** via DuckDB's `azure` extension (predicate pushdown straight against blob storage, **no download** of the Parquet), resolving the same external credentials as the write path and aborting with a loud error (naming the missing requirement) when the `azure` extension or a required credential is absent. `step` SHALL select one of the step layers (`sample`/`fit`/`hc`), and the package SHALL offer a path to the uploaded `summary` as well. For a dry-run destination, `ssd_results()` SHALL abort with an informative error stating that a dry run uploads nothing and that the local shards should be read directly — it SHALL NOT silently return an empty or local table. The result of `ssd_results()` SHALL be composable with `dplyr` verbs (e.g. `dplyr::count()`) so a one-line round-trip check verifies the upload.
+
+#### Scenario: Azure results read in place without downloading
+- **WHEN** `ssd_results(ssd_upload_azure(...), step = "hc")` is called with valid credentials
+- **THEN** it SHALL return a lazy table over `<container>/hc/**/part.parquet` read in place via the DuckDB `azure` extension, without downloading the Parquet, composable with `dplyr` verbs
+
+#### Scenario: A round-trip check verifies a just-uploaded shard
+- **WHEN** a shard is uploaded and then `ssd_results(upload, step)` is collected (or counted)
+- **THEN** the rows read back from the destination SHALL match the rows in the local shard, so the upload is verifiable in one line
+
+#### Scenario: Missing extension or credentials fails loud
+- **WHEN** `ssd_results(ssd_upload_azure(...), ...)` is called with the DuckDB `azure` extension or a required credential absent
+- **THEN** it SHALL abort with an error naming the missing requirement, not return an empty or partial table
+
+#### Scenario: Dry-run has nothing to read back
+- **WHEN** `ssd_results(ssd_upload_dryrun(), ...)` is called
+- **THEN** it SHALL abort stating that a dry run uploads nothing and that the local shards should be read directly
+
 ### Requirement: The backend set is extensible by a documented constructor-plus-methods contract
-The package SHALL document, on the `ssd_upload_shard()` generic's help page, the contract for adding a new destination backend (e.g. S3, GCS): provide a constructor returning an object of class `c("ssdsims_upload_<backend>", "ssdsims_upload")` and implement the three methods (`ssd_upload_shard()`, `ssd_test_upload()`, and the construction-time validation) for it. The package SHALL NOT ship speculative backends beyond Azure and dry-run; the dispatch SHALL be open so a new backend is added without editing the existing methods.
+The package SHALL document, on the `ssd_upload_shard()` generic's help page, the contract for adding a new destination backend (e.g. S3, GCS): provide a constructor returning an object of class `c("ssdsims_upload_<backend>", "ssdsims_upload")` (validating its destination at construction) and implement the three generic methods — `ssd_upload_shard()`, `ssd_test_upload()`, and `ssd_results()` — for it. The package SHALL NOT ship speculative backends beyond Azure and dry-run; the dispatch SHALL be open so a new backend is added without editing the existing methods.
 
 #### Scenario: Extension contract is documented
 - **WHEN** a developer reads `?ssd_upload_shard`
-- **THEN** it SHALL state that a new backend is added by writing a constructor returning an `ssdsims_upload_<backend>`/`ssdsims_upload` object and implementing the three methods, with no edit to existing methods
+- **THEN** it SHALL state that a new backend is added by writing a constructor returning an `ssdsims_upload_<backend>`/`ssdsims_upload` object (with construction-time validation) and implementing the three generics (`ssd_upload_shard()`, `ssd_test_upload()`, `ssd_results()`), with no edit to existing methods
 
 #### Scenario: No speculative backends are shipped
 - **WHEN** the package's exported upload constructors are enumerated
 - **THEN** only `ssd_upload_azure()` and `ssd_upload_dryrun()` SHALL be present
 
 ### Requirement: A vignette demonstrates local upload and the cluster/Azure extension
-The package SHALL ship a vignette ("Uploading Shards to Cloud Storage") that chains after the sharded-pipeline and cluster-pipeline vignettes and demonstrates the upload hook. Its **live** (evaluated) chunks SHALL run the pipeline locally with `ssd_upload_dryrun()` so the vignette builds with **no network access and no credentials** (guarded by `requireNamespace()` like the sibling vignettes), exercising `ssd_test_upload()` and the no-op `upload_<step>` targets. The vignette SHALL then show — as **described, non-evaluated** chunks — how to retarget the same `ssd_scenario_targets(scenario, ..., upload = ssd_upload_azure(...))` call to a real Azure destination on a cluster, and SHALL call out what to pay attention to: credentials must be present on the **workers** (not only the login/submit node), `ssd_test_upload()` SHALL be run as a preflight, a missing credential **fails loud** (per the credential requirement above), and unchanged shards are **not re-uploaded** (the content-hash skip). The sharded-pipeline and cluster-pipeline vignettes SHALL gain a forward link to this vignette, so the three form a chain (define → shard → cluster → upload).
+The package SHALL ship a vignette ("Uploading Shards to Cloud Storage") that chains after the sharded-pipeline and cluster-pipeline vignettes and demonstrates the upload hook. Its **live** (evaluated) chunks SHALL run the pipeline locally with `ssd_upload_dryrun()` so the vignette builds with **no network access and no credentials** (guarded by `requireNamespace()` like the sibling vignettes), exercising `ssd_test_upload()` and the no-op `upload_<step>` targets. The vignette SHALL then show — as **described, non-evaluated** chunks — how to retarget the same `ssd_scenario_targets(scenario, ..., upload = ssd_upload_azure(...))` call to a real Azure destination on a cluster, **and how to read the results back with `ssd_results(upload, step)` immediately after the upload to verify it landed** (an in-place query and a one-line `dplyr::count()` round-trip). It SHALL call out what to pay attention to: credentials must be present on the **workers** (not only the login/submit node), `ssd_test_upload()` SHALL be run as a preflight, a missing credential **fails loud** (per the credential requirement above), unchanged shards are **not re-uploaded** (the content-hash skip), and the read-back is **in place** (no download). The sharded-pipeline and cluster-pipeline vignettes SHALL gain a forward link to this vignette, so the three form a chain (define → shard → cluster → upload).
 
 #### Scenario: Vignette builds offline with no credentials
 - **WHEN** the vignette is rendered in an environment with no cloud credentials and no network

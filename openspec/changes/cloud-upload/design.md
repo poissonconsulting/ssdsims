@@ -17,13 +17,14 @@ The `ssd_scenario_targets()` factory (`R/targets-runner.R:625`, owned by the `ta
 - Fail-loud credentials: Azure with absent creds aborts; skipping the network is expressed only by `ssd_upload_dryrun()`.
 - Relocate the destination from the scenario to `ssd_scenario_targets(scenario, ..., root, upload, cue)`, with `check_dots_empty()` forcing named args, supporting both `upload = NULL` (no upload nodes) and `ssd_upload_dryrun()` (no-op nodes).
 - Per-shard `upload_<step>` targets (`format = "file"`, `error = "null"`), content-hashed, recording the cloud sha256 in the manifest.
-- A documented "constructor + three methods" extension contract for future S3/GCS.
+- A read-back tool, `ssd_results(upload, step)`, that opens the uploaded results in place (DuckDB `azure` extension, no download) so an upload can be verified immediately; a generic dispatching on the same destination object.
+- A documented "constructor + three generics" extension contract for future S3/GCS.
 - A vignette ("Uploading Shards to Cloud Storage") that runs locally with `ssd_upload_dryrun()` and documents the cluster/Azure extension, chained after the shard and cluster vignettes.
 
 **Non-Goals:**
 
 - Shipping S3/GCS or any backend beyond Azure and dry-run (the dispatch is open; backends are added later).
-- The in-place off-cluster *read-back* path (DuckDB `azure` extension Hive-glob over `az://…`). §6.1 describes it; it is an analysis-layer concern, separable from the write/upload path, and deferred.
+- A full analysis layer (joins across step layers, summary dashboards, plotting). `ssd_results()` provides the *reader* — a lazy `duckplyr` handle on the uploaded shards — and a verification round-trip; everything built *on top* of that handle is out of scope.
 - Owning credentials. Auth stays external (env vars / service principal); the upload object never carries secrets.
 - Changing the per-task compute, the shard layout, or the single-core/baseline runners (they remain upload-free by design).
 
@@ -57,6 +58,10 @@ Move `upload` off the scenario onto `ssd_scenario_targets(scenario, ..., root, u
 
 Following §6.1, the `upload_<step>` target takes the shard's local path (`format = "file"`) so `targets` re-runs it only when the shard's content hash changes — a re-driven `tar_make()` that rebuilt nothing uploads nothing; a partial extension uploads only new/rewritten shards. `error = "null"` isolates a per-shard upload failure. The local shard stays on disk (compute-step tracking unaffected); the cloud copy is an additional artefact whose sha256 the manifest records beside the local sha256.
 
+### Decision: `ssd_results()` reads the upload back in place — a fourth generic on the destination
+
+"Upload then immediately verify" is the natural round-trip, so the §6.1 in-place read story is pulled into scope as a fourth generic on the same upload object: `ssd_results(upload, step)`. The destination object already holds the URL/container, so it is the right thing to dispatch on — symmetric with `ssd_upload_shard()`/`ssd_test_upload()`. The Azure method returns a **lazy** `duckplyr`/DuckDB table over the `<container>/<step>/**/part.parquet` Hive glob, read **in place** via DuckDB's `azure` extension (predicate pushdown straight against blob storage, no download) — exactly the §6.1 "read the shards back in place" property, and the same Hive layout that makes local reads work. Because it is lazy and `dplyr`-composable, a one-line `ssd_results(upload, step) |> dplyr::count()` is the immediate post-upload smoke test, and a row-for-row compare against the local shard verifies the transfer (complementing the manifest's local-vs-cloud sha256). The dry-run method **errors** ("a dry run uploads nothing; read the local shards directly") rather than silently returning a local or empty table, so the read path is as fail-loud as the write path. Reading needs the `azure` extension and read credentials; their absence fails loud naming the missing requirement. *Alternatives considered:* a separate `ssd_read_results(url, container, step)` free function (rejected — duplicates the destination already captured in the object, and loses class dispatch); downloading the blobs to a temp dir then reading locally (rejected — defeats the in-place predicate-pushdown story and is slow for large result sets).
+
 ### Decision: the Azure backend is built on `AzureStor` + `AzureRMR`
 
 Decided elsewhere: the Azure method uses `AzureStor` for the blob operations (container endpoint, `upload_blob()`/`list_blobs()`/`delete_blob()` — the put/list/delete behind `ssd_upload_shard()` and `ssd_test_upload()`'s marker round-trip) and `AzureRMR` for the authentication layer (AAD tokens / service principal), complementing the simpler `AZURE_STORAGE_ACCOUNT` + `AZURE_STORAGE_KEY` path. Both are pure-R, are widely used (the `Azure*` family), and stay in `Suggests` so the package builds and the dry-run/`NULL` paths run without them, guarded by `rlang::check_installed(c("AzureStor", "AzureRMR"))` in the Azure methods. *Alternatives considered:* a raw `httr2` REST client (rejected — re-implements auth/retry that `AzureStor` already provides) or the `paws`-style generated SDK (no first-class Azure equivalent in R). The off-cluster read-back uses DuckDB's `azure` extension, separate from these write-path clients.
@@ -78,4 +83,4 @@ The vignette's cluster section is deliberately a *delta on the existing cluster 
 
 - **Credential schema.** The client is decided (`AzureStor` + `AzureRMR`); what remains is which auth mode(s) `ssd_test_upload.ssdsims_upload_azure_blob()` resolves and in what precedence — `AZURE_STORAGE_ACCOUNT` + `AZURE_STORAGE_KEY` (account key, via `AzureStor`), a SAS token, or an AAD service principal (via `AzureRMR`). The spec only requires that a missing required variable is named loudly; the precise env-var set is pinned during implementation.
 - **Manifest coupling.** The precise field where the cloud sha256 lands depends on the `manifest` change's record shape; this change records "local + cloud sha256 per shard" and defers the exact column to `manifest`.
-- **Off-cluster read-back.** The DuckDB `azure` in-place Hive-glob read (§6.1) is deferred; whether it becomes part of `cloud-upload` or a separate analysis capability is open.
+- **Read-back auth parity.** `ssd_results()` reads via the DuckDB `azure` extension, which needs its own credential/secret setup (a DuckDB `CREATE SECRET` or connection string) distinct from `AzureStor`'s write-path auth. Whether both resolve from the **same** env vars, or the read path needs its own, is pinned during implementation; the spec requires only that a missing requirement fails loud.
