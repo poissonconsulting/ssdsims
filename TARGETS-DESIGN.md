@@ -1286,9 +1286,14 @@ tar_make()
 **Failure mode.** A per-shard upload error becomes that
 `upload_<step>` branch's error (and, under `error = "null"`, leaves
 the rest uploading); the local shard remains, so `tar_make()` can be
-re-driven and only the failed uploads retried. The scenario's
-manifest records, per shard, the local sha256 and the cloud sha256; a
-mismatch flags a corrupted transfer.
+re-driven and only the failed uploads retried. Each shard's `meta.json`
+sidecar (the manifest's per-shard sha256 record, §8.5) is uploaded
+**alongside** its Parquet, so the trusted-as-produced sha256 travels with
+the data; a downloaded copy is verified by re-hashing it against that
+recorded sha256, and a mismatch flags a corrupted transfer. The manifest
+itself carries no separate cloud-copy sha256 — under a faithful byte copy
+it would equal the recorded sha256, so `cloud-upload` needs nothing added
+to the manifest (the two are decoupled).
 
 ### 6.2 Surviving a failed shard
 
@@ -1750,14 +1755,64 @@ directory):
 - `fit`, `hc` — the argument-vector grids.
 - `partition_by` — the per-shard path axes (§5).
 - `completed_shards` — set of shard partition paths whose Parquet
-  exists and is trusted, with each shard's sha256 (recorded at
-  write time, including the cloud copy's sha256 if `upload` is
-  set; see §6.1, §7).
+  exists and is trusted, with each shard's sha256 (the
+  trusted-as-produced value, recorded at write time in a per-shard
+  `meta.json` sidecar; see §6.1, §7). No separate cloud-copy sha256:
+  the sidecar is uploaded with the shard and a download is verified by
+  re-hashing against this sha256 (§6.1).
 - `r_version`, `dqrng_version`, `ssdtools_version` — versions
   pinned for bit-stability across re-runs (§9).
 
 Restart property for dqrng (same `(seed, state)` ⇒ same draw
 sequence) is verified by `scripts/experiment-dqrng-hash.R`.
+
+### 8.6 The incremental loop — run, assemble, expand, re-assemble
+
+The pieces above compose into one repeatable cycle: **run a scenario,
+assemble, expand the scenario, run only the missing pieces, assemble
+again** — with no redundant recomputation. It works because every step is
+a pure function of the *current* state, never an accumulation of edits:
+
+1. **Run.** `tar_make()` writes one Parquet per shard under the scenario's
+   layout root (§5). Path-axis growth and inner-axis rewrite (§8.1–§8.2)
+   are exactly the rules that decide which shards a *later* run rebuilds.
+2. **Assemble.** `ssd_assemble_manifest()` walks the results tree and
+   rebuilds `completed_shards` from whatever Parquets exist (§8.5),
+   preferring each shard's `meta.json` sidecar and hashing the rest. It
+   reads the manifest head left by `ssd_write_manifest()` and replaces
+   only the tail.
+3. **Expand.** Edit the scenario object — append a dataset, grow `nsim`,
+   add a `min_pmix`, widen `nrow` — and re-source `_targets.R`. The shard
+   set is re-derived from the expanded scenario at sourcing time (§6
+   static branching).
+4. **Run the missing pieces.** `tar_make()` again. Path-axis growth mints
+   and builds *only* the new shards and skips the rest (cache-by-
+   existence, §8.1); inner-axis growth atomically rewrites *only* the
+   affected shards (§8.2). Nothing else recomputes.
+5. **Assemble again.** `ssd_assemble_manifest()` re-walks the tree. Because
+   it rebuilds the tail from disk every call, the second assembly is
+   **idempotent and monotone under growth**: the new shards appear, the
+   untouched ones keep their (byte-identical) entries, and the result is
+   their union — no merge bookkeeping, no stale entries to prune.
+
+**Two ordering facts make the loop safe.**
+
+- *Write the head before you assemble.* The head is a pure function of the
+  scenario (§8.5), and `ssd_write_manifest()` rewrites the *whole* file
+  with the head alone — it does not preserve a previous tail. So after an
+  **expansion** the head must be re-written from the *expanded* scenario
+  (otherwise it still describes the smaller grid), and the assemble must
+  follow it to rebuild the tail from disk. The runner's contract is
+  therefore *write-head-then-assemble-tail* on every (re-)run: the head
+  always matches the current scenario, the tail always matches the shards
+  on disk, and the two cannot drift across runs (the within-run case is §6
+  static branching).
+- *Growth keeps the layout root; re-layout starts a fresh tree.* The
+  results root is keyed by `partition_by` (`layout=<hash>`, §5), so growing
+  along existing axes accretes into the *same* tree and reuses its cache
+  and manifest. Changing `partition_by` itself is not growth — it mints a
+  new layout root with its own (initially empty) manifest, leaving the old
+  tree intact rather than migrating it.
 
 ---
 
@@ -2007,9 +2062,13 @@ already ran end to end (see §4, §6). These steps are therefore
   shards' existence (`completed_shards`), never the reverse — the
   `task-tables` runner reads nothing from it. The `completed_shards`
   assembler hashes the shards on disk; recording each shard's sha256
-  *at write time* (and the cloud copy's sha256) is the
+  *at write time* (in a per-shard `meta.json` sidecar) is the
   trusted-as-produced enhancement wired in by the consumers that need
   it (`replay-helper`, `cloud-upload`), not by the happy-path pipeline.
+  It records **one** trusted sha256 per shard and nothing cloud-specific,
+  so `manifest` and `cloud-upload` are **decoupled**: `cloud-upload`
+  uploads the sidecar with the shard and verifies a download by
+  re-hashing against that sha256, needing nothing added to the manifest.
   Land it before its first consumer (`replay-helper` /
   `shard-completeness-assert`), and operationally before the first
   expensive cluster run whose results you intend to trust/reproduce;
@@ -2058,8 +2117,8 @@ already ran end to end (see §4, §6). These steps are therefore
   `tar_make()`'s first target; the hello-Azure round trip runs from
   interactive R. **Departs from the original §6.1 sketch** (silent dry-run
   on absent creds → now a loud error) and **moves `upload` off the
-  scenario**. Proposed (the `cloud-upload` change); implementation waits on
-  `manifest` landing.
+  scenario**. Proposed (the `cloud-upload` change); with `manifest` now
+  landed (#114) its prerequisites are met — ready to implement.
 - **`replay-helper`** — `ssd_replay_task()` (§7) and
   `ssd_input_hash()` for the lightweight recipe. Tests simulate a
   branch failure and reproduce locally.
@@ -2184,6 +2243,31 @@ public-API or ergonomics gaps.
   primer, or shard change); pairs with the §9 / GLOSSARY corrections that also
   fixed the stale *"`dists` and `nboot` are not fit/hc grid axes"* heading
   (`nboot` **is** an hc axis). Independent tidy-up; not on the dependency DAG.
+
+- **`est-method-setting`** — Reclassify `est_method` from an hc cross-join axis
+  to an hc-level **simulation setting** (the same shape as `dists-simulation-setting`
+  / `scalar-ci-flag`: `scenario-definition` + `task-lists` + `hazard-concentrations`
+  deltas). `est_method` is removed from `task_axes("hc")`; the hc fan-out becomes
+  `nboot × ci_method × parametric` and a single bootstrap per cell yields every
+  requested `est_method` (the analytical `est` differs; the CI is est_method-invariant
+  — verified at a fixed seed in the change's `exploration/`). Unlike the other
+  reclassifications this is **not** byte-preserving: because the hc primer hashes
+  the hc-grid row including `est_method` (§2), dropping the axis **re-seeds** every
+  hc task, so bootstrap CIs change numerically (point estimates unchanged). ~3×
+  cost reduction on the `est_method` axis. Independent tidy-up; not on the
+  dependency DAG.
+
+- **`cost-estimation`** — New `cost-estimation` capability: a calibration harness
+  (`ssd_calibrate_cost()`) that re-measures a per-task cost model on the target
+  architecture and an estimator (`ssd_estimate_cost()`) that reads a scenario's
+  hc task expansion (read-only, no run) to predict ballpark total cost and the
+  longest single task. Model: the hc bootstrap dominates `ci = TRUE`; per-call
+  time ≈ `base + slope(ci_method) × max(nboot, n0)`, with `proportion`/`est_method`
+  free and a bounded non-monotonic `nrow` factor (calibrated this session at
+  ~430 single-core hours for the motivating scenario). Ships a default calibration
+  with provenance; the model-form discovery is preserved in the change's
+  `exploration/`. Independent new capability; not on the dependency DAG (reads
+  the archived `task-tables` expansion, no dependants).
 
 ### Archived
 
@@ -2458,8 +2542,8 @@ flowchart TD
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
     class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
-    class inputs,postcheck,manif,migrate,cloud proposed
-    class cluster done
+    class inputs,postcheck,migrate,cloud proposed
+    class manif,cluster done
     class survive,assert,replay,lockin,cleanup open
 ```
 
@@ -2537,12 +2621,14 @@ appears under `### Archived` above rather than among the active changes.
 `scenario-definition`/`task-shards` deltas): it moves the upload destination
 onto the runner (`ssd_scenario_targets(..., upload)`, the sibling of `root`)
 and replaces the original §6.1 silent dry-run with a fail-loud credential
-contract. It carries artifacts (red) but its implementation still waits on
-`manifest` landing.
+contract, and adds an in-place `ssd_open_uploaded()` read-back. It carries
+artifacts (red) and, with `manifest` now landed (#114), its prerequisites are
+met — it is ready to implement (it records the cloud sha256 through the
+manifest).
 
-The remaining open nodes stay blocked: `replay-helper` waits on
-`manifest` landing, `shard-failure-survival` on `cluster-pipeline`,
-`shard-completeness-assert` on both `manifest` and `shard-failure-survival`,
+With `manifest` landed, `replay-helper` is unblocked (ready to propose). The
+remaining open nodes stay blocked: `shard-failure-survival` on
+`cluster-pipeline`, `shard-completeness-assert` on `shard-failure-survival`,
 `mixed-code-lockin` on `shard-atomic-rewrite`, and `cleanup-lecuyer` on
 `migrate-public-api` + `mixed-code-lockin`. (`dataset-provenance` remains
 roadmap-only, deliberately deferred.)
@@ -2565,3 +2651,11 @@ write/read + m:n loop in plain R, then feeds `hive-partitioning`
 Three "wait points" (`primer-primitives`, `task-tables`,
 `mixed-code-lockin`) gate the layers in between; anything not
 chained by an arrow can be worked on in parallel.
+
+**Addendum (2026-06-07).** Two further changes were proposed, both off the
+dependency DAG (prose bullets above, no Mermaid nodes): `est-method-setting`
+(an axis→setting reclassification in the `dists-simulation-setting` /
+`scalar-ci-flag` family) and `cost-estimation` (a new, independent
+capability that reads the archived `task-tables` expansion). Both grew out of
+the `ci = TRUE` performance investigation recorded in their `exploration/`
+scripts.
