@@ -92,8 +92,7 @@ Terminology used throughout `ssdsims`.
   `est_method`, `proportion` — each valid and meaningful when `ci = FALSE`) come
   before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
   `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
-  (which only retains bootstrap draws). Reclassifying `dists` and `est_method`
-  lands via the `dists-simulation-setting` and `est-method-setting` changes.
+  (which only retains bootstrap draws).
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is
   a *read-side* concept — query engines (duckplyr / DuckDB)

@@ -29,4 +29,4 @@
 
 ## 5. Sync
 
-- [ ] 5.1 After implementation, sync the `scenario-definition` delta into `openspec/specs/scenario-definition/spec.md` and resolve the GLOSSARY.md note ("moving `dists` … lands via the `dists-simulation-setting` change")
+- [x] 5.1 After implementation, sync the `scenario-definition` delta into `openspec/specs/scenario-definition/spec.md` and resolve the GLOSSARY.md note ("moving `dists` … lands via the `dists-simulation-setting` change")
