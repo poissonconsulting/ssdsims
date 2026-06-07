@@ -24,7 +24,14 @@ test_that("hc_sims 1 sim ci", {
 })
 
 test_that("hc_sims 1 sim ci bootstrap interval (dev withr only)", {
-  skip_if_withr_seed_leak()
+  # withr <= 3.0.2 has a bug (withr #286/#287) where `local_seed()` fails to
+  # restore `.Random.seed` on exit. `ssd_hc_sims(seed = NULL)` derives its
+  # bootstrap stream from the ambient RNG, so a leaked (CRAN) vs restored (dev)
+  # state changes the interval; pin those CI values only on the fixed withr.
+  skip_if(
+    utils::packageVersion("withr") <= "3.0.2",
+    "requires withr with the local_seed() restore fix (> 3.0.2)"
+  )
   withr::with_seed(42, {
     sims <- ssd_sim_data("rlnorm", seed = 10, nsim = 1L)
     sims <- ssd_fit_dists_sims(sims, seed = 10)
