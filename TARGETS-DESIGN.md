@@ -2439,12 +2439,12 @@ flowchart TD
         slice[step-scenario-slice]
         rewrite[shard-atomic-rewrite]
         pathgrow[path-axis-growth]
+        manif[manifest]
     end
 
     inputs[scenario-input-types]
     postcheck[task-rng-postcheck]
     migrate[migrate-public-api]
-    manif[manifest]
 
     cluster[cluster-pipeline]
     survive[shard-failure-survival]
@@ -2526,10 +2526,11 @@ flowchart TD
     classDef ready fill:#bbdefb,stroke:#1565c0,color:#0d3c61
     classDef open fill:#ffffff,stroke:#90a4ae,color:#37474f
 
-    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow archived
+    class define,baseline,dqinit,dqstate,primer,prims,acc,partby,tt,shardrun,hive,slice,rewrite,pathgrow,manif archived
     class inputs,postcheck,migrate proposed
-    class manif,cluster done
-    class survive,assert,cloud,replay,lockin,cleanup open
+    class cluster done
+    class cloud,replay ready
+    class survive,assert,lockin,cleanup open
 ```
 
 **Node colours track each step's status** — green = archived, yellow = done
@@ -2555,8 +2556,8 @@ task lists). The four original proposals:
   L'Ecuyer-CMRG lattice; only the prerequisite `*_data_task_primer()` wrappers
   (from the archived `primer-primitives`) exist, so the change itself is
   essentially un-started.
-- `manifest` — no `R/manifest.R`; `jsonlite`/`digest`/`sessioninfo` absent
-  from `Imports`.
+- `manifest` — *(superseded by the 2026-06-07 addendum: now implemented in
+  `R/manifest.R` (#114), synced, and archived).*
 
 Eight further changes were proposed in this round (all `openspec validate
 --strict`-clean):
@@ -2602,12 +2603,14 @@ and retires the §1.2 collapse; also off the dependency DAG. It has since been
 main specs and the change now lives in `openspec/changes/archive/`, so it
 appears under `### Archived` above rather than among the active changes.
 
-The remaining open nodes stay blocked: `cloud-upload`/`replay-helper` wait on
-`manifest` landing, `shard-failure-survival` on `cluster-pipeline`,
-`shard-completeness-assert` on both `manifest` and `shard-failure-survival`,
-`mixed-code-lockin` on `shard-atomic-rewrite`, and `cleanup-lecuyer` on
-`migrate-public-api` + `mixed-code-lockin`. (`dataset-provenance` remains
-roadmap-only, deliberately deferred.)
+With `manifest` archived (see the 2026-06-07 addendum), `cloud-upload` and
+`replay-helper` now have every prerequisite landed (`task-tables` and
+`manifest` are both archived), so they move to **ready** (blue) — they can be
+proposed next. The remaining open nodes stay blocked: `shard-failure-survival`
+on `cluster-pipeline`, `shard-completeness-assert` on both `manifest` and
+`shard-failure-survival`, `mixed-code-lockin` on `shard-atomic-rewrite`, and
+`cleanup-lecuyer` on `migrate-public-api` + `mixed-code-lockin`.
+(`dataset-provenance` remains roadmap-only, deliberately deferred.)
 
 `migrate-public-api` depends on `scenario-input-types` (its
 byte-equivalence re-run must exercise the full input surface) and on
@@ -2635,3 +2638,12 @@ dependency DAG (prose bullets above, no Mermaid nodes): `est-method-setting`
 capability that reads the archived `task-tables` expansion). Both grew out of
 the `ci = TRUE` performance investigation recorded in their `exploration/`
 scripts.
+
+`manifest` has since been **implemented (#114), synced, and archived** — the
+writer/reader/recorder/assembler live in `R/manifest.R` (with the shared
+`ssd_file_sha256()` in `R/utils.R`), `jsonlite`/`digest`/`sessioninfo` are in
+`Imports`, its delta spec is folded into the new `openspec/specs/manifest/`
+main spec, and the change now lives in `openspec/changes/archive/`. Its node
+is therefore **green (archived)** and moved into the `archived_box`. Because
+`task-tables` was already archived, this lands the last prerequisite for
+`cloud-upload` and `replay-helper`, which move from open to **ready** (blue).

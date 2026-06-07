@@ -149,7 +149,7 @@ writing tests.
 
 ## OpenSpec Workflow
 
-The package uses OpenSpec for spec-driven development (see `.claude/` and `.github/` directories).
+The package uses OpenSpec for spec-driven development (see `.claude/` and `.github/` directories). **`openspec/AGENTS.md`** is the focused subdirectory guide — read it before running any OpenSpec skill; it spells out the per-action roadmap obligation (below) that the generic skills do not enforce.
 
 ### Commands
 
