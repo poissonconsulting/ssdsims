@@ -612,15 +612,38 @@ edge_block <- function(names) {
 #' `crew::crew_controller_local()`) with `targets::tar_option_set()` in
 #' `_targets.R` before calling this - the target set is unchanged.
 #'
+#' @section Uploading shards to cloud storage (`upload`):
+#' `upload` is the **remote-destination sibling of `root`** (default `NULL`).
+#' With `upload = NULL` the pipeline contains **no** `upload_<step>` targets -
+#' the clean default DAG for a non-uploader. With a non-`NULL` upload object the
+#' factory pairs each step shard with an `upload_<step>` target in the same
+#' `tar_map` (`format = "file"`, `error = "null"`), so an unchanged shard is
+#' never re-uploaded (content-hash skip) and a per-shard upload failure isolates
+#' to its own branch. Pass [ssd_upload_dryrun()] for no-op upload targets that
+#' reach no network (exercising the DAG shape offline / in CI) or
+#' [ssd_upload_azure()] to ship to Azure. The destination's
+#' [ssd_test_upload()] probe is run **once up front** (when the factory is
+#' called, before `tar_make()`), so missing credentials or an unreachable
+#' destination abort before any compute. The per-task results are byte-identical
+#' across all three `upload` modes; only the presence and behaviour of the
+#' `upload_<step>` targets differ.
+#'
 #' @inheritParams scenario_dataset
+#' @param ... Unused; must be empty. Its presence forces `root`, `upload`, and
+#'   `cue` to be passed **by name** (`rlang::check_dots_empty()` aborts on a
+#'   positional or misspelled argument), since `root` and `upload` are both
+#'   path-shaped and easy to transpose.
 #' @param root The results root the shards and summary are written under;
 #'   defaults to the per-layout [scenario_results_dir()].
+#' @param upload An optional upload destination (the remote-destination sibling
+#'   of `root`) from [ssd_upload_azure()] or [ssd_upload_dryrun()], or `NULL`
+#'   (default) for no upload targets. See the section above.
 #' @param cue An optional `targets::tar_cue()` applied to every shard target
 #'   (e.g. `targets::tar_cue(depend = FALSE)` to pin trusted shards against code
 #'   changes). `NULL` (default) uses `targets`' standard cue.
 #' @return A list of `targets` target objects, for `_targets.R` to return.
 #' @seealso [scenario_results_dir()], [ssd_run_scenario_shards()] (the
-#'   single-core, `targets`-free equivalent).
+#'   single-core, `targets`-free equivalent), [ssd_upload_azure()].
 #' @export
 #' @autoglobal
 #' @examples
@@ -631,15 +654,37 @@ edge_block <- function(names) {
 #' library(ssdsims)
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
 #' ssd_scenario_targets(scenario)
+#'
+#' # Pair each shard with a (no-op) upload target, exercised offline:
+#' ssd_scenario_targets(scenario, upload = ssd_upload_dryrun())
 #' }
 ssd_scenario_targets <- function(
   scenario,
+  ...,
   root = scenario_results_dir(scenario),
+  upload = NULL,
   cue = NULL
 ) {
+  call <- environment()
+  rlang::check_dots_empty()
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   chk::chk_string(root)
+  if (!is.null(upload) && !inherits(upload, "ssdsims_upload")) {
+    chk::abort_chk(
+      "`upload` must be `NULL` or an upload destination from ",
+      "`ssd_upload_azure()` or `ssd_upload_dryrun()`.",
+      call = call
+    )
+  }
   rlang::check_installed(c("targets", "tarchetypes"))
+
+  # The front-door creds/connectivity probe, run once up front (at sourcing
+  # time, before `tar_make()` builds anything) so an auth/network failure aborts
+  # before any compute - never deep in the DAG on a worker (section 6.1). NULL
+  # adds no upload at all; a dry run is trivially OK.
+  if (!is.null(upload)) {
+    ssd_test_upload(upload)
+  }
 
   sample_dir <- file.path(root, "sample")
   fit_dir <- file.path(root, "fit")
@@ -657,17 +702,46 @@ ssd_scenario_targets <- function(
   # `.slice` (the `sample` step's per-dataset slice) as symbols resolved as
   # mapped values. Depending on the slice - not the bare `scenario` global - is
   # what scopes each step's dependency hash to the fields its runner reads.
+  #
+  # When `upload` is non-`NULL`, the same `tar_map` also mints a paired
+  # `upload_<step>` target per shard (`format = "file"`, `error = "null"`),
+  # taking the shard target's local path (the bare `<step>_step` symbol, which
+  # `tar_map` rewires to the paired, suffixed target) and shipping it via
+  # `ssd_upload_shard(path, upload)`. Because it is `format = "file"` over the
+  # shard path, `targets` re-uploads a shard only when its content hash changes.
+  # With `upload = NULL` no upload target is emitted (the clean default DAG).
   step_map <- function(step, shards, command) {
+    step_target <- targets::tar_target_raw(
+      paste0(step, "_step"),
+      command,
+      format = "file",
+      error = "null",
+      cue = cue
+    )
+    if (is.null(upload)) {
+      return(tarchetypes::tar_map(
+        values = shards,
+        names = tidyselect::all_of(
+          scenario_partition_axes(scenario, step)$path
+        ),
+        step_target
+      ))
+    }
+    upload_target <- targets::tar_target_raw(
+      paste0("upload_", step),
+      rlang::expr(ssd_upload_shard(
+        !!rlang::sym(paste0(step, "_step")),
+        !!upload
+      )),
+      format = "file",
+      error = "null",
+      cue = cue
+    )
     tarchetypes::tar_map(
       values = shards,
       names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
-      targets::tar_target_raw(
-        paste0(step, "_step"),
-        command,
-        format = "file",
-        error = "null",
-        cue = cue
-      )
+      step_target,
+      upload_target
     )
   }
 

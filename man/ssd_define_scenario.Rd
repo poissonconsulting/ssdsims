@@ -27,8 +27,7 @@ ssd_define_scenario(
   ci = FALSE,
   samples = FALSE,
   partition_by = NULL,
-  bundle = NULL,
-  upload = NULL
+  bundle = NULL
 )
 }
 \arguments{
@@ -146,9 +145,6 @@ step in \strong{both} is an error), but they may be mixed across steps and eithe
 may be partial. Use \code{partition_by} when you want few path axes, \code{bundle}
 when you want fine sharding and only a few inner axes. Both normalise into
 the single stored \code{partition_by} path list.}
-
-\item{upload}{An optional upload specification (a list), or \code{NULL} for no
-upload.}
 }
 \value{
 An S3 object of class \code{ssdsims_scenario}.

@@ -1,6 +1,6 @@
 ## 1. Signature and storage
 
-- [ ] 1.1 In `R/scenario.R`, move the `dists` formal out of the fit-axis block of `ssd_define_scenario()` to lead the simulation-settings block: `… parametric, dists, proportion, ci, samples, partition_by, bundle, upload`
+- [ ] 1.1 In `R/scenario.R`, move the `dists` formal out of the fit-axis block of `ssd_define_scenario()` to lead the simulation-settings block: `… parametric, dists, proportion, ci, samples, partition_by, bundle` (the `cloud-upload` change removed the trailing `upload` formal)
 - [ ] 1.2 Confirm storage is unchanged — `dists` still validated as a unique character vector and stored at `scenario$fit$dists`; no change to `scenario$hc`
 - [ ] 1.3 Confirm `task_axes()` is untouched (it already excludes `dists`); no change to `R/task-lists.R`, primers, identities, or shard layout
 

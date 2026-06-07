@@ -34,6 +34,8 @@ Imports:
     tidyr,
     withr
 Suggests: 
+    AzureRMR,
+    AzureStor,
     crew,
     crew.cluster,
     knitr,

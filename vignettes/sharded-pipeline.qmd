@@ -224,6 +224,9 @@ that fits the run.
 
 - ["Defining a Scenario"](defining-a-scenario.html) --- the scenario object and
   the baseline runner.
+- ["Running on a SLURM Cluster"](cluster-pipeline.html) --- the same pipeline on
+  a cluster, and ["Uploading Shards to Cloud Storage"](cloud-upload.html) ---
+  shipping the shards to an object store so they are readable off the cluster.
 - `TARGETS-DESIGN.md` §5 (tasks into shards), §6 (inter-shard linking, the Hive
   layout, the `targets` sketch).
 - `?ssd_run_scenario_shards`, `?ssd_scenario_fit_shards`, `?ssd_run_fit_step`,

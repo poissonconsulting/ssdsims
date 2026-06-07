@@ -45,6 +45,18 @@ reference:
   - ssd_summarize
   - scenario_results_dir
 
+- title: Cloud upload
+  desc: >
+    Typed, self-validating upload destinations (`ssd_upload_azure()`,
+    `ssd_upload_dryrun()`) and the class-dispatched generics that probe
+    credentials, ship each shard, and read the uploaded results back in place -
+    the remote-destination sibling of `root` on `ssd_scenario_targets()`.
+  contents:
+  - ssd_upload_azure
+  - ssd_test_upload
+  - ssd_upload_shard
+  - ssd_open_uploaded
+
 - title: Manifest
   desc: >
     A per-scenario JSON manifest: write the declarative head (scenario fields

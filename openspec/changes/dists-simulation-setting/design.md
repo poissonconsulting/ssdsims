@@ -87,7 +87,8 @@ and a new fragility (reliance on opaque prefix-stability).
 `dists` is a *fit*-level setting while `proportion`/`ci`/`samples` are *hc*-level.
 To honour "simulation settings are contiguous" we place `dists` **first** in the
 settings block (fit before hc): `… nboot, est_method, ci_method, parametric,`
-**`dists, proportion, ci, samples,`** `partition_by, bundle, upload`. Storage is
+**`dists, proportion, ci, samples,`** `partition_by, bundle` (the `cloud-upload`
+change removed `upload` from `ssd_define_scenario()`). Storage is
 unchanged and step-based: `dists` stays in `scenario$fit`, the hc settings in
 `scenario$hc`. All reordered formals follow `...`, so call sites name them and
 the reorder is behaviour-preserving.
