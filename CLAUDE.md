@@ -14,3 +14,7 @@ single commit on `main`, and that commit is what `fledge` reads to build
 `NEWS.md`. Individual commits on the branch are squashed away — their messages
 are not consumed by `fledge`, so a clean history helps review but the title is
 what ships.
+
+See the *Pull Requests* section of [AGENTS.md](AGENTS.md) for the extended PR
+instructions (updating the title/description, backticking names, referencing
+issues, and review-thread etiquette).
