@@ -34,19 +34,29 @@ run_m <- function(m, cim) {
   set.seed(7)
   ssd_hc(
     fit,
-    ci = TRUE, nboot = 40,
-    est_method = m, ci_method = cim, parametric = TRUE,
-    samples = TRUE, min_pboot = 0
+    ci = TRUE,
+    nboot = 40,
+    est_method = m,
+    ci_method = cim,
+    parametric = TRUE,
+    samples = TRUE,
+    min_pboot = 0
   )
 }
 
 cat(sprintf(
   "%-18s  %-22s  %-12s  %s\n",
-  "ci_method", "CI(lcl/ucl) invariant", "est differs", "samples identical"
+  "ci_method",
+  "CI(lcl/ucl) invariant",
+  "est differs",
+  "samples identical"
 ))
 for (cim in ssd_ci_methods()) {
   hs <- lapply(ests, run_m, cim = cim)
-  ci_same <- isTRUE(all.equal(hs[[1]][, c("lcl", "ucl")], hs[[3]][, c("lcl", "ucl")]))
+  ci_same <- isTRUE(all.equal(
+    hs[[1]][, c("lcl", "ucl")],
+    hs[[3]][, c("lcl", "ucl")]
+  ))
   est_diff <- !isTRUE(all.equal(hs[[1]]$est, hs[[3]]$est))
   smp_same <- isTRUE(all.equal(hs[[1]]$samples, hs[[3]]$samples))
   cat(sprintf("%-18s  %-22s  %-12s  %s\n", cim, ci_same, est_diff, smp_same))
