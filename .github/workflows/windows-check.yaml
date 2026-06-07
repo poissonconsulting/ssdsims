@@ -34,7 +34,13 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
+      # Vignettes are skipped on purpose: the quarto vignettes spawn a child R
+      # process (via the quarto CLI) that does not see the package on its
+      # library path during `R CMD build`, which is a separate infrastructure
+      # issue from the manifest fix this temporary workflow exists to validate.
       - uses: r-lib/actions/check-r-package@v2
         with:
+          build_args: 'c("--no-manual", "--no-build-vignettes")'
+          args: 'c("--no-manual", "--ignore-vignettes")'
           upload-snapshots: true
           error-on: '"error"'
