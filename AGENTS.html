@@ -160,7 +160,7 @@
 </div>
 <div class="section level2">
 <h2 id="openspec-workflow">OpenSpec Workflow<a class="anchor" aria-label="anchor" href="#openspec-workflow"></a></h2>
-<p>The package uses OpenSpec for spec-driven development (see <code>.claude/</code> and <code>.github/</code> directories).</p>
+<p>The package uses OpenSpec for spec-driven development (see <code>.claude/</code> and <code>.github/</code> directories). <strong><code>openspec/AGENTS.md</code></strong> is the focused subdirectory guide — read it before running any OpenSpec skill; it spells out the per-action roadmap obligation (below) that the generic skills do not enforce.</p>
 <div class="section level3">
 <h3 id="commands">Commands<a class="anchor" aria-label="anchor" href="#commands"></a></h3>
 <ul><li>
@@ -172,14 +172,9 @@
 <li>
 <strong><code>/opsx:archive &lt;change-name&gt;</code></strong> — Finalize a completed change.</li>
 </ul><blockquote>
-<p><strong>Working a change includes updating the roadmap.</strong> Whenever you create, apply, or archive a change (via <code>/opsx:propose</code>, <code>/opsx:ff</code>, <code>/opsx:apply</code>, <code>/opsx:archive</code>, or by hand), reflect it in <code>TARGETS-DESIGN.md</code> §12 and keep its node status colour in sync (red = proposed, yellow = done/implemented, green = archived; move an archived node into the <code>archived_box</code> subgraph). On first proposal, add a Mermaid node + edges coloured <code>proposed</code> for a DAG step, or an off-DAG prose bullet for an independent tidy-up / new capability. See “Architectural Notes → The targets redesign” below for the full rule.</p>
+<p><strong>Every lifecycle action (propose / apply / sync / archive) must update the <code>TARGETS-DESIGN.md</code> §12 roadmap in the same change-set</strong> — the generic skills will not. <code>openspec/AGENTS.md</code> is the authority for that rule (node colours, the <code>archived_box</code>, the per-action checklist) and for the change/spec layout.</p>
 </blockquote>
-<p>Changes live in <code>openspec/changes/&lt;name&gt;/</code> with: - <code>proposal.md</code> — What and why. - <code>design.md</code> — How. - <code>specs/&lt;capability&gt;/spec.md</code> — Detailed requirements (WHEN/THEN scenarios). - <code>tasks.md</code> — Implementation checklist.</p>
-</div>
-<div class="section level3">
-<h3 id="capability-specs">Capability Specs<a class="anchor" aria-label="anchor" href="#capability-specs"></a></h3>
-<p>The package’s current capabilities are documented in <code>openspec/specs/</code>: - <code>simulate-data</code> — <code><a href="reference/ssd_sim_data.html">ssd_sim_data()</a></code> and its 5 S3 methods. - <code>fit-distributions</code> — <code><a href="reference/ssd_fit_dists_sims.html">ssd_fit_dists_sims()</a></code> and factorial expansion. - <code>hazard-concentrations</code> — <code><a href="reference/ssd_hc_sims.html">ssd_hc_sims()</a></code> with bootstrap CI options. - <code>run-scenario</code> — <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> pipeline. - <code>parallel-safe-seeding</code> — L’Ecuyer-CMRG and dqrng seed/state helpers.</p>
-<p>New capabilities land via OpenSpec changes (e.g., <code>ssd-define-scenario</code>, <code>dqrng-init</code>); existing specs guide their implementation.</p>
+<p>Active changes live in <code>openspec/changes/&lt;name&gt;/</code>; the current capability specs live in <code>openspec/specs/</code> — that directory is the authoritative list.</p>
 </div>
 </div>
 <div class="section level2">
@@ -204,37 +199,11 @@
 </div>
 <div class="section level2">
 <h2 id="common-tasks">Common Tasks<a class="anchor" aria-label="anchor" href="#common-tasks"></a></h2>
-<div class="section level3">
-<h3 id="add-a-new-exported-function">Add a new exported function<a class="anchor" aria-label="anchor" href="#add-a-new-exported-function"></a></h3>
-<ol style="list-style-type: decimal"><li>Write the function in <code>R/</code> with roxygen comments.</li>
-<li>Mark <code>@export</code> in the docstring.</li>
-<li>Run <code>devtools::document()</code> to update <code>NAMESPACE</code>.</li>
-<li>Add tests in <code>tests/testthat/test-*.R</code>.</li>
-<li>Run <code>devtools::check()</code> and <code>air format</code>.</li>
-</ol></div>
-<div class="section level3">
-<h3 id="modify-an-existing-functions-arguments">Modify an existing function’s arguments<a class="anchor" aria-label="anchor" href="#modify-an-existing-functions-arguments"></a></h3>
-<ol style="list-style-type: decimal"><li>Update the function body and roxygen <code>@param</code> / <code>@return</code>.</li>
-<li>Update all tests that call the function.</li>
-<li>Run <code>devtools::document()</code>.</li>
-<li>Check if snapshots need updating (run tests, review diffs, accept or reject).</li>
-<li>Commit with a clear message.</li>
-</ol></div>
-<div class="section level3">
-<h3 id="add-a-new-test-file">Add a new test file<a class="anchor" aria-label="anchor" href="#add-a-new-test-file"></a></h3>
-<p>See <strong><code>tests/testthat/AGENTS.md</code></strong> for the full test-suite conventions (file/naming, expectations, snapshots, RNG seeding).</p>
-</div>
-<div class="section level3">
-<h3 id="update-package-version-and-news">Update package version and news<a class="anchor" aria-label="anchor" href="#update-package-version-and-news"></a></h3>
-<p><code>NEWS.md</code> and the dev version are managed by <a href="https://fledge.cynkra.com" class="external-link">fledge</a> — <strong>do not hand-edit <code>NEWS.md</code></strong> (its header says as much). Entries are generated from commit messages and grouped by Conventional Commit type (Features, Bug fixes, Chore, Refactoring), so the way to shape a changelog entry is to write a clear, conventionally-typed commit message (see Pull Requests below).</p>
 <ul><li>
-<code>fledge::bump_version()</code> bumps the <code>DESCRIPTION</code> version and assembles <code>NEWS.md</code> from the commits since the last bump; a scheduled GitHub Action (<code>.github/workflows/fledge.yaml</code>) also runs this on <code>main</code>.</li>
-<li>Reference the related issue in the commit message (e.g. <code>(#64)</code>) so it carries through to the changelog.</li>
-</ul><blockquote>
-<p><strong>Deviation from tidyverse/r-lib</strong>: those packages have contributors hand-add a <code>NEWS.md</code> bullet (and order bullets alphabetically by function). This package does <strong>not</strong> — fledge derives the changelog from commits, so skip the manual bullet entirely and put the effort into the commit message instead.</p>
-</blockquote>
-</div>
-</div>
+<strong>Add / change a function</strong>: edit the roxygen alongside it, <code>devtools::document()</code>, update or add tests (and review any snapshot diffs), then <code>air format .</code> and <code>devtools::check()</code>. New non-internal topics also go in <code>_pkgdown.yml</code> (see <em>Documentation</em>); test conventions are in <strong><code>tests/testthat/AGENTS.md</code></strong>.</li>
+<li>
+<strong>Version &amp; news</strong>: <code>NEWS.md</code> and the dev version are managed by <a href="https://fledge.cynkra.com" class="external-link">fledge</a> (<code>fledge::bump_version()</code>, plus a scheduled Action on <code>main</code>) — <strong>do not hand-edit <code>NEWS.md</code></strong>. The changelog is derived from commit messages grouped by Conventional Commit type, so shape entries via clear, conventionally-typed messages (see <em>Pull Requests</em>), not manual bullets.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="pull-requests">Pull Requests<a class="anchor" aria-label="anchor" href="#pull-requests"></a></h2>
 <blockquote>
@@ -243,7 +212,7 @@
 <ul><li>
 <strong>Always update PR title and description</strong> when opening the PR and after committing. The description must capture the change’s <em>current</em> state, not a revision/process log.</li>
 <li>
-<strong>PRs are squash-merged</strong>, so the <strong>PR title becomes the single commit on <code>main</code></strong> — and that commit is what <code>fledge</code> reads to build <code>NEWS.md</code> (see <em>Update package version and news</em> above). The PR title is therefore the load-bearing message: it <strong>must</strong> be a valid Conventional Commit. Individual commits on the branch are squashed away, so their messages are not consumed by <code>fledge</code> — a clean history still helps review, but the title is what ships.</li>
+<strong>PRs are squash-merged</strong>, so the <strong>PR title becomes the single commit on <code>main</code></strong> — and that commit is what <code>fledge</code> reads to build <code>NEWS.md</code> (see <em>Common Tasks → Version &amp; news</em> above). The PR title is therefore the load-bearing message: it <strong>must</strong> be a valid Conventional Commit. Individual commits on the branch are squashed away, so their messages are not consumed by <code>fledge</code> — a clean history still helps review, but the title is what ships.</li>
 <li>
 <strong>Titles follow Conventional Commits</strong> — <code>&lt;type&gt;: &lt;summary&gt;</code> or <code>&lt;type&gt;(&lt;scope&gt;): &lt;summary&gt;</code>, where <code>type</code> is one of <code>feat</code>, <code>fix</code>, <code>docs</code>, <code>refactor</code>, <code>test</code>, <code>chore</code>, etc. (e.g. <code>feat: add scenario-scoped dqrng pcg64 RNG backend</code>, <code>docs(openspec): propose registry, manifest, and task-tables changes</code>). Use the imperative mood and keep the summary concise.</li>
 <li>
@@ -274,8 +243,7 @@
 <strong>Static branching</strong> (default) — <code>tar_map()</code> mints one named target per shard at sourcing time.</li>
 <li>
 <strong>Dynamic branching</strong> (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.</li>
-</ul><p>The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from <code>ssd-define-scenario</code> and <code>dqrng-init</code> (no dependencies). Each step is a coherent working state; parallel work streams are encouraged.</p>
-<p><strong>Keep the roadmap and its Mermaid graph (TARGETS-DESIGN.md §12) up to date as part of each change</strong> — add/rename nodes and edges when a change is proposed, and update each node’s status colour as it progresses: <strong>green = archived, yellow = done</strong> (implemented, not yet archived), <strong>red = proposed</strong> (artifacts exist, not implemented), <strong>unfilled = open</strong> (roadmap only). The colours are Mermaid <code>classDef</code>s applied via <code>class</code> lines at the foot of the graph. <strong>Archived (green) nodes are collected in the <code>archived_box</code> subgraph</strong> — when a step is archived, move its node declaration into that subgraph as well as giving it the <code>archived</code> class, so the box always holds exactly the archived nodes.</p>
+</ul><p>The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from <code>ssd-define-scenario</code> and <code>dqrng-init</code> (no dependencies). Each step is a coherent working state; parallel work streams are encouraged. <strong>Keep its Mermaid graph current as part of each change</strong> — see <code>openspec/AGENTS.md</code> for the node-colour and <code>archived_box</code> rules.</p>
 </div>
 </div>
 <div class="section level2">
