@@ -126,6 +126,27 @@ test_that("manifest: assembler prefers a shard's recorded sidecar", {
   expect_false(identical(entry$sha256, ssd_file_sha256(parquet)))
 })
 
+test_that("manifest: re-assembly after new shards appear unions them in", {
+  dir <- withr::local_tempdir()
+  first <- "fit/dataset=boron/sim=1/rescale=FALSE"
+  parquet1 <- file.path(dir, first, "part.parquet")
+  dir.create(dirname(parquet1), recursive = TRUE)
+  writeLines("shard-one", parquet1)
+  assembled <- ssd_assemble_manifest(dir)$completed_shards
+  expect_named(assembled, first)
+  sha_first <- assembled[[first]]$sha256
+
+  # Expand: a second shard's Parquet appears, then we assemble again.
+  second <- "fit/dataset=boron/sim=2/rescale=FALSE"
+  parquet2 <- file.path(dir, second, "part.parquet")
+  dir.create(dirname(parquet2), recursive = TRUE)
+  writeLines("shard-two", parquet2)
+
+  reassembled <- ssd_assemble_manifest(dir)$completed_shards
+  expect_setequal(names(reassembled), c(first, second))
+  expect_identical(reassembled[[first]]$sha256, sha_first)
+})
+
 test_that("manifest: a shard with no Parquet is absent from completed_shards", {
   dir <- withr::local_tempdir()
   present <- "fit/dataset=boron/sim=1/rescale=FALSE"

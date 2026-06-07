@@ -1766,6 +1766,54 @@ directory):
 Restart property for dqrng (same `(seed, state)` ⇒ same draw
 sequence) is verified by `scripts/experiment-dqrng-hash.R`.
 
+### 8.6 The incremental loop — run, assemble, expand, re-assemble
+
+The pieces above compose into one repeatable cycle: **run a scenario,
+assemble, expand the scenario, run only the missing pieces, assemble
+again** — with no redundant recomputation. It works because every step is
+a pure function of the *current* state, never an accumulation of edits:
+
+1. **Run.** `tar_make()` writes one Parquet per shard under the scenario's
+   layout root (§5). Path-axis growth and inner-axis rewrite (§8.1–§8.2)
+   are exactly the rules that decide which shards a *later* run rebuilds.
+2. **Assemble.** `ssd_assemble_manifest()` walks the results tree and
+   rebuilds `completed_shards` from whatever Parquets exist (§8.5),
+   preferring each shard's `meta.json` sidecar and hashing the rest. It
+   reads the manifest head left by `ssd_write_manifest()` and replaces
+   only the tail.
+3. **Expand.** Edit the scenario object — append a dataset, grow `nsim`,
+   add a `min_pmix`, widen `nrow` — and re-source `_targets.R`. The shard
+   set is re-derived from the expanded scenario at sourcing time (§6
+   static branching).
+4. **Run the missing pieces.** `tar_make()` again. Path-axis growth mints
+   and builds *only* the new shards and skips the rest (cache-by-
+   existence, §8.1); inner-axis growth atomically rewrites *only* the
+   affected shards (§8.2). Nothing else recomputes.
+5. **Assemble again.** `ssd_assemble_manifest()` re-walks the tree. Because
+   it rebuilds the tail from disk every call, the second assembly is
+   **idempotent and monotone under growth**: the new shards appear, the
+   untouched ones keep their (byte-identical) entries, and the result is
+   their union — no merge bookkeeping, no stale entries to prune.
+
+**Two ordering facts make the loop safe.**
+
+- *Write the head before you assemble.* The head is a pure function of the
+  scenario (§8.5), and `ssd_write_manifest()` rewrites the *whole* file
+  with the head alone — it does not preserve a previous tail. So after an
+  **expansion** the head must be re-written from the *expanded* scenario
+  (otherwise it still describes the smaller grid), and the assemble must
+  follow it to rebuild the tail from disk. The runner's contract is
+  therefore *write-head-then-assemble-tail* on every (re-)run: the head
+  always matches the current scenario, the tail always matches the shards
+  on disk, and the two cannot drift across runs (the within-run case is §6
+  static branching).
+- *Growth keeps the layout root; re-layout starts a fresh tree.* The
+  results root is keyed by `partition_by` (`layout=<hash>`, §5), so growing
+  along existing axes accretes into the *same* tree and reuses its cache
+  and manifest. Changing `partition_by` itself is not growth — it mints a
+  new layout root with its own (initially empty) manifest, leaving the old
+  tree intact rather than migrating it.
+
 ---
 
 ## 9. Limitations

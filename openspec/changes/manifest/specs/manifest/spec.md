@@ -43,3 +43,7 @@ The package SHALL provide a manifest assembler that builds the manifest's `compl
 #### Scenario: A shard whose Parquet is absent is absent from completed_shards
 - **WHEN** a shard's Parquet was not written and the assembler runs
 - **THEN** that shard's partition path SHALL NOT appear in `completed_shards`
+
+#### Scenario: Re-assembly after new shards appear unions them with existing entries
+- **WHEN** a manifest has been assembled, further shard Parquets are then written under the results tree (a scenario expansion), and the assembler is run again
+- **THEN** `completed_shards` SHALL contain entries for both the pre-existing and the newly written shards, and the entry for an unchanged shard SHALL be unchanged

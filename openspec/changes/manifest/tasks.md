@@ -27,4 +27,5 @@
 - [x] 6.1 `tests/testthat/test-manifest.R`: write/read round-trip preserves declarative fields and the session-info block (incl. the `r`/`dqrng`/`ssdtools` subset), with `seed`/`nboot` whole numbers and logical knobs intact
 - [x] 6.2 `ssd_record_shard()` writes a per-shard `meta.json` sidecar; concurrent records do not collide (distinct sidecars)
 - [x] 6.3 Assembler builds `completed_shards` by hashing shards on disk; prefers a sidecar's recorded sha when present; a shard with no Parquet is absent
-- [x] 6.4 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`
+- [x] 6.4 Re-assembly is idempotent: after a manifest is assembled and a further shard Parquet appears (an expansion), re-running the assembler unions the new shard in and leaves the unchanged shard's entry intact (`TARGETS-DESIGN.md` §8.6)
+- [x] 6.5 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`
