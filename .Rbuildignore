@@ -6,6 +6,7 @@
 ^pkgdown$
 ^revdep$
 ^scripts$
+^exploration$
 ^codecov\.yml$
 ^\.covrignore$
 ^cran-comments\.md$

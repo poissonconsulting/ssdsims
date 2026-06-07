@@ -297,12 +297,12 @@
           range_shape2: {0.05, 20}
           dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
         hc grid:
+          ci: FALSE (setting)
           nboot: 1000
           ci_method: weighted_samples
           parametric: TRUE
           est_method: multi (setting)
           proportion: 0.05 (setting)
-          ci: FALSE (setting)
           samples: FALSE (setting)
         partition_by:
           sample: dataset, sim, replace
@@ -338,12 +338,12 @@
           range_shape2: {0.05, 20}
           dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
         hc grid:
+          ci: TRUE (setting)
           nboot: 100, 1000
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
           est_method: multi, geometric (setting)
           proportion: 0.05, 0.1 (setting)
-          ci: TRUE (setting)
           samples: FALSE (setting)
         partition_by:
           sample: dataset, sim, replace

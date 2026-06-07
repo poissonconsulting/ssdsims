@@ -75,26 +75,37 @@ test_that("scenario-definition: minimal construction stores declarative fields",
   expect_named(
     s$hc,
     c(
+      "ci",
       "nboot",
       "ci_method",
       "parametric",
       "est_method",
       "proportion",
-      "ci",
       "samples"
     )
   )
   expect_identical(s$hc$ci, FALSE)
 })
 
-test_that("scenario-definition: simulation settings are contiguous after the axes", {
+test_that("scenario-definition: ci leads its gated hc knobs in the signature", {
   fmls <- names(formals(ssd_define_scenario))
-  settings <- c("dists", "est_method", "proportion", "ci", "samples")
-  idx <- match(settings, fmls)
-  # Contiguous and in this order.
-  expect_identical(idx, seq(idx[[1L]], length.out = length(settings)))
-  # Immediately after the last cross-join axis, and before the partitioning args.
-  expect_identical(fmls[[idx[[1L]] - 1L]], "parametric")
+  # `dists` (the fit-level setting) then `ci` and the knobs it gates: the
+  # bootstrap axes `nboot`/`ci_method`/`parametric`, then the within-task hc
+  # settings `est_method`/`proportion`/`samples`. Contiguous, after the last
+  # structural axis (`range_shape2`) and before the partitioning args.
+  group <- c(
+    "dists",
+    "ci",
+    "nboot",
+    "ci_method",
+    "parametric",
+    "est_method",
+    "proportion",
+    "samples"
+  )
+  idx <- match(group, fmls)
+  expect_identical(idx, seq(idx[[1L]], length.out = length(group)))
+  expect_identical(fmls[[idx[[1L]] - 1L]], "range_shape2")
   expect_identical(fmls[[max(idx) + 1L]], "partition_by")
 })
 

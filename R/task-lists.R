@@ -260,18 +260,17 @@ ssd_run_scenario_baseline <- function(scenario) {
   fit_out <- rlang::set_names(fit_tbl$fits, fit_tbl$fit_id)
 
   # --- hc step: seed then estimate hc for each fit against its hc-grid row ---
-  # `ci` is a carried column (single-valued, not an hc axis), read here just
-  # like the `n_max` carried column on `sample` tasks.
+  # `ci`, `est_method`, `proportion`, and `samples` are hc *settings* (not axes):
+  # read from the scenario and applied uniformly, not pulled from the task row.
+  # Only the bootstrap axes (`nboot`/`ci_method`/`parametric`) vary per task.
   hc_tbl <- tasks$hc
-  hc_args <- hc_tbl[c("ci", "nboot", "ci_method", "parametric")]
+  hc_args <- hc_tbl[c("nboot", "ci_method", "parametric")]
   hc_args$fits <- fit_out[hc_tbl$fit_id]
   hc_args$primer <- task_primers(hc_tbl, "hc")
-  # `est_method` is an hc setting (like `proportion`/`samples`), applied
-  # uniformly: each task summarises every requested method from its single
-  # bootstrap sample set, so it is passed whole rather than as a task column.
   hc_tbl$hc <- purrr::pmap(
     hc_args,
     hc_data_task_primer,
+    ci = scenario$hc$ci,
     proportion = scenario$hc$proportion,
     est_method = scenario$hc$est_method,
     samples = scenario$hc$samples,

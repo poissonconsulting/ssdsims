@@ -175,6 +175,7 @@ scenario_step_slice <- function(
     ),
     hc = list(
       hc = list(
+        ci = scenario$hc$ci,
         proportion = scenario$hc$proportion,
         est_method = scenario$hc$est_method,
         samples = scenario$hc$samples
@@ -387,7 +388,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
     hc <- hc_data_task_primer(
       fits = fits,
       proportion = scenario$hc$proportion,
-      ci = t$ci,
+      ci = scenario$hc$ci,
       nboot = t$nboot,
       est_method = scenario$hc$est_method,
       ci_method = t$ci_method,

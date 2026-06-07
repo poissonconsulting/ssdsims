@@ -18,13 +18,13 @@ ssd_define_scenario(
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
+  dists = ssdtools::ssd_dists_bcanz(),
+  ci = FALSE,
   nboot = 1000,
   ci_method = "weighted_samples",
   parametric = TRUE,
-  dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
   proportion = 0.05,
-  ci = FALSE,
   samples = FALSE,
   partition_by = NULL,
   bundle = NULL,
@@ -76,6 +76,10 @@ upper bounds for the shape1 parameter.}
 \item{range_shape2}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape2 parameter.}
 
+\item{dists}{A character vector of the distribution names.}
+
+\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
+
 \item{nboot}{A count of the number of bootstrap samples to use to estimate the confidence limits. A value of 10,000 is recommended for official guidelines.}
 
 \item{ci_method}{A string specifying which method to use for estimating
@@ -99,8 +103,6 @@ calculate the confidence limits (and SE) from the single set of samples.}
 
 \item{parametric}{A flag specifying whether to perform parametric bootstrapping as opposed to non-parametrically resampling the original data with replacement.}
 
-\item{dists}{A character vector of the distribution names.}
-
 \item{est_method}{A string specifying whether to estimate directly from
 the model-averaged cumulative distribution function (\code{est_method = 'multi'}) or
 to take the arithmetic mean of the estimates from the
@@ -109,8 +111,6 @@ by the AICc derived weights  (\code{est_method = 'arithmetic'}) or
 or to use the geometric mean instead (\code{est_method = 'geometric'}).}
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
-
-\item{ci}{A flag specifying whether to estimate confidence intervals (by bootstrapping).}
 
 \item{samples}{A logical scalar (default \code{FALSE}): retain the bootstrap draws
 in the hc result's \code{samples} list-column (passed to \code{\link[ssdtools:ssd_hc]{ssdtools::ssd_hc()}}).
