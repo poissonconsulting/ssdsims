@@ -648,12 +648,15 @@ edge_block <- function(names) {
 #' never re-uploaded (content-hash skip) and a per-shard upload failure isolates
 #' to its own branch. Pass [ssd_upload_dryrun()] for no-op upload targets that
 #' reach no network (exercising the DAG shape offline / in CI) or
-#' [ssd_upload_azure()] to ship to Azure. The destination's
-#' [ssd_test_upload()] probe is run **once up front** (when the factory is
-#' called, before `tar_make()`), so missing credentials or an unreachable
-#' destination abort before any compute. The per-task results are byte-identical
-#' across all three `upload` modes; only the presence and behaviour of the
-#' `upload_<step>` targets differ.
+#' [ssd_upload_azure()] to ship to Azure. The factory performs **no** network
+#' I/O and never runs the [ssd_test_upload()] probe: it only assembles the
+#' target list, so sourcing `_targets.R` (which `targets` does on every
+#' `tar_make()`, `tar_manifest()`, `tar_visnetwork()`, and on each worker) stays
+#' side-effect free. Run `ssd_test_upload(upload)` yourself as a one-line
+#' preflight before `tar_make()` to confirm credentials and connectivity up
+#' front; a missing credential still fails loud per-shard at upload time as a
+#' backstop. The per-task results are byte-identical across all three `upload`
+#' modes; only the presence and behaviour of the `upload_<step>` targets differ.
 #'
 #' @inheritParams scenario_dataset
 #' @param ... Unused; must be empty. Its presence forces `root`, `upload`, and
@@ -705,13 +708,15 @@ ssd_scenario_targets <- function(
   }
   rlang::check_installed(c("targets", "tarchetypes"))
 
-  # The front-door creds/connectivity probe, run once up front (at sourcing
-  # time, before `tar_make()` builds anything) so an auth/network failure aborts
-  # before any compute - never deep in the DAG on a worker (section 6.1). NULL
-  # adds no upload at all; a dry run is trivially OK.
-  if (!is.null(upload)) {
-    ssd_test_upload(upload)
-  }
+  # The factory only assembles the target list - it performs no network I/O and
+  # deliberately never runs the `ssd_test_upload()` probe. `_targets.R` is
+  # re-sourced by every `targets` operation (`tar_make()`, but also
+  # `tar_manifest()`, `tar_visnetwork()`, `tar_outdated()`) and on *every* worker
+  # in a `crew`/cluster run, so probing here would fire a credential/marker-blob
+  # round-trip on each of those - not "once up front" at all. The probe is the
+  # user's explicit one-line preflight (`ssd_test_upload(upload)` at the prompt
+  # before `tar_make()`); a missing credential still fails loud per-shard at
+  # `ssd_upload_shard()` time as a backstop (section 6.1).
 
   sample_dir <- file.path(root, "sample")
   fit_dir <- file.path(root, "fit")

@@ -106,8 +106,9 @@ ssd_test_upload(ssd_upload_dryrun())
 ```
 
 Build a scenario and hand it to the factory with `upload = ssd_upload_dryrun()`.
-The factory runs the `ssd_test_upload()` probe **once up front**, then pairs each
-step shard with a no-op `upload_<step>` target:
+You run `ssd_test_upload()` yourself as a preflight (above); the factory does no
+network I/O of its own --- it just pairs each step shard with a no-op
+`upload_<step>` target:
 
 ```{r}
 #| label: scenario

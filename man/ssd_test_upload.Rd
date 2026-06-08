@@ -17,8 +17,11 @@ ssd_test_upload(upload)
 The front-door check, dispatched on the upload object's class, that confirms
 \strong{before any compute} whether the destination is reachable and the
 credentials are in the right place (\code{TARGETS-DESIGN.md} section 6.1). Run it
-as a one-liner at the prompt before \code{tar_make()}, or let
-\code{\link[=ssd_scenario_targets]{ssd_scenario_targets()}} run it once up front for you.
+as a one-liner at the prompt before \code{tar_make()} - it is the user's explicit
+preflight. \code{\link[=ssd_scenario_targets]{ssd_scenario_targets()}} deliberately does \strong{not} call it (the
+factory does no network I/O, so sourcing \verb{_targets.R} stays side-effect
+free); a missing credential still fails loud per-shard at
+\code{\link[=ssd_upload_shard]{ssd_upload_shard()}} time as a backstop.
 }
 \details{
 For an Azure destination it resolves the credentials from the environment

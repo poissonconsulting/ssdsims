@@ -333,6 +333,30 @@ test_that("cloud-upload: a dry-run upload pairs one upload target per shard", {
   }
 })
 
+test_that("cloud-upload: the factory never runs the ssd_test_upload() probe", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
+  scenario <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm"
+  )
+  # An Azure destination with no credentials present: if the factory probed, this
+  # would abort. It must not - building the target list does no network I/O.
+  az <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+  probed <- FALSE
+  local_mocked_bindings(
+    ssd_test_upload = function(upload) {
+      probed <<- TRUE
+      invisible(NULL)
+    }
+  )
+  expect_no_error(ssd_scenario_targets(scenario, upload = az))
+  expect_false(probed)
+})
+
 test_that("cloud-upload: root, upload, and cue must be passed by name", {
   scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
   expect_snapshot(error = TRUE, {
@@ -363,9 +387,8 @@ test_that("cloud-upload: the step shard commands are identical across upload mod
     dists = "lnorm"
   )
   az <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
-  # Skip the up-front Azure probe (no credentials / `AzureStor` in CI); this test
-  # is about the step commands being upload-mode-invariant, not the probe.
-  local_mocked_bindings(ssd_test_upload = function(upload) invisible(NULL))
+  # No probe to mock: the factory never runs `ssd_test_upload()`, so building the
+  # target list does no network I/O even for an Azure destination without creds.
   step_command <- function(tg, step) {
     tg[[switch(step, sample = 1L, fit = 2L, hc = 3L)]][[paste0(
       step,
