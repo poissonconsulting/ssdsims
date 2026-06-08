@@ -37,32 +37,6 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
 `[change]` whose every prerequisite has landed but which has no artifacts yet
 (blue/`ready` in the DAG) is also queued, ready to propose.
 
-## Decisions
-
-<!-- Durable decisions that shape the roadmap. The ground-truth design rationale
-     still lives in TARGETS-DESIGN.md; this records only what redirects the plan. -->
-
-- **2026-06-07 — The `manifest` concept is parked, not removed.** The
-  per-scenario manifest landed (`R/manifest.R`, #114) but has **no live
-  consumer**: the shard runner deliberately does not depend on it, and its
-  intended readers (`replay-helper`, `shard-completeness-assert`) are not yet
-  built, so nothing in the shipped pipeline writes, records, or assembles a
-  manifest today. Rather than ship four public functions with no caller, the
-  writer/reader/recorder/assembler (`ssd_write_manifest()`,
-  `ssd_read_manifest()`, `ssd_record_shard()`, `ssd_assemble_manifest()`) are
-  **un-exported but kept** (now `@keywords internal`, dropped from `NAMESPACE`
-  and the pkgdown reference; the code, tests, and `manifest` spec stay). The
-  decision to re-export and wire them in is deferred to the
-  `manifest-revival` task below, to be taken with the first real consumer.
-- **2026-06-07 — Hashing dropped from the cloud-upload path, deferred with the
-  manifest.** With no verification consumer yet, `ssd_upload_shard()` no longer
-  computes a cloud sha256, and `TARGETS-DESIGN.md` §6.1 / the `cloud-upload`
-  spec record no upload hash — a shard is shipped and read back **in place**
-  (`ssd_open_uploaded()` / `ssd_summarise_uploaded()`), the row data itself the
-  round-trip check. Hash-based transfer-corruption detection returns with
-  `manifest-revival`. The parked `manifest`'s own per-shard sha256 (in
-  `R/manifest.R`, §7/§8.5) is untouched — it stays kept-but-internal.
-
 ## Now
 
 <!-- What is actively being worked on this cycle. -->
@@ -131,3 +105,29 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
 - ✅ 2026-06-07 [cluster-pipeline] [🔗](openspec/changes/archive/2026-06-07-cluster-pipeline/) — Editable SLURM `crew.cluster` targets template (`inst/targets-templates/cluster/`) with a standalone connectivity/worker preflight and a zero-to-running-job guide (#115). _Real-SLURM end-to-end run (tasks 4.1/4.2) remains a documented manual/lab step._
 - ✅ 2026-06-07 [cloud-upload] [🔗](openspec/changes/archive/2026-06-07-cloud-upload/) — Typed, self-validating upload destinations on the runner (`ssd_upload_azure()` / `ssd_upload_dryrun()` + class-dispatched generics); BREAKING removal of `scenario$upload` (#114/#129).
 - ✅ 2026-06-07 [dual-summary-outputs] [🔗](openspec/changes/archive/2026-06-07-dual-summary-outputs/) — Optional `path_with_samples` full summary retaining the `dists`/`samples` list-columns, emitted iff `scenario$hc$samples` is `TRUE` (#140).
+
+## Decisions
+
+<!-- Durable decisions that shape the roadmap. The ground-truth design rationale
+     still lives in TARGETS-DESIGN.md; this records only what redirects the plan. -->
+
+- **2026-06-07 — The `manifest` concept is parked, not removed.** The
+  per-scenario manifest landed (`R/manifest.R`, #114) but has **no live
+  consumer**: the shard runner deliberately does not depend on it, and its
+  intended readers (`replay-helper`, `shard-completeness-assert`) are not yet
+  built, so nothing in the shipped pipeline writes, records, or assembles a
+  manifest today. Rather than ship four public functions with no caller, the
+  writer/reader/recorder/assembler (`ssd_write_manifest()`,
+  `ssd_read_manifest()`, `ssd_record_shard()`, `ssd_assemble_manifest()`) are
+  **un-exported but kept** (now `@keywords internal`, dropped from `NAMESPACE`
+  and the pkgdown reference; the code, tests, and `manifest` spec stay). The
+  decision to re-export and wire them in is deferred to the
+  `manifest-revival` task below, to be taken with the first real consumer.
+- **2026-06-07 — Hashing dropped from the cloud-upload path, deferred with the
+  manifest.** With no verification consumer yet, `ssd_upload_shard()` no longer
+  computes a cloud sha256, and `TARGETS-DESIGN.md` §6.1 / the `cloud-upload`
+  spec record no upload hash — a shard is shipped and read back **in place**
+  (`ssd_open_uploaded()` / `ssd_summarise_uploaded()`), the row data itself the
+  round-trip check. Hash-based transfer-corruption detection returns with
+  `manifest-revival`. The parked `manifest`'s own per-shard sha256 (in
+  `R/manifest.R`, §7/§8.5) is untouched — it stays kept-but-internal.
