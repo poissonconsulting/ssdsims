@@ -64,13 +64,13 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
 - 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Also establish `print()` methods for all objects. Independent.
 - 😀 [canonical-call-sites] Sweep the remaining public constructors (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments are passed in signature order, as the `ssd_define_scenario()` pass already did. Independent.
 - 😀 [cleanup-as-ssd-data] Add a public `as_ssd_data()` coercing the already-named input forms into a validated `ssd_data()` collection. Proposed.
-- 🐢 [manifest-revival] Revisit the parked `manifest` concept (see _Decisions_): wire it into a real consumer and re-export the writer/reader/recorder/assembler, or fold it down further. Take this up with the first of `replay-helper` / `shard-completeness-assert` that needs trusted per-shard provenance. **Hashing is revisited here too** — the cloud-upload sha256 (recording an upload hash / shipping the per-shard `meta.json` sidecar alongside the blob for transfer-corruption detection) was dropped with the manifest and comes back with it.
 
 ## Bluesky
 
 <!-- Aspirational. Not a commitment. -->
 
 - 💡 [dataset-provenance] Stop transporting generated datasets inline; store only the name + generator reference + `.seed` and regenerate from that provenance. The escape hatch `scenario-input-types` defers — not a near-term need while datasets are tiny. Off the DAG.
+- 🐢 [manifest-revival] Revisit the parked `manifest` concept (see _Decisions_): wire it into a real consumer and re-export the writer/reader/recorder/assembler, or fold it down further. Take this up with the first of `replay-helper` / `shard-completeness-assert` that needs trusted per-shard provenance. **Hashing is revisited here too** — the cloud-upload sha256 (recording an upload hash / shipping the per-shard `meta.json` sidecar alongside the blob for transfer-corruption detection) was dropped with the manifest and comes back with it.
 
 ## Done
 
