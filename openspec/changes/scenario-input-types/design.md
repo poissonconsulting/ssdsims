@@ -5,7 +5,7 @@
 The plan was reworked during exploration (`exploration/reprexes-and-api.md`, `exploration/ssd-gen-reprex.md`). The earlier draft put a `.seed` argument and eager generator materialisation **inside `ssd_data()` / the constructor**. Two empirical findings retired that shape:
 
 1. **`ssd_sim_data()` cannot back a seedable generation contract.** Its generator methods seed with L'Ecuyer-CMRG off the *sim index* and **ignore their `seed=` argument** (verified: `seed = 42` ≡ `seed = 999`). Routed under the dqrng backend, the L'Ecuyer `RNGkind` toggle even moves the dqrng state as a *side effect* (not from `.seed`), so "different `.seed` → different data" fails and the dqrng-only check misfires. Only a **direct draw under dqrng** satisfies the contract (validated in the reprex).
-2. **A materialised generator is a fixture the scenario *resamples*, indistinguishable from a data frame.** The `sample` step draws `slice_sample(data, n = max(nrow), replace)` from the stored tibble, and this change stores **no** generator descriptor (provenance deferred to `dataset-provenance`, §12). So accepting a generator *function* buys no downstream capability over a data frame; the value it adds is *reproducibly producing the fixture* — a **generation** concern, separable from scenario definition.
+2. **A materialised generator is a fixture the scenario *resamples*, indistinguishable from a data frame.** The `sample` step draws `slice_sample(data, n = max(nrow), replace)` from the stored tibble, and this change stores **no** generator descriptor (provenance deferred to `dataset-provenance`). So accepting a generator *function* buys no downstream capability over a data frame; the value it adds is *reproducibly producing the fixture* — a **generation** concern, separable from scenario definition.
 
 So the design splits into **two helpers**: `ssd_scenario_data()` (assembly/validation) and `ssd_gen()` (generation). `ssd_run_scenario()` / `ssd_sim_data()` are untouched.
 
@@ -17,11 +17,11 @@ So the design splits into **two helpers**: `ssd_scenario_data()` (assembly/valid
 - Seed generation reproducibly and **independently of the scenario**, with the dataset **name** as the dqrng stream and a **required** `.seed`, so reproducibility is hard to get wrong.
 - Keep `ssd_define_scenario()` RNG-free and inert (generation happens before it).
 - Rename `ssd_data()` → `ssd_scenario_data()` to escape the `ssdtools::ssd_data(x)` clash, and route all scenario dataset input through it.
-- Reuse `task-rng-postcheck` (#117) for the dqrng gate (`dqrng_usable()`) and the per-draw witness (`chk_dqrng_backend_intact()`).
+- Reuse `task-rng-postcheck` for the dqrng gate (`dqrng_usable()`) and the per-draw witness (`chk_dqrng_backend_intact()`).
 
 **Non-Goals:**
 
-- Persisting datasets to Parquet, or a name-only registry that *regenerates* them — deferred to `registry` / `dataset-provenance` (§1.1, §12). Here the realised tibble rides on the scenario.
+- Persisting datasets to Parquet, or a name-only registry that *regenerates* them — deferred to `registry` / `dataset-provenance` (§1.1). Here the realised tibble rides on the scenario.
 - "Fresh data per sim" (the legacy `ssd_run_scenario(gen, …)` semantics). A materialised generator is a single fixture that the scenario resamples; reproducing per-sim regeneration is a separate, deferred concern.
 - Per-task simulation RNG (§2). The scenario's `seed` governs `sample`/`fit`/`hc`; the generation `.seed` is separate and plays **no** part in the task primers.
 - Recording generator provenance (function, `.seed`, args) as scenario metadata — deferred (`dataset-provenance`). For now the **generator code is the provenance** and the realised bytes are transported.
@@ -59,12 +59,12 @@ local_dqrng_state(.seed, task_primer(list(dataset = "<name>")))
 
 so the dataset **name is the dqrng `stream`** and `.seed` is the base seed. One `.seed` therefore fans out across every named generator on its own independent stream (`hash({dataset})` differs per name). One `.n` per call (the common case); differing sizes use multiple `ssd_gen()` calls spliced together. The scoped run restores the dqrng state and leaves global `.Random.seed` unchanged on return.
 
-### Decision: dqrng-backed generation, reusing `task-rng-postcheck` (#117)
+### Decision: dqrng-backed generation, reusing `task-rng-postcheck`
 
-`ssd_gen()` draws under an active `local_dqrng_backend()` (pcg64). It depends on #117:
+`ssd_gen()` draws under an active `local_dqrng_backend()` (pcg64). It depends on `task-rng-postcheck`:
 
-- **`dqrng_usable()`** gates every dqrng touch — `ssd_gen()` aborts with actionable `library(dqrng)` guidance when dqrng is not already loaded, never loading a user-RNG provider implicitly (consistent with #117 moving `dqrng` to `Suggests`).
-- **`chk_dqrng_backend_intact()`** is the post-hoc witness after each generator draw: it verifies the draw came from dqrng. With `.seed` required, the outcomes collapse to two — *drew from dqrng* (reproducible) or *pure / no draw* (reproducible) → ok; *escaped dqrng* (e.g. switched `RNGkind` and drew base R) → abort. This replaces the bespoke three-way base-R/dqrng state check of the earlier draft with #117's shared, tested helper.
+- **`dqrng_usable()`** gates every dqrng touch — `ssd_gen()` aborts with actionable `library(dqrng)` guidance when dqrng is not already loaded, never loading a user-RNG provider implicitly (consistent with `task-rng-postcheck` moving `dqrng` to `Suggests`).
+- **`chk_dqrng_backend_intact()`** is the post-hoc witness after each generator draw: it verifies the draw came from dqrng. With `.seed` required, the outcomes collapse to two — *drew from dqrng* (reproducible) or *pure / no draw* (reproducible) → ok; *escaped dqrng* (e.g. switched `RNGkind` and drew base R) → abort. This replaces the bespoke three-way base-R/dqrng state check of the earlier draft with `task-rng-postcheck`'s shared, tested helper.
 
 *Residual blind spot (accepted):* a generator reaching a C-level RNG with no R-visible state escapes detection — acceptable under the pure/no-side-effects contract.
 
@@ -87,10 +87,11 @@ The `data` argument must be an `ssdsims_data` object; the bare-data-frame, bare-
 ## Risks / Trade-offs
 
 - **Breaking rename + dropped convenience forms** → `ssd_data()` becomes `ssd_scenario_data()` and `ssd_define_scenario(ccme_boron, …)` becomes `ssd_define_scenario(ssd_scenario_data(ccme_boron), …)`; `name=` is gone. Mitigation: pre-1.0 package (`0.0.0.9xxx`); examples/tests/vignette/README updated in this change; the single-collection input is simpler to reason about.
-- **Dependency on an unmerged change (#117)** → `ssd_gen()` builds on `dqrng_usable()`/`chk_dqrng_backend_intact()`. Mitigation: sequence after #117 (or branch from it); recorded as a DAG edge (`task-rng-postcheck → scenario-input-types`).
+- **Dependency on `task-rng-postcheck`** → `ssd_gen()` builds on its `dqrng_usable()`/`chk_dqrng_backend_intact()` and the dqrng-as-`Suggests` move. `task-rng-postcheck` is booked under Done in `ROADMAP.md` but its code is **not yet in the tree** (helpers absent, dqrng still in `Imports`), so §3 of this change must land after it. Recorded as the `task-rng-postcheck → scenario-input-types` dependency.
 - **`ssd_gen()` runs user code and draws RNG** → it can be slow or throw for a buggy/expensive generator. Mitigation: datasets are tiny by assumption; the scoped backend restores global RNG; failures abort in the user frame naming the offending dataset; this stays out of the constructor.
 - **Materialise-once ≠ legacy per-sim** → a generator becomes one fixture the scenario resamples, not fresh data per sim. Mitigation: deliberate and documented; the helper split makes the fixture step explicit; per-sim regeneration is a separate deferred concern.
 - **Two-seed reproducibility story** → `scenario$seed` reproduces the experiment, each `ssd_gen(.seed)` reproduces a fixture. Mitigation: accepted; the realised bytes are transported, so day-to-day reproduction is by storage and `.seed` only regenerates a fixture from scratch.
+- **Inline transport bloats a serialised scenario if datasets grow** → contrary to the tiny-dataset assumption. Mitigation: the name-only / `registry` regeneration path (`dataset-provenance`) is the documented escape hatch.
 
 ## Migration Plan
 
@@ -106,6 +107,7 @@ Resolved during exploration:
 - *Eager-in-constructor vs. a generation helper* → a dedicated `ssd_gen()`, separate from `ssd_scenario_data()` and from the constructor.
 - *Generation seed source* → a required `ssd_gen(.seed)`, decoupled from `scenario$seed`, with the dataset name as the dqrng stream; row count is a required `.n`.
 - *dqrng-only enforcement* → reuse `task-rng-postcheck`'s `dqrng_usable()` + `chk_dqrng_backend_intact()`.
+- *Provenance recording* → deferred to `dataset-provenance`; the generator code is the provenance for now, and execution-environment tracking is out of scope.
 - *Naming* → `ssd_scenario_data()` (collection) + `ssd_gen()` (generators).
 
 No blocking questions remain. Revisit inline transport vs. name-only regeneration only if a real generator produces a dataset large enough to make scenario serialisation heavy (`dataset-provenance`).

@@ -30,9 +30,11 @@ if (dir.exists("inst/targets-templates/small")) {
 tar_make()
 
 # The `summary` target is `format = "file"`, so its value is the path to the
-# combined Parquet (the union of the hc shards).
-summary_path <- tar_read(summary)
-cat("Summary written to:", summary_path, "\n")
+# compact `summary.parquet` (the union of the hc shards). If the scenario sets
+# `samples = TRUE`, the target also tracks a full `summary-samples.parquet`, so
+# the value is a length-2 vector; peek at the compact estimate table.
+summary_paths <- tar_read(summary)
+cat("Summary written to:", summary_paths, sep = "\n")
 
 # Peek at the combined estimates (duckplyr is an ssdsims dependency).
-print(duckplyr::read_parquet_duckdb(summary_path))
+print(duckplyr::read_parquet_duckdb(summary_paths[[1L]]))

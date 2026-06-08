@@ -12,12 +12,12 @@
 - [ ] 2.4 Derive names: argument name → string itself (for the character form) → `expr_to_name()`; abort when no name is derivable; enforce unique names across the call
 - [ ] 2.5 Materialise each generator under a scoped `local_dqrng_state(.seed, task_primer(list(dataset = name)))` (name as the dqrng stream, `.seed` as the base seed) so one `.seed` fans out across all generators on independent streams; build each element as `tibble(Conc = fn(.n))`
 
-## 3. dqrng contract (reuse `task-rng-postcheck`, #117)
+## 3. dqrng contract (reuse `task-rng-postcheck`)
 
 - [ ] 3.1 Gate every dqrng touch in `ssd_gen()` behind `dqrng_usable()`; abort with actionable `library(dqrng)` (`>= 0.4.1`) guidance when dqrng is not already loaded; open a scoped `local_dqrng_backend()` for the materialisation
 - [ ] 3.2 After each generator runs, verify the draw came from dqrng via `chk_dqrng_backend_intact()`; abort (user-facing frame) when a generator escaped dqrng; a pure (no-draw) generator passes
 - [ ] 3.3 Confirm `ssd_gen()` leaves the global `.Random.seed` unchanged on return (scoped restore), even though generation draws RNG internally
-- [ ] 3.4 Record the dependency edge `task-rng-postcheck → scenario-input-types` (DESCRIPTION/`TARGETS-DESIGN.md` §12); sequence after #117 (or branch from `claude/laughing-tesla-SmDdr`)
+- [ ] 3.4 Before implementing §3, ensure `task-rng-postcheck` has actually landed — it supplies `dqrng_usable()`/`chk_dqrng_backend_intact()` and the dqrng-as-`Suggests` move (booked under Done in `ROADMAP.md` but not yet physically in the tree). The `task-rng-postcheck → scenario-input-types` dependency is recorded in `ROADMAP.md`
 
 ## 4. Wire into `ssd_scenario_data()` and the constructor
 

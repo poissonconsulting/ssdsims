@@ -62,7 +62,7 @@ list(
     summary,
     {
       hc_done
-      ssd_summarize(
+      ssd_summarise(
         "results/sample",
         "results/fit",
         "results/hc",

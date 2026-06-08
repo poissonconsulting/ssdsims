@@ -51,11 +51,11 @@ The package SHALL ship a `targets` pipeline template that builds the scenario as
 - **THEN** the scenario SHALL be a construction-time object and the per-step shard tables SHALL be computed at sourcing time to feed `tar_map()`'s `values`
 
 ### Requirement: A failing whole shard does not abort the run
-The step targets SHALL carry `error = "null"` so that a shard whose body fails entirely records its error (readable via `tar_meta()` after the run) and yields a `NULL` target without aborting `tar_make()`; the remaining shard targets SHALL still build and `ssd_summarize()` SHALL union whatever shards landed (`TARGETS-DESIGN.md` §6.2). Finer *partial* survival (a single bad task yielding a shorter shard) is out of scope here (`shard-failure-survival`).
+The step targets SHALL carry `error = "null"` so that a shard whose body fails entirely records its error (readable via `tar_meta()` after the run) and yields a `NULL` target without aborting `tar_make()`; the remaining shard targets SHALL still build and `ssd_summarise()` SHALL union whatever shards landed (`TARGETS-DESIGN.md` §6.2). Finer *partial* survival (a single bad task yielding a shorter shard) is out of scope here (`shard-failure-survival`).
 
 #### Scenario: One failing shard leaves the others built
 - **WHEN** one shard's body fails entirely during `tar_make()` and the other shards succeed
-- **THEN** the run SHALL NOT abort, the failed shard's error SHALL be readable via `tar_meta()`, the other shards' Parquets SHALL be written, and `ssd_summarize()` SHALL union the shards that landed
+- **THEN** the run SHALL NOT abort, the failed shard's error SHALL be readable via `tar_meta()`, the other shards' Parquets SHALL be written, and `ssd_summarise()` SHALL union the shards that landed
 
 ### Requirement: Targets results match the single-core baseline runner
 The per-task results produced by the targets pipeline SHALL be byte-identical (as read-back R values) to those produced by the single-core `ssd_run_scenario_baseline()` for the same scenario, because both install the same per-task `(seed, primer)` via the same primitives and results are order-independent (`TARGETS-DESIGN.md` §5/§6). The baseline runner thereby serves as the reference oracle that validates the targets-based runner.
@@ -65,10 +65,10 @@ The per-task results produced by the targets pipeline SHALL be byte-identical (a
 - **THEN** the per-task `sample`, `fit`, and `hc` results SHALL be equal across the two runs
 
 ### Requirement: A summary fan-in reads the result layers without re-running upstream
-The package SHALL provide `ssd_summarize()` that reads the `sample`, `fit`, and `hc` result directories (via `duckplyr`) and writes a combined `results/summary.parquet`, without depending on each shard target's value and without re-running upstream steps (`TARGETS-DESIGN.md` §6).
+The package SHALL provide `ssd_summarise()` that reads the `sample`, `fit`, and `hc` result directories (via `duckplyr`) and writes a combined `results/summary.parquet`, without depending on each shard target's value and without re-running upstream steps (`TARGETS-DESIGN.md` §6).
 
 #### Scenario: Summary reads landed shards
-- **WHEN** `ssd_summarize()` is run after the shard Parquets are written
+- **WHEN** `ssd_summarise()` is run after the shard Parquets are written
 - **THEN** it SHALL read the result layers from disk and write a combined summary, without recomputing any shard
 
 #### Scenario: Summary does not pull every shard value into R via targets
@@ -87,11 +87,23 @@ Because a step's Hive shard path depth/axes are a function of `partition_by`/`bu
 - **THEN** the root SHALL be identical
 
 ### Requirement: A target factory builds the whole pipeline from a scenario
-The package SHALL provide `ssd_scenario_targets(scenario, root)` that returns the complete list of `targets` objects for the static-branching pipeline — one `format = "file"`, `error = "null"` target per `partition_by` path cell per step (named by the step's path axes), the per-child upstream edges wiring each child shard to the parent shard(s) it reads, and the `summary` — written under `root` (default `scenario_results_dir(scenario)`). A `_targets.R` SHALL therefore reduce to building a scenario and calling the factory; the per-task results SHALL be unchanged.
+The package SHALL provide `ssd_scenario_targets(scenario, ..., root, upload, cue)` that returns the complete list of `targets` objects for the static-branching pipeline — one `format = "file"`, `error = "null"` target per `partition_by` path cell per step (named by the step's path axes), the per-child upstream edges wiring each child shard to the parent shard(s) it reads, and the `summary` — written under `root` (default `scenario_results_dir(scenario)`). The factory SHALL place `...` immediately after `scenario` and call `rlang::check_dots_empty()`, so `root`, `upload`, and `cue` MUST be passed by name and a positional or misspelled argument aborts. The `upload` argument is the **remote-destination sibling of `root`** (default `NULL`): with `upload = NULL` the factory SHALL emit no `upload_<step>` targets; with a non-`NULL` upload object (`ssd_upload_azure(...)` or `ssd_upload_dryrun()`) the factory SHALL pair each step shard with an `upload_<step>` target in the same `tar_map` (per the `cloud-upload` capability). A `_targets.R` SHALL therefore reduce to building a scenario and calling the factory; the per-task results SHALL be unchanged and independent of `upload`.
 
 #### Scenario: A `_targets.R` is just a scenario plus the factory call
 - **WHEN** a `_targets.R` does `source("scenario.R"); ssd_scenario_targets(scenario)` and `targets::tar_make()` runs
 - **THEN** every shard target SHALL build and the per-task results SHALL equal those of `ssd_run_scenario_baseline()` for the same scenario
+
+#### Scenario: root, upload, and cue must be passed by name
+- **WHEN** `ssd_scenario_targets()` is called with a positional argument after `scenario`, or a misspelled named argument
+- **THEN** `rlang::check_dots_empty()` SHALL abort with an informative error, so `root`/`upload`/`cue` are only ever supplied by name
+
+#### Scenario: upload defaults to no upload targets
+- **WHEN** `ssd_scenario_targets(scenario, root = ...)` is called without `upload`
+- **THEN** `upload` SHALL default to `NULL` and the returned target list SHALL contain no `upload_<step>` targets
+
+#### Scenario: a non-NULL upload pairs each shard with an upload target
+- **WHEN** `ssd_scenario_targets(scenario, upload = ssd_upload_dryrun())` is called
+- **THEN** the returned target list SHALL contain one `upload_<step>` target per step shard, paired in the same `tar_map`, with the per-task results unchanged from the `upload = NULL` run
 
 ### Requirement: The shard invalidation model is pinned to content-hash over format = "file"
 The shard step targets (`sample_step` / `fit_step` / `hc_step`, one per `partition_by` path cell) SHALL use **content-hash invalidation over their `format = "file"` Parquet outputs** as their pinned invalidation model (`TARGETS-DESIGN.md` §8), read observably as **cache-by-existence**: a shard SHALL be treated as up to date if and only if its output Parquet exists *and* the inputs its body depends on — its task-row set, the scenario fields it reads, and the parent shard target(s) it reads — are unchanged. A shard whose Parquet is missing SHALL rebuild; a shard whose inputs changed SHALL rebuild; a recomputed shard whose Parquet bytes are byte-identical to the prior write SHALL leave its dependents skipped (value-propagation). This model SHALL be a stated property of the pipeline factory, NOT an emergent `targets` default, so the downstream `path-axis-growth`, `shard-atomic-rewrite`, and `step-scenario-slice` changes finalise their expected cached-vs-rebuilt assertions against it.
@@ -177,3 +189,56 @@ Adding a value to an axis that is **not** in a step's `partition_by` (an *inner*
 #### Scenario: Adding a min_pmix rewrites the affected fit shards byte-stably and leaves the rest cached
 - **WHEN** a scenario is run through the targets pipeline, then re-run after adding one new `min_pmix` value to the scenario's `fit` grid (an inner axis for the `fit` step), and `tar_make()` is run again into the same per-layout results root
 - **THEN** every `fit` shard affected by the new `min_pmix` SHALL be re-run and its Parquet overwritten with the larger task set; the rows present in that shard before the change SHALL read back byte-identical to the prior Parquet (the prior tasks' `(seed, primer)` unchanged) and the shard SHALL differ only by the added `min_pmix` task row(s); and the shards in steps not touched by the growth (the `sample` shards) SHALL be reported cached by `targets` and SHALL NOT be rebuilt
+
+### Requirement: An optional full summary retains the dists/samples list-columns
+
+`ssd_summarise()` SHALL accept an optional trailing `path_with_samples` argument
+(default `NULL`). The compact summary written to `path` SHALL be unchanged — it
+SHALL continue to project the `dists` and `samples` list-columns out at the
+DuckDB level so the potentially-large per-row bootstrap draws are never pulled
+into R. When `path_with_samples` is non-`NULL`, the function SHALL **additionally** write
+a *full* summary to `path_with_samples` that unions the same `hc` shard glob but
+**retains** the `dists`/`samples` list-columns. The full write SHALL be performed
+at the DuckDB level (read the Hive glob, write Parquet) so the retained draws are
+**never collected into R** — the same no-R-materialise guarantee as the compact
+path. Both summaries SHALL read the result directory (`hive_partitioning =
+FALSE`) rather than the shard target values, so the full summary inherits the
+partial-failure-survival property and unions whatever shards landed
+(`TARGETS-DESIGN.md` §6.2). When `path_with_samples` is `NULL`, `ssd_summarise()` SHALL
+behave exactly as before (a single compact summary, no extra file).
+
+#### Scenario: Full summary retains the draws the compact summary drops
+- **WHEN** `ssd_summarise()` is run with a non-`NULL` `path_with_samples` over `hc` shards
+  produced with `samples = TRUE`
+- **THEN** the compact `path` SHALL omit the `dists`/`samples` columns, the full
+  `path_with_samples` SHALL contain a populated `samples` list-column (and `dists`), and
+  the estimate columns (`est`/`lcl`/`ucl`) SHALL be identical across the two files
+
+#### Scenario: Without path_with_samples the behaviour is unchanged
+- **WHEN** `ssd_summarise()` is run with `path_with_samples = NULL` (the default)
+- **THEN** it SHALL write only the compact summary at `path`, projecting out
+  `dists`/`samples` as before, and SHALL NOT write any second file
+
+### Requirement: The pipeline emits the full summary only when the scenario retains draws
+
+`ssd_scenario_targets()` SHALL pass `path_with_samples = <root>/summary-samples.parquet`
+to the `summary` target's `ssd_summarise()` call **if and only if**
+`scenario$hc$samples` is `TRUE` — the case where the retained draws carry
+information the compact summary cannot. In that case the `summary` target SHALL
+return the **vector** of both file paths so `targets` tracks both under its
+`format = "file"` contract. When `scenario$hc$samples` is `FALSE`, the pipeline
+SHALL be unchanged: the `summary` target writes the single compact
+`summary.parquet` and returns its path.
+
+#### Scenario: samples = TRUE yields two tracked summary files
+- **WHEN** a scenario defined with `samples = TRUE` is run through the targets
+  pipeline
+- **THEN** the `summary` target SHALL write both `summary.parquet` and
+  `summary-samples.parquet` and SHALL return both paths so `targets` tracks each
+  as a `format = "file"` output
+
+#### Scenario: samples = FALSE leaves the pipeline unchanged
+- **WHEN** a scenario defined with `samples = FALSE` is run through the targets
+  pipeline
+- **THEN** the `summary` target SHALL write only `summary.parquet` and SHALL NOT
+  write `summary-samples.parquet`

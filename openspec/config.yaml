@@ -3,18 +3,21 @@ schema: spec-driven
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  R package for SSD simulation studies (full conventions in AGENTS.md).
+  Tidyverse style; format with `air` before committing. Commit messages follow
+  Conventional Commits — the squash-merge PR title is what `fledge` reads to
+  build NEWS.md, so it is the load-bearing message.
+
+  A change's proof-of-work / exploration scripts live in its own
+  `changes/<name>/exploration/` directory — never at the repo top level. They
+  travel with the change (and into `changes/archive/` on archive) and are
+  already excluded from the package build by the root `^openspec$`
+  `.Rbuildignore` entry, so no separate top-level ignore is needed. See the
+  "Explorations live with their change" section of `openspec/AGENTS.md`.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+  tasks:

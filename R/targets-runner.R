@@ -63,7 +63,7 @@ encode_obj <- function(x) {
   rawToChar(serialize(x, connection = NULL, ascii = TRUE))
 }
 
-#' Inverse of [encode_obj()].
+#' Inverse of `encode_obj()`.
 #' @noRd
 decode_obj <- function(s) {
   unserialize(charToRaw(s))
@@ -89,7 +89,7 @@ decode_obj <- function(s) {
 #' @inheritParams scenario_dataset
 #' @param root The results root directory (default `"results"`).
 #' @return The layout-keyed path `file.path(root, paste0("layout=", <hash>))`.
-#' @seealso [ssd_run_scenario_shards()], [ssd_summarize()].
+#' @seealso [ssd_run_scenario_shards()], [ssd_summarise()].
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
@@ -175,7 +175,9 @@ scenario_step_slice <- function(
     ),
     hc = list(
       hc = list(
+        ci = scenario$hc$ci,
         proportion = scenario$hc$proportion,
+        est_method = scenario$hc$est_method,
         samples = scenario$hc$samples
       ),
       partition_by = partition_by[c("fit", "hc")]
@@ -184,22 +186,40 @@ scenario_step_slice <- function(
   structure(slice, class = "ssdsims_scenario")
 }
 
-#' Run a sample Shard
+#' Run a Step Shard
 #'
-#' Runs the `sample` tasks bundled into one shard: under one
-#' [local_dqrng_backend()] scope, reads each task's dataset off the scenario via
-#' [scenario_dataset()], draws `n_max` rows with the per-task `(seed, primer)`
-#' through `sample_data_task_primer()`, and writes one Parquet at the shard's
-#' Hive partition path. Each task's draw is tagged with its `sample_id` and a
-#' `.row` order index so a downstream `fit` shard can isolate and re-order it.
+#' The per-shard step runners the `targets` pipeline (and the single-core
+#' [ssd_run_scenario_shards()]) call - one target per shard, one runner per step.
+#' Each takes a shard's `tasks` (the `tasks` list-column of a row of the matching
+#' [ssd_scenario_sample_shards()] family), runs the bundled tasks with the *same*
+#' per-task seed-and-run primitives the baseline runner uses
+#' (`*_data_task_primer()`) under one [local_dqrng_backend()] scope, reads any
+#' upstream shard back from Parquet by partition path, and writes one Parquet at
+#' the shard's Hive partition path - returning that path (the `format = "file"`
+#' contract). Because a task's result is fully determined by its `(seed, primer)`
+#' and is order-independent, the per-task results are byte-identical to
+#' [ssd_run_scenario_baseline()] regardless of how tasks bundle into shards.
 #'
 #' @param tasks A tibble of the shard's task rows (the `tasks` list-column of a
-#'   row of [ssd_scenario_sample_shards()]), each carrying its axis values,
-#'   `sample_id`, `seed`, and `primer`.
+#'   row of the matching `ssd_scenario_*_shards()`), each carrying the step's axis
+#'   values, its `<step>_id` key, `seed`, and `primer` - and, for `fit`/`hc`, the
+#'   parent step's path-axis values and `<parent>_id`.
 #' @param scenario The `ssdsims_scenario` (a referenced global in `_targets.R`).
-#' @param out_dir The `sample` results root (e.g. `"results/sample"`).
+#' @param sample_dir The `sample` results root the parent shards were written to
+#'   (the `fit` step).
+#' @param fit_dir The `fit` results root the parent shards were written to (the
+#'   `hc` step).
+#' @param out_dir The step's results root (e.g. `"results/sample"`).
 #' @return The shard's Parquet path (the `format = "file"` contract).
-#' @seealso [ssd_run_fit_step()], [ssd_run_hc_step()], [ssd_scenario_sample_shards()].
+#' @seealso [ssd_scenario_sample_shards()] (the shard grouping these consume),
+#'   [ssd_run_scenario_shards()], [ssd_run_scenario_baseline()].
+#' @name ssd_run_step
+NULL
+
+#' @describeIn ssd_run_step Run the `sample` tasks: read each task's dataset off
+#'   the scenario via [scenario_dataset()], draw `n_max` rows through
+#'   `sample_data_task_primer()`, and tag each draw with its `sample_id` and a
+#'   `.row` order index so a downstream `fit` shard can isolate and re-order it.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
@@ -233,25 +253,14 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
   ssd_write_parquet(dplyr::bind_rows(draws), out)
 }
 
-#' Run a fit Shard
-#'
-#' Runs the `fit` tasks bundled into one shard: reads the distinct set of parent
-#' `sample` shards the shard's tasks reference (each once - they may span several
-#' sample shards), isolates each task's draw by `sample_id` (restoring row
-#' order), truncates it inline (`head(sample, nrow)`,
-#' RNG-free, section 5), and fits with the per-task `(seed, primer)` through
-#' `fit_data_task_primer()` (resolving `min_pmix` off the scenario via
-#' [scenario_min_pmix()]). The fitted `fitdists` object is serialised into a
-#' `fit_blob` string column keyed by `fit_id`, and one Parquet is written at the
-#' shard's partition path.
-#'
-#' @inheritParams ssd_run_sample_step
-#' @param tasks A tibble of the shard's `fit` task rows (from
-#'   [ssd_scenario_fit_shards()]), each carrying its fit-grid values, `fit_id`,
-#'   the parent `sample` path-axis values, `seed`, and `primer`.
-#' @param sample_dir The `sample` results root the parent shards were written to.
-#' @param out_dir The `fit` results root (e.g. `"results/fit"`).
-#' @return The shard's Parquet path.
+#' @describeIn ssd_run_step Run the `fit` tasks: read the distinct set of
+#'   parent `sample` shards the shard's tasks reference (each once - they may span
+#'   several sample shards), isolate each task's draw by `sample_id` (restoring
+#'   row order), truncate it inline (`head(sample, nrow)`, RNG-free, section 5),
+#'   and fit with the per-task `(seed, primer)` through `fit_data_task_primer()`
+#'   (resolving `min_pmix` off the scenario via [scenario_min_pmix()]). The fitted
+#'   `fitdists` object is serialised into a `fit_blob` string column keyed by
+#'   `fit_id`, and one Parquet is written at the shard's partition path.
 #' @export
 #' @examples
 #' \donttest{
@@ -315,25 +324,15 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   ssd_write_parquet(dplyr::bind_rows(rows), out)
 }
 
-#' Run an hc Shard
-#'
-#' Runs the `hc` tasks bundled into one shard: reads the distinct set of parent
-#' `fit` shards the shard's tasks reference (each once - an hc shard typically
-#' spans several fit shards), isolates each task's fit by `fit_id`,
-#' deserialises the `fitdists` object, and estimates the hazard concentration
-#' with the per-task `(seed, primer)` through `hc_data_task_primer()`. Each
-#' task's hc tibble (one or more rows - the `proportion` fan-out, with the
-#' scalar `ci` applied uniformly and bootstrap-only knobs `NA` when
-#' `ci = FALSE`) is tagged with its `hc_id` and parent
-#' `fit_id`, stacked, and written as one Parquet at the shard's partition path.
-#'
-#' @inheritParams ssd_run_sample_step
-#' @param tasks A tibble of the shard's `hc` task rows (from
-#'   [ssd_scenario_hc_shards()]), each carrying its hc-grid values, `hc_id`, the
-#'   parent `fit` path-axis values and `fit_id`, `seed`, and `primer`.
-#' @param fit_dir The `fit` results root the parent shards were written to.
-#' @param out_dir The `hc` results root (e.g. `"results/hc"`).
-#' @return The shard's Parquet path.
+#' @describeIn ssd_run_step Run the `hc` tasks: read the distinct set of
+#'   parent `fit` shards the shard's tasks reference (each once - an hc shard
+#'   typically spans several fit shards), isolate each task's fit by `fit_id`,
+#'   deserialise the `fitdists` object, and estimate the hazard concentration with
+#'   the per-task `(seed, primer)` through `hc_data_task_primer()`. Each task's hc
+#'   tibble (one or more rows - the `proportion` fan-out, with the scalar `ci`
+#'   applied uniformly and bootstrap-only knobs `NA` when `ci = FALSE`) is tagged
+#'   with its `hc_id` and parent `fit_id`, stacked, and written as one Parquet at
+#'   the shard's partition path.
 #' @export
 #' @examples
 #' \donttest{
@@ -386,9 +385,9 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
     hc <- hc_data_task_primer(
       fits = fits,
       proportion = scenario$hc$proportion,
-      ci = t$ci,
+      ci = scenario$hc$ci,
       nboot = t$nboot,
-      est_method = t$est_method,
+      est_method = scenario$hc$est_method,
       ci_method = t$ci_method,
       parametric = t$parametric,
       samples = scenario$hc$samples,
@@ -421,11 +420,24 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' three result layers; the `sample` draws and serialised `fit` objects are not
 #' summary material, so the combined summary is the `hc` layer.
 #'
+#' The compact summary at `path` projects the `dists`/`samples` list-columns out
+#' at the DuckDB level, so the potentially-large retained bootstrap draws are
+#' never pulled into R. Supply `path_with_samples` to **also** write a full
+#' summary that retains those list-columns: that write reuses the same lazy
+#' DuckDB read, so the draws never materialise in R there either. The draws are
+#' populated only when the scenario set `samples = TRUE`, so the full summary is
+#' the analysis-ready estimates plus the per-row draws.
+#'
 #' @param dir_sample The `sample` results root.
 #' @param dir_fit The `fit` results root.
 #' @param dir_hc The `hc` results root.
-#' @param path The output Parquet path for the combined summary.
-#' @return The summary Parquet path (the `format = "file"` contract).
+#' @param path The output Parquet path for the compact summary (`dists`/`samples`
+#'   projected out).
+#' @param path_with_samples Optional output Parquet path for a full summary that
+#'   retains the `dists`/`samples` list-columns. `NULL` (the default) writes only
+#'   the compact summary.
+#' @return The summary Parquet path(s) (the `format = "file"` contract): `path`
+#'   when `path_with_samples` is `NULL`, otherwise `c(path, path_with_samples)`.
 #' @details
 #' In a `targets` pipeline a directory read carries no dependency edge, so
 #' [ssd_scenario_targets()] orders `summary` after the shards by naming every
@@ -445,28 +457,43 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' )
 #' # Materialise the shards single-core, then fan in the hc layer.
 #' run <- ssd_run_scenario_shards(scenario)
-#' ssd_summarize(
+#' ssd_summarise(
 #'   file.path(run$dir, "sample"),
 #'   file.path(run$dir, "fit"),
 #'   file.path(run$dir, "hc"),
 #'   file.path(run$dir, "summary.parquet")
 #' )
 #' }
-ssd_summarize <- function(dir_sample, dir_fit, dir_hc, path) {
+ssd_summarise <- function(
+  dir_sample,
+  dir_fit,
+  dir_hc,
+  path,
+  path_with_samples = NULL
+) {
   glob <- file.path(dir_hc, "**", "part.parquet")
+  hc_shards <- duckplyr::read_parquet_duckdb(
+    glob,
+    options = list(hive_partitioning = FALSE)
+  )
   # Project out the `dists`/`samples` list-columns at the DuckDB level (so the
   # potentially-large retained `samples` draws are never pulled into R): the
-  # summary is the analysis-ready estimate table; the draws stay in the hc shards.
-  hc <- tibble::as_tibble(dplyr::collect(
-    dplyr::select(
-      duckplyr::read_parquet_duckdb(
-        glob,
-        options = list(hive_partitioning = FALSE)
-      ),
-      -dplyr::any_of(c("dists", "samples"))
-    )
-  ))
+  # compact summary is the analysis-ready estimate table; the draws stay in the
+  # hc shards. The select stays lazy and is written straight to Parquet by
+  # duckplyr - the read, projection, and write all happen inside DuckDB, never
+  # collecting the union into R.
+  hc <- dplyr::select(hc_shards, -dplyr::any_of(c("dists", "samples")))
   ssd_write_parquet(hc, path)
+  if (is.null(path_with_samples)) {
+    return(path)
+  }
+  # The full summary retains every hc column (`dists`/`samples` included). The
+  # same lazy read is written straight back out, so the potentially-large draws
+  # never materialise in R either - the same no-R guarantee the compact
+  # projection above relies on.
+  dir.create(dirname(path_with_samples), recursive = TRUE, showWarnings = FALSE)
+  duckplyr::compute_parquet(hc_shards, path_with_samples)
+  c(path, path_with_samples)
 }
 
 # ---- per-child upstream edges (Option 3, TARGETS-DESIGN.md sections 6, 8) ---
@@ -549,6 +576,16 @@ edge_block <- function(names) {
 #' ssd_scenario_targets(scenario)
 #' ```
 #'
+#' The shard and summary targets carry `error = "null"` so a shard whose body
+#' fails entirely goes `NULL` (its error readable via `tar_meta()`) without
+#' aborting the run, and `ssd_summarise()` unions whatever landed
+#' (TARGETS-DESIGN.md section 6.2). The shipped `_targets.R` templates pair this
+#' with a pipeline-wide **keep-going** default (`tar_option_set(error =
+#' "continue")`, the `make -k` analogue) so an errored target skips only its
+#' dependents while the rest of the shards still build; fail-fast pre-flight
+#' checks (upload/cluster connectivity) belong in a separate script the user
+#' runs *before* `tar_make()`, not in this DAG.
+#'
 #' For each step it `tarchetypes::tar_map()`s one named, `format = "file"`,
 #' `error = "null"` target per `partition_by` path cell (the `names` are the
 #' step's path axes), and writes every shard and the summary under the
@@ -602,15 +639,38 @@ edge_block <- function(names) {
 #' `crew::crew_controller_local()`) with `targets::tar_option_set()` in
 #' `_targets.R` before calling this - the target set is unchanged.
 #'
+#' @section Uploading shards to cloud storage (`upload`):
+#' `upload` is the **remote-destination sibling of `root`** (default `NULL`).
+#' With `upload = NULL` the pipeline contains **no** `upload_<step>` targets -
+#' the clean default DAG for a non-uploader. With a non-`NULL` upload object the
+#' factory pairs each step shard with an `upload_<step>` target in the same
+#' `tar_map` (`format = "file"`, `error = "null"`), so an unchanged shard is
+#' never re-uploaded (content-hash skip) and a per-shard upload failure isolates
+#' to its own branch. Pass [ssd_upload_dryrun()] for no-op upload targets that
+#' reach no network (exercising the DAG shape offline / in CI) or
+#' [ssd_upload_azure()] to ship to Azure. The destination's
+#' [ssd_test_upload()] probe is run **once up front** (when the factory is
+#' called, before `tar_make()`), so missing credentials or an unreachable
+#' destination abort before any compute. The per-task results are byte-identical
+#' across all three `upload` modes; only the presence and behaviour of the
+#' `upload_<step>` targets differ.
+#'
 #' @inheritParams scenario_dataset
+#' @param ... Unused; must be empty. Its presence forces `root`, `upload`, and
+#'   `cue` to be passed **by name** (`rlang::check_dots_empty()` aborts on a
+#'   positional or misspelled argument), since `root` and `upload` are both
+#'   path-shaped and easy to transpose.
 #' @param root The results root the shards and summary are written under;
 #'   defaults to the per-layout [scenario_results_dir()].
+#' @param upload An optional upload destination (the remote-destination sibling
+#'   of `root`) from [ssd_upload_azure()] or [ssd_upload_dryrun()], or `NULL`
+#'   (default) for no upload targets. See the section above.
 #' @param cue An optional `targets::tar_cue()` applied to every shard target
 #'   (e.g. `targets::tar_cue(depend = FALSE)` to pin trusted shards against code
 #'   changes). `NULL` (default) uses `targets`' standard cue.
 #' @return A list of `targets` target objects, for `_targets.R` to return.
 #' @seealso [scenario_results_dir()], [ssd_run_scenario_shards()] (the
-#'   single-core, `targets`-free equivalent).
+#'   single-core, `targets`-free equivalent), [ssd_upload_azure()].
 #' @export
 #' @autoglobal
 #' @examples
@@ -621,20 +681,51 @@ edge_block <- function(names) {
 #' library(ssdsims)
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
 #' ssd_scenario_targets(scenario)
+#'
+#' # Pair each shard with a (no-op) upload target, exercised offline:
+#' ssd_scenario_targets(scenario, upload = ssd_upload_dryrun())
 #' }
 ssd_scenario_targets <- function(
   scenario,
+  ...,
   root = scenario_results_dir(scenario),
+  upload = NULL,
   cue = NULL
 ) {
+  call <- environment()
+  rlang::check_dots_empty()
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   chk::chk_string(root)
+  if (!is.null(upload) && !inherits(upload, "ssdsims_upload")) {
+    chk::abort_chk(
+      "`upload` must be `NULL` or an upload destination from ",
+      "`ssd_upload_azure()` or `ssd_upload_dryrun()`.",
+      call = call
+    )
+  }
   rlang::check_installed(c("targets", "tarchetypes"))
+
+  # The front-door creds/connectivity probe, run once up front (at sourcing
+  # time, before `tar_make()` builds anything) so an auth/network failure aborts
+  # before any compute - never deep in the DAG on a worker (section 6.1). NULL
+  # adds no upload at all; a dry run is trivially OK.
+  if (!is.null(upload)) {
+    ssd_test_upload(upload)
+  }
 
   sample_dir <- file.path(root, "sample")
   fit_dir <- file.path(root, "fit")
   hc_dir <- file.path(root, "hc")
   summary_path <- file.path(root, "summary.parquet")
+  # When the scenario retains the bootstrap draws (`samples = TRUE`), also fan in
+  # a full summary that keeps the `dists`/`samples` list-columns the compact
+  # summary projects out; otherwise those draws are empty and the second file
+  # would carry nothing extra (TARGETS-DESIGN.md §12 `dual-summary-outputs`).
+  summary_samples_path <- if (isTRUE(scenario$hc$samples)) {
+    file.path(root, "summary-samples.parquet")
+  } else {
+    NULL
+  }
 
   sample_shards <- ssd_scenario_sample_shards(scenario)
   fit_shards <- ssd_scenario_fit_shards(scenario)
@@ -647,17 +738,46 @@ ssd_scenario_targets <- function(
   # `.slice` (the `sample` step's per-dataset slice) as symbols resolved as
   # mapped values. Depending on the slice - not the bare `scenario` global - is
   # what scopes each step's dependency hash to the fields its runner reads.
+  #
+  # When `upload` is non-`NULL`, the same `tar_map` also mints a paired
+  # `upload_<step>` target per shard (`format = "file"`, `error = "null"`),
+  # taking the shard target's local path (the bare `<step>_step` symbol, which
+  # `tar_map` rewires to the paired, suffixed target) and shipping it via
+  # `ssd_upload_shard(path, upload)`. Because it is `format = "file"` over the
+  # shard path, `targets` re-uploads a shard only when its content hash changes.
+  # With `upload = NULL` no upload target is emitted (the clean default DAG).
   step_map <- function(step, shards, command) {
+    step_target <- targets::tar_target_raw(
+      paste0(step, "_step"),
+      command,
+      format = "file",
+      error = "null",
+      cue = cue
+    )
+    if (is.null(upload)) {
+      return(tarchetypes::tar_map(
+        values = shards,
+        names = tidyselect::all_of(
+          scenario_partition_axes(scenario, step)$path
+        ),
+        step_target
+      ))
+    }
+    upload_target <- targets::tar_target_raw(
+      paste0("upload_", step),
+      rlang::expr(ssd_upload_shard(
+        !!rlang::sym(paste0(step, "_step")),
+        !!upload
+      )),
+      format = "file",
+      error = "null",
+      cue = cue
+    )
     tarchetypes::tar_map(
       values = shards,
       names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
-      targets::tar_target_raw(
-        paste0(step, "_step"),
-        command,
-        format = "file",
-        error = "null",
-        cue = cue
-      )
+      step_target,
+      upload_target
     )
   }
 
@@ -731,7 +851,13 @@ ssd_scenario_targets <- function(
     "summary",
     rlang::expr({
       !!edge_block(unname(hc_names)) # order/value-depend on every hc shard
-      ssd_summarize(!!sample_dir, !!fit_dir, !!hc_dir, !!summary_path)
+      ssd_summarise(
+        !!sample_dir,
+        !!fit_dir,
+        !!hc_dir,
+        !!summary_path,
+        path_with_samples = !!summary_samples_path
+      )
     }),
     format = "file"
   )

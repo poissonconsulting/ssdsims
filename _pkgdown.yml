@@ -12,9 +12,6 @@ reference:
   - ssd_data
   - ssd_define_scenario
   - ssd_scenario_tasks
-  - ssd_scenario_sample_tasks
-  - ssd_scenario_fit_tasks
-  - ssd_scenario_hc_tasks
   - ssd_run_scenario_baseline
   - ssd_run_scenario_shards
 
@@ -35,15 +32,36 @@ reference:
     fan in a summary - the building blocks of the static-branching `targets`
     pipeline (see the `inst/targets-templates/small/_targets.R` template).
   contents:
-  - ssd_scenario_sample_shards
-  - ssd_scenario_fit_shards
-  - ssd_scenario_hc_shards
-  - ssd_run_sample_step
-  - ssd_run_fit_step
-  - ssd_run_hc_step
+  - ssd_scenario_shards
+  - ssd_run_step
   - ssd_scenario_targets
-  - ssd_summarize
+  - ssd_summarise
   - scenario_results_dir
+
+- title: Cloud upload
+  desc: >
+    Typed, self-validating upload destinations (`ssd_upload_azure()`,
+    `ssd_upload_dryrun()`) and the class-dispatched generics that probe
+    credentials, ship each shard, and read the uploaded results back in place -
+    the remote-destination sibling of `root` on `ssd_scenario_targets()`.
+  contents:
+  - ssd_upload_azure
+  - ssd_test_upload
+  - ssd_upload_shard
+  - ssd_open_uploaded
+  - ssd_summarise_uploaded
+
+- title: Cost estimation
+  desc: >
+    Predict, before launching, roughly how much compute a scenario costs and how
+    long its single longest task runs. Calibrate the per-task cost model on the
+    target machine (or use the shipped default), then apply it to a scenario
+    read-only - no fit, bootstrap, or RNG.
+  contents:
+  - ssd_estimate_cost
+  - ssd_calibrate_cost
+  - ssd_cost_calibration
+  - ssd_cost_calibration_default
 
 - title: Scenario accessors
   desc: >
@@ -72,3 +90,13 @@ reference:
 - title: Package
   contents:
   - ssdsims-package
+
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - defining-a-scenario
+  - cost-estimation
+  - sharded-pipeline
+  - cluster-pipeline
+  - cloud-upload
