@@ -63,7 +63,7 @@ encode_obj <- function(x) {
   rawToChar(serialize(x, connection = NULL, ascii = TRUE))
 }
 
-#' Inverse of [encode_obj()].
+#' Inverse of `encode_obj()`.
 #' @noRd
 decode_obj <- function(s) {
   unserialize(charToRaw(s))
@@ -420,11 +420,24 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' three result layers; the `sample` draws and serialised `fit` objects are not
 #' summary material, so the combined summary is the `hc` layer.
 #'
+#' The compact summary at `path` projects the `dists`/`samples` list-columns out
+#' at the DuckDB level, so the potentially-large retained bootstrap draws are
+#' never pulled into R. Supply `path_with_samples` to **also** write a full
+#' summary that retains those list-columns: that write reuses the same lazy
+#' DuckDB read, so the draws never materialise in R there either. The draws are
+#' populated only when the scenario set `samples = TRUE`, so the full summary is
+#' the analysis-ready estimates plus the per-row draws.
+#'
 #' @param dir_sample The `sample` results root.
 #' @param dir_fit The `fit` results root.
 #' @param dir_hc The `hc` results root.
-#' @param path The output Parquet path for the combined summary.
-#' @return The summary Parquet path (the `format = "file"` contract).
+#' @param path The output Parquet path for the compact summary (`dists`/`samples`
+#'   projected out).
+#' @param path_with_samples Optional output Parquet path for a full summary that
+#'   retains the `dists`/`samples` list-columns. `NULL` (the default) writes only
+#'   the compact summary.
+#' @return The summary Parquet path(s) (the `format = "file"` contract): `path`
+#'   when `path_with_samples` is `NULL`, otherwise `c(path, path_with_samples)`.
 #' @details
 #' In a `targets` pipeline a directory read carries no dependency edge, so
 #' [ssd_scenario_targets()] orders `summary` after the shards by naming every
@@ -451,22 +464,36 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #'   file.path(run$dir, "summary.parquet")
 #' )
 #' }
-ssd_summarise <- function(dir_sample, dir_fit, dir_hc, path) {
+ssd_summarise <- function(
+  dir_sample,
+  dir_fit,
+  dir_hc,
+  path,
+  path_with_samples = NULL
+) {
   glob <- file.path(dir_hc, "**", "part.parquet")
+  hc_shards <- duckplyr::read_parquet_duckdb(
+    glob,
+    options = list(hive_partitioning = FALSE)
+  )
   # Project out the `dists`/`samples` list-columns at the DuckDB level (so the
   # potentially-large retained `samples` draws are never pulled into R): the
-  # summary is the analysis-ready estimate table; the draws stay in the hc
-  # shards. The select stays lazy and is written straight to Parquet by
+  # compact summary is the analysis-ready estimate table; the draws stay in the
+  # hc shards. The select stays lazy and is written straight to Parquet by
   # duckplyr - the read, projection, and write all happen inside DuckDB, never
   # collecting the union into R.
-  hc <- dplyr::select(
-    duckplyr::read_parquet_duckdb(
-      glob,
-      options = list(hive_partitioning = FALSE)
-    ),
-    -dplyr::any_of(c("dists", "samples"))
-  )
+  hc <- dplyr::select(hc_shards, -dplyr::any_of(c("dists", "samples")))
   ssd_write_parquet(hc, path)
+  if (is.null(path_with_samples)) {
+    return(path)
+  }
+  # The full summary retains every hc column (`dists`/`samples` included). The
+  # same lazy read is written straight back out, so the potentially-large draws
+  # never materialise in R either - the same no-R guarantee the compact
+  # projection above relies on.
+  dir.create(dirname(path_with_samples), recursive = TRUE, showWarnings = FALSE)
+  duckplyr::compute_parquet(hc_shards, path_with_samples)
+  c(path, path_with_samples)
 }
 
 # ---- per-child upstream edges (Option 3, TARGETS-DESIGN.md sections 6, 8) ---
@@ -690,6 +717,15 @@ ssd_scenario_targets <- function(
   fit_dir <- file.path(root, "fit")
   hc_dir <- file.path(root, "hc")
   summary_path <- file.path(root, "summary.parquet")
+  # When the scenario retains the bootstrap draws (`samples = TRUE`), also fan in
+  # a full summary that keeps the `dists`/`samples` list-columns the compact
+  # summary projects out; otherwise those draws are empty and the second file
+  # would carry nothing extra (TARGETS-DESIGN.md §12 `dual-summary-outputs`).
+  summary_samples_path <- if (isTRUE(scenario$hc$samples)) {
+    file.path(root, "summary-samples.parquet")
+  } else {
+    NULL
+  }
 
   sample_shards <- ssd_scenario_sample_shards(scenario)
   fit_shards <- ssd_scenario_fit_shards(scenario)
@@ -815,7 +851,13 @@ ssd_scenario_targets <- function(
     "summary",
     rlang::expr({
       !!edge_block(unname(hc_names)) # order/value-depend on every hc shard
-      ssd_summarise(!!sample_dir, !!fit_dir, !!hc_dir, !!summary_path)
+      ssd_summarise(
+        !!sample_dir,
+        !!fit_dir,
+        !!hc_dir,
+        !!summary_path,
+        path_with_samples = !!summary_samples_path
+      )
     }),
     format = "file"
   )
