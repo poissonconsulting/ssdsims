@@ -72,10 +72,13 @@ ssd_hc_sims <- function(
   )
   trace_rng_kind()
 
+  # `est_method` is an hc simulation setting, not part of the factorial
+  # expansion: every requested method is summarised within each cell from its
+  # single bootstrap sample set, so it is passed whole to `hc_seed()` rather than
+  # crossed into the grid (see `hc_collapse_est_methods()`).
   x <- x |>
     dplyr::cross_join(tidyr::expand_grid(
       nboot = nboot,
-      est_method = est_method,
       ci_method = ci_method,
       parametric = parametric
     ))
@@ -86,17 +89,16 @@ ssd_hc_sims <- function(
       x$sim,
       x$stream,
       x$nboot,
-      x$est_method,
       x$ci_method,
       x$parametric
     ),
-    \(.x, .sim, .stream, .nboot, .est_method, .ci_method, .parametric) {
+    \(.x, .sim, .stream, .nboot, .ci_method, .parametric) {
       hc_seed(
         .x,
         .sim,
         .stream,
         nboot = .nboot,
-        est_method = .est_method,
+        est_method = est_method,
         ci_method = .ci_method,
         parametric = .parametric,
         seed = seed,

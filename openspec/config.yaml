@@ -3,18 +3,38 @@ schema: spec-driven
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  R package for SSD simulation studies (full conventions in AGENTS.md).
+  Tidyverse style; format with `air` before committing. Commit messages follow
+  Conventional Commits — the squash-merge PR title is what `fledge` reads to
+  build NEWS.md, so it is the load-bearing message.
+
+  A change's proof-of-work / exploration scripts live in its own
+  `changes/<name>/exploration/` directory — never at the repo top level. They
+  travel with the change (and into `changes/archive/` on archive) and are
+  already excluded from the package build by the root `^openspec$`
+  `.Rbuildignore` entry, so no separate top-level ignore is needed. See the
+  "Explorations live with their change" section of `openspec/AGENTS.md`.
+
+  Roadmap upkeep spans a change's whole lifecycle. Whenever a change is created,
+  applied, or archived, reflect it in TARGETS-DESIGN.md §12 and keep its node
+  status colour in sync (red = proposed, yellow = done/implemented, green =
+  archived; move an archived node into the `archived_box` subgraph). When a
+  change is first proposed:
+    - a step with prerequisites and/or dependants -> add a Mermaid node + edges
+      and colour it `proposed` (red) via a `class` line;
+    - an independent tidy-up or new capability (no prereqs, no dependants) ->
+      add an off-DAG prose bullet in the §12 roadmap list, matching
+      `dists-simulation-setting` / `error-call-origin` / `scalar-ci-flag`.
+  See "Architectural Notes -> The targets redesign" in AGENTS.md for the rule.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+rules:
+  proposal:
+    - After writing the proposal, update TARGETS-DESIGN.md §12 to reflect the new
+      change (a `proposed`-coloured Mermaid node for a DAG step, or an off-DAG
+      prose bullet for an independent tidy-up / new capability), per AGENTS.md.
+  tasks:
+    - Before finishing, confirm TARGETS-DESIGN.md §12 has been updated for this
+      change — roadmap upkeep is part of the change lifecycle, per AGENTS.md.

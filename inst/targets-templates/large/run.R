@@ -10,7 +10,9 @@
 # It builds one target per shard (writing
 # `results/layout=<hash>/<step>/<axis=value>/.../part.parquet`) and the combined
 # `results/layout=<hash>/summary.parquet`, then reports the summary path and a peek at the
-# hazard-concentration estimates.
+# hazard-concentration estimates. This scenario sets `samples = TRUE`, so the
+# `summary` target also writes a full `summary-samples.parquet` retaining the
+# per-row bootstrap draws (the compact `summary.parquet` projects them out).
 
 library(targets)
 
@@ -29,10 +31,11 @@ if (dir.exists("inst/targets-templates/large")) {
 # Needs the `crew` package installed.
 tar_make()
 
-# The `summary` target is `format = "file"`, so its value is the path to the
-# combined Parquet (the union of the hc shards).
-summary_path <- tar_read(summary)
-cat("Summary written to:", summary_path, "\n")
+# The `summary` target is `format = "file"`. With `samples = TRUE` it tracks two
+# files: the compact `summary.parquet` (first) and the full
+# `summary-samples.parquet` (second). Peek at the compact estimate table.
+summary_paths <- tar_read(summary)
+cat("Summaries written to:", summary_paths, sep = "\n")
 
 # Peek at the combined estimates (duckplyr is an ssdsims dependency).
-print(duckplyr::read_parquet_duckdb(summary_path))
+print(duckplyr::read_parquet_duckdb(summary_paths[[1L]]))

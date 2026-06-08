@@ -1,0 +1,272 @@
+---
+title: "Uploading Shards to Cloud Storage"
+vignette: >
+  %\VignetteIndexEntry{Uploading Shards to Cloud Storage}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+---
+
+```{r}
+#| label: setup
+#| include: false
+# The live chunks build local shards and a target list with a dry-run upload, so
+# they need the fitting deps, duckplyr, and targets/tarchetypes — but no network
+# and no credentials. Skip evaluation gracefully on a minimal runner.
+evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+  requireNamespace("ssdtools", quietly = TRUE) &&
+  requireNamespace("duckplyr", quietly = TRUE) &&
+  requireNamespace("targets", quietly = TRUE) &&
+  requireNamespace("tarchetypes", quietly = TRUE)
+knitr::opts_chunk$set(eval = evaluate)
+```
+
+```{r}
+#| label: library
+library(ssdsims)
+```
+
+The ["Running a Sharded Pipeline"](sharded-pipeline.html) vignette materialises
+each step as Hive-partitioned Parquet shards, and the
+["Running on a SLURM Cluster"](cluster-pipeline.html) vignette runs that same
+pipeline on a cluster. This vignette covers the last link: shipping each shard
+to an **object store** as it is produced, so the results are readable **from
+outside the cluster** --- analysis notebooks, dashboards, downstream R/Python
+(`TARGETS-DESIGN.md` §6.1).
+
+The model is simple: **upload is a runner argument**, the remote-destination
+sibling of `root`. You pass an `upload` object to the
+[`ssd_scenario_targets()`](../reference/ssd_scenario_targets.html) factory and it
+pairs each step shard with an `upload_<step>` target. There are three modes:
+
+- `upload = NULL` (the default) --- **no** upload targets; the clean DAG.
+- `upload = ssd_upload_dryrun()` --- upload targets that **no-op** (reach no
+  network), so the DAG shape can be exercised offline and in CI.
+- `upload = ssd_upload_azure(url, container)` --- upload targets that ship to
+  Azure Blob Storage.
+
+The per-task `sample`/`fit`/`hc` results are **byte-identical** across all three
+--- only the presence and behaviour of the `upload_<step>` targets differ. This
+vignette's **live chunks use `ssd_upload_dryrun()`**, so the build needs no
+network and no credentials; the Azure path is shown as described, non-evaluated
+chunks.
+
+## The destination objects
+
+`ssd_upload_azure()` and `ssd_upload_dryrun()` return plain, classed S3 objects
+that carry **only the destination** --- never credentials, connections, or
+environments --- so they travel unchanged to `crew` workers and through
+`targets`:
+
+```{r}
+#| label: objects
+dryrun <- ssd_upload_dryrun()
+azure <- ssd_upload_azure(
+  url = "https://acct.blob.core.windows.net",
+  container = "ssdsims-results"
+)
+class(azure)
+unclass(azure)
+```
+
+Credentials stay **external**: the Azure methods resolve the **secret** from the
+environment at call time --- one of `SSDSIMS_AZURE_STORAGE_KEY`,
+`SSDSIMS_AZURE_STORAGE_SAS`, or the service-principal trio
+(`SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET`)
+--- and the object itself holds no secrets. The storage **account name** is
+derived from `url` (the `acct` in `https://acct.blob.core.windows.net`), so there
+is **no** account environment variable; for a sovereign cloud, set `domain` (e.g.
+`domain = "blob.core.usgovcloudapi.net"`).
+
+To write under a **subdirectory** of the container (so one container can hold
+several independent result sets), pass `prefix`:
+
+```{r}
+#| label: prefix
+ssd_upload_azure(
+  url = "https://acct.blob.core.windows.net",
+  container = "ssdsims-results",
+  prefix = "study-2026/run-3"
+)$prefix
+```
+
+The shards then land at `<container>/<prefix>/<step>/<partition>/part.parquet`,
+and `ssd_open_uploaded()` reads them back from the same prefixed location.
+
+## Run it locally with a dry run
+
+The dry-run probe is trivially OK --- no credentials, no network:
+
+```{r}
+#| label: probe
+ssd_test_upload(ssd_upload_dryrun())
+```
+
+Build a scenario and hand it to the factory with `upload = ssd_upload_dryrun()`.
+The factory runs the `ssd_test_upload()` probe **once up front**, then pairs each
+step shard with a no-op `upload_<step>` target:
+
+```{r}
+#| label: scenario
+scenario <- ssd_define_scenario(
+  ssddata::ccme_boron,
+  nsim = 2L,
+  seed = 42L,
+  nrow = 6L,
+  dists = "lnorm"
+)
+root <- tempfile("results-")
+targets_dry <- ssd_scenario_targets(scenario, root = root, upload = dryrun)
+```
+
+The upload targets are present in the DAG, one paired with each shard:
+
+```{r}
+#| label: upload-nodes
+target_names <- function(x) {
+  if (inherits(x, "tar_target")) {
+    return(x$settings$name)
+  }
+  if (is.list(x)) {
+    return(unlist(lapply(x, target_names), use.names = FALSE))
+  }
+  character(0)
+}
+names_dry <- target_names(targets_dry)
+grep("^upload_", names_dry, value = TRUE)
+```
+
+Contrast `upload = NULL` --- the default --- which emits **no** upload nodes at
+all:
+
+```{r}
+#| label: upload-null
+targets_null <- ssd_scenario_targets(scenario, root = root)
+grep("^upload_", target_names(targets_null), value = TRUE)
+```
+
+A no-op upload is exactly a no-op: it reaches no network and returns the shard's
+local path unchanged. Materialise one shard locally, then "ship" it with the
+dry-run destination:
+
+```{r}
+#| label: dryrun-shard
+run <- ssd_run_scenario_shards(scenario)
+shard <- list.files(
+  file.path(run$dir, "hc"),
+  pattern = "part.parquet",
+  recursive = TRUE,
+  full.names = TRUE
+)[1]
+identical(ssd_upload_shard(shard, dryrun), shard)
+```
+
+That is the whole upload DAG --- the probe, the paired `upload_<step>` targets,
+and the per-shard ship --- exercised end to end with no network and no
+credentials.
+
+## Extend the same call to Azure on a cluster
+
+To ship to a real Azure container, swap `ssd_upload_dryrun()` for
+`ssd_upload_azure(url, container)` in the **cluster** template's `_targets.R`
+(["Running on a SLURM Cluster"](cluster-pipeline.html)). It is the same factory
+call --- one line changes:
+
+```{r}
+#| label: azure-targets
+#| eval: false
+ssd_scenario_targets(
+  scenario,
+  upload = ssd_upload_azure(
+    url = "https://<account>.blob.core.windows.net",
+    container = "ssdsims-results"
+  )
+)
+```
+
+Run the credentials/connectivity probe as an interactive **preflight** before
+`tar_make()` --- it lists the container and writes then deletes a marker blob,
+aborting loudly (naming the missing `SSDSIMS_AZURE_*` variable) if your wiring is wrong:
+
+```{r}
+#| label: azure-preflight
+#| eval: false
+Sys.setenv(SSDSIMS_AZURE_STORAGE_KEY = "<key>") # account comes from the url
+ssd_test_upload(ssd_upload_azure("https://<account>.blob.core.windows.net", "ssdsims-results"))
+# silent on success; aborts naming the missing variable otherwise
+```
+
+## Verify the upload, in place
+
+Right after an upload, read the results **back in place** to confirm they landed
+--- no download. `ssd_open_uploaded(upload, step)` returns a lazy
+`duckplyr`/DuckDB table over the `<container>/<step>/**/part.parquet` Hive glob,
+read straight against blob storage via DuckDB's `azure` extension (it remaps your
+`SSDSIMS_AZURE_*` credentials into a DuckDB `azure` secret for you). Because it is lazy
+and `dplyr`-composable, a one-line `count()` is the immediate smoke test:
+
+```{r}
+#| label: read-back
+#| eval: false
+upload <- ssd_upload_azure("https://<account>.blob.core.windows.net", "ssdsims-results")
+ssd_open_uploaded(upload, step = "hc") |>
+  dplyr::count()
+```
+
+A row-for-row compare of `ssd_open_uploaded(upload, step)` against the local
+shard verifies the transfer. (A dry-run destination has nothing to read back:
+`ssd_open_uploaded(ssd_upload_dryrun(), ...)` aborts and points you at the local
+shards.)
+
+For the analysis-ready table, `ssd_summarise_uploaded()` is the cloud
+counterpart of `ssd_summarise()`: it unions a step's uploaded shards in place and
+collects them, dropping the heavy `dists`/`samples` list-columns by default. Pass
+`drop_samples = FALSE` when you need the in-flight bootstrap `samples`:
+
+```{r}
+#| label: summarise-uploaded
+#| eval: false
+ssd_summarise_uploaded(upload, step = "hc") # analysis-ready summary tibble
+ssd_summarise_uploaded(upload, step = "hc", drop_samples = FALSE) # keep samples
+```
+
+## What to pay attention to
+
+::: {.callout-important}
+- **Credentials must reach the *workers*.** `ssd_test_upload()` is easy to run
+  interactively on the login node, but the shards upload **on the compute
+  nodes**. Set `SSDSIMS_AZURE_*` so the workers see them --- via the controller's
+  `script_lines`/module loads, or your scheduler's environment propagation ---
+  not just on the login node.
+- **The Azure client and the DuckDB `azure` extension must be on the workers.**
+  Install `AzureStor`/`AzureRMR` (and, for the read-back, DuckDB's `azure`
+  extension) on the workers, alongside `ssdsims` --- the same ManyLinux binary
+  path the cluster vignette covers.
+- **A missing credential fails loud.** Azure with absent credentials **aborts**
+  --- it is never a silent no-op. Intent to skip the network is expressed only
+  by `ssd_upload_dryrun()`. Under the pipeline's per-shard `error = "null"`, a
+  failed upload isolates to its own branch and the rest keep shipping, so a
+  re-driven run retries only the failed uploads.
+- **Unchanged shards are not re-uploaded.** Each `upload_<step>` target takes the
+  shard's path as a `format = "file"` input, so `targets` re-uploads a shard only
+  when its content hash changes --- a re-driven `tar_make()` that rebuilt nothing
+  uploads nothing; a partial extension uploads only the new shards.
+- **The read-back is in place.** `ssd_open_uploaded()` predicate-pushes straight
+  against blob storage --- it does **not** download the Parquet.
+:::
+
+## See also
+
+- ["Running a Sharded Pipeline"](sharded-pipeline.html) --- materialising the
+  shards this vignette uploads.
+- ["Running on a SLURM Cluster"](cluster-pipeline.html) --- the cluster template
+  whose `_targets.R` gains the `upload = ssd_upload_azure(...)` line.
+- `TARGETS-DESIGN.md` §6.1 (the cloud-upload hook).
+- [`?ssd_upload_azure`](../reference/ssd_upload_azure.html),
+  [`?ssd_test_upload`](../reference/ssd_test_upload.html),
+  [`?ssd_upload_shard`](../reference/ssd_upload_shard.html),
+  [`?ssd_open_uploaded`](../reference/ssd_open_uploaded.html).
+```

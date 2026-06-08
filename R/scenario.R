@@ -44,6 +44,19 @@
 #' are meaningless; passing any of them in that case is an error, so set
 #' `ci = TRUE` to enable bootstrap, or omit the knobs.
 #'
+#' # `dists` and `est_method`
+#'
+#' `dists` and `est_method` are **simulation settings**, not cross-join axes -
+#' they are absent from `task_axes("fit")`/`task_axes("hc")`, so they never
+#' multiply tasks or enter the per-task RNG primer. `dists` is the *fit*-level
+#' setting: the whole character vector is handed to one `ssd_fit_dists()` call
+#' per fit task (fanning out per distribution would dissolve the model averaging
+#' that defines a fit). `est_method` is an *hc*-level setting: every requested
+#' method is summarised from each hc task's **single** bootstrap sample set
+#' rather than re-bootstrapping per method (the CI is est_method-invariant and
+#' the point `est` is analytical), so a vector `est_method` yields one row per
+#' method within a task without fanning out into separate tasks.
+#'
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
@@ -83,8 +96,9 @@
 #'   columns). Each entry must be unique, non-missing, and a subset of that
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
-#'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `est_method`,
-#'   `ci_method`, `parametric` (`ci` is a scalar hc flag, not an axis).
+#'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`,
+#'   `parametric` (`ci` and `est_method` are hc simulation settings, not axes;
+#'   `dists` is the fit-level simulation setting).
 #'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
@@ -104,8 +118,6 @@
 #'   may be partial. Use `partition_by` when you want few path axes, `bundle`
 #'   when you want fine sharding and only a few inner axes. Both normalise into
 #'   the single stored `partition_by` path list.
-#' @param upload An optional upload specification (a list), or `NULL` for no
-#'   upload.
 #' @param ... Unused; must be empty.
 #' @return An S3 object of class `ssdsims_scenario`.
 #' @export
@@ -119,23 +131,22 @@ ssd_define_scenario <- function(
   name = NULL,
   nrow = 6L,
   replace = FALSE,
-  dists = ssdtools::ssd_dists_bcanz(),
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
-  nboot = 1000,
+  dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
-  ci_method = "weighted_samples",
-  parametric = TRUE,
   proportion = 0.05,
   ci = FALSE,
+  nboot = 1000,
+  ci_method = "weighted_samples",
+  parametric = TRUE,
   samples = FALSE,
   partition_by = NULL,
-  bundle = NULL,
-  upload = NULL
+  bundle = NULL
 ) {
   data_expr <- rlang::enexpr(data)
   min_pmix_expr <- rlang::enexpr(min_pmix)
@@ -174,7 +185,6 @@ ssd_define_scenario <- function(
   chk::chk_length(replace, upper = 2L)
 
   chk::chk_null_or(name, vld = chk::vld_string)
-  chk::chk_null_or(upload, vld = chk::vld_list)
   # `partition_by`/`bundle` are validated and normalised below.
 
   # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
@@ -292,26 +302,25 @@ ssd_define_scenario <- function(
       nrow = as.integer(nrow),
       replace = replace,
       fit = list(
-        dists = dists,
         rescale = rescale,
         computable = computable,
         at_boundary_ok = at_boundary_ok,
         min_pmix = min_pmix_spec$names,
         range_shape1 = range_shape1,
-        range_shape2 = range_shape2
+        range_shape2 = range_shape2,
+        dists = dists
       ),
       min_pmix_fns = min_pmix_spec$fns,
       hc = list(
-        nboot = nboot,
         est_method = est_method,
-        ci_method = ci_method,
-        parametric = parametric,
         proportion = proportion,
         ci = ci,
+        nboot = nboot,
+        ci_method = ci_method,
+        parametric = parametric,
         samples = samples
       ),
-      partition_by = partition_by,
-      upload = upload
+      partition_by = partition_by
     ),
     class = "ssdsims_scenario"
   )
@@ -748,9 +757,9 @@ print.ssdsims_scenario <- function(x, ...) {
   cat("  nrow:     ", paste(x$nrow, collapse = ", "), "\n", sep = "")
   cat("  replace:  ", paste(x$replace, collapse = ", "), "\n", sep = "")
   cat("  fit grid:\n")
-  print_grid(x$fit)
+  print_grid(x$fit, "fit")
   cat("  hc grid:\n")
-  print_grid(x$hc)
+  print_grid(x$hc, "hc")
   cat("  partition_by:\n")
   for (step in c("sample", "fit", "hc")) {
     cat(
@@ -776,11 +785,19 @@ print.ssdsims_scenario <- function(x, ...) {
   invisible(x)
 }
 
-#' Print a named list of argument vectors in a snapshot-stable way.
+#' Print a step's argument grid in stored (signature) order, flagging the
+#' simulation settings (the knobs absent from `task_axes(step)`) with
+#' `(setting)`. Stored order mirrors the signature grouping: the non-`ci`-gated
+#' settings (`dists`, `est_method`, `proportion`) come first, then `ci`, then the
+#' knobs it gates (`nboot`/`ci_method`/`parametric`, `samples`). So the hc grid
+#' renders `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`,
+#' `samples`, and the fit grid renders `dists` after its axes.
 #' @noRd
-print_grid <- function(grid) {
+print_grid <- function(grid, step) {
+  axes <- task_axes(step)
   for (nm in names(grid)) {
-    cat("    ", nm, ": ", fmt_grid_value(grid[[nm]]), "\n", sep = "")
+    marker <- if (nm %in% axes) "" else " (setting)"
+    cat("    ", nm, ": ", fmt_grid_value(grid[[nm]]), marker, "\n", sep = "")
   }
 }
 

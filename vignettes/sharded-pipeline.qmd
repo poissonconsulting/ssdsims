@@ -124,7 +124,7 @@ with `ssd_run_scenario_baseline()` joined on the task identity:
 base <- ssd_run_scenario_baseline(scenario)
 base_est <- sort(do.call(rbind, base$hc$hc)$est)
 
-summary_path <- ssd_summarize(
+summary_path <- ssd_summarise(
   file.path(run$dir, "sample"),
   file.path(run$dir, "fit"),
   file.path(run$dir, "hc"),
@@ -136,31 +136,44 @@ shard_est <- sort(summary_tbl$est)
 all.equal(base_est, shard_est)
 ```
 
-`ssd_summarize()` fans the `hc` layer in across shards (via duckplyr) into a
+`ssd_summarise()` fans the `hc` layer in across shards (via duckplyr) into a
 single `summary.parquet` --- the analysis-ready table --- without recomputing
-anything.
+anything. It projects the `dists`/`samples` list-columns out at the DuckDB level,
+so the (potentially large) retained bootstrap draws are never pulled into R. Pass
+`path_with_samples =` to **also** write a full summary that keeps those columns; that
+write stays lazy in DuckDB, so the draws never materialise in R there either. In
+the `targets` pipeline the full `summary-samples.parquet` is written
+automatically when the scenario set `samples = TRUE` (the case where the retained
+draws carry information the compact summary cannot).
 
 ## Scaling up: the `targets` pipeline
 
 The sharded runner is single core. To run shards **in parallel** (or on a
 cluster), the same building blocks plug into a static-branching `targets`
 pipeline: `tarchetypes::tar_map()` mints one named target per shard, so
-`targets` caches, invalidates, and reruns each shard independently. Two ready
-example projects ship with the package --- a minimal `small` one and a fuller
+`targets` caches, invalidates, and reruns each shard independently. Three ready
+example projects ship with the package --- a minimal `small` one, a fuller
 `large` one (adapted from `scripts/example.R`, sweeping `nrow`, `proportion`,
-and the estimation / CI methods). The `large` project parallelises its shards
-across local workers with a mirai-backed `crew` controller
-(`tar_option_set(controller = crew::crew_controller_local())`); swap in a
-`crew.cluster` controller for SLURM/PBS:
+and the estimation / CI methods), and a `cluster` one for SLURM. The `large`
+project parallelises its shards across local workers with a mirai-backed `crew`
+controller (`tar_option_set(controller = crew::crew_controller_local())`); the
+`cluster` project is the same pipeline under a
+`crew.cluster::crew_controller_slurm()` controller, with a connectivity +
+worker-prerequisite preflight — see the
+["Running on a SLURM Cluster"](cluster-pipeline.html) vignette, a "zero to a
+running cluster job" guide that maps your site's own SLURM instructions onto the
+controller:
 
 ```{r}
 #| label: template-path
 list.files(system.file("targets-templates", "small", package = "ssdsims"))
 ```
 
-Each directory holds `scenario.R` (the study, shared by both drivers),
-`_targets.R` (the pipeline), `run.R` (the **targets** driver), and
-`run-serial.R` (the **single-core** driver). The whole `_targets.R` is just
+The `small` and `large` directories each hold `scenario.R` (the study, shared by
+both drivers), `_targets.R` (the pipeline), `run.R` (the **targets** driver), and
+`run-serial.R` (the **single-core** driver); the `cluster` directory is a minimal
+four-file variant (the scenario is inline in `_targets.R`, and a separate
+`controller.R` holds the SLURM controller). The whole `_targets.R` is just
 *build a scenario and call the `ssd_scenario_targets()` factory* —
 
 ```{r}
@@ -217,7 +230,10 @@ that fits the run.
 
 - ["Defining a Scenario"](defining-a-scenario.html) --- the scenario object and
   the baseline runner.
+- ["Running on a SLURM Cluster"](cluster-pipeline.html) --- the same pipeline on
+  a cluster, and ["Uploading Shards to Cloud Storage"](cloud-upload.html) ---
+  shipping the shards to an object store so they are readable off the cluster.
 - `TARGETS-DESIGN.md` §5 (tasks into shards), §6 (inter-shard linking, the Hive
   layout, the `targets` sketch).
 - `?ssd_run_scenario_shards`, `?ssd_scenario_fit_shards`, `?ssd_run_fit_step`,
-  `?ssd_summarize`.
+  `?ssd_summarise`.
