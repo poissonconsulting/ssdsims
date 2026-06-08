@@ -50,7 +50,7 @@ Suggests:
     tidyselect
 VignetteBuilder: quarto
 Remotes:
-    poissonconsulting/ssdtools@dev
+    poissonconsulting/ssdtools
 Config/testthat/edition: 3
 Config/roxyglobals/unique: FALSE
 Encoding: UTF-8
