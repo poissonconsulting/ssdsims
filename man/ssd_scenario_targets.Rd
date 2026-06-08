@@ -125,7 +125,7 @@ to its own branch. Pass \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}} fo
 reach no network (exercising the DAG shape offline / in CI) or
 \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} to ship to Azure. The factory performs \strong{no} network
 I/O and never runs the \code{\link[=ssd_test_upload]{ssd_test_upload()}} probe: it only assembles the
-target list, so sourcing \code{_targets.R} (which \code{targets} does on every
+target list, so sourcing \verb{_targets.R} (which \code{targets} does on every
 \code{tar_make()}, \code{tar_manifest()}, \code{tar_visnetwork()}, and on each worker) stays
 side-effect free. Run \code{ssd_test_upload(upload)} yourself as a one-line
 preflight before \code{tar_make()} to confirm credentials and connectivity up

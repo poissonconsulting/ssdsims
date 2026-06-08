@@ -19,7 +19,7 @@
 
 ## 4. Docs and design
 
-- [ ] 4.1 Update `TARGETS-DESIGN.md` §5 prose (the `n_max = max(scenario$nrow)` derivation → the fixed `nrow_max` draw and the retired re-draw churn). (§12 roadmap bullet + addendum already added at propose.)
+- [ ] 4.1 Update `TARGETS-DESIGN.md` §5 prose (the `n_max = max(scenario$nrow)` derivation → the fixed `nrow_max` draw and the retired re-draw churn). (`ROADMAP.md` entry already added at propose.)
 - [ ] 4.2 `GLOSSARY.md`: rework the `n_max` carried-column entry (it is no longer a row column) and add a `nrow_max` entry (a simulation setting; the fixed draw size).
 - [ ] 4.3 `devtools::document()`; regenerate `man/`; sweep example scripts / `inst/targets-templates/` for any reliance on the derived draw size, and add `nrow_max` where illustrative.
 

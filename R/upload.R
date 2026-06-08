@@ -188,10 +188,8 @@ ssd_test_upload <- function(upload) {
 #'
 #' @param path The local shard Parquet path (the `<step>_step` target's value).
 #' @inheritParams ssd_test_upload
-#' @return The local `path` (a string). For an Azure upload the returned value
-#'   carries the cloud copy's sha256 as a `"cloud_sha256"` attribute, which the
-#'   manifest can record alongside the local sha256 so a corrupted transfer
-#'   shows up as a mismatch.
+#' @return The local `path` (a string), so the `upload_<step>` target stays
+#'   `format = "file"`.
 #' @seealso [ssd_test_upload()], [ssd_open_uploaded()], [ssd_scenario_targets()].
 #' @export
 #' @examples
@@ -368,9 +366,7 @@ ssd_upload_shard.ssdsims_upload_azure_blob <- function(path, upload) {
     src = path,
     dest = azure_blob_dest(upload, upload_blob_key(path))
   )
-  out <- path
-  attr(out, "cloud_sha256") <- ssd_file_sha256(path)
-  out
+  path
 }
 
 #' @export
@@ -401,13 +397,11 @@ ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   creds <- resolve_azure_credentials(call = rlang::caller_env())
   azure_load_duckdb_extension(creds, upload$account, call = rlang::caller_env())
 
-  # --- duckplyr query: read the uploaded shards in place and union them -------
-  # SKETCH - drop-in point for the working implementation. Reads the step's Hive
-  # glob via the `azure` extension (predicate pushdown, no download) and
-  # optionally projects away the heavy `dists`/`samples` list-columns (the
-  # analysis-ready summary, mirroring `ssd_summarise()`). The result stays a
-  # **lazy duckplyr tibble** (not collected), so it composes with `dplyr` verbs
-  # and the read/projection run inside DuckDB.
+  # Read the step's Hive glob via the `azure` extension (predicate pushdown, no
+  # download) and optionally project away the heavy `dists`/`samples`
+  # list-columns (the analysis-ready summary, mirroring `ssd_summarise()`). The
+  # result stays a **lazy duckplyr tibble** (not collected), so it composes with
+  # `dplyr` verbs and the read/projection run inside DuckDB.
   tbl <- duckplyr::read_parquet_duckdb(
     azure_glob(upload, step),
     options = list(hive_partitioning = FALSE)

@@ -19,7 +19,7 @@ The front-door check, dispatched on the upload object's class, that confirms
 credentials are in the right place (\code{TARGETS-DESIGN.md} section 6.1). Run it
 as a one-liner at the prompt before \code{tar_make()} - it is the user's explicit
 preflight. \code{\link[=ssd_scenario_targets]{ssd_scenario_targets()}} deliberately does \strong{not} call it (the
-factory does no network I/O, so sourcing \code{_targets.R} stays side-effect
+factory does no network I/O, so sourcing \verb{_targets.R} stays side-effect
 free); a missing credential still fails loud per-shard at
 \code{\link[=ssd_upload_shard]{ssd_upload_shard()}} time as a backstop.
 }

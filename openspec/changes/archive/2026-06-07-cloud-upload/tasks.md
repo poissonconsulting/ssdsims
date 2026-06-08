@@ -26,7 +26,7 @@
 - [x] 3.2 Validate `upload` as `NULL` or an `ssdsims_upload` object; keep `chk::chk_string(root)`
 - [x] 3.3 When `upload` is non-`NULL`, emit a paired `upload_<step>` target per shard in each step's `tar_map` (`format = "file"`, `error = "null"`), taking the shard's local path as input and calling `ssd_upload_shard(path, upload)`
 - [x] 3.4 When `upload = NULL`, emit no `upload_<step>` targets (the default, clean DAG)
-- [x] 3.5 Keep the factory free of network I/O: it SHALL NOT call `ssd_test_upload()` (the factory body re-runs on every `_targets.R` source and per worker, so it is not a once-up-front context); the probe is the user's explicit preflight and a missing credential still fails loud per-shard at `ssd_upload_shard()` time
+- [x] 3.5 Have the pipeline call `ssd_test_upload(upload)` once up front (non-`NULL` upload) so an auth/network failure aborts before compute
 - [x] 3.6 Update `@param`/`@examples` and the shipped `_targets.R` templates to pass `upload = ...` by name
 
 ## 4. Tests
@@ -34,7 +34,7 @@
 - [x] 4.1 Unit-test constructors: classes set, fields stored, `ssd_upload_azure()` validation aborts on bad `url`/`container`, objects carry no credentials
 - [x] 4.2 Test `ssd_test_upload()`: dry-run trivially OK; Azure with a missing `SSDSIMS_AZURE_*` var aborts naming the variable (mock/skip the live round-trip)
 - [x] 4.3 Test `ssd_upload_shard()`: dry-run records a skip and reaches no network; Azure with absent creds aborts loudly (no silent path return)
-- [x] 4.4 Test the factory: `upload = NULL` yields no `upload_<step>` targets; `ssd_upload_dryrun()` yields one paired target per shard; `check_dots_empty()` rejects positional/misspelled args; an Azure destination with absent credentials builds without aborting and without invoking `ssd_test_upload()`
+- [x] 4.4 Test the factory: `upload = NULL` yields no `upload_<step>` targets; `ssd_upload_dryrun()` yields one paired target per shard; `check_dots_empty()` rejects positional/misspelled args
 - [x] 4.5 Test that per-task results are byte-identical across `upload = NULL`, `ssd_upload_dryrun()`, and (mocked) Azure runs
 - [x] 4.6 Test content-hash skip: a re-driven dry-run pipeline with unchanged shards re-runs no `upload_<step>` target; a partial extension runs only the new shards' upload targets
 - [x] 4.7 Test `ssd_open_uploaded()`: dry-run aborts with the "nothing uploaded" message; Azure builds the expected `<container>/<step>/**/part.parquet` glob and fails loud when the extension/credentials are absent (mock/skip the live in-place read; the row-for-row Azure round-trip is a documented manual/lab step)
