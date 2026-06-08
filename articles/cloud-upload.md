@@ -107,10 +107,10 @@ ssd_test_upload(ssd_upload_dryrun())
 ```
 
 Build a scenario and hand it to the factory with
-`upload = ssd_upload_dryrun()`. The factory runs the
+`upload = ssd_upload_dryrun()`. You run
 [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
-probe **once up front**, then pairs each step shard with a no-op
-`upload_<step>` target:
+yourself as a preflight (above); the factory does no network I/O of its
+own — it just pairs each step shard with a no-op `upload_<step>` target:
 
 ``` r
 
@@ -170,7 +170,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/RtmpTRZePw/ssdsims-shards-3fab5f9aac7f/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/RtmpeACvHa/ssdsims-shards-3f363e1edbcc/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 

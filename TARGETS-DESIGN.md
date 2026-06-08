@@ -105,7 +105,8 @@ The most consequential design choices, with section refs:
   own `format = "file"` target, content-hashing skips re-uploading
   shards that did not change;
   [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
-  probes the backend at pipeline init, and
+  is the user’s explicit preflight probe (the factory itself does no
+  network I/O and never runs it), and
   [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
   builds and dry-runs the DAG with no credentials.
 - **Partial failures survive and stay visible (§6.2).** The pipeline
@@ -1267,11 +1268,11 @@ construction. They are passed by name to the factory — `upload = NULL`
 (no-op nodes, exercised offline/in CI), or `ssd_upload_azure(...)` (ship
 to Azure). Four generics dispatch on the object’s class:
 [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
-(the front-door creds/connectivity probe, run once up front),
-`ssd_upload_shard(path, upload)` (ship one shard),
-`ssd_open_uploaded(upload, step)` (read the uploaded results back in
-place), and `ssd_summarise_uploaded(upload, step, drop_samples)` (the
-in-place fan-in summary, the cloud counterpart of
+(the front-door creds/connectivity probe, the user’s explicit preflight
+— the factory never runs it), `ssd_upload_shard(path, upload)` (ship one
+shard), `ssd_open_uploaded(upload, step)` (read the uploaded results
+back in place), and `ssd_summarise_uploaded(upload, step, drop_samples)`
+(the in-place fan-in summary, the cloud counterpart of
 [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md)).
 A new backend (S3/GCS) is a constructor plus those four methods — no
 edit to existing methods.
@@ -1353,26 +1354,39 @@ variable), not a silent no-op — skipping the network is
 [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)’s
 job.
 
-**Connectivity probe up front.** `ssd_test_upload(upload)` performs a
-minimal round-trip (list the container, write and delete a small marker
-blob) and either returns silently or errors with the backend’s
-diagnostic — resolving the credentials first and aborting, naming the
-missing `SSDSIMS_AZURE_*` variable, when one is absent. The factory
-[`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
-runs it **once up front** (when the target list is built, i.e. when
-`_targets.R` is sourced — before
+**Connectivity probe — the user’s explicit preflight.**
+`ssd_test_upload(upload)` performs a minimal round-trip (list the
+container, write and delete a small marker blob) and either returns
+silently or errors with the backend’s diagnostic — resolving the
+credentials first and aborting, naming the missing `SSDSIMS_AZURE_*`
+variable, when one is absent. It is the one-liner the user runs at the
+prompt before
 [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-builds anything), so an auth/network failure aborts before any compute
-rather than deep in the DAG on a worker. The same one-liner works
-interactively as the user’s “are my credentials in the right place?”
-check:
+to answer “are my credentials in the right place?”. The factory
+[`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
+**does not** run it: `_targets.R` is re-sourced by every `targets`
+operation
+([`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
+but also
+[`tar_manifest()`](https://docs.ropensci.org/targets/reference/tar_manifest.html),
+[`tar_visnetwork()`](https://docs.ropensci.org/targets/reference/tar_visnetwork.html),
+[`tar_outdated()`](https://docs.ropensci.org/targets/reference/tar_outdated.html))
+and on **every worker** in a `crew`/cluster run, so probing in the
+factory would fire a credential resolution and marker-blob round-trip on
+each of those — surprising network I/O on every graph inspection and N×
+on a cluster, and a requirement that workers carry credentials merely to
+*source* the pipeline. The factory therefore stays a pure,
+side-effect-free assembler; fail-loud is preserved by the backstop in
+[`ssd_upload_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_shard.md)
+(a missing credential aborts that shard’s upload branch at upload time,
+leaving the rest shipping under `error = "null"`).
 
 ``` r
 
 upload <- ssd_upload_azure(url = "https://<acct>.blob.core.windows.net",
                            container = "ssdsims-results")
-ssd_test_upload(upload)   # silent on success, throws (naming the missing var) on failure
-ssd_scenario_targets(scenario, upload = upload)   # runs the probe up front too
+ssd_test_upload(upload)   # preflight: silent on success, throws (naming the missing var) on failure
+ssd_scenario_targets(scenario, upload = upload)   # pure: builds the target list, no network I/O
 ```
 
 **Failure mode.** A per-shard upload error becomes that `upload_<step>`

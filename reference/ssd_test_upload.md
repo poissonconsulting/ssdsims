@@ -4,10 +4,14 @@ The front-door check, dispatched on the upload object's class, that
 confirms **before any compute** whether the destination is reachable and
 the credentials are in the right place (`TARGETS-DESIGN.md` section
 6.1). Run it as a one-liner at the prompt before
-[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
-or let
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html) -
+it is the user's explicit preflight.
 [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
-run it once up front for you.
+deliberately does **not** call it (the factory does no network I/O, so
+sourcing `_targets.R` stays side-effect free); a missing credential
+still fails loud per-shard at
+[`ssd_upload_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_shard.md)
+time as a backstop.
 
 ## Usage
 

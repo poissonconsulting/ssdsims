@@ -160,14 +160,21 @@ branch. Pass
 for no-op upload targets that reach no network (exercising the DAG shape
 offline / in CI) or
 [`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
-to ship to Azure. The destination's
+to ship to Azure. The factory performs **no** network I/O and never runs
+the
 [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md)
-probe is run **once up front** (when the factory is called, before
-[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)),
-so missing credentials or an unreachable destination abort before any
-compute. The per-task results are byte-identical across all three
-`upload` modes; only the presence and behaviour of the `upload_<step>`
-targets differ.
+probe: it only assembles the target list, so sourcing `_targets.R`
+(which `targets` does on every
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
+[`tar_manifest()`](https://docs.ropensci.org/targets/reference/tar_manifest.html),
+[`tar_visnetwork()`](https://docs.ropensci.org/targets/reference/tar_visnetwork.html),
+and on each worker) stays side-effect free. Run
+`ssd_test_upload(upload)` yourself as a one-line preflight before
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+to confirm credentials and connectivity up front; a missing credential
+still fails loud per-shard at upload time as a backstop. The per-task
+results are byte-identical across all three `upload` modes; only the
+presence and behaviour of the `upload_<step>` targets differ.
 
 ## See also
 
