@@ -29,9 +29,9 @@ identifier between the emoji and the prose. Example:
 
 Append directly after the priority emoji (no space); drop on move to `## Done`.
 Mutually exclusive. A `[change]` with artifacts under `openspec/changes/` but no
-implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
+implementation yet is queued in `## Next`; a
 `[change]` whose every prerequisite has landed but which has no artifacts yet
-(blue/`ready` in the DAG) is also queued, ready to propose.
+is also queued, ready to propose.
 
 ## Now
 

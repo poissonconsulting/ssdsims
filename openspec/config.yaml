@@ -16,29 +16,8 @@ context: |
   `.Rbuildignore` entry, so no separate top-level ignore is needed. See the
   "Explorations live with their change" section of `openspec/AGENTS.md`.
 
-  Roadmap upkeep spans a change's whole lifecycle and spans TWO files: ROADMAP.md
-  (the Now/Next/Later/Bluesky/Done backlog + shipped log) and TARGETS-DESIGN.md
-  §12 (the dependency DAG + the `### Archived` prose for landed steps). Whenever a
-  change is created, applied, or archived, reflect it in both and keep the §12
-  node status colour in sync (red = proposed, yellow = done/implemented, green =
-  archived; move an archived node into the `archived_box` subgraph). When a
-  change is first proposed:
-    - add a ROADMAP.md line under Now/Next/Later (priority emoji + [change]);
-    - a DAG step (with prerequisites and/or dependants) also gets a Mermaid node
-      + edges coloured `proposed` (red) via a `class` line;
-    - an independent tidy-up or new capability (no prereqs, no dependants) is
-      ROADMAP.md-only -> no §12 node and no §12 prose until it archives.
-  On archive, move the ROADMAP.md line to Done and add the §12 `### Archived`
-  bullet. See "Architectural Notes -> The targets redesign" in AGENTS.md.
-
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
 rules:
   proposal:
-    - After writing the proposal, update ROADMAP.md (a Now/Next/Later line) and,
-      for a DAG step, TARGETS-DESIGN.md §12 (a `proposed`-coloured Mermaid node);
-      an off-DAG tidy-up / new capability is ROADMAP.md-only, per AGENTS.md.
   tasks:
-    - Before finishing, confirm ROADMAP.md (and, for a DAG step, TARGETS-DESIGN.md
-      §12) has been updated for this change — roadmap upkeep is part of the change
-      lifecycle, per AGENTS.md.
