@@ -52,13 +52,3 @@ Falls back to
 [`ssd_read_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_read_manifest.md),
 [`ssd_record_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_record_shard.md),
 [`ssd_assemble_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_assemble_manifest.md).
-
-## Examples
-
-``` r
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-dir <- withr::local_tempdir()
-ssd_write_manifest(scenario, dir)
-ssd_read_manifest(dir)$seed
-#> [1] 42
-```

@@ -41,13 +41,3 @@ returns head and tail together.
 
 [`ssd_record_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_record_shard.md),
 [`ssd_write_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_write_manifest.md).
-
-## Examples
-
-``` r
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-dir <- withr::local_tempdir()
-ssd_write_manifest(scenario, dir)
-ssd_assemble_manifest(dir)$completed_shards
-#> list()
-```

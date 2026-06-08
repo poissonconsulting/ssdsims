@@ -187,11 +187,12 @@ ssd_run_scenario(
 - range_shape1:
 
   A numeric vector of length two of the lower and upper bounds for the
-  shape1 parameter.
+  shape1 parameter for the burrIII3 distribution.
 
 - range_shape2:
 
-  shape2 parameter.
+  A numeric vector of length two of the lower and upper bounds for the
+  shape2 parameter for the burrIII3 distribution.
 
 - proportion:
 

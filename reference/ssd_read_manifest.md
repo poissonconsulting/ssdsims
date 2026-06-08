@@ -29,22 +29,3 @@ written scenario restored.
 ## See also
 
 [`ssd_write_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_write_manifest.md).
-
-## Examples
-
-``` r
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-dir <- withr::local_tempdir()
-ssd_write_manifest(scenario, dir)
-manifest <- ssd_read_manifest(dir)
-manifest$partition_by
-#> $sample
-#> [1] "dataset" "sim"     "replace"
-#> 
-#> $fit
-#> [1] "dataset" "sim"     "nrow"    "rescale"
-#> 
-#> $hc
-#> [1] "dataset" "sim"    
-#> 
-```

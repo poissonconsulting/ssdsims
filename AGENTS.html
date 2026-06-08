@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9013</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9014</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,7 +60,9 @@
 <div class="section level2">
 <h2 id="key-design-documents">Key Design Documents<a class="anchor" aria-label="anchor" href="#key-design-documents"></a></h2>
 <ul><li>
-<strong>TARGETS-DESIGN.md</strong> — Forward-looking design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. This is the north star for the roadmap.</li>
+<strong>TARGETS-DESIGN.md</strong> — Principal design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. Not intended for modification.</li>
+<li>
+<strong>ROADMAP.md</strong> — The actionable roadmap: the <code>Now</code>/<code>Next</code>/<code>Later</code>/<code>Bluesky</code> backlog and the <code>Done</code> shipped log (<code>initiative</code>-template style), keyed by OpenSpec <code>[change]</code> identifiers.</li>
 <li>
 <strong>RNG-FLOW.md</strong> — RNG design rationale and gaps closed by TARGETS-DESIGN.</li>
 <li>
@@ -78,7 +80,7 @@
 <li>
 <strong>Validation</strong>: Use <code>chk</code> for all input validation; keep error messages informative and actionable.</li>
 <li>
-<strong>Error origin</strong>: Raise errors in the context of the <em>user-facing</em> function. Thread the public function’s frame down to validators (<code>chk::abort_chk(..., call = call)</code> with <code>call = environment()</code> captured in the exported function) and avoid leaking internal frames like <code><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">purrr::map()</a></code> / <code><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply()</a></code> / private helpers into the <code>Error in ...:</code> header (loop instead of <code><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">purrr::walk</a></code>/<code>chk_all</code> where they would surface). A package-wide pass to enforce this is tracked as the <code>error-call-origin</code> roadmap item (TARGETS-DESIGN.md §12).</li>
+<strong>Error origin</strong>: Raise errors in the context of the <em>user-facing</em> function. Thread the public function’s frame down to validators (<code>chk::abort_chk(..., call = call)</code> with <code>call = environment()</code> captured in the exported function) and avoid leaking internal frames like <code><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">purrr::map()</a></code> / <code><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply()</a></code> / private helpers into the <code>Error in ...:</code> header (loop instead of <code><a href="https://purrr.tidyverse.org/reference/map.html" class="external-link">purrr::walk</a></code>/<code>chk_all</code> where they would surface). A package-wide pass to enforce this is tracked as the <code>error-call-origin</code> roadmap item.</li>
 <li>
 <strong>Minimal diffs</strong>: touch only the lines your change requires; don’t reformat unrelated lines or let editors rewrite whitespace. Leave <code>DESCRIPTION</code> formatting to <code>usethis</code>/<code>desc</code> (e.g. keep the trailing space after field names like <code>Imports:</code>).</li>
 <li>
@@ -97,7 +99,7 @@
 <li>Prefer <code>rlang</code> helpers over their base equivalents: <code><a href="https://rlang.r-lib.org/reference/set_names.html" class="external-link">rlang::set_names()</a></code> over <code><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">stats::setNames()</a></code>, <code><a href="https://rlang.r-lib.org/reference/exec.html" class="external-link">rlang::exec()</a></code> over <code><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call()</a></code>, <code><a href="https://rlang.r-lib.org/reference/env_get.html" class="external-link">rlang::env_get()</a></code> / <code><a href="https://rlang.r-lib.org/reference/is_function.html" class="external-link">rlang::is_function()</a></code> over <code><a href="https://rdrr.io/r/base/get.html" class="external-link">get()</a></code> / <code><a href="https://rdrr.io/r/base/ns-reflect.html" class="external-link">getExportedValue()</a></code> / <code><a href="https://rdrr.io/r/base/is.function.html" class="external-link">is.function()</a></code>.</li>
 <li>Reserve the <code>with_</code>/<code>local_</code> prefixes for RAII (withr-style) scope helpers; do not use them for ordinary transforms (e.g. name a column-adder <code>add_*()</code>).</li>
 <li>
-<strong>Canonical argument order</strong>: at every call site, pass arguments in signature order. In particular, lead <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> calls with its three required arguments — <code>data</code> (positional), then <code>nsim =</code>, then <code>seed =</code> — before any <code>...</code> knob (<code>nrow</code>, <code>dists</code>, <code>rescale</code>, …). <code>seed</code> is the scenario’s RNG root (an RNG term, <strong>not</strong> a simulation setting/grid knob — see <code>GLOSSARY.md</code>), so it belongs up front with <code>data</code>/<code>nsim</code>, never wedged between knobs like <code>nrow</code>. A full package-wide sweep of remaining call sites for this and the other public constructors is a <code>TARGETS-DESIGN.md</code> §12 cleanup item.</li>
+<strong>Canonical argument order</strong>: at every call site, pass arguments in signature order. In particular, implement <code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> calls in the exact order of the signature. A full package-wide sweep of remaining call sites for this and the other public constructors is a <code>ROADMAP.md</code> cleanup item.</li>
 <li>Permissions for the common tooling (<code>air</code>, <code>R</code>, <code>Rscript</code>, read-only <code>git</code>/<code>gh</code>, <code>quarto</code>, <code>Skill</code>) are pre-approved in <code>.claude/settings.json</code>, so these run without a prompt.</li>
 </ul></div>
 </div>
@@ -154,6 +156,7 @@
 <div class="section level3">
 <h3 id="documentation">Documentation<a class="anchor" aria-label="anchor" href="#documentation"></a></h3>
 <ul><li>Functions are documented inline with roxygen comments (<code>#' @param</code>, <code>#' @return</code>, etc.); wrap roxygen comments at 80 characters.</li>
+<li>Prefer <code>#' @inheritParams</code> over copying argument descriptions.</li>
 <li>Every user-facing function should be exported and documented; internal functions should not have roxygen documentation.</li>
 <li>Run <code>devtools::document()</code> to generate <code>man/</code> pages and update <code>NAMESPACE</code> — always re-document after changing a roxygen comment, and never edit <code>man/</code> or <code>NAMESPACE</code> by hand.</li>
 <li>Whenever you add a new (non-internal) topic, add it to <code>_pkgdown.yml</code> and confirm with <code><a href="https://pkgdown.r-lib.org/reference/check_pkgdown.html" class="external-link">pkgdown::check_pkgdown()</a></code>.</li>
@@ -173,10 +176,7 @@
 <strong><code>/opsx:apply &lt;change-name&gt;</code></strong> — Implement tasks from a change.</li>
 <li>
 <strong><code>/opsx:archive &lt;change-name&gt;</code></strong> — Finalize a completed change.</li>
-</ul><blockquote>
-<p><strong>Every lifecycle action (propose / apply / sync / archive) must update the <code>TARGETS-DESIGN.md</code> §12 roadmap in the same change-set</strong> — the generic skills will not. <code>openspec/AGENTS.md</code> is the authority for that rule (node colours, the <code>archived_box</code>, the per-action checklist) and for the change/spec layout.</p>
-</blockquote>
-<p>Active changes live in <code>openspec/changes/&lt;name&gt;/</code>; the current capability specs live in <code>openspec/specs/</code> — that directory is the authoritative list.</p>
+</ul><p>Active changes live in <code>openspec/changes/&lt;name&gt;/</code>; the current capability specs live in <code>openspec/specs/</code> — that directory is the authoritative list.</p>
 </div>
 </div>
 <div class="section level2">
@@ -241,7 +241,7 @@
 <strong>Static branching</strong> (default) — <code>tar_map()</code> mints one named target per shard at sourcing time.</li>
 <li>
 <strong>Dynamic branching</strong> (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.</li>
-</ul><p>The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from <code>ssd-define-scenario</code> and <code>dqrng-init</code> (no dependencies). Each step is a coherent working state; parallel work streams are encouraged. <strong>Keep its Mermaid graph current as part of each change</strong> — see <code>openspec/AGENTS.md</code> for the node-colour and <code>archived_box</code> rules.</p>
+</ul><p>The roadmap lands features in order. Each step is a coherent working state; parallel work streams are encouraged. The forward-looking backlog lives in <a href="ROADMAP.html"><code>ROADMAP.md</code></a>.</p>
 </div>
 </div>
 <div class="section level2">

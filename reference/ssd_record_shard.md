@@ -46,10 +46,3 @@ computes no Parquet paths itself.
 
 [`ssd_assemble_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_assemble_manifest.md),
 [`ssd_write_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_write_manifest.md).
-
-## Examples
-
-``` r
-dir <- withr::local_tempdir()
-ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", strrep("a", 64))
-```

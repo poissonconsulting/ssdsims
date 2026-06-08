@@ -1,5 +1,100 @@
 # Changelog
 
+## ssdsims 0.0.0.9014
+
+### Bug fixes
+
+- Key `completed_shards` by relative partition path on Windows
+  ([\#130](https://github.com/poissonconsulting/ssdsims/issues/130)).
+
+### Features
+
+#### task-shards
+
+- Add optional full summary retaining dists/samples
+  ([\#140](https://github.com/poissonconsulting/ssdsims/issues/140)).
+
+- Add per-scenario manifest writer, reader, and shard sha256 assembly
+  ([\#114](https://github.com/poissonconsulting/ssdsims/issues/114)).
+
+- Add scenario cost-estimation calibrate/estimate workflow
+  ([\#131](https://github.com/poissonconsulting/ssdsims/issues/131)).
+
+- Add per-scenario manifest writer, reader, and shard sha256 assembly
+  ([\#114](https://github.com/poissonconsulting/ssdsims/issues/114)).
+
+- Add cluster targets template for SLURM (cluster-pipeline)
+  ([\#115](https://github.com/poissonconsulting/ssdsims/issues/115)).
+
+### Chore
+
+- Change code ownership for now.
+
+- Bump codecov-action to v7 and sharpen PR-title convention
+  ([\#126](https://github.com/poissonconsulting/ssdsims/issues/126)).
+
+### Documentation
+
+#### openspec
+
+- Propose `nrow-max-setting` and reconcile `migrate-public-api` ci
+  primer
+  ([\#134](https://github.com/poissonconsulting/ssdsims/issues/134)).
+
+- Consolidate per-step task, shard, and runner docs onto umbrella pages
+  ([\#137](https://github.com/poissonconsulting/ssdsims/issues/137)).
+
+#### openspec
+
+- Archive cost-estimation and axis reclassifications
+  ([\#139](https://github.com/poissonconsulting/ssdsims/issues/139)).
+
+- Add/correct author ORCID(s) in DESCRIPTION
+  ([\#136](https://github.com/poissonconsulting/ssdsims/issues/136)).
+
+#### openspec
+
+- Sync and archive `blob-storage-format` change
+  ([\#135](https://github.com/poissonconsulting/ssdsims/issues/135)).
+
+- Consolidate PR conventions to CLAUDE.md
+  ([\#132](https://github.com/poissonconsulting/ssdsims/issues/132)).
+
+- Sync manifest spec, archive, update §12 roadmap, and trim AGENTS.md
+  ([\#125](https://github.com/poissonconsulting/ssdsims/issues/125)).
+
+#### openspec
+
+- Propose cloud-upload capability with typed upload destinations
+  ([\#122](https://github.com/poissonconsulting/ssdsims/issues/122)).
+
+- Document keep-going error mode and pre-flight checks
+  ([\#123](https://github.com/poissonconsulting/ssdsims/issues/123)).
+
+#### openspec
+
+- Propose est-method-setting and cost-estimation changes
+  ([\#121](https://github.com/poissonconsulting/ssdsims/issues/121)).
+
+### Refactoring
+
+- Reclassify `est_method` and `dists` as hc/fit simulation settings
+  ([\#127](https://github.com/poissonconsulting/ssdsims/issues/127)).
+
+### Testing
+
+- Pin name-order sensitivity in task_primer()
+  ([\#138](https://github.com/poissonconsulting/ssdsims/issues/138)).
+
+- Handle withr seed leak in hc_sims bootstrap CI tests
+  ([\#128](https://github.com/poissonconsulting/ssdsims/issues/128)).
+
+#### task-shards
+
+- Guard targets-object tests so checks pass without
+  `targets`/`tarchetypes`
+  ([\#124](https://github.com/poissonconsulting/ssdsims/issues/124)).
+
 ## ssdsims 0.0.0.9013
 
 ### Features

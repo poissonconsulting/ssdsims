@@ -19,10 +19,13 @@ Species Sensitivity Distribution (SSD) simulation studies.
 
 ## Key Design Documents
 
-- **TARGETS-DESIGN.md** — Forward-looking design for the cluster-based
-  targets pipeline. Covers the scenario object, dqrng/hash RNG
-  mechanism, task shards, and extension patterns. This is the north star
-  for the roadmap.
+- **TARGETS-DESIGN.md** — Principal design for the cluster-based targets
+  pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task
+  shards, and extension patterns. Not intended for modification.
+- **ROADMAP.md** — The actionable roadmap: the
+  `Now`/`Next`/`Later`/`Bluesky` backlog and the `Done` shipped log
+  (`initiative`-template style), keyed by OpenSpec `[change]`
+  identifiers.
 - **RNG-FLOW.md** — RNG design rationale and gaps closed by
   TARGETS-DESIGN.
 - **GLOSSARY.md** — Terminology (seed vs. state vs. primer vs. stream).
@@ -47,8 +50,7 @@ Read these before major implementation work.
   into the `Error in ...:` header (loop instead of
   [`purrr::walk`](https://purrr.tidyverse.org/reference/map.html)/`chk_all`
   where they would surface). A package-wide pass to enforce this is
-  tracked as the `error-call-origin` roadmap item (TARGETS-DESIGN.md
-  §12).
+  tracked as the `error-call-origin` roadmap item.
 - **Minimal diffs**: touch only the lines your change requires; don’t
   reformat unrelated lines or let editors rewrite whitespace. Leave
   `DESCRIPTION` formatting to `usethis`/`desc` (e.g. keep the trailing
@@ -95,15 +97,11 @@ chk::chk_character(dataset_names)
   helpers; do not use them for ordinary transforms (e.g. name a
   column-adder `add_*()`).
 - **Canonical argument order**: at every call site, pass arguments in
-  signature order. In particular, lead
+  signature order. In particular, implement
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
-  calls with its three required arguments — `data` (positional), then
-  `nsim =`, then `seed =` — before any `...` knob (`nrow`, `dists`,
-  `rescale`, …). `seed` is the scenario’s RNG root (an RNG term, **not**
-  a simulation setting/grid knob — see `GLOSSARY.md`), so it belongs up
-  front with `data`/`nsim`, never wedged between knobs like `nrow`. A
-  full package-wide sweep of remaining call sites for this and the other
-  public constructors is a `TARGETS-DESIGN.md` §12 cleanup item.
+  calls in the exact order of the signature. A full package-wide sweep
+  of remaining call sites for this and the other public constructors is
+  a `ROADMAP.md` cleanup item.
 - Permissions for the common tooling (`air`, `R`, `Rscript`, read-only
   `git`/`gh`, `quarto`, `Skill`) are pre-approved in
   `.claude/settings.json`, so these run without a prompt.
@@ -194,6 +192,7 @@ Read that before writing tests.
 
 - Functions are documented inline with roxygen comments (`#' @param`,
   `#' @return`, etc.); wrap roxygen comments at 80 characters.
+- Prefer `#' @inheritParams` over copying argument descriptions.
 - Every user-facing function should be exported and documented; internal
   functions should not have roxygen documentation.
 - Run `devtools::document()` to generate `man/` pages and update
@@ -221,12 +220,6 @@ skills do not enforce.
   decision before committing.
 - **`/opsx:apply <change-name>`** — Implement tasks from a change.
 - **`/opsx:archive <change-name>`** — Finalize a completed change.
-
-> **Every lifecycle action (propose / apply / sync / archive) must
-> update the `TARGETS-DESIGN.md` §12 roadmap in the same change-set** —
-> the generic skills will not. `openspec/AGENTS.md` is the authority for
-> that rule (node colours, the `archived_box`, the per-action checklist)
-> and for the change/spec layout.
 
 Active changes live in `openspec/changes/<name>/`; the current
 capability specs live in `openspec/specs/` — that directory is the
@@ -322,11 +315,10 @@ execution to a cluster-based targets pipeline. Key shifts:
 - **Dynamic branching** (escape hatch) — For extreme fan-outs, task
   tables can be computed inside targets instead.
 
-The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order,
-starting from `ssd-define-scenario` and `dqrng-init` (no dependencies).
-Each step is a coherent working state; parallel work streams are
-encouraged. **Keep its Mermaid graph current as part of each change** —
-see `openspec/AGENTS.md` for the node-colour and `archived_box` rules.
+The roadmap lands features in order. Each step is a coherent working
+state; parallel work streams are encouraged. The forward-looking backlog
+lives in
+[`ROADMAP.md`](https://poissonconsulting.github.io/ssdsims/ROADMAP.md).
 
 ## Contact & Contribution
 

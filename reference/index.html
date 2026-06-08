@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9013</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9014</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -208,43 +208,6 @@
 
         </dt>
         <dd>Summarise Uploaded Results, In Place (the cloud <code><a href="../reference/ssd_summarise.html">ssd_summarise()</a></code>)</dd>
-      </dl></div><div class="section level2">
-      <h2 id="manifest">Manifest<a class="anchor" aria-label="anchor" href="#manifest"></a></h2>
-
-      <div class="section-desc"><p>A per-scenario JSON manifest: write the declarative head (scenario fields plus complete session info for the bit-stability contract), record each completed shard’s sha256 in a per-shard sidecar, and assemble those into the manifest’s <code>completed_shards</code> map.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="ssd_write_manifest.html">ssd_write_manifest()</a></code>
-
-        </dt>
-        <dd>Write a Per-Scenario Manifest</dd>
-
-        <dt>
-
-          <code><a href="ssd_read_manifest.html">ssd_read_manifest()</a></code>
-
-        </dt>
-        <dd>Read a Per-Scenario Manifest</dd>
-
-        <dt>
-
-          <code><a href="ssd_record_shard.html">ssd_record_shard()</a></code>
-
-        </dt>
-        <dd>Record a Completed Shard's sha256 Alongside its Parquet</dd>
-
-        <dt>
-
-          <code><a href="ssd_assemble_manifest.html">ssd_assemble_manifest()</a></code>
-
-        </dt>
-        <dd>Assemble <code>completed_shards</code> from the Shards on Disk</dd>
       </dl></div><div class="section level2">
       <h2 id="cost-estimation">Cost estimation<a class="anchor" aria-label="anchor" href="#cost-estimation"></a></h2>
 

@@ -35,10 +35,8 @@ ssd_upload_shard(path, upload)
 
 ## Value
 
-The local `path` (a string). For an Azure upload the returned value
-carries the cloud copy's sha256 as a `"cloud_sha256"` attribute, which
-the manifest can record alongside the local sha256 so a corrupted
-transfer shows up as a mismatch.
+The local `path` (a string), so the `upload_<step>` target stays
+`format = "file"`.
 
 ## Adding a backend
 
@@ -78,6 +76,6 @@ path <- tempfile(fileext = ".parquet")
 file.create(path)
 #> [1] TRUE
 ssd_upload_shard(path, ssd_upload_dryrun())
-#> Dry-run upload: skipped "/tmp/RtmpiXpGtK/file3bc7c6e28de.parquet".
-#> [1] "/tmp/RtmpiXpGtK/file3bc7c6e28de.parquet"
+#> Dry-run upload: skipped "/tmp/RtmplPzKQ4/file3b321908b6f1.parquet".
+#> [1] "/tmp/RtmplPzKQ4/file3b321908b6f1.parquet"
 ```

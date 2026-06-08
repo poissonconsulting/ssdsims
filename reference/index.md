@@ -87,27 +87,6 @@ remote-destination sibling of `root` on
   Summarise Uploaded Results, In Place (the cloud
   [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md))
 
-## Manifest
-
-A per-scenario JSON manifest: write the declarative head (scenario
-fields plus complete session info for the bit-stability contract),
-record each completed shard’s sha256 in a per-shard sidecar, and
-assemble those into the manifest’s `completed_shards` map.
-
-- [`ssd_write_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_write_manifest.md)
-  : Write a Per-Scenario Manifest
-
-- [`ssd_read_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_read_manifest.md)
-  : Read a Per-Scenario Manifest
-
-- [`ssd_record_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_record_shard.md)
-  : Record a Completed Shard's sha256 Alongside its Parquet
-
-- [`ssd_assemble_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_assemble_manifest.md)
-  :
-
-  Assemble `completed_shards` from the Shards on Disk
-
 ## Cost estimation
 
 Predict, before launching, roughly how much compute a scenario costs and
