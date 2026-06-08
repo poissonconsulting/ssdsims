@@ -16,25 +16,8 @@ context: |
   `.Rbuildignore` entry, so no separate top-level ignore is needed. See the
   "Explorations live with their change" section of `openspec/AGENTS.md`.
 
-  Roadmap upkeep spans a change's whole lifecycle. Whenever a change is created,
-  applied, or archived, reflect it in TARGETS-DESIGN.md §12 and keep its node
-  status colour in sync (red = proposed, yellow = done/implemented, green =
-  archived; move an archived node into the `archived_box` subgraph). When a
-  change is first proposed:
-    - a step with prerequisites and/or dependants -> add a Mermaid node + edges
-      and colour it `proposed` (red) via a `class` line;
-    - an independent tidy-up or new capability (no prereqs, no dependants) ->
-      add an off-DAG prose bullet in the §12 roadmap list, matching
-      `dists-simulation-setting` / `error-call-origin` / `scalar-ci-flag`.
-  See "Architectural Notes -> The targets redesign" in AGENTS.md for the rule.
-
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.
 rules:
   proposal:
-    - After writing the proposal, update TARGETS-DESIGN.md §12 to reflect the new
-      change (a `proposed`-coloured Mermaid node for a DAG step, or an off-DAG
-      prose bullet for an independent tidy-up / new capability), per AGENTS.md.
   tasks:
-    - Before finishing, confirm TARGETS-DESIGN.md §12 has been updated for this
-      change — roadmap upkeep is part of the change lifecycle, per AGENTS.md.

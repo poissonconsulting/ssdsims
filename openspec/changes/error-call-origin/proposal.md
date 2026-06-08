@@ -1,6 +1,6 @@
 ## Why
 
-When a user passes an invalid argument to a `ssd_*()` function, the `Error in ...:` header should name the function they actually called, not an internal frame they have never heard of. Today only `ssd_data()` and `ssd_define_scenario()` follow the `AGENTS.md` "Error origin" convention (thread the public frame down to validators as `call = environment()`, loop instead of `purrr::walk`/`chk_all`); the rest of the exported surface either delegates validation to a private helper (so the header names that helper) or uses `chk::chk_all()` (so the header names `chk_all`). The result is misleading provenance — `Error in \`scenario_shards()\`:` or `Error in \`chk_all()\`:` for a mistake in `ssd_scenario_fit_shards()` / `ssd_fit_dists_sims()` — which the `error-call-origin` roadmap item (`TARGETS-DESIGN.md` §12) exists to retire package-wide.
+When a user passes an invalid argument to a `ssd_*()` function, the `Error in ...:` header should name the function they actually called, not an internal frame they have never heard of. Today only `ssd_data()` and `ssd_define_scenario()` follow the `AGENTS.md` "Error origin" convention (thread the public frame down to validators as `call = environment()`, loop instead of `purrr::walk`/`chk_all`); the rest of the exported surface either delegates validation to a private helper (so the header names that helper) or uses `chk::chk_all()` (so the header names `chk_all`). The result is misleading provenance — `Error in \`scenario_shards()\`:` or `Error in \`chk_all()\`:` for a mistake in `ssd_scenario_fit_shards()` / `ssd_fit_dists_sims()` — which the `error-call-origin` cleanup exists to retire package-wide.
 
 ## What Changes
 
@@ -25,6 +25,6 @@ When a user passes an invalid argument to a `ssd_*()` function, the `Error in ..
 - **Behaviour**: only the `Error in ...:` origin (the condition's `call`) changes; the set of inputs accepted/rejected and the message bodies are unchanged. No API, signature, or return-value change.
 - **No new dependencies**: uses the existing `chk` (`abort_chk`, `chk_*`) and `rlang` (`try_fetch()`, `caller_env()`, `environment()`); anticipated-validation functionals are wrapped in `rlang::try_fetch()` (re-raising with the public `call`) rather than rewritten as base `for` loops — keeping the functional style while fixing the origin.
 - **Tests**: per-function regression tests (`expect_error(..., class = ...)` plus `expect_snapshot()` on the rendered error) asserting the origin frame.
-- **Dependencies (direction)**: none. `TARGETS-DESIGN.md` §12 records this as cosmetic and **off the dependency DAG** — it can land at any time and gates nothing.
+- **Dependencies (direction)**: none. This is cosmetic and **independent** — it can land at any time and gates nothing.
 - **Upstream risk**: fully threading `call` through *every* `chk_*()` may need an upstream `chk` change (a `call`/`error_call` argument on `chk_*()`), so the origin can be set without hand-rolling each check via `abort_chk()`. Captured as an open question / risk in `design.md`; the in-package pass uses `abort_chk(..., call = call)` and plain loops, which need no upstream change.
-- **When to land it**: any time. Independent, cosmetic, no prerequisites (`TARGETS-DESIGN.md` §12).
+- **When to land it**: any time. Independent, cosmetic, no prerequisites.

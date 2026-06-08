@@ -40,12 +40,7 @@
 #' @return The path to the written `manifest.json`, invisibly.
 #' @seealso [ssd_read_manifest()], [ssd_record_shard()],
 #'   [ssd_assemble_manifest()].
-#' @export
-#' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-#' dir <- withr::local_tempdir()
-#' ssd_write_manifest(scenario, dir)
-#' ssd_read_manifest(dir)$seed
+#' @keywords internal
 ssd_write_manifest <- function(scenario, dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   chk::chk_string(dir)
@@ -72,13 +67,7 @@ ssd_write_manifest <- function(scenario, dir) {
 #' @return The manifest as an R list, with the scalar/vector knob types of the
 #'   written scenario restored.
 #' @seealso [ssd_write_manifest()].
-#' @export
-#' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-#' dir <- withr::local_tempdir()
-#' ssd_write_manifest(scenario, dir)
-#' manifest <- ssd_read_manifest(dir)
-#' manifest$partition_by
+#' @keywords internal
 ssd_read_manifest <- function(dir) {
   chk::chk_string(dir)
   path <- file.path(dir, "manifest.json")
@@ -118,10 +107,7 @@ ssd_read_manifest <- function(dir) {
 #'   `ssd_file_sha256()` internal).
 #' @return The path to the written sidecar, invisibly.
 #' @seealso [ssd_assemble_manifest()], [ssd_write_manifest()].
-#' @export
-#' @examples
-#' dir <- withr::local_tempdir()
-#' ssd_record_shard(dir, "fit/dataset=boron/sim=1/rescale=FALSE", strrep("a", 64))
+#' @keywords internal
 ssd_record_shard <- function(dir, partition_key, sha256) {
   chk::chk_string(dir)
   chk::chk_string(partition_key)
@@ -152,12 +138,7 @@ ssd_record_shard <- function(dir, partition_key, sha256) {
 #' @return The merged manifest (head plus `completed_shards`) as an R list,
 #'   invisibly.
 #' @seealso [ssd_record_shard()], [ssd_write_manifest()].
-#' @export
-#' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-#' dir <- withr::local_tempdir()
-#' ssd_write_manifest(scenario, dir)
-#' ssd_assemble_manifest(dir)$completed_shards
+#' @keywords internal
 ssd_assemble_manifest <- function(dir) {
   chk::chk_string(dir)
   completed_shards <- assemble_completed_shards(dir)

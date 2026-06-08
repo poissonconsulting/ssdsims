@@ -29,12 +29,7 @@ The assembled tail is merged into the manifest head at \verb{<dir>/manifest.json
 (written by \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}) and written back, so \code{\link[=ssd_read_manifest]{ssd_read_manifest()}}
 returns head and tail together.
 }
-\examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-dir <- withr::local_tempdir()
-ssd_write_manifest(scenario, dir)
-ssd_assemble_manifest(dir)$completed_shards
-}
 \seealso{
 \code{\link[=ssd_record_shard]{ssd_record_shard()}}, \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}.
 }
+\keyword{internal}

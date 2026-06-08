@@ -13,10 +13,8 @@ ssd_upload_shard(path, upload)
 \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}.}
 }
 \value{
-The local \code{path} (a string). For an Azure upload the returned value
-carries the cloud copy's sha256 as a \code{"cloud_sha256"} attribute, which the
-manifest can record alongside the local sha256 so a corrupted transfer
-shows up as a mismatch.
+The local \code{path} (a string), so the \verb{upload_<step>} target stays
+\code{format = "file"}.
 }
 \description{
 A generic, dispatched on the upload object's class, that ships one shard

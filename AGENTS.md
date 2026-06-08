@@ -20,7 +20,8 @@ ssdsims/
 
 ## Key Design Documents
 
-- **TARGETS-DESIGN.md** — Forward-looking design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. This is the north star for the roadmap.
+- **TARGETS-DESIGN.md** — Principal design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. Not intended for modification.
+- **ROADMAP.md** — The actionable roadmap: the `Now`/`Next`/`Later`/`Bluesky` backlog and the `Done` shipped log (`initiative`-template style), keyed by OpenSpec `[change]` identifiers.
 - **RNG-FLOW.md** — RNG design rationale and gaps closed by TARGETS-DESIGN.
 - **GLOSSARY.md** — Terminology (seed vs. state vs. primer vs. stream).
 
@@ -32,7 +33,7 @@ Read these before major implementation work.
 - **Linting**: Run `air format` to apply formatters.
 - **Type checks**: No explicit type hints; rely on `chk::*()` for runtime validation in function bodies.
 - **Validation**: Use `chk` for all input validation; keep error messages informative and actionable.
-- **Error origin**: Raise errors in the context of the *user-facing* function. Thread the public function's frame down to validators (`chk::abort_chk(..., call = call)` with `call = environment()` captured in the exported function) and avoid leaking internal frames like `purrr::map()` / `lapply()` / private helpers into the `Error in ...:` header (loop instead of `purrr::walk`/`chk_all` where they would surface). A package-wide pass to enforce this is tracked as the `error-call-origin` roadmap item (TARGETS-DESIGN.md §12).
+- **Error origin**: Raise errors in the context of the *user-facing* function. Thread the public function's frame down to validators (`chk::abort_chk(..., call = call)` with `call = environment()` captured in the exported function) and avoid leaking internal frames like `purrr::map()` / `lapply()` / private helpers into the `Error in ...:` header (loop instead of `purrr::walk`/`chk_all` where they would surface). A package-wide pass to enforce this is tracked as the `error-call-origin` roadmap item.
 - **Minimal diffs**: touch only the lines your change requires; don't reformat
   unrelated lines or let editors rewrite whitespace. Leave `DESCRIPTION`
   formatting to `usethis`/`desc` (e.g. keep the trailing space after field names
@@ -66,13 +67,8 @@ chk::chk_character(dataset_names)
 - Reserve the `with_`/`local_` prefixes for RAII (withr-style) scope helpers; do
   not use them for ordinary transforms (e.g. name a column-adder `add_*()`).
 - **Canonical argument order**: at every call site, pass arguments in signature
-  order. In particular, lead `ssd_define_scenario()` calls with its three
-  required arguments — `data` (positional), then `nsim =`, then `seed =` — before
-  any `...` knob (`nrow`, `dists`, `rescale`, …). `seed` is the scenario's RNG
-  root (an RNG term, **not** a simulation setting/grid knob — see `GLOSSARY.md`),
-  so it belongs up front with `data`/`nsim`, never wedged between knobs like
-  `nrow`. A full package-wide sweep of remaining call sites for this and the
-  other public constructors is a `TARGETS-DESIGN.md` §12 cleanup item.
+  order. In particular, implement `ssd_define_scenario()` calls in the exact order of the signature. A full package-wide sweep of remaining call sites for this and the
+  other public constructors is a `ROADMAP.md` cleanup item.
 - Permissions for the common tooling (`air`, `R`, `Rscript`, read-only `git`/`gh`,
   `quarto`, `Skill`) are pre-approved in `.claude/settings.json`, so these run
   without a prompt.
@@ -142,6 +138,7 @@ writing tests.
 ### Documentation
 
 - Functions are documented inline with roxygen comments (`#' @param`, `#' @return`, etc.); wrap roxygen comments at 80 characters.
+- Prefer `#' @inheritParams` over copying argument descriptions.
 - Every user-facing function should be exported and documented; internal functions should not have roxygen documentation.
 - Run `devtools::document()` to generate `man/` pages and update `NAMESPACE` — always re-document after changing a roxygen comment, and never edit `man/` or `NAMESPACE` by hand.
 - Whenever you add a new (non-internal) topic, add it to `_pkgdown.yml` and confirm with `pkgdown::check_pkgdown()`.
@@ -157,11 +154,6 @@ The package uses OpenSpec for spec-driven development (see `.claude/` and `.gith
 - **`/opsx:explore <question>`** — Think through a problem or design decision before committing.
 - **`/opsx:apply <change-name>`** — Implement tasks from a change.
 - **`/opsx:archive <change-name>`** — Finalize a completed change.
-
-> **Every lifecycle action (propose / apply / sync / archive) must update the
-> `TARGETS-DESIGN.md` §12 roadmap in the same change-set** — the generic skills
-> will not. `openspec/AGENTS.md` is the authority for that rule (node colours,
-> the `archived_box`, the per-action checklist) and for the change/spec layout.
 
 Active changes live in `openspec/changes/<name>/`; the current capability specs
 live in `openspec/specs/` — that directory is the authoritative list.
@@ -232,7 +224,7 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 - **Static branching** (default) — `tar_map()` mints one named target per shard at sourcing time.
 - **Dynamic branching** (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.
 
-The roadmap (TARGETS-DESIGN.md §12) lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged. **Keep its Mermaid graph current as part of each change** — see `openspec/AGENTS.md` for the node-colour and `archived_box` rules.
+The roadmap lands features in order. Each step is a coherent working state; parallel work streams are encouraged. The forward-looking backlog lives in [`ROADMAP.md`](ROADMAP.md).
 
 ## Contact & Contribution
 
