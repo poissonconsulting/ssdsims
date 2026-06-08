@@ -87,10 +87,10 @@ the awkward constant list-columns `proportion`/`dists` would become.
 - **No primer/partition change**: neither `n_max` nor `ci` was ever in
   `task_axes()`, so this is pure storage/plumbing — `task_primer()`,
   `path_key()`, and `partition_by` are untouched.
-- **Docs/roadmap**: `TARGETS-DESIGN.md` (§5 draw-size prose; §12 off-DAG Cleanup
-  bullet + narrative addendum), `GLOSSARY.md` (rework the `n_max` carried-column
+- **Docs/roadmap**: `TARGETS-DESIGN.md` (§5 draw-size prose), the `ROADMAP.md`
+  entry, `GLOSSARY.md` (rework the `n_max` carried-column
   entry; add `nrow_max`), regenerated `man/`, example scripts/templates that pass
   `nrow`, and the re-baselined snapshots.
-- **Dependencies (DAG)**: an **independent off-DAG Cleanup tidy-up** in the
+- **Dependencies**: an **independent tidy-up** in the
   `scalar-ci-flag` / `dists-simulation-setting` / `est-method-setting`
   "axis/row → setting" family — no prerequisites, no dependants.
