@@ -20,7 +20,7 @@ ssdsims/
 
 ## Key Design Documents
 
-- **TARGETS-DESIGN.md** — Forward-looking design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. §12 holds the dependency DAG and the landed-step record; it is the north star for the design.
+- **TARGETS-DESIGN.md** — Principal design for the cluster-based targets pipeline. Covers the scenario object, dqrng/hash RNG mechanism, task shards, and extension patterns. Not intended for modification.
 - **ROADMAP.md** — The actionable roadmap: the `Now`/`Next`/`Later`/`Bluesky` backlog and the `Done` shipped log (`initiative`-template style), keyed by OpenSpec `[change]` identifiers.
 - **RNG-FLOW.md** — RNG design rationale and gaps closed by TARGETS-DESIGN.
 - **GLOSSARY.md** — Terminology (seed vs. state vs. primer vs. stream).
@@ -67,13 +67,8 @@ chk::chk_character(dataset_names)
 - Reserve the `with_`/`local_` prefixes for RAII (withr-style) scope helpers; do
   not use them for ordinary transforms (e.g. name a column-adder `add_*()`).
 - **Canonical argument order**: at every call site, pass arguments in signature
-  order. In particular, lead `ssd_define_scenario()` calls with its three
-  required arguments — `data` (positional), then `nsim =`, then `seed =` — before
-  any `...` knob (`nrow`, `dists`, `rescale`, …). `seed` is the scenario's RNG
-  root (an RNG term, **not** a simulation setting/grid knob — see `GLOSSARY.md`),
-  so it belongs up front with `data`/`nsim`, never wedged between knobs like
-  `nrow`. A full package-wide sweep of remaining call sites for this and the
-  other public constructors is a `TARGETS-DESIGN.md` §12 cleanup item.
+  order. In particular, implement `ssd_define_scenario()` calls in the exact order of the signature. A full package-wide sweep of remaining call sites for this and the
+  other public constructors is a `ROADMAP.md` cleanup item.
 - Permissions for the common tooling (`air`, `R`, `Rscript`, read-only `git`/`gh`,
   `quarto`, `Skill`) are pre-approved in `.claude/settings.json`, so these run
   without a prompt.
@@ -143,6 +138,7 @@ writing tests.
 ### Documentation
 
 - Functions are documented inline with roxygen comments (`#' @param`, `#' @return`, etc.); wrap roxygen comments at 80 characters.
+- Prefer `#' @inheritParams` over copying argument descriptions.
 - Every user-facing function should be exported and documented; internal functions should not have roxygen documentation.
 - Run `devtools::document()` to generate `man/` pages and update `NAMESPACE` — always re-document after changing a roxygen comment, and never edit `man/` or `NAMESPACE` by hand.
 - Whenever you add a new (non-internal) topic, add it to `_pkgdown.yml` and confirm with `pkgdown::check_pkgdown()`.
@@ -158,14 +154,6 @@ The package uses OpenSpec for spec-driven development (see `.claude/` and `.gith
 - **`/opsx:explore <question>`** — Think through a problem or design decision before committing.
 - **`/opsx:apply <change-name>`** — Implement tasks from a change.
 - **`/opsx:archive <change-name>`** — Finalize a completed change.
-
-> **Every lifecycle action (propose / apply / sync / archive) must update the
-> roadmap in the same change-set** — the generic skills will not. The roadmap
-> spans two files: [`ROADMAP.md`](ROADMAP.md) (the `Now`/`Next`/`Later`/
-> `Bluesky`/`Done` backlog + shipped log) and `TARGETS-DESIGN.md` §12 (the
-> dependency DAG + `### Archived` prose for landed steps). `openspec/AGENTS.md`
-> is the authority for that rule (node colours, the `archived_box`, the
-> per-action checklist) and for the change/spec layout.
 
 Active changes live in `openspec/changes/<name>/`; the current capability specs
 live in `openspec/specs/` — that directory is the authoritative list.
