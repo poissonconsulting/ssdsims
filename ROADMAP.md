@@ -37,7 +37,7 @@ is also queued, ready to propose.
 
 <!-- What is actively being worked on this cycle. -->
 
-- ❗️ [scenario-input-types] Extend `ssd_define_scenario()` to accept the remaining input types `ssd_run_scenario()` handles (`fitdists`, `tmbfit`, a generator function, a function-name string), materialised once in the constructor under the dqrng-only `ssd_data(..., .seed = NULL)` contract. Unblocked (deps `task-primer` / `local-dqrng-state` landed); gates `migrate-public-api`.
+- ❗️⏳ [scenario-input-types] Accept the generator inputs `ssd_run_scenario()` handles (`fitdists`, `tmbfit`, a generator function, a function-name string) in the declarative path via a new `ssd_gen(..., .n, .seed)` that materialises each once to a reproducible `Conc` tibble (name as the dqrng stream, required `.seed`/`.n`); `ssd_data()` is renamed `ssd_scenario_data()` (escaping the `ssdtools::ssd_data(x)` clash) and `ssd_define_scenario()` accepts only that collection, so the constructor stays RNG-free. Deps `task-primer` / `local-dqrng-state` **and** `task-rng-postcheck` (`ssd_gen()` reuses its `dqrng_usable()` gate + `chk_dqrng_backend_intact()` witness — postcheck is booked under Done but its helpers are not yet in the tree, so it must land first); gates `migrate-public-api`. Name-only regeneration is the deferred `dataset-provenance`.
 
 ## Next
 

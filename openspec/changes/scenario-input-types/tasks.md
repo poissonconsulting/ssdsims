@@ -1,40 +1,47 @@
-## 1. Input classification and materialisation
+## 1. Rename `ssd_data()` → `ssd_scenario_data()`
 
-- [ ] 1.1 Add `classify_input(value, expr, name, call, .seed)` in `R/data.R` returning a validated tibble for **every** input: a data-frame input passes through `Conc` validation; a generator input (fitdists/tmbfit/function/character) is **materialised** to a tibble via its `ssd_sim_data()` method
-- [ ] 1.2 Dispatch on the most specific class first (`tmbfit` before `fitdists`); for a function-name string resolve via `get0()`/`match.fun()` in the caller environment (bare name only, no `eval(parse())`) and abort (user-facing frame) if it does not resolve to a function
-- [ ] 1.3 Validate a generator function structurally (a function; single-argument `n` contract) before executing it; reuse the existing single-arg check pattern
-- [ ] 1.4 Reuse the existing name derivation (`expr_to_name()`, list names, explicit `name=`) unchanged; for a function-name string use the string as the name; abort when no name is derivable
+- [ ] 1.1 Rename the exported `ssd_data()` to `ssd_scenario_data()` in `R/data.R` (keep the `ssdsims_data` class and the `ssd_data_validate()`/`ssd_data_names()` internals); update `@export`/roxygen and the function's own examples
+- [ ] 1.2 Update every call site and reference: `R/scenario.R` (`scenario_datasets()`), `R/accessors.R` docs, `NAMESPACE`, `_pkgdown.yml`, `man/`, `README`/`README.Rmd`, and the `vignettes/defining-a-scenario.qmd` vignette
+- [ ] 1.3 Update tests referencing `ssd_data()` in `tests/testthat/test-scenario.R` (and any snapshots) to `ssd_scenario_data()`
 
-## 2. Generation seeding (`.seed`) and the dqrng-only check
+## 2. `ssd_gen()` — generator materialisation
 
-- [ ] 2.1 Add a dot-prefixed `.seed = NULL` formal to `ssd_data()`; confirm it is not absorbed into `...` and that `seed=` does not partial-match it
-- [ ] 2.2 Materialise each generator under a scoped `local_dqrng_state(.seed, task_primer(list(dataset = name)))` — name as the dqrng stream, `.seed` as the base seed — so one `.seed` fans out across all generators on independent streams
-- [ ] 2.3 Snapshot base R `.Random.seed` and the dqrng state around each generator run; abort (user-facing frame) when base-R RNG moved ("use dqrng, not base R") or when dqrng moved with `.seed = NULL` ("consumes RNG — supply `.seed`"); a pure generator passes
-- [ ] 2.4 Abort when `.seed` is supplied but the call contains no generator inputs (Q1)
-- [ ] 2.5 Confirm construction leaves global `.Random.seed` unchanged (scoped restore), even though generation draws RNG internally
+- [ ] 2.1 Add `ssd_gen(..., .n, .seed)` (in `R/gen.R`) returning a classed `ssdsims_gen` named list of validated `Conc` tibbles; make `.n` and `.seed` **required**, dot-prefixed formals (confirm neither is absorbed into `...` nor partial-matched from a `seed=`/`n=` generator name)
+- [ ] 2.2 Add a `classify_gen(value, expr, name, env, call)` dispatch (most-specific first: `tmbfit` before `fitdists`) resolving each input to a single-argument draw `fn(n)`: function → itself; function-name string → bare-name `get0()`/`match.fun()` in the caller env then `ssdtools` (no `eval(parse())`); `tmbfit` → `ssdtools::estimates()` + matching `ssd_r<dist>` via `do.call`; `fitdists` → top-weighted dist (`glance(wt = TRUE)` → `which.max`) then the `tmbfit` path
+- [ ] 2.3 Reject a `data.frame` input in `ssd_gen()` with an error directing the user to `ssd_scenario_data()`; validate a generator function structurally (is a function) before executing it
+- [ ] 2.4 Derive names: argument name → string itself (for the character form) → `expr_to_name()`; abort when no name is derivable; enforce unique names across the call
+- [ ] 2.5 Materialise each generator under a scoped `local_dqrng_state(.seed, task_primer(list(dataset = name)))` (name as the dqrng stream, `.seed` as the base seed) so one `.seed` fans out across all generators on independent streams; build each element as `tibble(Conc = fn(.n))`
 
-## 3. Wire into ssd_data() and the constructor
+## 3. dqrng contract (reuse `task-rng-postcheck`)
 
-- [ ] 3.1 Route every element of `ssd_data(..., .seed = NULL)` through `classify_input()`; allow mixed data-frame and generator inputs in one collection; keep unique-name enforcement; the collection stays a homogeneous named list of tibbles
-- [ ] 3.2 Extend `scenario_dataset_names()` (in `R/scenario.R`) so single-input, named-list, and unnamed-list paths accept generators and store the materialised tibbles in `scenario$data` and their names in `datasets` — no new task-table columns, behind the existing `dataset` axis (#80)
-- [ ] 3.3 Confirm a materialised generator dataset is indistinguishable downstream from a data-frame dataset (no descriptor type, no `inherits()` discrimination needed)
+- [ ] 3.1 Gate every dqrng touch in `ssd_gen()` behind `dqrng_usable()`; abort with actionable `library(dqrng)` (`>= 0.4.1`) guidance when dqrng is not already loaded; open a scoped `local_dqrng_backend()` for the materialisation
+- [ ] 3.2 After each generator runs, verify the draw came from dqrng via `chk_dqrng_backend_intact()`; abort (user-facing frame) when a generator escaped dqrng; a pure (no-draw) generator passes
+- [ ] 3.3 Confirm `ssd_gen()` leaves the global `.Random.seed` unchanged on return (scoped restore), even though generation draws RNG internally
+- [ ] 3.4 Before implementing §3, ensure `task-rng-postcheck` has actually landed — it supplies `dqrng_usable()`/`chk_dqrng_backend_intact()` and the dqrng-as-`Suggests` move (booked under Done in `ROADMAP.md` but not yet physically in the tree). The `task-rng-postcheck → scenario-input-types` dependency is recorded in `ROADMAP.md`
 
-## 4. Baseline runner (#80)
+## 4. Wire into `ssd_scenario_data()` and the constructor
 
-- [ ] 4.1 Confirm `ssd_run_scenario_baseline()` draws from a generator-backed dataset with no change — it is a tibble in `scenario$data` — and that task-table derivation (`ssd_scenario_*_tasks()`) is unaffected (the `dataset` axis is just a name)
+- [ ] 4.1 Teach `ssd_scenario_data()` to accept an `ssdsims_gen` argument: an unnamed `ssd_gen(...)` argument is flattened into the collection (`inherits("ssdsims_gen")`), and `!!!ssd_gen(...)` splices identically; keep unique-name enforcement; the collection stays a homogeneous named list of tibbles
+- [ ] 4.2 Change `ssd_define_scenario()` to accept dataset input **only** as an `ssd_scenario_data()` collection: drop the `name=` argument and the bare-data-frame/bare-list/`data_expr` routing in `scenario_datasets()` (collapse to "assert `ssdsims_data`, return it"); update the constructor roxygen and `man/`
+- [ ] 4.3 Confirm a materialised generator dataset is indistinguishable downstream from a data-frame dataset (no descriptor type, no `inherits()` discrimination needed) and that `ssd_define_scenario()` performs no RNG (the "No side effects on RNG state" requirement still holds)
 
-## 5. Docs
+## 5. Baseline runner (#80)
 
-- [ ] 5.1 Update roxygen for `ssd_data()` (including `.seed`) and `ssd_define_scenario()` to document the widened input contract (data frame / fitdists / tmbfit / function / function-name string), eager materialisation, the name-as-stream `.seed`, and the dqrng-only/pure-generator rule
-- [ ] 5.2 Remove the "data-frame-only" gap note now that generators are accepted and materialised at construction
+- [ ] 5.1 Confirm `ssd_run_scenario_baseline()` draws from a generator-backed dataset with no change — it is a tibble in `scenario$data` — and that task-table derivation (`ssd_scenario_*_tasks()`) is unaffected (the `dataset` axis is just a name)
 
-## 6. Tests and checks
+## 6. Docs
 
-- [ ] 6.1 `tests/testthat/test-data.R`: `ssd_data()` accepts each generator kind singly and in a mixed list; generators materialise to tibbles with a `Conc` column; names derived/explicit; duplicate names rejected
-- [ ] 6.2 `.seed` reproducibility: same `.seed` → byte-identical generated data; different `.seed` → different data; one `.seed` across several generators yields independent (name-streamed) draws; `.seed` supplied with no generators aborts
-- [ ] 6.3 dqrng-only check: a base-R-RNG generator aborts ("use dqrng"); a dqrng generator with `.seed = NULL` aborts ("supply `.seed`"); a pure generator passes with or without `.seed`; global `.Random.seed` unchanged after construction
-- [ ] 6.4 `tests/testthat/test-scenario.R`: `ssd_define_scenario()` accepts each generator kind; `scenario$data` holds materialised tibbles; `datasets` holds the names
-- [ ] 6.5 Validation tests: unresolvable function-name string aborts; anonymous function literal with no name aborts; errors report the user-facing function as origin
-- [ ] 6.6 `tests/testthat/test-task-lists.R`: task tables derive and `ssd_run_scenario_baseline()` runs for a generator dataset exactly as for a data-frame dataset
-- [ ] 6.7 Snapshot tests for `print` on generator and mixed-input scenarios (a materialised generator prints as a data-frame dataset)
-- [ ] 6.8 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`
+- [ ] 6.1 Document `ssd_gen()` (the four generator kinds, required `.n`/`.seed`, name-as-stream seeding, the dqrng-only/`library(dqrng)` rule, the `ssdsims_gen` return and both call forms) and update `ssd_scenario_data()`/`ssd_define_scenario()` roxygen for the rename, the collection-only input, and the dropped `name=`
+- [ ] 6.2 Remove the "data-frame-only" gap note (and the `name=` single-data-frame forms) now that generators are accepted via `ssd_gen()` and materialised at construction; refresh the `defining-a-scenario` vignette and README examples
+
+## 7. Tests and checks
+
+- [ ] 7.1 `tests/testthat/test-data.R`: `ssd_gen()` accepts each generator kind (function, function-name string, `fitdists`, `tmbfit`) singly and several together; materialises to `Conc` tibbles of `.n` rows; names derived/explicit; a data frame is rejected; duplicate names rejected
+- [ ] 7.2 `.seed` reproducibility: same `.seed` → byte-identical; different `.seed` → different; one `.seed` across several generators yields independent (name-streamed) draws; `.seed`/`.n` required (omitting either aborts)
+- [ ] 7.3 dqrng contract: `dqrng` not loaded aborts with `library(dqrng)` guidance; a base-R-escaping generator aborts; a pure generator passes; global `.Random.seed` unchanged after `ssd_gen()`
+- [ ] 7.4 `ssd_scenario_data()`: an unnamed `ssd_gen(...)` argument and `!!!ssd_gen(...)` produce identical collections mixing data frames and generators
+- [ ] 7.5 `tests/testthat/test-scenario.R`: `ssd_define_scenario()` accepts an `ssd_scenario_data()` collection with generator datasets; rejects a bare data frame / `name=`; `scenario$data` holds materialised tibbles and `datasets` holds the names; construction leaves `.Random.seed` unchanged
+- [ ] 7.6 Validation tests: unresolvable function-name string aborts; anonymous function literal with no name aborts; errors report the user-facing function (`ssd_gen()`) as origin
+- [ ] 7.7 `tests/testthat/test-task-lists.R`: task tables derive and `ssd_run_scenario_baseline()` runs for a generator dataset exactly as for a data-frame dataset
+- [ ] 7.8 Snapshot tests for `print` on a scenario with generator and mixed inputs (a materialised generator prints as a data-frame dataset)
+- [ ] 7.9 Run `devtools::document()`, `air format .`, and `devtools::check()`; update `NAMESPACE`/`man/`
