@@ -41,14 +41,14 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
 
 <!-- What is actively being worked on this cycle. -->
 
-- … _(nothing mid-implementation; the current cycle is spec-sync / archive / roadmap housekeeping)_
+- ❗️ [scenario-input-types] Extend `ssd_define_scenario()` to accept the remaining input types `ssd_run_scenario()` handles (`fitdists`, `tmbfit`, a generator function, a function-name string), materialised once in the constructor under the dqrng-only `ssd_data(..., .seed = NULL)` contract. Unblocked (deps `task-primer` / `local-dqrng-state` landed); gates `migrate-public-api`.
 
 ## Next
 
 <!-- Queued up. Roughly in priority order. Doesn't have to be exhaustive. -->
 
 - ‼️ [nrow-max-setting] Add an explicit `nrow_max` draw-size setting (default `1000L`), decoupling the draw from the `nrow` axis to retire the §5 re-draw churn, and move the last carried columns (`n_max`, `ci`) off the task tables into the scenario slice. Proposed; breaking pre-release.
-- ❗️ [scenario-input-types] Extend `ssd_define_scenario()` to accept the remaining input types `ssd_run_scenario()` handles (`fitdists`, `tmbfit`, a generator function, a function-name string), materialised once in the constructor under the dqrng-only `ssd_data(..., .seed = NULL)` contract. Unblocked (deps `task-primer` / `local-dqrng-state` landed); gates `migrate-public-api`.
+- ‼️ [cost-analysis-targets] Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Might require  Supports a project deliverable.
 - ❗️ [migrate-public-api] Migrate `ssd_sim_data.data.frame` / `ssd_fit_dists_sims` / `ssd_hc_sims` to the new per-task contract, keeping the `_seed` wrappers as a one-release shim. Depends on `scenario-input-types` + `primer-primitives`; gates `cleanup-lecuyer`.
 - ❗️ [replay-helper] `ssd_replay_task()` (§7) and `ssd_input_hash()` for the lightweight recipe — reproduce a failed branch locally with no `targets`. Ready to propose (prereqs `task-tables` + `manifest` landed).
 - ❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), `summary` unions the survivors. Ready to propose (prereq `cluster-pipeline` landed).
@@ -61,7 +61,7 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
 - 😀 [mixed-code-lockin] §8.3 — document and runtime-test `tar_cue(depend = FALSE)` as a shard-pinning recipe plus the §8.4 forced-refresh loop. Ready (prereq `shard-atomic-rewrite` landed).
 - 🐢 [cleanup-lecuyer] Remove the L'Ecuyer-CMRG helpers and `_seed` shims once the public step functions are off the L'Ecuyer path. Blocked on `migrate-public-api` + `mixed-code-lockin`.
 - 😀 [error-call-origin] Audit user-facing functions so validation errors report the calling function as the origin, never an internal frame. Proposed; independent.
-- 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Independent.
+- 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Also establish `print()` methods for all objects. Independent.
 - 😀 [canonical-call-sites] Sweep the remaining public constructors (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments are passed in signature order, as the `ssd_define_scenario()` pass already did. Independent.
 - 😀 [cleanup-as-ssd-data] Add a public `as_ssd_data()` coercing the already-named input forms into a validated `ssd_data()` collection. Proposed.
 - 🐢 [manifest-revival] Revisit the parked `manifest` concept (see _Decisions_): wire it into a real consumer and re-export the writer/reader/recorder/assembler, or fold it down further. Take this up with the first of `replay-helper` / `shard-completeness-assert` that needs trusted per-shard provenance. **Hashing is revisited here too** — the cloud-upload sha256 (recording an upload hash / shipping the per-shard `meta.json` sidecar alongside the blob for transfer-corruption detection) was dropped with the manifest and comes back with it.
