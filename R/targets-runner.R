@@ -63,7 +63,7 @@ encode_obj <- function(x) {
   rawToChar(serialize(x, connection = NULL, ascii = TRUE))
 }
 
-#' Inverse of [encode_obj()].
+#' Inverse of `encode_obj()`.
 #' @noRd
 decode_obj <- function(s) {
   unserialize(charToRaw(s))
