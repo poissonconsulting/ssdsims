@@ -47,11 +47,16 @@ implementation yet (red/`proposed` in the §12 DAG) is queued in `## Next`; a
 
 <!-- Queued up. Roughly in priority order. Doesn't have to be exhaustive. -->
 
+- ‼️ [duckplyr-config] Configure duckplyr to work with reduced main memory and using only a single thread, just in the context of the targets pipeline.
 - ‼️ [nrow-max-setting] Add an explicit `nrow_max` draw-size setting (default `1000L`), decoupling the draw from the `nrow` axis to retire the §5 re-draw churn, and move the last carried columns (`n_max`, `ci`) off the task tables into the scenario slice. Proposed; breaking pre-release.
 - ‼️ [cost-analysis-targets] Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Might require  Supports a project deliverable.
+- ❗️ [scenario-combine] Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline.
 - ❗️ [migrate-public-api] Migrate `ssd_sim_data.data.frame` / `ssd_fit_dists_sims` / `ssd_hc_sims` to the new per-task contract, keeping the `_seed` wrappers as a one-release shim. Depends on `scenario-input-types` + `primer-primitives`; gates `cleanup-lecuyer`.
 - ❗️ [replay-helper] `ssd_replay_task()` (§7) and `ssd_input_hash()` for the lightweight recipe — reproduce a failed branch locally with no `targets`. Ready to propose (prereqs `task-tables` + `manifest` landed).
 - ❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), `summary` unions the survivors. Ready to propose (prereq `cluster-pipeline` landed).
+- 📚 [cluster-controller] Run the controller on a long-running SLURM job.
+- 😀 [azure-summary] Conveniently access the summary Parquet files from Azure.
+- 😀 [duckplyr-message] Turn off noise from duckplyr.
 
 ## Later
 
