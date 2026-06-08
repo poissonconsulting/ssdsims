@@ -33,7 +33,7 @@ Read these before major implementation work.
 - **Linting**: Run `air format` to apply formatters.
 - **Type checks**: No explicit type hints; rely on `chk::*()` for runtime validation in function bodies.
 - **Validation**: Use `chk` for all input validation; keep error messages informative and actionable.
-- **Error origin**: Raise errors in the context of the *user-facing* function. Thread the public function's frame down to validators (`chk::abort_chk(..., call = call)` with `call = environment()` captured in the exported function) and avoid leaking internal frames like `purrr::map()` / `lapply()` / private helpers into the `Error in ...:` header (loop instead of `purrr::walk`/`chk_all` where they would surface). A package-wide pass to enforce this is tracked as the `error-call-origin` roadmap item (TARGETS-DESIGN.md §12).
+- **Error origin**: Raise errors in the context of the *user-facing* function. Thread the public function's frame down to validators (`chk::abort_chk(..., call = call)` with `call = environment()` captured in the exported function) and avoid leaking internal frames like `purrr::map()` / `lapply()` / private helpers into the `Error in ...:` header (loop instead of `purrr::walk`/`chk_all` where they would surface). A package-wide pass to enforce this is tracked as the `error-call-origin` roadmap item.
 - **Minimal diffs**: touch only the lines your change requires; don't reformat
   unrelated lines or let editors rewrite whitespace. Leave `DESCRIPTION`
   formatting to `usethis`/`desc` (e.g. keep the trailing space after field names
@@ -224,7 +224,7 @@ The package is transitioning from immediate `ssd_run_scenario()` execution to a 
 - **Static branching** (default) — `tar_map()` mints one named target per shard at sourcing time.
 - **Dynamic branching** (escape hatch) — For extreme fan-outs, task tables can be computed inside targets instead.
 
-The roadmap lands features in dependency order, starting from `ssd-define-scenario` and `dqrng-init` (no dependencies). Each step is a coherent working state; parallel work streams are encouraged. The forward-looking backlog lives in [`ROADMAP.md`](ROADMAP.md); `TARGETS-DESIGN.md` §12 keeps the dependency DAG and the landed-step (`### Archived`) record. **Keep both current as part of each change** — see `openspec/AGENTS.md` for the node-colour and `archived_box` rules.
+The roadmap lands features in order. Each step is a coherent working state; parallel work streams are encouraged. The forward-looking backlog lives in [`ROADMAP.md`](ROADMAP.md).
 
 ## Contact & Contribution
 

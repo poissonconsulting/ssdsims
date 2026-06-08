@@ -1,11 +1,7 @@
 # Roadmap
 
-A living view of where `ssdsims` is heading. The in-place, step-by-step
-implementation plan and its **dependency DAG** live in
-[`TARGETS-DESIGN.md`](./TARGETS-DESIGN.md) §12 (the completed steps and the
-Mermaid graph that colours every node by status); detail for each change lives
-in [`openspec/changes/`](./openspec/changes/) (active) and
-[`openspec/changes/archive/`](./openspec/changes/archive/) (landed).
+A living view of where `ssdsims` is heading. The principal design and its completed
+step-by-step implementation plan live in [`TARGETS-DESIGN.md`](./TARGETS-DESIGN.md) §12; detail for each change lives in [`openspec/changes/`](./openspec/changes/) (active) and [`openspec/changes/archive/`](./openspec/changes/archive/) (landed).
 
 Section membership (`## Now` / `## Next` / `## Later` / `## Bluesky` / `## Done`)
 encodes state — no `- [ ]` checkboxes. Each actionable line uses a priority
