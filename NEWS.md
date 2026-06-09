@@ -1,5 +1,26 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9015
+
+## Chore
+
+- Auto-update from GitHub Actions (#147).
+
+- Fix dep.
+
+## Documentation
+
+### scenario-input-types
+
+- Redesign to `ssd_scenario_data()` + `ssd_gen()` (#118).
+
+- Archive landed changes and establish ROADMAP.md (#143).
+
+## Refactoring
+
+- Make factory side-effect-free by removing probe from init (#145).
+
+
 # ssdsims 0.0.0.9014
 
 ## Bug fixes
