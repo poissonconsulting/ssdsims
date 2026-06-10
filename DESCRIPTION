@@ -37,6 +37,7 @@ Imports:
 Suggests: 
     AzureRMR,
     AzureStor,
+    callr,
     crew,
     crew.cluster,
     knitr,

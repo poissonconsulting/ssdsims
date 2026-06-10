@@ -418,7 +418,7 @@ test_that("cloud-upload: a re-driven dry-run re-uploads no unchanged shard", {
     file.path(dir, "_targets.R")
   )
   withr::local_dir(dir)
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   # the no-op upload targets ran the first time
   meta <- targets::tar_meta(fields = "error")
   upload_meta <- meta[grepl("^upload_", meta$name), ]
@@ -426,7 +426,7 @@ test_that("cloud-upload: a re-driven dry-run re-uploads no unchanged shard", {
   expect_true(all(is.na(upload_meta$error)))
 
   # re-drive with nothing changed: no upload target re-runs
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   progress <- targets::tar_progress()
   reran <- progress$name[progress$progress %in% c("completed", "started")]
   expect_length(grep("^upload_", reran), 0L)
@@ -442,11 +442,11 @@ test_that("cloud-upload: extending nsim uploads only the new shard", {
     file.path(dir, "_targets.R")
   )
   withr::local_dir(dir)
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
 
   # grow nsim by one sim: only the new sim's shards (and their upload pair) run
   saveRDS(2L, "nsim.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   progress <- targets::tar_progress()
   completed <- progress$name[progress$progress == "completed"]
   new_uploads <- grep("^upload_", completed, value = TRUE)

@@ -51,6 +51,60 @@ skip_targets <- function() {
   testthat::skip_if_not_installed("ssdsims")
 }
 
+# The targets-backed tests build pipelines that write Parquet through duckdb.
+# Running that build *in the main test session* deadlocks once enough
+# duckdb/duckplyr state has accumulated from the earlier test files (it does not
+# when these files run on their own). Spawning a fresh `callr` subprocess per
+# `tar_make()`/`tar_outdated()` is the safe-but-slow alternative the suite used
+# before.
+#
+# Instead, route every pipeline call through ONE dedicated, reused `callr`
+# session. It keeps the duckdb state out of the main session (so no deadlock),
+# and because it only ever runs targets builds it stays as clean as those files
+# do in isolation. Within that single session `callr_function = NULL` runs the
+# build in-process, so the whole suite pays one R startup rather than one per
+# call. The session is closed at suite teardown.
+the_targets <- new.env(parent = emptyenv())
+
+targets_session <- function() {
+  s <- the_targets$session
+  if (is.null(s) || !s$is_alive()) {
+    s <- callr::r_session$new()
+    the_targets$session <- s
+    withr::defer(s$close(), envir = testthat::teardown_env())
+  }
+  s
+}
+
+# Run `fun` (a self-contained function) in the dedicated session, first matching
+# its working directory to the caller's -- each test drives its own withr
+# tempdir, and the `_targets` store and `results/` tree are resolved relative to
+# it.
+in_targets_session <- function(fun) {
+  targets_session()$run(
+    function(wd, fun) {
+      setwd(wd)
+      fun()
+    },
+    args = list(getwd(), fun)
+  )
+}
+
+tar_make_local <- function() {
+  in_targets_session(function() {
+    suppressWarnings(targets::tar_make(
+      reporter = "silent",
+      callr_function = NULL
+    ))
+  })
+}
+
+tar_outdated_local <- function() {
+  in_targets_session(function() {
+    targets::tar_outdated(reporter = "silent", callr_function = NULL)
+  })
+}
+
 # A small numeric-only dataset: avoids factor/character columns so a draw
 # round-trips through Parquet byte-identically (the byte-identity oracle).
 numeric_dataset <- function() {
