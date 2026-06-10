@@ -215,6 +215,140 @@ test_that("task-shards: ssd_summarise unions landed hc shards without recomputat
   expect_gt(nrow(summary), 0L)
 })
 
+# ---- dual summary outputs (dual-summary-outputs change) --------------------
+
+# Materialise every sample/fit/hc shard for `scenario` under `dir`.
+materialise_shards <- function(scenario, dir) {
+  ss <- ssd_scenario_sample_shards(scenario)
+  fs <- ssd_scenario_fit_shards(scenario)
+  hs <- ssd_scenario_hc_shards(scenario)
+  for (i in seq_len(nrow(ss))) {
+    ssd_run_sample_step(ss$tasks[[i]], scenario, file.path(dir, "sample"))
+  }
+  for (i in seq_len(nrow(fs))) {
+    ssd_run_fit_step(
+      fs$tasks[[i]],
+      scenario,
+      file.path(dir, "sample"),
+      file.path(dir, "fit")
+    )
+  }
+  for (i in seq_len(nrow(hs))) {
+    ssd_run_hc_step(
+      hs$tasks[[i]],
+      scenario,
+      file.path(dir, "fit"),
+      file.path(dir, "hc")
+    )
+  }
+}
+
+test_that("dual-summary-outputs: path_with_samples writes a full summary retaining samples", {
+  dir <- withr::local_tempdir()
+  scenario <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm",
+    ci = TRUE,
+    nboot = 10L,
+    samples = TRUE
+  )
+  materialise_shards(scenario, dir)
+  compact_path <- file.path(dir, "summary.parquet")
+  full_path <- file.path(dir, "summary-samples.parquet")
+  out <- ssd_summarise(
+    file.path(dir, "sample"),
+    file.path(dir, "fit"),
+    file.path(dir, "hc"),
+    compact_path,
+    path_with_samples = full_path
+  )
+  # both paths returned and written
+  expect_identical(out, c(compact_path, full_path))
+  expect_true(all(file.exists(out)))
+
+  compact <- ssd_read_parquet(compact_path)
+  full <- ssd_read_parquet(full_path)
+  # compact projects the heavy list-columns out; full retains them
+  expect_false(any(c("dists", "samples") %in% names(compact)))
+  expect_true(all(c("dists", "samples") %in% names(full)))
+  # the full summary's draws are populated (samples = TRUE)
+  expect_true(any(lengths(full$samples) > 0L))
+  # same rows and identical estimates across the two files (the union read is
+  # unordered, so compare sorted)
+  expect_identical(nrow(compact), nrow(full))
+  expect_equal(sort(compact$est), sort(full$est))
+  expect_equal(sort(compact$lcl), sort(full$lcl))
+  expect_equal(sort(compact$ucl), sort(full$ucl))
+})
+
+test_that("dual-summary-outputs: path_with_samples = NULL writes only the compact summary", {
+  dir <- withr::local_tempdir()
+  scenario <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm"
+  )
+  materialise_shards(scenario, dir)
+  out <- ssd_summarise(
+    file.path(dir, "sample"),
+    file.path(dir, "fit"),
+    file.path(dir, "hc"),
+    file.path(dir, "summary.parquet")
+  )
+  expect_identical(out, file.path(dir, "summary.parquet"))
+  expect_true(file.exists(out))
+  expect_false(file.exists(file.path(dir, "summary-samples.parquet")))
+})
+
+test_that("dual-summary-outputs: the pipeline gates the full summary on samples", {
+  skip_targets()
+  root <- withr::local_tempdir()
+  with_samples <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm",
+    ci = TRUE,
+    nboot = 10L,
+    samples = TRUE
+  )
+  without_samples <- ssd_define_scenario(
+    ssd_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = "lnorm"
+  )
+  # the summary target is the last element of the factory's list
+  summary_cmd <- function(scenario) {
+    tgts <- ssd_scenario_targets(scenario, root = root)
+    tgts[[length(tgts)]]$command$string
+  }
+  expect_match(
+    summary_cmd(with_samples),
+    "summary-samples.parquet",
+    fixed = TRUE
+  )
+  expect_match(summary_cmd(with_samples), "path_with_samples = ", fixed = TRUE)
+  # samples = FALSE injects `path_with_samples = NULL` and no second file path
+  expect_no_match(
+    summary_cmd(without_samples),
+    "summary-samples.parquet",
+    fixed = TRUE
+  )
+  expect_match(
+    summary_cmd(without_samples),
+    "path_with_samples = NULL",
+    fixed = TRUE
+  )
+})
+
 # ---- targets pipeline integration (task 7.4) -------------------------------
 
 test_that("task-shards: the shipped template tar_make()s every shard", {
@@ -228,7 +362,7 @@ test_that("task-shards: the shipped template tar_make()s every shard", {
     dir
   )
   withr::local_dir(dir)
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   meta <- targets::tar_meta(fields = "error")
   steps <- meta[grepl("_step_", meta$name), ]
   expect_gt(nrow(steps), 0L)
@@ -258,7 +392,7 @@ test_that("task-shards: pipeline per-task results equal the baseline runner", {
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "byte-identity-targets.R")
   withr::local_dir(dir)
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
 
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),
@@ -310,7 +444,7 @@ test_that("task-shards: a failing shard goes NULL and the survivors still summar
   # fail as whole shards (error = "null"); the sample shards still build.
   setup_targets_fixture(dir, "error-null-targets.R")
   withr::local_dir(dir)
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   meta <- targets::tar_meta(fields = "error")
   # sample shards built; fit shards recorded an error and went NULL
   sample_meta <- meta[grepl("sample_step_", meta$name), ]
@@ -495,12 +629,12 @@ test_that("hive: re-make is a full cache hit; a missing Parquet rebuilds only it
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "factory-invalidation-targets.R")
   withr::local_dir(dir)
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   # cache-by-existence: a second make with nothing changed is a full hit.
-  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+  expect_length(tar_outdated_local(), 0L)
   # delete the sim=1 sample shard's Parquet -> only its subtree (+ summary) rebuilds.
   unlink(file.path("results", "sample", "dataset=d", "sim=1", "part.parquet"))
-  outdated <- targets::tar_outdated(reporter = "silent")
+  outdated <- tar_outdated_local()
   expect_true(all(
     c("sample_step_d_1", "fit_step_d_1", "hc_step_d_1", "summary") %in% outdated
   ))
@@ -514,10 +648,10 @@ test_that("hive: invalidating one parent shard re-runs only the children that re
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "factory-invalidation-targets.R")
   withr::local_dir(dir)
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   # invalidate the sim=1 sample shard; its subtree is outdated, sim=2 stays cached.
   targets::tar_invalidate(tidyselect::any_of("sample_step_d_1"))
-  outdated <- targets::tar_outdated(reporter = "silent")
+  outdated <- tar_outdated_local()
   expect_true(all(
     c("sample_step_d_1", "fit_step_d_1", "hc_step_d_1", "summary") %in% outdated
   ))
@@ -536,7 +670,7 @@ test_that("shard-atomic-rewrite: growing a fit inner axis rewrites the fit shard
 
   # First build: one fit task per shard (min_pmix = loose only).
   saveRDS(FALSE, "grow.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
 
   # Capture each affected fit shard's Parquet before the growth.
   fit_shard_dirs <- dirname(list.files(
@@ -555,13 +689,13 @@ test_that("shard-atomic-rewrite: growing a fit inner axis rewrites the fit shard
   # is unchanged (min_pmix is not a partition_by axis), so the per-layout root
   # is identical and the shards are rewritten in place, not re-pathed.
   saveRDS(TRUE, "grow.rds")
-  outdated <- targets::tar_outdated(reporter = "silent")
+  outdated <- tar_outdated_local()
   # Exactly the fit shards (and their hc/summary subtree) are stale; the sample
   # shards - a step the inner-axis growth does not touch - are not.
   expect_true(all(c("fit_step_d_1", "fit_step_d_2") %in% outdated))
   expect_false(any(c("sample_step_d_1", "sample_step_d_2") %in% outdated))
 
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
 
   # The sample shards are reported cached by targets and are NOT rebuilt.
   progress <- targets::tar_progress()
@@ -595,13 +729,13 @@ test_that("task-shards: changing an hc-only knob rebuilds only hc and summary", 
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
   saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
-  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+  tar_make_local()
+  expect_length(tar_outdated_local(), 0L)
 
   # Flip the hc-only `samples` knob: only the hc slice changes, so only the hc
   # shard's command moves; the sample/fit slices (and commands) are untouched.
   saveRDS(list(dists = "lnorm", samples = TRUE), "knobs.rds")
-  outdated <- targets::tar_outdated(reporter = "silent")
+  outdated <- tar_outdated_local()
   expect_true(all(c("hc_step_d_1", "summary") %in% outdated))
   expect_false(any(c("sample_step_d_1", "fit_step_d_1") %in% outdated))
 })
@@ -612,14 +746,14 @@ test_that("task-shards: changing a fit-only knob leaves sample cached", {
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
   saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
-  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+  tar_make_local()
+  expect_length(tar_outdated_local(), 0L)
 
   # Flip the fit-only `dists` knob: the fit slice changes (and cascades into the
   # hc shard that reads the fit shard, and summary), but the sample slice does
   # not, so the sample shard stays cached.
   saveRDS(list(dists = c("lnorm", "gamma"), samples = FALSE), "knobs.rds")
-  outdated <- targets::tar_outdated(reporter = "silent")
+  outdated <- tar_outdated_local()
   expect_true(all(c("fit_step_d_1", "hc_step_d_1", "summary") %in% outdated))
   expect_false("sample_step_d_1" %in% outdated)
 })
@@ -633,14 +767,14 @@ test_that("task-shards: appending a dataset mints new shards and caches existing
   )
   withr::local_dir(dir)
   saveRDS(list(d1 = numeric_dataset()), "datasets.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
-  expect_length(targets::tar_outdated(reporter = "silent"), 0L)
+  tar_make_local()
+  expect_length(tar_outdated_local(), 0L)
 
   # Append a second dataset: its shards are new path cells; the per-dataset
   # `sample` slice keeps d1's shard commands byte-identical, so only d2's shards
   # (and `summary`) are outdated while every d1 shard stays cached.
   saveRDS(list(d1 = numeric_dataset(), d2 = numeric_dataset()), "datasets.rds")
-  outdated <- targets::tar_outdated(reporter = "silent")
+  outdated <- tar_outdated_local()
   expect_true(all(
     c("sample_step_d2_1", "fit_step_d2_1", "hc_step_d2_1", "summary") %in%
       outdated
@@ -656,7 +790,7 @@ test_that("task-shards: factory per-task results equal the baseline (slice drops
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
   saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
 
   scenario <- ssd_define_scenario(
     ssd_data(d = numeric_dataset()),

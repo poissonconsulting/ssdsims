@@ -21,13 +21,7 @@ declarative fields and session-info block written by \code{\link[=ssd_write_mani
 lossy coercion: \code{seed}/\code{nboot} are restored as whole numbers and logical
 knobs (\code{rescale}, \code{parametric}, ...) as logicals.
 }
-\examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
-dir <- withr::local_tempdir()
-ssd_write_manifest(scenario, dir)
-manifest <- ssd_read_manifest(dir)
-manifest$partition_by
-}
 \seealso{
 \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}.
 }
+\keyword{internal}

@@ -1,6 +1,6 @@
 Package: ssdsims
 Title: Simulation Analyses for Species Sensitivity Distributions
-Version: 0.0.0.9013
+Version: 0.0.0.9015
 Authors@R: c(
     person("Joe", "Thorley", , "joe@poissonconsulting.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7683-4592")),
@@ -37,6 +37,7 @@ Imports:
 Suggests: 
     AzureRMR,
     AzureStor,
+    callr,
     crew,
     crew.cluster,
     knitr,
@@ -50,7 +51,7 @@ Suggests:
     tidyselect
 VignetteBuilder: quarto
 Remotes:
-    poissonconsulting/ssdtools@dev
+    poissonconsulting/ssdtools
 Config/testthat/edition: 3
 Config/roxyglobals/unique: FALSE
 Encoding: UTF-8

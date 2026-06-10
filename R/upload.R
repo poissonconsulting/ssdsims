@@ -129,8 +129,11 @@ ssd_upload_dryrun <- function() {
 #' The front-door check, dispatched on the upload object's class, that confirms
 #' **before any compute** whether the destination is reachable and the
 #' credentials are in the right place (`TARGETS-DESIGN.md` section 6.1). Run it
-#' as a one-liner at the prompt before `tar_make()`, or let
-#' [ssd_scenario_targets()] run it once up front for you.
+#' as a one-liner at the prompt before `tar_make()` - it is the user's explicit
+#' preflight. [ssd_scenario_targets()] deliberately does **not** call it (the
+#' factory does no network I/O, so sourcing `_targets.R` stays side-effect
+#' free); a missing credential still fails loud per-shard at
+#' [ssd_upload_shard()] time as a backstop.
 #'
 #' For an Azure destination it resolves the credentials from the environment
 #' and, when a required variable is **absent**, aborts with a loud error
@@ -185,10 +188,8 @@ ssd_test_upload <- function(upload) {
 #'
 #' @param path The local shard Parquet path (the `<step>_step` target's value).
 #' @inheritParams ssd_test_upload
-#' @return The local `path` (a string). For an Azure upload the returned value
-#'   carries the cloud copy's sha256 as a `"cloud_sha256"` attribute, which the
-#'   manifest can record alongside the local sha256 so a corrupted transfer
-#'   shows up as a mismatch.
+#' @return The local `path` (a string), so the `upload_<step>` target stays
+#'   `format = "file"`.
 #' @seealso [ssd_test_upload()], [ssd_open_uploaded()], [ssd_scenario_targets()].
 #' @export
 #' @examples
@@ -365,9 +366,7 @@ ssd_upload_shard.ssdsims_upload_azure_blob <- function(path, upload) {
     src = path,
     dest = azure_blob_dest(upload, upload_blob_key(path))
   )
-  out <- path
-  attr(out, "cloud_sha256") <- ssd_file_sha256(path)
-  out
+  path
 }
 
 #' @export
@@ -398,13 +397,11 @@ ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   creds <- resolve_azure_credentials(call = rlang::caller_env())
   azure_load_duckdb_extension(creds, upload$account, call = rlang::caller_env())
 
-  # --- duckplyr query: read the uploaded shards in place and union them -------
-  # SKETCH - drop-in point for the working implementation. Reads the step's Hive
-  # glob via the `azure` extension (predicate pushdown, no download) and
-  # optionally projects away the heavy `dists`/`samples` list-columns (the
-  # analysis-ready summary, mirroring `ssd_summarise()`). The result stays a
-  # **lazy duckplyr tibble** (not collected), so it composes with `dplyr` verbs
-  # and the read/projection run inside DuckDB.
+  # Read the step's Hive glob via the `azure` extension (predicate pushdown, no
+  # download) and optionally project away the heavy `dists`/`samples`
+  # list-columns (the analysis-ready summary, mirroring `ssd_summarise()`). The
+  # result stays a **lazy duckplyr tibble** (not collected), so it composes with
+  # `dplyr` verbs and the read/projection run inside DuckDB.
   tbl <- duckplyr::read_parquet_duckdb(
     azure_glob(upload, step),
     options = list(hive_partitioning = FALSE)
@@ -468,8 +465,8 @@ azure_account_from_url <- function(url, domain, call = rlang::caller_env()) {
 # is derived from the destination `url` (see `azure_account_from_url()`), not the
 # environment. Aborts in the context of `call` with a loud error naming the
 # missing variable when no complete secret is present, so the failure surfaces at
-# the prompt (or the pipeline's up-front probe) rather than deep in the DAG on a
-# worker.
+# the prompt (the user's `ssd_test_upload()` preflight) or, as a backstop, on the
+# shard's upload branch - rather than silently.
 resolve_azure_credentials <- function(call = rlang::caller_env()) {
   env <- function(name) {
     value <- Sys.getenv(name, unset = NA_character_)

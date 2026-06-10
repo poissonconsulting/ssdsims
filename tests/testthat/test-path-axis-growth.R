@@ -29,7 +29,7 @@ test_that("path-axis-growth: appending a dataset builds only the new dataset's s
   )
   withr::local_dir(dir)
   saveRDS(list(d1 = numeric_dataset()), "datasets.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   orig <- growth_state()
 
   # the captured shard names are one per shard of each step's shard table (so the
@@ -58,7 +58,7 @@ test_that("path-axis-growth: appending a dataset builds only the new dataset's s
   # append a dataset (a path axis for all three steps), `partition_by` unchanged,
   # re-source and `tar_make()` again into the same store/root
   saveRDS(list(d1 = numeric_dataset(), d2 = numeric_dataset()), "datasets.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   progress <- targets::tar_progress()
   completed <- progress$name[progress$progress == "completed"]
   skipped <- progress$name[progress$progress == "skipped"]
@@ -86,7 +86,7 @@ test_that("path-axis-growth: growing nsim builds only the new sim cells' shards 
   withr::local_dir(dir)
   saveRDS(numeric_dataset(), "data.rds")
   saveRDS(2L, "nsim.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   orig <- growth_state()
 
   scenario <- ssd_define_scenario(
@@ -113,7 +113,7 @@ test_that("path-axis-growth: growing nsim builds only the new sim cells' shards 
   # grow `nsim` (adds new `sim` path cells for all three steps), `partition_by`
   # unchanged, re-source and `tar_make()` again into the same store/root
   saveRDS(3L, "nsim.rds")
-  suppressWarnings(targets::tar_make(reporter = "silent"))
+  tar_make_local()
   progress <- targets::tar_progress()
   completed <- progress$name[progress$progress == "completed"]
   skipped <- progress$name[progress$progress == "skipped"]

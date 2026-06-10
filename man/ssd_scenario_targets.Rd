@@ -123,12 +123,15 @@ factory pairs each step shard with an \verb{upload_<step>} target in the same
 never re-uploaded (content-hash skip) and a per-shard upload failure isolates
 to its own branch. Pass \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}} for no-op upload targets that
 reach no network (exercising the DAG shape offline / in CI) or
-\code{\link[=ssd_upload_azure]{ssd_upload_azure()}} to ship to Azure. The destination's
-\code{\link[=ssd_test_upload]{ssd_test_upload()}} probe is run \strong{once up front} (when the factory is
-called, before \code{tar_make()}), so missing credentials or an unreachable
-destination abort before any compute. The per-task results are byte-identical
-across all three \code{upload} modes; only the presence and behaviour of the
-\verb{upload_<step>} targets differ.
+\code{\link[=ssd_upload_azure]{ssd_upload_azure()}} to ship to Azure. The factory performs \strong{no} network
+I/O and never runs the \code{\link[=ssd_test_upload]{ssd_test_upload()}} probe: it only assembles the
+target list, so sourcing \verb{_targets.R} (which \code{targets} does on every
+\code{tar_make()}, \code{tar_manifest()}, \code{tar_visnetwork()}, and on each worker) stays
+side-effect free. Run \code{ssd_test_upload(upload)} yourself as a one-line
+preflight before \code{tar_make()} to confirm credentials and connectivity up
+front; a missing credential still fails loud per-shard at upload time as a
+backstop. The per-task results are byte-identical across all three \code{upload}
+modes; only the presence and behaviour of the \verb{upload_<step>} targets differ.
 }
 
 \examples{

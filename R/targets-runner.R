@@ -63,7 +63,7 @@ encode_obj <- function(x) {
   rawToChar(serialize(x, connection = NULL, ascii = TRUE))
 }
 
-#' Inverse of [encode_obj()].
+#' Inverse of `encode_obj()`.
 #' @noRd
 decode_obj <- function(s) {
   unserialize(charToRaw(s))
@@ -420,11 +420,24 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' three result layers; the `sample` draws and serialised `fit` objects are not
 #' summary material, so the combined summary is the `hc` layer.
 #'
+#' The compact summary at `path` projects the `dists`/`samples` list-columns out
+#' at the DuckDB level, so the potentially-large retained bootstrap draws are
+#' never pulled into R. Supply `path_with_samples` to **also** write a full
+#' summary that retains those list-columns: that write reuses the same lazy
+#' DuckDB read, so the draws never materialise in R there either. The draws are
+#' populated only when the scenario set `samples = TRUE`, so the full summary is
+#' the analysis-ready estimates plus the per-row draws.
+#'
 #' @param dir_sample The `sample` results root.
 #' @param dir_fit The `fit` results root.
 #' @param dir_hc The `hc` results root.
-#' @param path The output Parquet path for the combined summary.
-#' @return The summary Parquet path (the `format = "file"` contract).
+#' @param path The output Parquet path for the compact summary (`dists`/`samples`
+#'   projected out).
+#' @param path_with_samples Optional output Parquet path for a full summary that
+#'   retains the `dists`/`samples` list-columns. `NULL` (the default) writes only
+#'   the compact summary.
+#' @return The summary Parquet path(s) (the `format = "file"` contract): `path`
+#'   when `path_with_samples` is `NULL`, otherwise `c(path, path_with_samples)`.
 #' @details
 #' In a `targets` pipeline a directory read carries no dependency edge, so
 #' [ssd_scenario_targets()] orders `summary` after the shards by naming every
@@ -451,22 +464,36 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #'   file.path(run$dir, "summary.parquet")
 #' )
 #' }
-ssd_summarise <- function(dir_sample, dir_fit, dir_hc, path) {
+ssd_summarise <- function(
+  dir_sample,
+  dir_fit,
+  dir_hc,
+  path,
+  path_with_samples = NULL
+) {
   glob <- file.path(dir_hc, "**", "part.parquet")
+  hc_shards <- duckplyr::read_parquet_duckdb(
+    glob,
+    options = list(hive_partitioning = FALSE)
+  )
   # Project out the `dists`/`samples` list-columns at the DuckDB level (so the
   # potentially-large retained `samples` draws are never pulled into R): the
-  # summary is the analysis-ready estimate table; the draws stay in the hc
-  # shards. The select stays lazy and is written straight to Parquet by
+  # compact summary is the analysis-ready estimate table; the draws stay in the
+  # hc shards. The select stays lazy and is written straight to Parquet by
   # duckplyr - the read, projection, and write all happen inside DuckDB, never
   # collecting the union into R.
-  hc <- dplyr::select(
-    duckplyr::read_parquet_duckdb(
-      glob,
-      options = list(hive_partitioning = FALSE)
-    ),
-    -dplyr::any_of(c("dists", "samples"))
-  )
+  hc <- dplyr::select(hc_shards, -dplyr::any_of(c("dists", "samples")))
   ssd_write_parquet(hc, path)
+  if (is.null(path_with_samples)) {
+    return(path)
+  }
+  # The full summary retains every hc column (`dists`/`samples` included). The
+  # same lazy read is written straight back out, so the potentially-large draws
+  # never materialise in R either - the same no-R guarantee the compact
+  # projection above relies on.
+  dir.create(dirname(path_with_samples), recursive = TRUE, showWarnings = FALSE)
+  duckplyr::compute_parquet(hc_shards, path_with_samples)
+  c(path, path_with_samples)
 }
 
 # ---- per-child upstream edges (Option 3, TARGETS-DESIGN.md sections 6, 8) ---
@@ -621,12 +648,15 @@ edge_block <- function(names) {
 #' never re-uploaded (content-hash skip) and a per-shard upload failure isolates
 #' to its own branch. Pass [ssd_upload_dryrun()] for no-op upload targets that
 #' reach no network (exercising the DAG shape offline / in CI) or
-#' [ssd_upload_azure()] to ship to Azure. The destination's
-#' [ssd_test_upload()] probe is run **once up front** (when the factory is
-#' called, before `tar_make()`), so missing credentials or an unreachable
-#' destination abort before any compute. The per-task results are byte-identical
-#' across all three `upload` modes; only the presence and behaviour of the
-#' `upload_<step>` targets differ.
+#' [ssd_upload_azure()] to ship to Azure. The factory performs **no** network
+#' I/O and never runs the [ssd_test_upload()] probe: it only assembles the
+#' target list, so sourcing `_targets.R` (which `targets` does on every
+#' `tar_make()`, `tar_manifest()`, `tar_visnetwork()`, and on each worker) stays
+#' side-effect free. Run `ssd_test_upload(upload)` yourself as a one-line
+#' preflight before `tar_make()` to confirm credentials and connectivity up
+#' front; a missing credential still fails loud per-shard at upload time as a
+#' backstop. The per-task results are byte-identical across all three `upload`
+#' modes; only the presence and behaviour of the `upload_<step>` targets differ.
 #'
 #' @inheritParams scenario_dataset
 #' @param ... Unused; must be empty. Its presence forces `root`, `upload`, and
@@ -678,18 +708,29 @@ ssd_scenario_targets <- function(
   }
   rlang::check_installed(c("targets", "tarchetypes"))
 
-  # The front-door creds/connectivity probe, run once up front (at sourcing
-  # time, before `tar_make()` builds anything) so an auth/network failure aborts
-  # before any compute - never deep in the DAG on a worker (section 6.1). NULL
-  # adds no upload at all; a dry run is trivially OK.
-  if (!is.null(upload)) {
-    ssd_test_upload(upload)
-  }
+  # The factory only assembles the target list - it performs no network I/O and
+  # deliberately never runs the `ssd_test_upload()` probe. `_targets.R` is
+  # re-sourced by every `targets` operation (`tar_make()`, but also
+  # `tar_manifest()`, `tar_visnetwork()`, `tar_outdated()`) and on *every* worker
+  # in a `crew`/cluster run, so probing here would fire a credential/marker-blob
+  # round-trip on each of those - not "once up front" at all. The probe is the
+  # user's explicit one-line preflight (`ssd_test_upload(upload)` at the prompt
+  # before `tar_make()`); a missing credential still fails loud per-shard at
+  # `ssd_upload_shard()` time as a backstop (section 6.1).
 
   sample_dir <- file.path(root, "sample")
   fit_dir <- file.path(root, "fit")
   hc_dir <- file.path(root, "hc")
   summary_path <- file.path(root, "summary.parquet")
+  # When the scenario retains the bootstrap draws (`samples = TRUE`), also fan in
+  # a full summary that keeps the `dists`/`samples` list-columns the compact
+  # summary projects out; otherwise those draws are empty and the second file
+  # would carry nothing extra (TARGETS-DESIGN.md §12 `dual-summary-outputs`).
+  summary_samples_path <- if (isTRUE(scenario$hc$samples)) {
+    file.path(root, "summary-samples.parquet")
+  } else {
+    NULL
+  }
 
   sample_shards <- ssd_scenario_sample_shards(scenario)
   fit_shards <- ssd_scenario_fit_shards(scenario)
@@ -815,7 +856,13 @@ ssd_scenario_targets <- function(
     "summary",
     rlang::expr({
       !!edge_block(unname(hc_names)) # order/value-depend on every hc shard
-      ssd_summarise(!!sample_dir, !!fit_dir, !!hc_dir, !!summary_path)
+      ssd_summarise(
+        !!sample_dir,
+        !!fit_dir,
+        !!hc_dir,
+        !!summary_path,
+        path_with_samples = !!summary_samples_path
+      )
     }),
     format = "file"
   )

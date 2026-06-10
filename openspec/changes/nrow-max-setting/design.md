@@ -155,8 +155,8 @@ moot (the draw size no longer grows with `nrow`).
 3. `R/targets-runner.R`: extend `scenario_step_slice()` (sample → `nrow_max`,
    hc → `ci`); `ssd_run_sample_step()` computes `D` from `nrow_max` + dataset;
    `ssd_run_hc_step()` reads `ci` from the slice.
-4. Update specs (the five deltas), `TARGETS-DESIGN.md` §5 prose + §12 (done at
-   propose), `GLOSSARY.md` (`n_max` entry rework + new `nrow_max` entry).
+4. Update specs (the five deltas), `TARGETS-DESIGN.md` §5 prose, `GLOSSARY.md`
+   (`n_max` entry rework + new `nrow_max` entry).
 5. Re-baseline snapshots; refresh `man/`; sweep example scripts/templates;
    `air format`; `devtools::test()` / `R CMD check`.
 

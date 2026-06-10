@@ -25,8 +25,8 @@ explicit `call`, so any check that runs inside a private helper or a
 
 This change is a **cross-cutting audit**, not a feature: it standardises the
 error *origin* across the public surface without changing what any function
-accepts or rejects. It is cosmetic, off the targets dependency DAG, and can
-land at any time (`TARGETS-DESIGN.md` §12).
+accepts or rejects. It is cosmetic, independent, and can
+land at any time.
 
 ## Goals / Non-Goals
 
@@ -62,8 +62,8 @@ land at any time (`TARGETS-DESIGN.md` §12).
 The contract is cross-cutting — it constrains *every* exported function's error
 behaviour. Encoding it as `## ADDED Requirements` in a single new `error-origin`
 capability (rather than amending each feature spec's requirements) keeps the
-change orthogonal to, and independent of, every feature spec and the targets
-DAG. A feature spec can be added, modified, or archived without disturbing this
+change orthogonal to, and independent of, every feature spec.
+A feature spec can be added, modified, or archived without disturbing this
 contract, and this contract can land at any time without touching a feature
 spec. *Alternative considered:* adding a "report origin" scenario to each
 function's own spec — rejected as scattering one contract across many specs and

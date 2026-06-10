@@ -1,110 +1,111 @@
 ## MODIFIED Requirements
 
-### Requirement: Dataset input (single or list)
-`ssd_define_scenario()` SHALL accept datasets as either a single input or a list of inputs, and SHALL derive or accept a dataset name for each. Each input SHALL be one of: a data frame, a `fitdists` object, a `tmbfit` object, a generator function (single argument, the number of rows), or a function-name string — the same set of inputs `ssd_run_scenario()` accepts through the `ssd_sim_data()` S3 methods. A non-data-frame input is a data *generator* that SHALL be **materialised once, at construction**, to a validated tibble (with a numeric `Conc` column) stored inline under its derived name, indistinguishable downstream from a data-frame input.
-
-#### Scenario: Single data frame, implicit name
-- **WHEN** `ssd_define_scenario(ssddata::ccme_boron, ...)` is called with a single data frame as the first argument
-- **THEN** the scenario SHALL derive the dataset name from the argument name (e.g., `"ccme_boron"` from the symbol or the variable name) and store it as the sole dataset name
-
-#### Scenario: Single data frame, explicit name
-- **WHEN** `ssd_define_scenario(ssddata::ccme_boron, name = "boron_data", ...)` is called
-- **THEN** the scenario SHALL use the explicit `name` parameter as the dataset name, overriding automatic derivation
-
-#### Scenario: List of data frames with implicit names
-- **WHEN** `ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium), ...)` is called with a named list
-- **THEN** the scenario SHALL use the list names as the dataset names and store them all (e.g., `c("boron", "cadmium")`)
-
-#### Scenario: List of data frames with derived names
-- **WHEN** `ssd_define_scenario(list(ssddata::ccme_boron, ssddata::ccme_cadmium), ...)` is called with an unnamed list
-- **THEN** the scenario SHALL derive names from the data frame arguments (e.g., `c("ccme_boron", "ccme_cadmium")`)
-
-#### Scenario: Named list with an explicit name is rejected
-- **WHEN** both a named list and an explicit `name=` are supplied
-- **THEN** the constructor SHALL abort with an informative error signalling the conflict (matching the current `scenario_dataset_names()` behaviour)
-
-#### Scenario: fitdists object materialised as a dataset
-- **WHEN** `ssd_define_scenario(fit, ..., .seed = 1L)` is called where `fit` is a `fitdists` object
-- **THEN** the scenario SHALL derive the dataset name from the argument (e.g. `"fit"`) and store, under that name, the tibble produced by materialising the generator once at construction
-
-#### Scenario: tmbfit object materialised as a dataset
-- **WHEN** `ssd_define_scenario(fit[[1]], name = "lnorm", ..., .seed = 1L)` is called where the input is a single `tmbfit`
-- **THEN** the scenario SHALL store, under the supplied (or derived) name, the tibble produced by materialising the `tmbfit` generator once at construction
-
-#### Scenario: Generator function materialised as a dataset
-- **WHEN** `ssd_define_scenario(ssdtools::ssd_rlnorm, ..., .seed = 1L)` is called with a generator function
-- **THEN** the scenario SHALL derive the dataset name from the argument expression (e.g. `"ssd_rlnorm"`) and store, under that name, the tibble produced by running the generator once at construction
-
-#### Scenario: Function-name string materialised as a dataset
-- **WHEN** `ssd_define_scenario("ssd_rlnorm", ..., .seed = 1L)` is called with a function-name string
-- **THEN** the scenario SHALL use that string as the dataset name, materialise the resolved function once, and SHALL abort with an informative error if the string does not resolve to a function
-
-#### Scenario: Mixed list of data frames and generators
-- **WHEN** `ssd_define_scenario(list(boron = ssddata::ccme_boron, synth = ssdtools::ssd_rlnorm), ..., .seed = 1L)` is called
-- **THEN** the scenario SHALL store `boron` as the given data frame and `synth` as the tibble materialised from the generator, each under its list name, with unique names enforced across the collection
-
 ### Requirement: Input data assembly and normalisation
-The package SHALL expose `ssd_data()` as the single entry point that assembles one or more inputs into a validated, named collection — an `ssdsims_data` object that is a homogeneous named list of tibbles. Each element SHALL be a tibble: a data-frame input passed through `Conc` validation, or the tibble produced by **materialising a generator input once at construction**. `ssd_define_scenario()` SHALL accept either an `ssd_data()` collection or, for convenience, bare input(s) routed through the same per-element handling. Every element SHALL be required to have a numeric `Conc` column, with additional columns preserved. Names SHALL be taken from argument names where supplied, otherwise derived by symbol capture, and SHALL be unique across the collection.
+The package SHALL expose `ssd_scenario_data()` (renamed from `ssd_data()`, which collided with the unrelated `ssdtools::ssd_data(x)`) as the single entry point that assembles one or more inputs into a validated, named collection — an `ssdsims_data` object that is a homogeneous named list of tibbles. Each element SHALL be a tibble with a numeric `Conc` column (additional columns preserved): a data-frame input passed through `Conc` validation, or a tibble produced by `ssd_gen()`. `ssd_scenario_data()` SHALL accept the result of `ssd_gen()` (an `ssdsims_gen` object) both as an unnamed argument (its members flattened into the collection) and via `rlang` splicing (`!!!ssd_gen(...)`), with identical results. Names SHALL be taken from argument names where supplied, otherwise derived by symbol capture, and SHALL be unique across the collection.
 
 #### Scenario: Conc column required
-- **WHEN** `ssd_data()` (or `ssd_define_scenario()`) is given an input whose materialised tibble lacks a numeric `Conc` column
+- **WHEN** `ssd_scenario_data()` is given an input whose tibble lacks a numeric `Conc` column
 - **THEN** the function SHALL abort with an informative error
 
 #### Scenario: Valid data frame passes through as a tibble element
-- **WHEN** `ssd_data()` is given one or more data frames with a numeric `Conc` column
+- **WHEN** `ssd_scenario_data()` is given one or more data frames with a numeric `Conc` column
 - **THEN** the collection SHALL hold those elements as tibbles preserving the `Conc` column and any additional columns
 
-#### Scenario: Generator inputs materialised into the collection
-- **WHEN** `ssd_data(boron = ssddata::ccme_boron, gen = ssdtools::ssd_rlnorm, refit = fit, .seed = 1L)` is called (with `fit` a `fitdists` object)
-- **THEN** the collection SHALL hold `boron` as the given tibble and `gen`/`refit` as the tibbles produced by materialising the generators once at construction
+#### Scenario: An ssd_gen() result is flattened into the collection
+- **WHEN** `ssd_scenario_data(boron = ccme_boron, ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L))` is called with the `ssd_gen()` result as an unnamed argument
+- **THEN** the collection SHALL hold `boron` as the given tibble and `synth` as the materialised generator tibble, each under its name
+
+#### Scenario: Splicing an ssd_gen() result is equivalent
+- **WHEN** the same call is written `ssd_scenario_data(boron = ccme_boron, !!!ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L))`
+- **THEN** the resulting collection SHALL be identical to the unnamed-argument form
 
 #### Scenario: Names derived and unique across mixed inputs
-- **WHEN** `ssd_data(ssddata::ccme_boron, ssdtools::ssd_rlnorm, .seed = 1L)` is called with unnamed inputs
-- **THEN** names SHALL be derived by symbol capture (`"ccme_boron"`, `"ssd_rlnorm"`) and duplicate names across the collection SHALL abort with an informative error
+- **WHEN** `ssd_scenario_data(ccme_boron, !!!ssd_gen(ssd_rlnorm, .n = 30, .seed = 1L))` is called with names derived by symbol capture
+- **THEN** names SHALL be derived (`"ccme_boron"`, `"ssd_rlnorm"`) and duplicate names across the collection SHALL abort with an informative error
 
 ## ADDED Requirements
 
-### Requirement: Generators materialised at construction under a dedicated, scenario-independent seed
-`ssd_data()` and `ssd_define_scenario()` SHALL materialise each non-data-frame input once, at construction, to an inline tibble, seeded **independently of the scenario `seed`** by a dedicated dot-prefixed `ssd_data(.seed = NULL)` argument. Each generator SHALL be run under a scoped RNG state derived from `.seed` as the base seed and the dataset **name** as the stream, so a single `.seed` fans out across all named generators on independent streams. The generation seeding SHALL NOT enter the per-task simulation primers. The construction SHALL leave the global RNG state (`.Random.seed`) unchanged on return.
+### Requirement: Dataset input via an ssd_scenario_data() collection
+`ssd_define_scenario()` SHALL accept dataset input ONLY as an `ssd_scenario_data()` collection (an `ssdsims_data` object). Bare data frames, bare lists, and a `name=` argument SHALL NOT be accepted; naming and validation are owned by `ssd_scenario_data()`/`ssd_gen()`. Because generation is performed by `ssd_gen()` before construction, `ssd_define_scenario()` SHALL perform no random-number generation (the "No side effects on RNG state" requirement is preserved).
 
-#### Scenario: Reproducible generation under `.seed`
-- **WHEN** two scenarios are constructed from the same generator and the same `.seed`
-- **THEN** the materialised dataset SHALL be byte-identical; a different `.seed` SHALL (for an RNG-using generator) yield different data
+#### Scenario: Collection accepted
+- **WHEN** `ssd_define_scenario(ssd_scenario_data(boron = ccme_boron), nsim = 100L, nrow = c(5L, 10L), seed = 42L)` is called
+- **THEN** the scenario SHALL store `boron` as its sole dataset name and the validated tibble in `$data`
 
-#### Scenario: One `.seed` across several generators
-- **WHEN** `ssd_data()` is given several generators and a single `.seed`
-- **THEN** each generator SHALL draw on an independent stream keyed by its name, and the result SHALL be reproducible
+#### Scenario: Collection with a generated dataset accepted
+- **WHEN** `ssd_define_scenario(ssd_scenario_data(boron = ccme_boron, !!!ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L)), nsim = 100L, seed = 42L)` is called
+- **THEN** the scenario SHALL store `c("boron", "synth")` as dataset names and the materialised tibbles in `$data`, indistinguishable downstream from data-frame datasets
 
-#### Scenario: `.seed` without generators is rejected
-- **WHEN** `.seed` is supplied but the call contains no generator inputs
+#### Scenario: Bare data frame rejected
+- **WHEN** `ssd_define_scenario()` is given a bare data frame (or list, or a `name=` argument) instead of an `ssd_scenario_data()` collection
+- **THEN** the constructor SHALL abort with an informative error directing the user to `ssd_scenario_data()`
+
+#### Scenario: Construction draws no random numbers
+- **WHEN** `ssd_define_scenario()` is called with any `ssd_scenario_data()` collection
+- **THEN** the global RNG state (`.Random.seed`) SHALL be unchanged after the call returns
+
+### Requirement: Generator materialisation via ssd_gen()
+The package SHALL expose `ssd_gen(..., .n, .seed)` that accepts ONLY generator-style inputs — a function, a function-name string, a `fitdists` object, or a `tmbfit` object — and materialises each, once, to a validated tibble with a numeric `Conc` column of `.n` rows, returning a classed `ssdsims_gen` named collection suitable for use within (or splicing into) `ssd_scenario_data()`. `.n` and `.seed` SHALL be required, dot-prefixed formals (never absorbed into `...`, never partial-matched from a `seed=`/`n=` named generator). Dispatch SHALL be most-specific-first (`tmbfit` before `fitdists`); a function-name string SHALL be resolved to a function via a bare-name lookup (`get0()`/`match.fun()`, no `eval(parse())`) and SHALL also be the dataset name; `fitdists`/`tmbfit` SHALL resolve to the matching `ssd_r<dist>` draw via `ssdtools::estimates()`. A `data.frame` SHALL be rejected (it belongs in `ssd_scenario_data()`). Each generator SHALL be materialised under a scoped dqrng state seeded by `.seed` (base seed) with the dataset **name** as the dqrng stream (`task_primer(list(dataset = name))`), so one `.seed` fans out across all generators on independent streams; the global `.Random.seed` SHALL be unchanged on return.
+
+#### Scenario: Function generator materialised
+- **WHEN** `ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)` is called
+- **THEN** the result SHALL be an `ssdsims_gen` collection holding `synth` as a tibble of 30 rows with a numeric `Conc` column
+
+#### Scenario: Function-name string resolved and materialised
+- **WHEN** `ssd_gen("ssd_rlnorm", .n = 30, .seed = 1L)` is called
+- **THEN** the string SHALL resolve to the function, be used as the dataset name, and produce a tibble identical to the function form
+
+#### Scenario: tmbfit and fitdists materialised
+- **WHEN** `ssd_gen(refit = fit[[1]], .n = 30, .seed = 1L)` (a `tmbfit`) or `ssd_gen(refit = fit, .n = 30, .seed = 1L)` (a `fitdists`, top-weighted dist selected) is called
+- **THEN** each SHALL materialise a `Conc` tibble drawn from the matching `ssd_r<dist>` with the fit's estimates
+
+#### Scenario: Reproducible under .seed
+- **WHEN** `ssd_gen()` is called twice with the same generator and the same `.seed`
+- **THEN** the materialised tibble SHALL be byte-identical; a different `.seed` SHALL (for an RNG-using generator) yield different data
+
+#### Scenario: One .seed across several generators
+- **WHEN** `ssd_gen(a = ssd_rlnorm, b = ssd_rlnorm, .n = 30, .seed = 1L)` is called
+- **THEN** each generator SHALL draw on an independent stream keyed by its name (so `a` and `b` differ), and the result SHALL be reproducible
+
+#### Scenario: .seed and .n are required
+- **WHEN** `ssd_gen()` is called without `.seed` (or without `.n`)
 - **THEN** the function SHALL abort with an informative error
 
+#### Scenario: Data frame rejected by ssd_gen()
+- **WHEN** `ssd_gen(d = ccme_boron, .n = 30, .seed = 1L)` is called with a data frame
+- **THEN** the function SHALL abort with an informative error directing the user to `ssd_scenario_data()`
+
 #### Scenario: Global RNG state preserved
-- **WHEN** `ssd_define_scenario(ssdtools::ssd_rlnorm, ..., .seed = 1L)` is called
+- **WHEN** `ssd_gen(ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)` is called
 - **THEN** `.Random.seed` SHALL be unchanged after the call (the scoped generation restores it)
 
-### Requirement: dqrng-only, pure generators enforced post hoc
-`ssd_data()` and `ssd_define_scenario()` SHALL detect, by comparing RNG state before and after each generator runs, whether the generator consumed randomness, and SHALL enforce a dqrng-only contract: a generator that moves the base R `.Random.seed` SHALL abort (directing the user to dqrng); a generator that moves the dqrng state with `.seed = NULL` SHALL abort (directing the user to supply `.seed`); a pure generator SHALL pass with or without `.seed`.
+### Requirement: dqrng-backed, reproducible generation
+`ssd_gen()` SHALL draw under an active dqrng pcg64 backend and SHALL reuse `task-rng-postcheck` to enforce a dqrng-only contract. It SHALL gate every dqrng touch behind `dqrng_usable()`, aborting with actionable guidance (`library(dqrng)`, `>= 0.4.1`) when dqrng is not already loaded rather than loading a user-RNG provider implicitly. After each generator runs, it SHALL verify via `chk_dqrng_backend_intact()` that the draw came from dqrng, aborting when a generator escaped dqrng (e.g. drew from base R after switching `RNGkind`). A generator that consumes no randomness SHALL pass.
 
-#### Scenario: base R RNG in a generator is rejected
-- **WHEN** a generator draws from the base R RNG (moves `.Random.seed`)
-- **THEN** the function SHALL abort with an informative error directing the user to use dqrng
+#### Scenario: dqrng not loaded is rejected
+- **WHEN** `ssd_gen()` is called while `dqrng` is not loaded (`dqrng_usable()` is `FALSE`)
+- **THEN** the function SHALL abort with an informative error directing the user to `library(dqrng)`
 
-#### Scenario: dqrng generator without a seed is rejected
-- **WHEN** a generator draws from dqrng and `.seed` is `NULL`
-- **THEN** the function SHALL abort with an informative error directing the user to supply `.seed`
+#### Scenario: A generator escaping dqrng is rejected
+- **WHEN** a generator draws from the base R RNG (escaping the dqrng backend)
+- **THEN** the function SHALL abort with an informative error (the draw is not reproducible under `.seed`)
 
-#### Scenario: pure generator needs no seed
+#### Scenario: A pure generator passes
 - **WHEN** a generator consumes no randomness
-- **THEN** it SHALL materialise successfully whether or not `.seed` is supplied
+- **THEN** it SHALL materialise successfully under any `.seed`
 
 ### Requirement: Structural validation of generator inputs
-`ssd_define_scenario()` and `ssd_data()` SHALL validate generator inputs structurally, in the context of the user-facing function, and abort with an informative error on invalid input. A function-name string SHALL resolve to a function; a generator function SHALL be a function; a name SHALL be derivable for every input (or supplied explicitly).
+`ssd_gen()` SHALL validate generator inputs structurally, in the context of the user-facing function, and abort with an informative error on invalid input. A function-name string SHALL resolve to a function; a generator function SHALL be a function; a name SHALL be derivable for every input (argument name, the string itself, or symbol capture) or supplied explicitly.
 
 #### Scenario: Unresolvable function-name string
 - **WHEN** a function-name string is supplied that does not resolve to a function in scope
 - **THEN** the function SHALL abort with an informative error naming the offending string
 
 #### Scenario: Underivable generator name requires explicit name
-- **WHEN** a generator input has no derivable name (e.g. an anonymous function literal) and no `name=`/list name is supplied
+- **WHEN** a generator input has no derivable name (e.g. an anonymous function literal) and no argument name is supplied
 - **THEN** the function SHALL abort with an informative error directing the user to supply a name
+
+## REMOVED Requirements
+
+### Requirement: Dataset input (single or list)
+**Reason**: `ssd_define_scenario()` no longer accepts bare data frames, bare lists, or a `name=` argument. All dataset input now flows through an `ssd_scenario_data()` collection (data frames) composed with `ssd_gen()` (generators), which own naming and validation. Restated as *"Dataset input via an ssd_scenario_data() collection"*.

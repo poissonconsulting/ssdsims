@@ -153,11 +153,13 @@ test_that("cost-estimation: input validation errors", {
 test_that("cost-estimation: a single call calibrates a usable object", {
   skip_on_cran()
   skip_if_not_installed("ssddata")
-  cal <- ssd_calibrate_cost(nboot = c(20L, 50L), nrow = c(5L, 10L), seed = 1L)
+  # The smallest grid the harness accepts (two `nboot`, two `nrow`); this is a
+  # wiring smoke test, so keep the bootstrap counts low rather than realistic.
+  cal <- ssd_calibrate_cost(nboot = c(10L, 20L), nrow = c(5L, 10L), seed = 1L)
   expect_s3_class(cal, "ssdsims_cost_calibration")
   expect_setequal(cal$coefficients$ci_method, ssdtools::ssd_ci_methods())
   expect_identical(nrow(cal$nrow_factor), 2L)
-  expect_identical(cal$provenance$sweep_grid$nboot, c(20L, 50L))
+  expect_identical(cal$provenance$sweep_grid$nboot, c(10L, 20L))
   # The freshly fitted calibration drives the estimator just like the default.
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
