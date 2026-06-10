@@ -58,7 +58,16 @@ Four experiments (all under `exploration/`, RESULT tables reproducible with
    `ROW_GROUP_SIZE_BYTES '100MB'` (payload-aware; requires
    `preserve_insertion_order = false`) passes even at 500 MB. The compact
    summary (`samples` projected out) stays trivial (100 MB, 0.7 s).
-5. **`experiment-duckplyr-noise.R`** — the pipeline's own surface
+5. **`experiment-rgbytes.R`** — the knob choice, on reprexes: with ordering
+   preserved the engine **refuses** `ROW_GROUP_SIZE_BYTES` outright (a Binder
+   error naming the fix — never silently ignored); with `threads = 1` and
+   ordering relaxed, repeated runs were byte-identical *and* kept the input
+   row order (observed, not contractual); small 1000-double cells yielded
+   13 000-row groups against 246-row groups for 50k-double cells (one budget,
+   payload-adaptive); and the memory floor tracks the *budget* at the same
+   ~5× rule (100 MB budget: 250 MB fails / 500 MB passes; 32 MB budget passes
+   at a 150 MB limit).
+6. **`experiment-duckplyr-noise.R`** — the pipeline's own surface
    (namespace-only duckplyr, as ssdsims uses it) emits *nothing*, with or
    without silencing. The noise is one step removed: duckplyr **collects
    fallback-telemetry logs by default** (`DUCKPLYR_FALLBACK_COLLECT` unset ⇒
@@ -165,31 +174,53 @@ telemetry preferences are untouched. We do not set `DUCKPLYR_FALLBACK_INFO`
 (per-call fallback messages are opt-in and already silent) and we do not touch
 the user's persisted `fallback_config()`.
 
-### D4. The full-summary write gets an explicit, bounded `ROW_GROUP_SIZE`
+### D4. The full-summary write uses `ROW_GROUP_SIZE_BYTES` with insertion order relaxed
 
-`ssd_summarise()`'s `path_with_samples` write passes an explicit
-`row_group_size` to `duckplyr::compute_parquet()` (the `options` seam already
-exists), sized so one row group's `samples` payload stays within a fixed byte
-budget (~100 MB): `rows_per_group = clamp(budget / (max_nboot × 8), 1, 122880)`.
-The factory (`ssd_scenario_targets()`) knows the scenario's largest `nboot`, so
-it computes the value and threads it to the summary target;
-`ssd_summarise()` exposes it as an argument with a conservative fallback for
-standalone calls. The compact-summary write keeps the default options (its
-rows are tiny — 4100 rows passed at a 100 MB limit).
+`ssd_summarise()`'s `path_with_samples` write passes
+`row_group_size_bytes = '100MB'` (a documented argument with that default) to
+`duckplyr::compute_parquet()`, with `preserve_insertion_order = false` set —
+and afterwards restored — **around that one write only**. The compact-summary
+write keeps default options and ordered output (its rows are tiny — 4100 rows
+passed at a 100 MB limit).
 
-*Why this over a relaxed summary memory budget*: the experiment shows the
-default writer's requirement grows with the union's **total row count** (one
-giant row group), so "give the summary task more memory" has no stable
-ceiling — it would re-break on the next bigger sweep. Bounded row groups make
-the write memory-flat (465 MB peak RSS for a 1.6 GB-payload union under a 1 GB
-limit) at zero compression cost.
+*Why this over a relaxed summary memory budget*: the union experiment shows
+the default writer's requirement grows with the union's **total row count**
+(one giant row group), so "give the summary task more memory" has no stable
+ceiling — it would re-break on the next bigger sweep. A bounded row group
+makes the write memory-flat at zero compression cost (0.181 MB/row in every
+layout measured).
 
-*Why `ROW_GROUP_SIZE` over `ROW_GROUP_SIZE_BYTES`*: the bytes knob is
-payload-aware but only takes effect with `preserve_insertion_order = false`,
-which surrenders deterministic row order — and with it the byte-identity
-property the spec demands of re-runs. A row count computed *from* the
-scenario's `nboot` is equally payload-aware in practice and keeps insertion
-order. Smaller row groups slightly coarsen predicate-pushdown granularity for
+*Why `ROW_GROUP_SIZE_BYTES` over a fixed `ROW_GROUP_SIZE`* (decided on the
+`experiment-rgbytes.R` reprexes, with review accepting non-guaranteed row
+order):
+
+- **Payload-adaptive with no arithmetic**: one byte budget serves every
+  `nboot` — 1000-double cells yielded 13 000-row groups (≈ the 104 MB
+  budget), 50k-double cells yielded 246-row groups. A fixed row count would
+  need scenario-derived sizing in the factory and would still mis-size mixed
+  `nboot` sweeps; the bytes knob sizes each group as it fills.
+- **The ordering requirement is loud, not a foot-gun**: with insertion order
+  preserved the engine *refuses* the option outright (Binder error naming
+  `SET preserve_insertion_order = false`), so a mispaired configuration can
+  never silently degrade. Mechanism: the order-preserving sink must
+  reassemble upstream batches into source order before emitting, cutting row
+  groups on the ordered batcher's row-count boundaries — it cannot flush
+  early on a byte budget while later-ordered batches are pending (which is
+  also why the default ordered writer accumulated the whole union toward one
+  122 880-row group). With ordering relaxed the sink flushes whenever the
+  budget fills.
+- **Under `threads = 1` the relaxation costs nothing in practice**: repeated
+  runs produced byte-identical files (`md5` equal) that retained the input
+  row order — single-producer behaviour, not an engine contract. The spec
+  therefore guarantees **value-identity** (the same multiset of rows) for the
+  full summary rather than byte-identity; shards and the compact summary
+  remain byte-identical.
+- **The floor tracks the budget at the same ~5× rule**: a 100 MB budget needs
+  250–500 MB of `memory_limit` (a 32 MB budget passes at 150 MB), so the
+  default budget fits comfortably under any worker allocation that can run
+  the shards at all — and can be lowered arbitrarily if ever needed.
+
+Smaller row groups slightly coarsen predicate-pushdown granularity for
 readers of the full summary; that file is an archival artefact (the compact
 summary is the analysis surface), so the trade is accepted.
 
@@ -225,13 +256,19 @@ later (`cost-analysis-targets` territory).
 - [Memory floor is duckdb-version-specific] The 5× rule was measured on duckdb
   1.5.2. → Recorded as an empirical bound with the reproduction scripts kept in
   `exploration/`; re-measure on major engine upgrades.
-- [Sub-2048 `ROW_GROUP_SIZE` honoured is version-observed behaviour] duckdb
-  1.5.2 wrote exact 100-row groups, but a future engine could clamp small row
-  groups (the believed 2048 minimum), re-raising the summary floor to
-  ~5 × 2048 × max_nboot × 8 bytes (~4 GB at `nboot = 50000`). →
-  `experiment-summary-union.R` is the canary (re-run on engine upgrades); if a
-  clamp ever lands, the fallback is the documented one: read `samples` from
-  the per-shard Parquets and skip `path_with_samples` for very large `nboot`.
+- [Full-summary row order is not contractual] With
+  `preserve_insertion_order = false` the engine does not promise output
+  order; under `threads = 1` it was observed byte-identical and in input
+  order, but an engine upgrade may legitimately change either. → Accepted at
+  review (the file is queried, not diffed); the spec demands value-identity
+  only, and consumers address rows by `hc_id`, never by position.
+- [Writer byte-flushing behaviour is version-observed] duckdb 1.5.2 honours
+  `ROW_GROUP_SIZE_BYTES` exactly (groups of 246/79 rows as budgeted) and
+  refuses it loudly when ordering is preserved; a future engine could change
+  the floor or the refusal. → `experiment-rgbytes.R` and
+  `experiment-summary-union.R` are the canaries (re-run on engine upgrades);
+  the ultimate fallback stands: read `samples` from the per-shard Parquets
+  and skip `path_with_samples` for very large `nboot`.
 
 ## Open Questions
 

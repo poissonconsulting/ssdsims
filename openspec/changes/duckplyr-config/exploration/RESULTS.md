@@ -172,3 +172,50 @@ Readings:
   but it needs insertion order relaxed, which `ROW_GROUP_SIZE` does not.
 - The compact summary (`samples` projected out at the DuckDB level) remains
   trivial: 4100 rows at `memory_limit='100MB'` in 0.7 s.
+
+## experiment-rgbytes.R
+
+Review preference: accept nondeterministic order; `ROW_GROUP_SIZE_BYTES` is
+attractive because it adapts the row-group row count to the cell size (large
+groups for small `samples`, small groups for huge ones). Corpora: `big` =
+4100 one-row files × 50k-double cells (shared with
+`experiment-summary-union.R`); `small` = 30 000 rows × 1000-double cells
+(the `nboot = 1000` default scale). All cases threads = 1, union via the
+verbatim `ssd_summarise()` path.
+
+```
+A. RESULT ok=FALSE corpus=big   memlim=1GB   rgbytes=100MB order=default ... error=Binder Error: "ROW_GROUP_SIZE_BYTES does not work while preserving insertion order. Use SET preserve_insertion_order=false;"
+A. RESULT ok=FALSE corpus=small memlim=500MB rgbytes=100MB order=default ... error=(same Binder Error)
+B. RESULT ok=TRUE  corpus=big   memlim=1GB   rgbytes=100MB order=false mode=determinism write_s=48.47(2 writes) file_mb=741.6 rss_peak_mb=761 row_groups=17groups[246+246+246...] bytes_identical=TRUE order_preserved=TRUE
+C. RESULT ok=TRUE  corpus=small memlim=500MB rgbytes=100MB order=false write_s=2.50 file_mb=23 rss_peak_mb=574 row_groups=13000+13000+4000 order_preserved=TRUE
+D. RESULT ok=FALSE corpus=big   memlim=250MB rgbytes=100MB order=false ... error=Out of Memory: failed to allocate 93.8 MiB
+D. RESULT ok=FALSE corpus=big   memlim=150MB rgbytes=100MB order=false ... error=(as above)
+D. RESULT ok=TRUE  corpus=big   memlim=150MB rgbytes=32MB  order=false write_s=21.04 file_mb=741.6 rss_peak_mb=342 row_groups=52groups[79+79+79...] order_preserved=TRUE
+```
+
+Readings:
+
+- **A — the `preserve_insertion_order = false` requirement is real and
+  LOUD**: with ordering preserved the engine refuses the option outright with
+  a Binder error naming the fix, so a mispaired configuration can never be
+  silently ignored. (Mechanism: the order-preserving sink must reassemble
+  upstream batches into source order before emitting, cutting row groups on
+  the ordered batcher's row-count boundaries — it cannot flush a group early
+  when a byte budget fills because later-ordered batches may still be
+  pending. With ordering relaxed, the sink flushes whenever the byte budget
+  fills, which is also why the *default* ordered writer accumulated our whole
+  union toward one 122 880-row group.)
+- **B — with `threads = 1`, relaxing order costs nothing in practice**: two
+  runs produced byte-identical files (`md5` equal) AND the output retained
+  the input row order. Not an engine contract — just the observed
+  single-producer behaviour — so specs should promise value-identity, not
+  byte-identity, for this file.
+- **C — the adaptivity is real**: 1000-double cells yielded 13 000-row groups
+  (13 000 × 1000 × 8 ≈ 104 MB ≈ the budget), against 246-row groups for the
+  50k-double cells. One byte budget serves every `nboot` with no
+  scenario-derived arithmetic.
+- **D — the floor tracks the budget, ~5×**: a 100 MB budget needs between
+  250 MB and 500 MB of `memory_limit`; a 32 MB budget passes at 150 MB
+  (groups of 79 rows ≈ 31.6 MB). The same ≳ 5× rule as the shard writes, now
+  applied to the *budget* instead of the whole union — i.e. arbitrarily
+  tunable.

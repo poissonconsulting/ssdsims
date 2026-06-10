@@ -34,22 +34,26 @@
   (`R/shard-runner.R`, beside its run-wide `local_dqrng_backend()`)
 - [ ] 2.3 `air format .`; `devtools::document()`
 
-## 3. Bounded row groups for the full summary (`R/targets-runner.R`)
+## 3. Byte-budgeted row groups for the full summary (`R/targets-runner.R`)
 
-- [ ] 3.1 Add a `samples_row_group_size` argument to `ssd_summarise()`
-  (default `NULL`); when non-`NULL`, pass
-  `options = list(row_group_size = <value>)` to the `path_with_samples`
-  `compute_parquet()` call; the compact-summary write keeps default options
-- [ ] 3.2 Compute the default in the factory from the scenario:
-  `rows_per_group = max(1L, min(122880L, floor(budget / (max(nboot) * 8))))`
-  with a ~100 MB `budget`, and thread it into the `summary` target's command;
-  document the standalone fallback (a conservative constant) on
-  `ssd_summarise()`
-- [ ] 3.3 Roxygen-document the argument: why bounded row groups (the engine
-  buffers a whole row group of nested `samples`; the default writer puts the
-  whole union in one group, evidence in the `duckplyr-config` change's
-  `exploration/experiment-summary-union.R`), the determinism constraint (no
-  `preserve_insertion_order=false`), and the pushdown-granularity trade-off
+- [ ] 3.1 Add a `samples_row_group_bytes` argument to `ssd_summarise()`
+  (default `"100MB"`); pass
+  `options = list(row_group_size_bytes = <value>)` to the
+  `path_with_samples` `compute_parquet()` call; the compact-summary write
+  keeps default options and the ordered writer
+- [ ] 3.2 Scope `SET preserve_insertion_order = false` around that one write
+  (snapshot via `read_sql_duckdb()`, restore via `withr::defer()` — the same
+  mechanics as `local_duckplyr_config()`), so the compact write and the rest
+  of the scope keep ordered output; the engine refuses the bytes option
+  without it (Binder error), so a regression here fails loud, never silently
+- [ ] 3.3 Roxygen-document the argument: why a byte budget (the engine buffers
+  whole row groups of nested `samples`; the default ordered writer puts the
+  whole union in ONE group, so its memory floor grows with total rows —
+  evidence in the `duckplyr-config` change's
+  `exploration/experiment-summary-union.R` and `exploration/
+  experiment-rgbytes.R`), the value-identity (not byte-identity) contract of
+  the full summary (row order non-contractual; address rows by key), the
+  ~5×-budget memory floor, and the pushdown-granularity trade-off
 
 ## 4. Tests (`tests/testthat/test-duckplyr-config.R`)
 
@@ -77,13 +81,16 @@
 - [ ] 4.6 Runners apply the scope: assert `threads == 1` is observed *during* a
   step runner body (e.g. via a mocked/wrapped seam per the test-suite AGENTS
   wrapping rule), not merely that the helper works in isolation
-- [ ] 4.7 Bounded summary row groups: a full summary written with
-  `samples_row_group_size = <n>` shows row groups of at most `n` rows in
-  `parquet_metadata()`, and two identical runs produce byte-identical output
-  (spec "The full summary writes bounded row groups"); keep the fixture tiny
-  (small `n`, short `samples` cells — the property under test is the
-  metadata/options plumbing and determinism, not the 1 GB floor itself, which
-  stays covered by `exploration/experiment-summary-union.R`)
+- [ ] 4.7 Byte-budgeted summary row groups: a full summary written with a
+  small `samples_row_group_bytes` shows multiple byte-sized row groups in
+  `parquet_metadata()`; two identical runs yield the same multiset of rows
+  (equal after ordering by `hc_id`) and byte-identical compact summaries;
+  and `preserve_insertion_order` reports its pre-write value afterwards
+  (spec "The full summary writes byte-budgeted row groups"); keep the fixture
+  tiny (small budget, short `samples` cells — the property under test is the
+  options/scoping plumbing, not the 1 GB floor itself, which stays covered by
+  `exploration/experiment-summary-union.R` and
+  `exploration/experiment-rgbytes.R`)
 
 ## 5. Templates and docs
 

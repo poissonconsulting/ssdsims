@@ -61,43 +61,61 @@ configuration SHALL NOT be modified.
 
 ### Requirement: Configuration never changes results
 The pipeline-scoped configuration SHALL affect resource usage and chatter
-only: for a fixed scenario, the written shard and summary Parquet files SHALL
-be byte-identical whatever `SSDSIMS_DUCKDB_THREADS` and (sufficient)
+only: for a fixed scenario, the written shard Parquets and the compact
+summary SHALL be byte-identical, and the full summary (`path_with_samples`)
+SHALL be value-identical (the same multiset of rows; see the byte-budgeted
+row-groups requirement), whatever `SSDSIMS_DUCKDB_THREADS` and (sufficient)
 `SSDSIMS_DUCKDB_MEMORY_LIMIT` values are in effect.
 
 #### Scenario: Byte-identical shards under constrained configuration
 - **WHEN** the same scenario is run once with default configuration and once
   with `SSDSIMS_DUCKDB_THREADS=1` and a sufficient
   `SSDSIMS_DUCKDB_MEMORY_LIMIT`
-- **THEN** every produced shard and summary Parquet SHALL be byte-identical
-  between the two runs
+- **THEN** every produced shard Parquet and the compact summary SHALL be
+  byte-identical between the two runs, and the full summary SHALL contain the
+  same multiset of rows
 
-### Requirement: The full summary writes bounded row groups
+### Requirement: The full summary writes byte-budgeted row groups
 `ssd_summarise()` SHALL write the full summary (`path_with_samples`, the
 output retaining the `dists`/`samples` list-columns) with an explicit Parquet
-`row_group_size`, sized so that one row group's `samples` payload stays
-within a fixed byte budget (about 100 MB) given the scenario's largest
-`nboot` — so the write's memory requirement is bounded by the row-group
-budget, not by the union's total row count. The targets factory
-SHALL derive this value from the scenario and pass it to the summary target;
-`ssd_summarise()` SHALL accept it as an argument with a conservative default
-for standalone use. The write SHALL preserve insertion order (deterministic
-output bytes for identical inputs). The compact summary write (list-columns
-projected out) SHALL keep the engine's default row-group sizing.
+`ROW_GROUP_SIZE_BYTES` budget (default about 100 MB, exposed as an argument),
+setting the engine's `preserve_insertion_order` to `false` for that write and
+restoring it afterwards — so the write's memory requirement is bounded by the
+row-group byte budget, not by the union's total row count, and the row-group
+row count adapts to the `samples` cell size (large groups for small draws,
+small groups for large draws). Because insertion order is relaxed, the full
+summary's guarantee is **value-identity**: re-summarising the same shards
+SHALL yield the same multiset of rows, while row order and file bytes MAY
+differ; consumers SHALL address rows by their keys (`hc_id`/`fit_id`), never
+by position. The compact summary write (list-columns projected out) SHALL
+keep the engine's default ordered writer and its byte-identity across
+re-runs.
 
 #### Scenario: Union memory is flat in total rows
 - **WHEN** `ssd_summarise()` writes a full summary unioning more rows than fit
   one row-group byte budget (e.g. thousands of rows of 50k-double `samples`
   cells) under a DuckDB `memory_limit` of 1 GB
 - **THEN** the write SHALL succeed, and the output's Parquet metadata SHALL
-  show row groups within the byte budget rather than a single row group
+  show row groups sized to the byte budget rather than a single row group
   spanning the union
 
-#### Scenario: Determinism is preserved
+#### Scenario: Row groups adapt to the sample size
+- **WHEN** the `samples` cells are small (e.g. the default `nboot = 1000`)
+- **THEN** the written row groups SHALL hold correspondingly many rows
+  (approximately the byte budget divided by the cell payload), not a fixed
+  small row count
+
+#### Scenario: Value-identity across re-runs
 - **WHEN** the same shard inputs are summarised twice with the same
   configuration
-- **THEN** the full-summary Parquet bytes SHALL be identical across the two
-  runs (insertion order preserved; no order-relaxing engine options)
+- **THEN** the two full summaries SHALL contain the same multiset of rows
+  (equal after ordering by key), and the compact summaries SHALL be
+  byte-identical
+
+#### Scenario: Insertion order is restored after the write
+- **WHEN** the full-summary write completes (or errors)
+- **THEN** the connection's `preserve_insertion_order` setting SHALL be back
+  at its pre-write value
 
 ### Requirement: Nested-shard memory sizing is documented
 The helper's documentation and the cluster template SHALL state the empirical
