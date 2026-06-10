@@ -18,6 +18,12 @@
 #' for all the distributions and/or `"top"` to use the distribution with most weight
 #' and/or `"multi"` to treat the distributions as a single distribution.
 #' @param nrow A numeric vector of the number of rows in the generated data which must be between 5 and 1,000,
+#' @param nrow_max A whole number (default `1000L`): the fixed size of the
+#' shared `sample` draw that every `nrow` value sub-truncates. A sample-level
+#' simulation setting, not a cross-join axis. The effective per-dataset draw is
+#' `min(nrow_max, nrow(data))` when `replace = FALSE` (the high default draws
+#' the full permutation) and `nrow_max` rows when `replace = TRUE`; each `nrow`
+#' must not exceed the effective draw size.
 #' @param nsim A count of the number of data sets to generate.
 #' @param pars A named list of the parameter values.
 #' @param replace A logical vector specifying whether to sample with replacement.

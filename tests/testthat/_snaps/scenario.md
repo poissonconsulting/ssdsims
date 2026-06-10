@@ -30,6 +30,32 @@
       Error in `ssd_data()`:
       ! Dataset names must be unique.
 
+# scenario-definition: nrow_max must be a whole number
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow_max = 10.5)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow_max` must be a whole number (non-missing integer scalar or double equivalent).
+
+# scenario-definition: nrow exceeding the effective draw size errors
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 50L,
+      replace = TRUE, nrow_max = 20L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow` value 50 exceeds the shared draw size: the draw is `nrow_max` (20) rows when `replace = TRUE`.
+
+---
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = c(10L,
+        30L))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow` value 30 exceeds the effective draw size for dataset "ccme_boron": the draw is `min(nrow_max, nrow(data))` = 28 rows when `replace = FALSE`.
+
 # scenario-definition: min_pmix rejects non-function list elements
 
     Code
@@ -288,6 +314,7 @@
         datasets: ccme_boron
         nrow:     5, 10
         replace:  FALSE
+        nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE
           computable: FALSE
@@ -329,6 +356,7 @@
         datasets: boron, cadmium
         nrow:     5, 6, 10
         replace:  FALSE
+        nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE, TRUE
           computable: FALSE, TRUE

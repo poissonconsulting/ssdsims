@@ -84,10 +84,12 @@ test_that("scenario-accessors: each step's slice carries its runner's inputs", {
   expect_s3_class(fit_slice, "ssdsims_scenario")
   expect_s3_class(hc_slice, "ssdsims_scenario")
 
-  # sample: the datasets + partition_by$sample, and nothing else.
+  # sample: the datasets + the nrow_max draw-size setting + partition_by$sample,
+  # and nothing else.
   expect_identical(scenario_dataset(sample_slice, "boron"), scenario$data$boron)
+  expect_identical(sample_slice$nrow_max, scenario$nrow_max)
   expect_identical(sample_slice$partition_by, scenario$partition_by["sample"])
-  expect_setequal(names(sample_slice), c("data", "partition_by"))
+  expect_setequal(names(sample_slice), c("data", "nrow_max", "partition_by"))
 
   # fit: fit$dists + the min_pmix functions + partition_by for sample and fit.
   expect_identical(fit_slice$fit$dists, scenario$fit$dists)
@@ -102,8 +104,10 @@ test_that("scenario-accessors: each step's slice carries its runner's inputs", {
   expect_setequal(names(fit_slice), c("fit", "min_pmix_fns", "partition_by"))
   expect_null(fit_slice$data)
 
-  # hc: hc$proportion + hc$samples + partition_by for fit and hc.
+  # hc: the hc settings the runner reads (incl. the scalar ci) + partition_by
+  # for fit and hc.
   expect_identical(hc_slice$hc$proportion, scenario$hc$proportion)
+  expect_identical(hc_slice$hc$ci, scenario$hc$ci)
   expect_identical(hc_slice$hc$samples, scenario$hc$samples)
   expect_identical(hc_slice$partition_by, scenario$partition_by[c("fit", "hc")])
   expect_setequal(names(hc_slice), c("hc", "partition_by"))

@@ -43,7 +43,7 @@ test_that("task-shards: union of a step's shard tasks equals its task table", {
   }
 })
 
-test_that("task-shards: ci rides as a carried column on the hc shards", {
+test_that("task-shards: ci is not a column, path axis, or inner axis on the hc shards", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
@@ -52,9 +52,9 @@ test_that("task-shards: ci rides as a carried column on the hc shards", {
     nboot = 10L
   )
   tasks <- ssd_scenario_hc_shards(scenario)$tasks[[1]]
-  # `ci` is present as a column the runner reads, but it is neither a path nor
-  # an inner axis (it is absent from the hc vocabulary).
-  expect_true("ci" %in% names(tasks))
+  # `ci` is an hc setting the runner reads from the scenario slice: it is not
+  # emitted as a task-row column and is absent from the hc vocabulary.
+  expect_false("ci" %in% names(tasks))
   expect_false("ci" %in% task_axes("hc"))
   expect_false("ci" %in% scenario_partition_axes(scenario, "hc")$path)
   expect_false("ci" %in% scenario_partition_axes(scenario, "hc")$inner)
@@ -598,13 +598,16 @@ test_that("hive: cue is threaded onto every shard target", {
   expect_true(tg0[[1L]][["sample_step"]][[1L]]$cue$depend)
 })
 
-test_that("hive: widening max(nrow) changes the sample shard command (rewrite trigger)", {
+test_that("hive: extending nrow caches the sample shard; changing nrow_max rebuilds it", {
   skip_if_not_installed("targets")
   skip_if_not_installed("tarchetypes")
-  # The sample draw's n_max = max(nrow) is a sample task column, so widening nrow
-  # changes the (inlined) sample shard command -> the sample shard rebuilds and
-  # the per-child edge propagates to the fit shards that read it (task 4.5). The
-  # byte-level multi-run assertion lives in shard-atomic-rewrite / path-axis-growth.
+  # The draw size is the scenario's fixed `nrow_max` setting (carried on the
+  # sample slice), not max(nrow): adding an `nrow` value within the effective
+  # draw size leaves the (inlined) sample shard command byte-identical -> the
+  # sample shard stays cached and only the new nrow-keyed fit shards mint.
+  # Changing `nrow_max` changes the sample slice -> the draw rebuilds and the
+  # per-child edge propagates to the fit shards that read it. The byte-level
+  # multi-run assertion lives in shard-atomic-rewrite / path-axis-growth.
   base <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 1L,
@@ -619,9 +622,19 @@ test_that("hive: widening max(nrow) changes the sample shard command (rewrite tr
     nrow = c(6L, 12L),
     dists = "lnorm"
   )
+  resized <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    nrow_max = 500L,
+    dists = "lnorm"
+  )
   s1 <- ssd_scenario_targets(base)[[1L]][["sample_step"]][[1L]]$command$expr
   s2 <- ssd_scenario_targets(wide)[[1L]][["sample_step"]][[1L]]$command$expr
-  expect_false(identical(s1, s2))
+  s3 <- ssd_scenario_targets(resized)[[1L]][["sample_step"]][[1L]]$command$expr
+  expect_identical(s1, s2)
+  expect_false(identical(s1, s3))
 })
 
 test_that("hive: re-make is a full cache hit; a missing Parquet rebuilds only its subtree", {

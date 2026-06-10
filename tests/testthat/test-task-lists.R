@@ -28,7 +28,7 @@ test_that("task-lists: the scenario replace knob is a sample axis", {
   expect_setequal(tasks$replace, c(FALSE, TRUE))
 })
 
-test_that("task-lists: nrow does not multiply the sample draw; n_max is carried", {
+test_that("task-lists: nrow does not multiply the sample draw; the draw size is not a row column", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 4L,
@@ -39,7 +39,10 @@ test_that("task-lists: nrow does not multiply the sample draw; n_max is carried"
   # 1 dataset * 4 sims * 1 replace = 4, not multiplied by the 3 nrow values
   expect_identical(nrow(tasks), 4L)
   expect_false("nrow" %in% names(tasks))
-  expect_identical(unique(tasks$n_max), 20L)
+  # The draw size is the scenario's `nrow_max` setting (resolved by the
+  # runner), not an `n_max` row column: the table carries only the identity.
+  expect_false("n_max" %in% names(tasks))
+  expect_identical(names(tasks), c("dataset", "sim", "replace", "sample_id"))
 })
 
 test_that("task-lists: sample derivation is RNG-free with no seeding columns", {
@@ -125,7 +128,9 @@ test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
   # summarised within the single task rather than multiplying it.
   expect_identical(nrow(hc_tasks), nrow(fit_tasks))
   expect_false("est_method" %in% names(hc_tasks))
-  expect_true(all(hc_tasks$ci == FALSE))
+  # `ci` is a setting read from the scenario, not an emitted column; the
+  # NA-canonicalisation of the bootstrap-only knobs is keyed off the scalar.
+  expect_false("ci" %in% names(hc_tasks))
   expect_true(all(is.na(hc_tasks$nboot)))
   expect_true(all(is.na(hc_tasks$ci_method)))
   expect_true(all(is.na(hc_tasks$parametric)))
@@ -144,7 +149,7 @@ test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
   # 2 nboot * 1 ci_method * 1 parametric = 2 per fit task (est_method is a
   # within-task setting, absent from the fan-out).
   expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 2L)
-  expect_true(all(hc_tasks$ci == TRUE))
+  expect_false("ci" %in% names(hc_tasks))
   expect_false("est_method" %in% attr(hc_tasks, "axes"))
 })
 
@@ -387,8 +392,12 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   expect_s3_class(out$sample$sample[[1L]], "data.frame")
   expect_s3_class(out$fit$fits[[1L]], "fitdists")
   expect_s3_class(out$hc$hc[[1L]], "data.frame")
-  # one shared draw of n_max = 6 rows; both nrow fits truncate that same draw
-  expect_identical(nrow(out$sample$sample[[1L]]), 6L)
+  # one shared draw of the effective draw size - min(nrow_max, nrow(data)),
+  # the full permutation here; both nrow fits truncate that same draw
+  expect_identical(
+    nrow(out$sample$sample[[1L]]),
+    nrow(ssddata::ccme_boron)
+  )
   expect_identical(length(unique(out$fit$sample_id)), 1L)
   # The baseline runner does no Parquet I/O of its own (it threads results in
   # memory). (`targets` is a package dependency since `task-tables`, so its
@@ -414,6 +423,29 @@ test_that("task-lists: sub-truncation property holds across nrow", {
   )
   # both fit tasks reference the one sample draw
   expect_identical(length(unique(out$fit$sample_id)), 1L)
+})
+
+test_that("parallel-safe-seeding: adding an nrow within the draw size never re-draws", {
+  # The draw size is the fixed `nrow_max` setting, not `max(nrow)`: widening
+  # the `nrow` axis (within the effective draw size) leaves the seeded draw
+  # byte-identical, so the `sample` shard would stay cached.
+  base <- ssd_define_scenario(
+    ssd_data(boron = ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L,
+    dists = "lnorm",
+    nrow = c(5L, 6L)
+  )
+  wider <- ssd_define_scenario(
+    ssd_data(boron = ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L,
+    dists = "lnorm",
+    nrow = c(5L, 6L, 10L)
+  )
+  out_base <- ssd_run_scenario_baseline(base)
+  out_wider <- ssd_run_scenario_baseline(wider)
+  expect_identical(out_base$sample$sample, out_wider$sample$sample)
 })
 
 test_that("parallel-safe-seeding: baseline runner is reproducible without an external seed", {
@@ -459,9 +491,10 @@ test_that("parallel-safe-seeding: baseline runner results are order-independent"
   primer <- task_primer(row[task_axes("sample")])
   isolated <- local({
     local_dqrng_backend()
+    data <- scenario$data[[row$dataset]]
     sample_data_task_primer(
-      scenario$data[[row$dataset]],
-      row$n_max,
+      data,
+      effective_draw_size(scenario$nrow_max, data, row$replace),
       row$replace,
       scenario$seed,
       primer

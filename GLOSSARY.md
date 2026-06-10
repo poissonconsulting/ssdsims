@@ -71,25 +71,31 @@ Terminology used throughout `ssdsims`.
   `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`).
   `est_method`, `proportion`, `ci`, and `samples` are **not** hc axes —
   they are *simulation settings* (below), consumed within each task rather
-  than multiplying it. Contrast a *carried column* (e.g. `n_max`), which is
-  data on the row but is **not** fanned out over:
+  than multiplying it. A task row carries **only** its identity — the axis
+  columns, its `<step>_id`/`<parent>_id` keys, and the per-row `seed`/`primer`
+  the shard path attaches; a non-axis value a runner needs (the draw size, the
+  `ci` flag) lives on the scenario as a setting, never as a row column.
   `nrow` is deliberately not a `sample` axis because every `nrow` is
-  a sub-truncation of one `n_max`-row draw (TARGETS-DESIGN.md §5),
-  so it is an axis only of the (RNG-free) `data` truncation step.
+  a sub-truncation of one shared draw sized by the `nrow_max` setting
+  (TARGETS-DESIGN.md §5), truncated inline at the (RNG-free) `fit` step.
 - **simulation setting**: A scenario knob that is **not** an axis — it is
   absent from `task_axes(step)`, so it never creates a task, enters the
   per-task **primer**, or becomes a **shard**/**partition** level. Its effect
   is realised *inside* each task: it either fans out within the task's own
-  output (`est_method`, `proportion` → one HC row per value) or is applied
-  uniformly to every task (`ci`, `dists`, `samples`). Where an **axis**
+  output (`est_method`, `proportion` → one HC row per value), is applied
+  uniformly to every task (`ci`, `dists`, `samples`), or sets the shared draw
+  size (`nrow_max`). Where an **axis**
   multiplies the *task graph*, a simulation setting only shapes the *contents*
   of a task's result. "Scalar" is a near-synonym but a misnomer for `proportion`
   and `est_method` (vector-valued) and for `dists` (a character vector) — all
-  non-scalar yet still not axes. Settings attach at different **steps**: `dists`
-  is a **fit**-level setting (the `dists` vector handed to every fit task), while
+  non-scalar yet still not axes. Settings attach at different **steps**:
+  `nrow_max` is the **sample**-level setting (the fixed shared-draw size),
+  `dists` is a **fit**-level setting (the `dists` vector handed to every fit
+  task), while
   `est_method`, `proportion`, `ci`, and `samples` are **hc**-level. In the
-  `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`dists`,
-  `est_method`, `proportion` — each valid and meaningful when `ci = FALSE`) come
+  `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`nrow_max`,
+  `dists`, `est_method`, `proportion` — each valid and meaningful when
+  `ci = FALSE`) come
   before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
   `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
   (which only retains bootstrap draws).
@@ -188,6 +194,13 @@ Terminology used throughout `ssdsims`.
 - **`sim`**: The index of a simulation replicate.
 - **`nsim`**: The number of simulation replicates to perform.
 - **`nrow`**: The number of rows (species) in each simulated dataset.
+- **`nrow_max`**: The fixed size of the shared `sample` draw (default
+  `1000L`) — a sample-level **simulation setting**, not an axis or a task-row
+  column. The effective per-dataset draw is `min(nrow_max, nrow(data))` when
+  `replace = FALSE` (the high default draws the full permutation) and
+  `nrow_max` rows when `replace = TRUE`; every `nrow` is a `head()` prefix of
+  that draw, so adding `nrow` values (within the effective draw size) never
+  re-draws (TARGETS-DESIGN.md §5).
 - **`replace`**: Whether the resampling that generates simulated data is
   performed with replacement.
 

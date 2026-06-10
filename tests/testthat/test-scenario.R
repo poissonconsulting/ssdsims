@@ -85,16 +85,85 @@ test_that("scenario-definition: minimal construction stores declarative fields",
     )
   )
   expect_identical(s$hc$ci, FALSE)
+  expect_identical(s$nrow_max, 1000L)
+})
+
+# ---- nrow_max (sample-level draw-size setting) -------------------------------
+
+test_that("scenario-definition: nrow_max defaults to 1000L and is a setting, not an axis", {
+  s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
+  expect_identical(s$nrow_max, 1000L)
+  expect_false("nrow_max" %in% task_axes("sample"))
+})
+
+test_that("scenario-definition: nrow_max must be a whole number", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      nrow_max = 10.5
+    )
+  })
+})
+
+test_that("scenario-definition: nrow exceeding the effective draw size errors", {
+  # replace = TRUE: the draw is `nrow_max` rows.
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      nrow = 50L,
+      replace = TRUE,
+      nrow_max = 20L
+    )
+  })
+  # replace = FALSE: the draw is min(nrow_max, nrow(data)) rows (ccme_boron
+  # has 28), so an `nrow` above the dataset size is rejected.
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      nrow = c(10L, 30L)
+    )
+  })
+})
+
+test_that("scenario-definition: nrow at the effective draw size is accepted", {
+  expect_s3_class(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      nrow = 20L,
+      replace = TRUE,
+      nrow_max = 20L
+    ),
+    "ssdsims_scenario"
+  )
+  expect_s3_class(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      nrow = nrow(ssddata::ccme_boron)
+    ),
+    "ssdsims_scenario"
+  )
 })
 
 test_that("scenario-definition: non-ci-gated settings precede ci, gated knobs follow", {
   fmls <- names(formals(ssd_define_scenario))
-  # The non-`ci`-gated settings (`dists`, `est_method`, `proportion` — all valid
-  # and meaningful when `ci = FALSE`) come first, then `ci`, then the knobs it
-  # gates: the bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when
-  # `ci = FALSE`) and `samples` (only retains bootstrap draws). Contiguous, after
-  # the last structural axis (`range_shape2`) and before the partitioning args.
+  # The non-`ci`-gated settings (`nrow_max`, `dists`, `est_method`, `proportion`
+  # — all valid and meaningful when `ci = FALSE`, led by the sample-level
+  # `nrow_max`) come first, then `ci`, then the knobs it gates: the bootstrap
+  # axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and
+  # `samples` (only retains bootstrap draws). Contiguous, after the last
+  # structural axis (`range_shape2`) and before the partitioning args.
   group <- c(
+    "nrow_max",
     "dists",
     "est_method",
     "proportion",

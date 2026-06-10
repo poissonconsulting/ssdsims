@@ -78,10 +78,11 @@ ssd_scenario_tasks <- function(scenario, step = NULL) {
 #' @describeIn ssd_scenario_tasks Derive just the `sample` task table: one row per
 #'   cell of the cross-join of the scenario's dataset names, replicate index
 #'   (`1:nsim`), and `replace` values, keyed by `sample_id`. Each row is the
-#'   single random draw of `n_max = max(nrow)` rows that every `nrow` value
-#'   sub-truncates (`TARGETS-DESIGN.md` section 5), so `nrow` is **not** a sample
-#'   axis - the draw is shared - and `n_max` is carried as an ordinary integer
-#'   column.
+#'   single random draw that every `nrow` value sub-truncates
+#'   (`TARGETS-DESIGN.md` section 5), so `nrow` is **not** a sample axis - the
+#'   draw is shared. The draw size is the scenario's `nrow_max` setting,
+#'   resolved by the runner against each dataset, not a row column: the table
+#'   carries only the task identity.
 #' @export
 #' @examples
 #' ssd_scenario_sample_tasks(scenario)
@@ -118,9 +119,10 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #'   fit-task identity with each row of the scenario's `hc` argument grid
 #'   (`nboot`, `ci_method`, `parametric`). The scenario's scalar `ci` flag and the
 #'   `est_method` setting are applied uniformly to every hc row - neither is a
-#'   cross-join axis; `ci` rides as a carried column and every requested
-#'   `est_method` is summarised within each task from its single bootstrap sample
-#'   set. When `ci = FALSE` the bootstrap-only knobs (`nboot`, `ci_method`,
+#'   cross-join axis nor an emitted column; the runners read `ci` from the
+#'   scenario and every requested `est_method` is summarised within each task
+#'   from its single bootstrap sample set. When `ci = FALSE` the bootstrap-only
+#'   knobs (`nboot`, `ci_method`,
 #'   `parametric`) are canonically `NA` and there is no fan-out axis, so the grid
 #'   is exactly one hc row per fit task; when `ci = TRUE` the grid fans out across
 #'   `nboot x ci_method x parametric`. Each row carries an `hc_id` primary key and
@@ -199,19 +201,25 @@ ssd_run_scenario_baseline <- function(scenario) {
   # are reproducible and order-independent for a fixed `scenario$seed`.
   local_dqrng_backend()
 
-  # --- sample step: one seeded draw of n_max rows per (dataset, sim, replace).
-  # The primer is keyed by the sample identity only (no `nrow`), so every
-  # `nrow` shares the one draw (TARGETS-DESIGN.md section 5).
+  # --- sample step: one seeded draw per (dataset, sim, replace), sized by the
+  # scenario's fixed `nrow_max` setting resolved against the dataset (the
+  # effective draw size). The primer is keyed by the sample identity only (no
+  # `nrow`), so every `nrow` shares the one draw (TARGETS-DESIGN.md section 5).
   sample_tbl <- tasks$sample
   sample_tbl$sample <- purrr::pmap(
     list(
       data = data[sample_tbl$dataset],
-      n_max = sample_tbl$n_max,
       replace = sample_tbl$replace,
       primer = task_primers(sample_tbl, "sample")
     ),
-    \(data, n_max, replace, primer) {
-      sample_data_task_primer(data, n_max, replace, seed, primer)
+    \(data, replace, primer) {
+      sample_data_task_primer(
+        data,
+        effective_draw_size(scenario$nrow_max, data, replace),
+        replace,
+        seed,
+        primer
+      )
     }
   )
   sample_out <- rlang::set_names(sample_tbl$sample, sample_tbl$sample_id)
@@ -281,16 +289,15 @@ task_primers <- function(tbl, step) {
 # ---- internal grid helpers -------------------------------------------------
 
 sample_task_grid <- function(scenario) {
-  grid <- tidyr::expand_grid(
+  # The single draw every `nrow` sub-truncates is sized by the scenario's
+  # `nrow_max` setting, resolved by the runner against each dataset
+  # (TARGETS-DESIGN.md section 5) - not stored as a row column - so the table
+  # carries only the task identity and `nrow` never multiplies the draw.
+  tidyr::expand_grid(
     dataset = scenario$datasets,
     sim = seq_len(scenario$nsim),
     replace = scenario$replace
   )
-  # The single draw is `n_max = max(nrow)` rows; every `nrow` value is a
-  # sub-truncation of it (TARGETS-DESIGN.md section 5), so `n_max` is carried data, not
-  # a cross-join axis, and `nrow` never multiplies the draw.
-  grid$n_max <- max(scenario$nrow)
-  grid
 }
 
 fit_grid_tbl <- function(scenario) {
@@ -320,21 +327,20 @@ fit_task_table <- function(scenario) {
 hc_grid_tbl <- function(scenario) {
   hc <- scenario$hc
   # Single grid keyed by the scalar `ci` flag (no `c(FALSE, TRUE)` collapse).
-  # `ci` is emitted as a (single-valued) carried column the runners read, but
-  # it is not an hc axis, so it never enters the per-task primer.
+  # `ci` is an hc simulation setting, not an axis or an emitted column: the
+  # runners read it from the scenario, so it never enters the per-task primer
+  # or the task row.
   if (isFALSE(hc$ci)) {
     # Bootstrap-only knobs are canonically NA when ci = FALSE so they cannot
     # enter task identity; with `est_method` now an hc setting (not an axis),
     # there is no fan-out axis, so this is exactly one hc row per fit task.
     tidyr::expand_grid(
-      ci = FALSE,
       nboot = NA_integer_,
       ci_method = NA_character_,
       parametric = NA
     )
   } else {
     tidyr::expand_grid(
-      ci = TRUE,
       nboot = as.integer(hc$nboot),
       ci_method = hc$ci_method,
       parametric = hc$parametric
@@ -425,6 +431,19 @@ add_task_ids <- function(tbl, step) {
 
 sample_data_task <- function(data, n_max, replace) {
   dplyr::slice_sample(data, n = n_max, replace = replace)
+}
+
+# The effective draw size for one dataset: the scenario's fixed `nrow_max`
+# simulation setting, capped at the dataset size for `replace = FALSE` (the
+# high default thus draws the full permutation - the maximal no-churn draw);
+# `nrow_max` rows for `replace = TRUE`. Resolved at run time by the runners
+# (and mirrored by the constructor's `nrow` validation), never stored on a
+# task row, so extending `nrow` within the draw size never re-draws.
+effective_draw_size <- function(nrow_max, data, replace) {
+  if (isTRUE(replace)) {
+    return(nrow_max)
+  }
+  min(nrow_max, nrow(data))
 }
 
 # Resolve a `min_pmix` name to its function off the scenario (the materialised

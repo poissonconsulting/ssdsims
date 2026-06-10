@@ -18,6 +18,7 @@ ssd_define_scenario(
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
+  nrow_max = 1000L,
   dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
   proportion = 0.05,
@@ -74,6 +75,13 @@ upper bounds for the shape1 parameter.}
 
 \item{range_shape2}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape2 parameter.}
+
+\item{nrow_max}{A whole number (default \code{1000L}): the fixed size of the
+shared \code{sample} draw that every \code{nrow} value sub-truncates. A sample-level
+simulation setting, not a cross-join axis. The effective per-dataset draw is
+\code{min(nrow_max, nrow(data))} when \code{replace = FALSE} (the high default draws
+the full permutation) and \code{nrow_max} rows when \code{replace = TRUE}; each \code{nrow}
+must not exceed the effective draw size.}
 
 \item{dists}{A character vector of the distribution names.}
 
@@ -182,6 +190,21 @@ accepted in four forms (routed through the same \code{Conc} validation):
 }
 
 Supplying both a named list and \verb{name=} is an error.
+}
+
+\section{\code{nrow_max}}{
+\code{nrow_max} is the \emph{sample}-level \strong{simulation setting}: the fixed size of
+the shared \code{sample} draw that every \code{nrow} value sub-truncates
+(\code{head(sample, nrow)}, \code{TARGETS-DESIGN.md} section 5). The effective
+per-dataset draw is \code{min(nrow_max, nrow(data))} for \code{replace = FALSE} (the
+high default thus draws the full permutation) and \code{nrow_max} rows for
+\code{replace = TRUE}. Because the draw size is fixed - not derived from
+\code{max(nrow)} - adding \code{nrow} values (within the effective draw size) never
+changes the draw, so cached \code{sample} shards stay valid. Each \code{nrow} is
+validated at construction against the effective draw size. It is not
+\code{ci}-gated (the draw happens regardless of \code{ci}) and, like \code{dists} and
+\code{est_method}, it is absent from \code{task_axes("sample")}, so it never
+multiplies tasks or enters the per-task RNG primer.
 }
 
 \section{\code{ci}}{

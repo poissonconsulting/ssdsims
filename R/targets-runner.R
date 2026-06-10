@@ -131,20 +131,23 @@ read_parent_shards <- function(tasks, scenario, parent, parent_dir) {
 # steps' shards cached). Reading the three runners pins each step's consumed set:
 #
 #   sample -> the datasets it draws from (read via `scenario_dataset()`) +
-#             `partition_by$sample` (its `shard_path()` axis). `datasets`
-#             restricts the carried datasets to those the *shard* reads (its
-#             `unique(tasks$dataset)`); since `dataset` is a path axis, a sample
-#             shard reads one dataset, so the slice carries only that one. This
-#             keeps a sample shard's slice independent of the *other* datasets,
-#             so appending a dataset mints a new shard and leaves the existing
-#             shards' slices (and thus their cached Parquets) untouched.
+#             `nrow_max` (the draw-size setting the runner resolves against
+#             each dataset) + `partition_by$sample` (its `shard_path()` axis).
+#             `datasets` restricts the carried datasets to those the *shard*
+#             reads (its `unique(tasks$dataset)`); since `dataset` is a path
+#             axis, a sample shard reads one dataset, so the slice carries only
+#             that one. This keeps a sample shard's slice independent of the
+#             *other* datasets, so appending a dataset mints a new shard and
+#             leaves the existing shards' slices (and thus their cached
+#             Parquets) untouched.
 #   fit    -> `fit$dists` + the `min_pmix` functions (resolved via
 #             `scenario_min_pmix()` in the fit primer) + `partition_by` for
 #             `sample` (parent read) and `fit` (own path). Carries no datasets
 #             (fit reads its parent `sample` shards off disk), so it is already
 #             independent of the dataset set.
-#   hc     -> `hc$proportion` + `hc$samples` + `partition_by` for `fit` (parent
-#             read) and `hc` (own path).
+#   hc     -> the hc settings its runner reads (`hc$est_method`,
+#             `hc$proportion`, `hc$ci`, `hc$samples`) + `partition_by` for
+#             `fit` (parent read) and `hc` (own path).
 #
 # `seed`/`primer` are not sliced - they ride in each shard's `tasks` list-column.
 # The `min_pmix` functions hash by name (carried for `fit` execution but not part
@@ -166,6 +169,7 @@ scenario_step_slice <- function(
     step,
     sample = list(
       data = scenario$data[datasets],
+      nrow_max = scenario$nrow_max,
       partition_by = partition_by["sample"]
     ),
     fit = list(
@@ -217,9 +221,11 @@ scenario_step_slice <- function(
 NULL
 
 #' @describeIn ssd_run_step Run the `sample` tasks: read each task's dataset off
-#'   the scenario via [scenario_dataset()], draw `n_max` rows through
-#'   `sample_data_task_primer()`, and tag each draw with its `sample_id` and a
-#'   `.row` order index so a downstream `fit` shard can isolate and re-order it.
+#'   the scenario via [scenario_dataset()], draw the effective draw size - the
+#'   scenario's `nrow_max` setting, capped at the dataset size for
+#'   `replace = FALSE` - through `sample_data_task_primer()`, and tag each draw
+#'   with its `sample_id` and a `.row` order index so a downstream `fit` shard
+#'   can isolate and re-order it.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
@@ -235,7 +241,7 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
     data <- scenario_dataset(scenario, t$dataset)
     draw <- sample_data_task_primer(
       data,
-      t$n_max,
+      effective_draw_size(scenario$nrow_max, data, t$replace),
       t$replace,
       t$seed,
       t$primer[[1L]]
@@ -630,10 +636,12 @@ edge_block <- function(names) {
 #'
 #' The `head(sample, nrow)` truncation stays folded into the `fit` step (no
 #' materialised `data` shard): a `fit` shard is keyed by `fit_id`, which includes
-#' `nrow`, so extending `nrow` mints new `fit` shards and caches the rest, and a
-#' widened `max(nrow)` changes the `sample` shard's `n_max` task row, so its
-#' bytes change and the per-child edge propagates to exactly the `fit` shards
-#' that read the wider draw - no stale short draw is produced.
+#' `nrow`, so extending `nrow` mints new `fit` shards and caches the rest. The
+#' shared draw is sized by the scenario's fixed `nrow_max` setting (carried on
+#' the `sample` slice), not `max(nrow)`, so extending `nrow` within the
+#' effective draw size leaves the `sample` shards cached too; changing
+#' `nrow_max` invalidates the `sample` slice and rebuilds the draw, propagating
+#' through the per-child edges - no stale short draw can arise.
 #'
 #' To parallelise the shards, set a controller (e.g. a mirai-backed
 #' `crew::crew_controller_local()`) with `targets::tar_option_set()` in

@@ -7,11 +7,11 @@
       <ssdsims_tasks: sample>
         axes:  dataset, sim, replace
         tasks: 2
-      # A tibble: 2 x 5
-        dataset      sim replace n_max sample_id                             
-        <chr>      <int> <lgl>   <int> <chr>                                 
-      1 ccme_boron     1 FALSE       6 dataset=ccme_boron/sim=1/replace=FALSE
-      2 ccme_boron     2 FALSE       6 dataset=ccme_boron/sim=2/replace=FALSE
+      # A tibble: 2 x 4
+        dataset      sim replace sample_id                             
+        <chr>      <int> <lgl>   <chr>                                 
+      1 ccme_boron     1 FALSE   dataset=ccme_boron/sim=1/replace=FALSE
+      2 ccme_boron     2 FALSE   dataset=ccme_boron/sim=2/replace=FALSE
 
 ---
 
@@ -41,13 +41,13 @@
       <ssdsims_tasks: hc>
         axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
         tasks: 2
-      # A tibble: 2 x 16
+      # A tibble: 2 x 15
         dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
         <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
       1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
       2 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-      # i 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-      #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
+      # i 7 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+      #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 
 # task-lists: printing a task set reports per-step counts
 
@@ -65,7 +65,7 @@
     Code
       names(ssd_scenario_sample_tasks(scenario))
     Output
-      [1] "dataset"   "sim"       "replace"   "n_max"     "sample_id"
+      [1] "dataset"   "sim"       "replace"   "sample_id"
     Code
       names(ssd_scenario_fit_tasks(scenario))
     Output
@@ -77,6 +77,6 @@
     Output
        [1] "dataset"        "sim"            "replace"        "nrow"          
        [5] "rescale"        "computable"     "at_boundary_ok" "min_pmix"      
-       [9] "range_shape1"   "range_shape2"   "ci"             "nboot"         
-      [13] "ci_method"      "parametric"     "hc_id"          "fit_id"        
+       [9] "range_shape1"   "range_shape2"   "nboot"          "ci_method"     
+      [13] "parametric"     "hc_id"          "fit_id"        
 

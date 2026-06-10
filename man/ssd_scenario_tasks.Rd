@@ -51,10 +51,11 @@ parent by a single column.
 \item \code{ssd_scenario_sample_tasks()}: Derive just the \code{sample} task table: one row per
 cell of the cross-join of the scenario's dataset names, replicate index
 (\code{1:nsim}), and \code{replace} values, keyed by \code{sample_id}. Each row is the
-single random draw of \code{n_max = max(nrow)} rows that every \code{nrow} value
-sub-truncates (\code{TARGETS-DESIGN.md} section 5), so \code{nrow} is \strong{not} a sample
-axis - the draw is shared - and \code{n_max} is carried as an ordinary integer
-column.
+single random draw that every \code{nrow} value sub-truncates
+(\code{TARGETS-DESIGN.md} section 5), so \code{nrow} is \strong{not} a sample axis - the
+draw is shared. The draw size is the scenario's \code{nrow_max} setting,
+resolved by the runner against each dataset, not a row column: the table
+carries only the task identity.
 
 \item \code{ssd_scenario_fit_tasks()}: Derive just the \code{fit} task table: cross each
 sample-task identity (\code{dataset}, \code{sim}, \code{replace}) with the scenario's \code{nrow}
@@ -71,9 +72,10 @@ primary key and a \code{sample_id} foreign key referencing its parent sample tas
 fit-task identity with each row of the scenario's \code{hc} argument grid
 (\code{nboot}, \code{ci_method}, \code{parametric}). The scenario's scalar \code{ci} flag and the
 \code{est_method} setting are applied uniformly to every hc row - neither is a
-cross-join axis; \code{ci} rides as a carried column and every requested
-\code{est_method} is summarised within each task from its single bootstrap sample
-set. When \code{ci = FALSE} the bootstrap-only knobs (\code{nboot}, \code{ci_method},
+cross-join axis nor an emitted column; the runners read \code{ci} from the
+scenario and every requested \code{est_method} is summarised within each task
+from its single bootstrap sample set. When \code{ci = FALSE} the bootstrap-only
+knobs (\code{nboot}, \code{ci_method},
 \code{parametric}) are canonically \code{NA} and there is no fan-out axis, so the grid
 is exactly one hc row per fit task; when \code{ci = TRUE} the grid fans out across
 \verb{nboot x ci_method x parametric}. Each row carries an \code{hc_id} primary key and

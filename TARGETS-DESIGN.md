@@ -75,7 +75,7 @@ The most consequential design choices, with section refs:
 - **Three step grids, one primer per task (§5).** Data, fit and hc
   fan out independently; `nrow` is **never** an axis of the data
   step — every `nrow` value is a `head(., n)` of a single
-  `n_max`-row sample.
+  fixed-size sample (the scenario's `nrow_max` setting).
 - **`ci` is a scalar flag, not an axis (§1.2).** `ci` is a scenario-wide
   `TRUE`/`FALSE` choice (the point estimate is identical either way; `ci =
   TRUE` merely adds the CI columns), so it is excluded from `task_axes("hc")`
@@ -698,7 +698,15 @@ slice_sample_state <- function(data, n_max, n, seed, state, replace) {
 }
 ```
 
-with `n_max = max(scenario$nrow)` pre-computed from the scenario.
+with `n_max` the **effective draw size** resolved from the
+scenario's fixed `nrow_max` setting (`min(nrow_max, nrow(data))`
+for `replace = FALSE` — the high default thus draws the full
+permutation — and `nrow_max` rows for `replace = TRUE`), **not**
+`max(scenario$nrow)`: deriving the draw size from the `nrow` axis
+meant a widened `max(nrow)` re-drew the sample and invalidated the
+fit shards reading it; the `nrow_max`-sized draw is axis-independent,
+so extending `nrow` (within the effective draw size) never re-draws
+(the `nrow-max-setting` change).
 Result: `slice_sample_state(data, n_max, 5, …)` is a prefix of
 `slice_sample_state(data, n_max, 10, …)` — same `(seed, state)`,
 same `sample.int` call, just truncated.
@@ -716,8 +724,10 @@ Both cases assume the byte-stable behavior of `base::sample.int()`
 (and `dplyr::slice_sample()` which delegates to it). Pin R version
 in the manifest (§9).
 
-The trick costs one extra integer column on the data task table
-(`n_max`) and cuts `|data grid|` from `|dataset| · |sim| · |nrow|`
+The trick costs nothing on the task table — the draw size is the
+scenario's `nrow_max` setting, resolved by the runner per dataset,
+not a row column — and cuts `|data grid|` from
+`|dataset| · |sim| · |nrow|`
 to `|dataset| · |sim| · |replace|`. For a scenario with `nrow =
 c(5, 6, 10, 20, 50)` and `replace = FALSE` only, it cuts the data
 fan-out by 5×.
@@ -799,9 +809,9 @@ these task tables:
 
 | step     | identity axes                                  | RNG? | note                                                       |
 | -------- | ---------------------------------------------- | ---- | ---------------------------------------------------------- |
-| `sample` | `dataset, sim, replace`                        | yes  | one draw of `n_max = max(nrow)` rows (carried column)      |
+| `sample` | `dataset, sim, replace`                        | yes  | one draw sized by the `nrow_max` setting (resolved per dataset; no row column) |
 | `fit`    | `sample` axes, `nrow` `× fit grid`             | yes  | truncates `head(sample, nrow)` inline (RNG-free) then fits |
-| `hc`     | fit axes `× hc grid` (scalar `ci`, §1.2)       | yes  | `ci` is a scalar flag, not an axis; bootstrap knobs `NA` when `ci = FALSE` |
+| `hc`     | fit axes `× hc grid` (scalar `ci`, §1.2)       | yes  | `ci` is a scalar setting read from the scenario, not an axis or a row column; bootstrap knobs `NA` when `ci = FALSE` |
 
 This keeps the sub-truncation property **structural**: there is
 exactly one `sample` task per `(dataset, sim, replace)`, so the
@@ -1086,7 +1096,8 @@ rewritten with the new task set):
 | --------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- | ------- |
 | dataset appended (path axis everywhere) | new shards only             | new shards only                   | new shards only                   | re-run  |
 | `sim` value (= `nsim` grows; path axis everywhere) | new shards only  | new shards only                   | new shards only                   | re-run  |
-| `nrow` value added (sub-trunc; not an axis) | rewrite all if `max(nrow)` grows; cached otherwise | inherits via prefix (open Q, §11) | inherits via prefix (open Q, §11) | re-run  |
+| `nrow` value added (sub-trunc; not an axis) | cached (the draw is the fixed `nrow_max` setting, not `max(nrow)`) | new shards only (`nrow` ∈ fit path) | rewrite all (`nrow` ∈ hc inner) | re-run  |
+| `nrow_max` changed (sample setting) | rewrite all (the draw resizes)  | rewrite all (per-child edge)      | rewrite all                       | re-run  |
 | `replace` value added (data path; fit/hc inner under default) | new shards only | rewrite all (`replace` ∈ fit inner) | rewrite all (`replace` ∈ hc inner) | re-run  |
 | `rescale` value added (fit path; hc inner under default) | cached    | new shards only                   | rewrite all (`rescale` ∈ hc inner) | re-run  |
 | `dists` change (fit setting, not an axis) | cached                    | rewrite all 4                     | rewrite all 2                     | re-run  |
