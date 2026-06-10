@@ -28,7 +28,16 @@ built here.
   derived from the argument expression. Each name is a **scenario name** within
   the design; names must be unique, non-empty, and safe for both target names
   and result paths (they become the per-scenario target-name prefix and a
-  `scenario=<name>` directory level).
+  `scenario=<name>` directory level). A design of **one** scenario is valid and
+  uniformly shaped (no special-casing) — the recommended starting point for
+  studies that may grow.
+- **Design growth caches existing members**: adding a scenario to an
+  already-run design builds only the new member's targets plus the combined
+  summary; every existing member's targets are reported cached and their shards
+  stay byte-identical, because member addressing is independent of the design's
+  other members (the path-axis-growth contract, one level up). Promoting a flat
+  `ssd_scenario_targets()` run into a design is documented as safe but
+  recomputing (addressing changes; `(seed, primer)` does not).
 - **New `ssd_design_targets(design, ..., root, upload, cue)` target factory** —
   the multi-scenario sibling of `ssd_scenario_targets()`. For each named
   scenario it emits the full single-scenario target set with every target name
@@ -78,14 +87,19 @@ built here.
   byte-for-byte.
 - **APIs**: two new exports (`ssd_design()`, `ssd_design_targets()`); no
   breaking change to existing exports.
-- **Docs**: README / `vignettes/sharded-pipeline.qmd` (a design section),
+- **Docs**: README / `vignettes/sharded-pipeline.qmd` (a design section
+  steering growable studies to start as a design of one, with the
+  flat-to-design promotion documented as safe but recomputing),
   `_pkgdown.yml`, `GLOSSARY.md` (the *Design terms* `scenario`/`design`/`study`
   entries — landed in this change), `ROADMAP.md` (move the entry), regenerated
   `man/`; optionally a design `inst/targets-templates/` template.
 - **Tests**: integration test running a two-scenario design in one pipeline
   (byte-identity against the single-scenario runs; combined summary content);
-  validation tests for the collection (duplicate/empty/unsafe names);
-  upload-prefix shape under `ssd_upload_dryrun()`.
+  a design-growth test (design of one grown by a member: existing shards
+  cached and byte-identical, only the new member and combined summary build);
+  validation tests for the collection (duplicate/empty/unsafe names; a design
+  of one is valid, an empty call aborts); upload-prefix shape under
+  `ssd_upload_dryrun()`.
 - **Dependencies**: none — independent of the in-flight
   `scenario-input-types` (different functions; only GLOSSARY/vignette prose
   could brush against it).

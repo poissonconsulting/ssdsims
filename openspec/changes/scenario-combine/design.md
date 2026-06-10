@@ -124,6 +124,32 @@ never mix shards, and each scenario's subtree is byte-identical in layout to a
 standalone run under that root. A scenario rename is addressing-only (a fresh
 subtree; the old one is abandoned, the standard layout-change behaviour).
 
+### Decision: growable studies start as a design of one; the flat entry point stays
+
+`ssd_design()` accepts a single scenario, and a design of one is shaped exactly
+like any larger design — the member keeps its name, `<name>_` prefix, and
+`scenario=<name>` root, with no special-casing. Because member addressing is
+independent of the design's other members, growing a design is purely additive:
+adding a scenario changes no existing member's target names, commands, or
+`format = "file"` outputs, so every existing shard is cached and only the new
+member (plus the combined summary) builds — the path-axis-growth contract, one
+level up. The docs and template therefore steer studies that may grow toward
+starting as a design of one. `ssd_scenario_targets()` is untouched and remains
+the entry point for one-off runs and the byte-identity oracle the design
+factory is tested against; promoting a flat run into a design later is *safe
+but recomputing* — task identity and every `(seed, primer)` are unchanged, but
+the addressing is not (names gain the prefix, the root gains the `scenario=`
+level), so no prior shard satisfies the cache. Documented, not mitigated.
+
+*Alternative considered:* leaving the design's first member unprefixed/unrooted
+(flat addressing) so an existing flat run grows in place — rejected; it forks
+the design into two addressing shapes, makes a member's addressing depend on
+its position and the design's history, and breaks the "rename is
+addressing-only" uniformity. *Alternative considered:* retiring the flat layout
+so every run is a design of one — rejected; a breaking re-path of every
+existing store and template to optimise a promotion that starting with
+`ssd_design(one)` avoids upfront.
+
 ### Decision: the combined summary unions per-scenario compact summaries
 
 A top-level `summary` target (the only unprefixed name the design factory

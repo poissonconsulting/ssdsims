@@ -9,7 +9,11 @@ set of conditions to run), the union of regular per-scenario grids into one
 possibly-non-regular design. Names SHALL be taken from explicit argument names
 or derived from the argument expression (mirroring the `ssd_data()` dataset-name
 derivation); each name is a **scenario name** within the design. The constructor
-SHALL validate that every element is an `ssdsims_scenario` and that the names
+SHALL accept **one or more** scenarios — a design of a single scenario is valid
+and SHALL be shaped exactly like any larger design (the member still gets its
+name, `<name>_` target-name prefix, and `scenario=<name>` results level; no
+special-casing) — and SHALL abort on an empty call. The constructor SHALL
+validate that every element is an `ssdsims_scenario` and that the names
 are unique, non-empty, non-`NA`, and safe to serve as both a target-name prefix
 and a results directory level (starting with a letter; letters, digits, and
 underscore only), aborting with an informative error otherwise. Construction
@@ -20,6 +24,13 @@ SHALL be RNG-free (no draws; `.Random.seed` unchanged).
   variable holding a scenario
 - **THEN** the design SHALL contain the two scenarios named `"base"` (from the
   argument expression) and `"wide"` (explicit), in input order
+
+#### Scenario: A design of one is valid and uniformly shaped
+- **WHEN** `ssd_design(base)` is called with a single scenario
+- **THEN** it SHALL return a one-member design whose member is addressed
+  exactly as in a larger design (named `"base"`, with the `base_` prefix and
+  `scenario=base` results level downstream), while a no-argument
+  `ssd_design()` call SHALL abort with an informative error
 
 #### Scenario: Invalid elements and names abort
 - **WHEN** `ssd_design()` is called with an element that is not an
@@ -69,9 +80,9 @@ be unchanged.
 - **THEN** `rlang::check_dots_empty()` SHALL abort with an informative error
 
 ### Requirement: Design-pipeline results are byte-identical to standalone runs
-A scenario's per-task `sample`, `fit`, and `hc` results produced through
-`ssd_design_targets()` SHALL be byte-identical (as read-back R values) to those
-produced by running the same scenario alone through `ssd_scenario_targets()`:
+A scenario's per-task `sample`, `fit`, and `hc` results SHALL be byte-identical
+(as read-back R values) between `ssd_design_targets()` and a run of the same
+scenario alone through `ssd_scenario_targets()`:
 combination changes addressing only (target names and results roots), never any
 task's `(seed, primer)`. Scenario *names* SHALL NOT enter task identity, the
 per-task primer, or any result value. Two scenarios in a design sharing a `seed`
@@ -91,6 +102,43 @@ be warned about or rejected.
   names (in separate runs)
 - **THEN** the per-task results SHALL be identical across the two runs, with
   only the target names and `scenario=<name>` paths differing
+
+### Requirement: Design growth mints the new member's targets and caches existing ones
+Design growth SHALL be additive: adding a scenario to a design that has already
+been `tar_make()`'d into a root SHALL mint new named targets only for the new
+member. On re-sourcing, `tar_make()` SHALL build only the new member's shard
+and summary targets plus the top-level combined `summary`, and every
+pre-existing member's target SHALL be reported cached (skipped) by `targets`
+with its Parquet byte-identical (no in-place rewrite, no recomputation). This
+holds because member addressing — the `<name>_` target-name prefix and the
+`scenario=<name>/layout=<hash>` root — is independent of the design's other
+members, so an existing member's target names, commands, and `format = "file"`
+outputs are unchanged by the addition (the path-axis-growth contract, one level
+up: extension is literally more named targets). Removing a member SHALL
+likewise leave every remaining member cached, with only the combined `summary`
+re-running (over the remaining members) and the removed member's
+`scenario=<name>` subtree abandoned in place, the standard addressing-change
+behaviour. The documentation SHALL steer studies that may grow toward starting
+as a **design of one** (growth is then purely additive), and SHALL document
+promoting a standalone `ssd_scenario_targets()` run into a design as **safe but
+recomputing** — task identity and every `(seed, primer)` are unchanged, but the
+addressing changes (names gain the `<name>_` prefix; the root gains the
+`scenario=<name>` level), so no prior shard satisfies the cache.
+
+#### Scenario: Adding a scenario builds only the new member and the combined summary
+- **WHEN** a design of scenario `a` is run to completion through
+  `ssd_design_targets()` + `tar_make()`, then the design is grown to
+  `ssd_design(a, b)` and `tar_make()` is re-run into the same root
+- **THEN** only `b`'s shard and summary targets and the top-level `summary`
+  SHALL build; every `a` target SHALL be reported cached (skipped) and `a`'s
+  shard and summary Parquets SHALL be byte-identical to before
+
+#### Scenario: Removing a scenario leaves the remaining members cached
+- **WHEN** the completed design `ssd_design(a, b)` is re-sourced as
+  `ssd_design(a)` and `tar_make()` is re-run into the same root
+- **THEN** every `a` target SHALL be reported cached (skipped), only the
+  combined `summary` SHALL re-run (unioning `a` alone), and the
+  `scenario=b` subtree SHALL remain on disk untouched
 
 ### Requirement: A combined design summary with a scenario identity column
 The design pipeline SHALL include one top-level `summary` target (the only
