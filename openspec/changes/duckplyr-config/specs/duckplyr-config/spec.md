@@ -8,8 +8,9 @@ The package SHALL provide an internal, withr-style scope helper
 connection for pipeline work and restores the prior configuration when the
 scope exits. Within the scope the helper SHALL set DuckDB `threads` from
 `SSDSIMS_DUCKDB_THREADS` (defaulting to `1` when unset) and SHALL set DuckDB
-`memory_limit` from `SSDSIMS_DUCKDB_MEMORY_LIMIT` (leaving DuckDB's own default
-in place when unset). The per-shard step runners (`ssd_run_sample_step()`,
+`memory_limit` from `SSDSIMS_DUCKDB_MEMORY_LIMIT` (defaulting to `1GB` when
+unset, so a worker is never one forgotten variable away from the engine's
+machine-derived default). The per-shard step runners (`ssd_run_sample_step()`,
 `ssd_run_fit_step()`, `ssd_run_hc_step()`), the summary fan-in
 (`ssd_summarise()`), and the single-core runner (`ssd_run_scenario_shards()`)
 SHALL each apply this scope for the duration of their body. The configuration
@@ -25,6 +26,10 @@ duckplyr/DuckDB settings SHALL be left untouched.
 - **THEN** DuckDB `memory_limit` SHALL be 500 MB while the runner body
   executes, and a write that exceeds it SHALL fail as a catchable R error
   (never an uncontrolled process kill by the engine)
+
+#### Scenario: One gigabyte by default
+- **WHEN** a step runner executes with `SSDSIMS_DUCKDB_MEMORY_LIMIT` unset
+- **THEN** DuckDB `memory_limit` SHALL be 1 GB while the runner body executes
 
 #### Scenario: Prior settings are restored on scope exit
 - **WHEN** the user has set custom `threads`/`memory_limit` on duckplyr's
@@ -127,10 +132,17 @@ allocation and cannot spill or stream it (`preserve_insertion_order`,
 `temp_directory`, and `ROW_GROUP_SIZE` do not lower the floor). The guidance
 SHALL name the two remedies: raise `SSDSIMS_DUCKDB_MEMORY_LIMIT` (within the
 job allocation) or reduce the per-shard `samples` payload (`bundle`, `nboot`).
+The documentation SHALL also state how to **raise** the default 1 GB limit
+(the env var, set in the controller's `script_lines` on a cluster or via
+`Sys.setenv()` interactively) and the **implications** of raising it: the
+limit must leave headroom for R's own footprint within the scheduler
+allocation, and a higher limit addresses only the shard-payload floor — the
+full summary's floor follows its row-group byte budget and never needs it.
 
 #### Scenario: The knob is documented where it is set
 - **WHEN** a user reads the cluster template's controller block or the
   helper's documentation
-- **THEN** they SHALL find `SSDSIMS_DUCKDB_MEMORY_LIMIT`, its relation to the
-  scheduler memory request, and the nested-shard `≳ 5 × payload` rule with a
-  pointer to the measurements
+- **THEN** they SHALL find `SSDSIMS_DUCKDB_MEMORY_LIMIT`, its 1 GB default,
+  how to raise it and the implications of doing so (scheduler-allocation
+  headroom; shard floor only), and the nested-shard `≳ 5 × payload` rule with
+  a pointer to the measurements

@@ -43,9 +43,10 @@ with a multi-line "fallback events can be collected and uploaded…" banner
     CPU; the experiments show the single-thread write is no slower, and was 2×
     *faster* on the large nested shard),
   - sets an explicit **`memory_limit`** from `SSDSIMS_DUCKDB_MEMORY_LIMIT`
-    (unset = DuckDB's default; the cluster template sets it beside the SLURM
-    memory request, the same `script_lines` channel that carries
-    `SSDSIMS_AZURE_*` to workers),
+    (default **`1GB`** when unset — never the engine's machine-derived 80% of
+    node RAM; the cluster template raises it beside the SLURM memory request,
+    the same `script_lines` channel that carries `SSDSIMS_AZURE_*` to
+    workers, and the docs state how and when to raise it),
   - disables duckplyr **fallback-telemetry collection and the autoupload nudge**
     (`DUCKPLYR_FALLBACK_COLLECT=0`, `DUCKPLYR_FALLBACK_AUTOUPLOAD=0`, scoped
     env vars), so pipeline-context duckplyr use never seeds the interactive

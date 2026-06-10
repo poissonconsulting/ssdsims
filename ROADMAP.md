@@ -43,7 +43,6 @@ is also queued, ready to propose.
 
 <!-- Queued up. Roughly in priority order. Doesn't have to be exhaustive. -->
 
-- ‼️ [duckplyr-config] Configure duckplyr to work with reduced main memory and using only a single thread, just in the context of the targets pipeline.
 - ‼️ [nrow-max-setting] Add an explicit `nrow_max` draw-size setting (default `1000L`), decoupling the draw from the `nrow` axis to retire the §5 re-draw churn, and move the last carried columns (`n_max`, `ci`) off the task tables into the scenario slice. Proposed; breaking pre-release.
 - ‼️ [cost-analysis-targets] Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Might require  Supports a project deliverable.
 - ❗️ [scenario-combine] Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline.
@@ -52,7 +51,6 @@ is also queued, ready to propose.
 - ❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), `summary` unions the survivors. Ready to propose (prereq `cluster-pipeline` landed).
 - 📚 [cluster-controller] Run the controller on a long-running SLURM job.
 - 😀 [azure-summary] Conveniently access the summary Parquet files from Azure.
-- 😀 [duckplyr-message] Turn off noise from duckplyr.
 
 ## Later
 
@@ -106,6 +104,7 @@ is also queued, ready to propose.
 - ✅ 2026-06-07 [cluster-pipeline] [🔗](openspec/changes/archive/2026-06-07-cluster-pipeline/) — Editable SLURM `crew.cluster` targets template (`inst/targets-templates/cluster/`) with a standalone connectivity/worker preflight and a zero-to-running-job guide (#115). _Real-SLURM end-to-end run (tasks 4.1/4.2) remains a documented manual/lab step._
 - ✅ 2026-06-07 [cloud-upload] [🔗](openspec/changes/archive/2026-06-07-cloud-upload/) — Typed, self-validating upload destinations on the runner (`ssd_upload_azure()` / `ssd_upload_dryrun()` + class-dispatched generics); BREAKING removal of `scenario$upload` (#114/#129).
 - ✅ 2026-06-07 [dual-summary-outputs] [🔗](openspec/changes/archive/2026-06-07-dual-summary-outputs/) — Optional `path_with_samples` full summary retaining the `dists`/`samples` list-columns, emitted iff `scenario$hc$samples` is `TRUE` (#140).
+- ✅ 2026-06-10 [duckplyr-config] [🔗](openspec/changes/duckplyr-config/) — Pipeline-scoped duckplyr/DuckDB configuration: a `local_duckplyr_config()` scope on the step runners, `ssd_summarise()`, and `ssd_run_scenario_shards()` pins a single thread and a 1GB default `memory_limit` (env knobs `SSDSIMS_DUCKDB_THREADS`/`SSDSIMS_DUCKDB_MEMORY_LIMIT`), and the full summary writes byte-budgeted row groups (`samples_row_group_bytes`, insertion order relaxed for that one write). Folds in [duckplyr-message]: the scope silences duckplyr's fallback telemetry (`DUCKPLYR_FALLBACK_COLLECT=0`/`DUCKPLYR_FALLBACK_AUTOUPLOAD=0`) (#151). _The change directory is not yet physically archived._
 
 ## Decisions
 

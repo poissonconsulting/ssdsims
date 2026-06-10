@@ -146,14 +146,26 @@ a runner interactively. Alternative rejected.
   for a single thread outright; the experiments show it is free (faster, even,
   on the large nested shard), and it matches the template's
   `cpus_per_task = 1`.
-- `SSDSIMS_DUCKDB_MEMORY_LIMIT` — default **unset = leave DuckDB's default**.
-  A hard-coded cap (say `2GB`) would gratuitously break big interactive
-  `ssd_summarise()` calls on capable machines; the right value is a function of
-  the worker's actual allocation, which only the user knows. The cluster
-  template documents setting it in the controller's `script_lines` (e.g.
-  `export SSDSIMS_DUCKDB_MEMORY_LIMIT=3GB` beside
-  `memory_gigabytes_per_cpu = 4`, headroom for R itself), the same channel that
-  already carries `SSDSIMS_AZURE_*` to workers.
+- `SSDSIMS_DUCKDB_MEMORY_LIMIT` — default **`1GB`** when unset (decided at
+  review). A machine-derived default (80% of node RAM) is exactly the
+  failure mode this change removes, and an unset-means-unbounded default
+  would leave cluster workers one forgotten `export` away from a cgroup
+  kill. 1 GB is comfortable for every pipeline write the experiments
+  measured *except* an oversized nested shard: the byte-budgeted full
+  summary needs only ~500 MB, ordinary shards far less, and a nested shard
+  that does not fit (payload ≳ 200 MB of draws) fails with DuckDB's loud,
+  catchable OOM error naming the remedy — at which point the user either
+  raises the limit or re-shards. **Raising it** is one env var
+  (`export SSDSIMS_DUCKDB_MEMORY_LIMIT=3GB` in the controller's
+  `script_lines`, beside `memory_gigabytes_per_cpu = 4` — headroom for R
+  itself; or `Sys.setenv()` interactively). **Implications of raising it**:
+  the limit must stay below the scheduler allocation minus R's own
+  footprint (R holds the shard's draws while DuckDB ingests them — budget
+  roughly half the allocation for DuckDB), and a higher limit only helps
+  the shard-payload floor (~5 × the nested `samples` bytes); it is never
+  needed for the summary, whose floor follows the row-group byte budget
+  instead. This is documented on the helper and in the templates (tasks
+  5.x).
 
 *Why env vars, not R options or function arguments*: options do not cross the
 process boundary to `crew` workers, and threading a `duckdb_config` argument

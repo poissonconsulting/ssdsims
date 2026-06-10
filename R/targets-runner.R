@@ -52,6 +52,40 @@ ssd_read_parquet <- function(path) {
   )))
 }
 
+#' Write a lazy duckplyr table to Parquet in byte-budgeted row groups.
+#'
+#' The full-summary (`path_with_samples`) writer. DuckDB's default ordered
+#' Parquet sink accumulates rows toward its 122 880-row row groups and must
+#' buffer a whole row group of nested `samples` draws, so its memory floor
+#' grows with the union's TOTAL row count (the `duckplyr-config` change's
+#' `exploration/experiment-summary-union.R`). `ROW_GROUP_SIZE_BYTES` caps
+#' that buffer payload-adaptively (large groups for small draws, small groups
+#' for large ones) but the engine refuses it - a loud Binder error, never a
+#' silent ignore - unless insertion order is relaxed: the ordered sink cuts
+#' row groups on its ordered batcher's row-count boundaries and cannot flush
+#' early on a byte budget while later-ordered batches are pending. So
+#' `preserve_insertion_order` is set to `false` for this one write and
+#' restored on exit (error included); the compact summary and the shard
+#' writes keep the ordered writer and their byte-identity. Output row order
+#' is therefore non-contractual here - value-identity only; consumers address
+#' rows by their keys.
+#' @noRd
+compute_parquet_unordered <- function(tbl, path, row_group_bytes) {
+  prior <- tibble::as_tibble(dplyr::collect(duckplyr::read_sql_duckdb(
+    "SELECT current_setting('preserve_insertion_order') AS preserve"
+  )))$preserve[[1L]]
+  duckplyr::db_exec("SET preserve_insertion_order = false")
+  withr::defer(duckplyr::db_exec(paste0(
+    "SET preserve_insertion_order = ",
+    if (isTRUE(as.logical(prior))) "true" else "false"
+  )))
+  duckplyr::compute_parquet(
+    tbl,
+    path,
+    options = list(row_group_size_bytes = row_group_bytes)
+  )
+}
+
 #' Serialise an arbitrary R object to an ASCII string (Parquet-storable).
 #'
 #' The single encode/decode seam through which a non-tabular per-task result
@@ -228,6 +262,7 @@ NULL
 #' ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
 ssd_run_sample_step <- function(tasks, scenario, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  local_duckplyr_config()
   local_dqrng_backend()
   draws <- vector("list", nrow(tasks))
   for (i in seq_len(nrow(tasks))) {
@@ -286,6 +321,7 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 #' }
 ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  local_duckplyr_config()
   local_dqrng_backend()
   # Read each distinct parent `sample` shard once, then isolate each task's draw
   # in memory by `sample_id` (tasks in this shard may span several sample shards).
@@ -364,6 +400,7 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #' }
 ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  local_duckplyr_config()
   local_dqrng_backend()
   # Read each distinct parent `fit` shard once, then isolate each task's fit in
   # memory by `fit_id` (an hc shard typically spans several fit shards).
@@ -428,6 +465,21 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' populated only when the scenario set `samples = TRUE`, so the full summary is
 #' the analysis-ready estimates plus the per-row draws.
 #'
+#' @section Memory and the full summary's row groups:
+#' The full summary is written in **byte-budgeted Parquet row groups**
+#' (`samples_row_group_bytes`, default `"100MB"`) with the engine's
+#' `preserve_insertion_order` relaxed for that one write (and restored after),
+#' so its memory requirement follows the per-group budget - about five times
+#' the budget - rather than the union's total row count, and the row-group
+#' row count adapts to the `samples` cell size (large groups for small draws,
+#' small groups for large ones). The trade: the full summary's **row order is
+#' not contractual** - re-summarising the same shards yields the same rows
+#' (address them by `hc_id`/`fit_id`), but their order and the file's bytes
+#' may differ. The compact summary keeps the engine's default ordered writer
+#' and is byte-identical across re-runs. Evidence: the `duckplyr-config`
+#' change's `exploration/experiment-summary-union.R` and
+#' `exploration/experiment-rgbytes.R`.
+#'
 #' @param dir_sample The `sample` results root.
 #' @param dir_fit The `fit` results root.
 #' @param dir_hc The `hc` results root.
@@ -436,6 +488,10 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' @param path_with_samples Optional output Parquet path for a full summary that
 #'   retains the `dists`/`samples` list-columns. `NULL` (the default) writes only
 #'   the compact summary.
+#' @param samples_row_group_bytes The Parquet row-group byte budget for the
+#'   `path_with_samples` write (a string DuckDB's `ROW_GROUP_SIZE_BYTES`
+#'   accepts, default `"100MB"`); see the *Memory and the full summary's row
+#'   groups* section. Ignored when `path_with_samples` is `NULL`.
 #' @return The summary Parquet path(s) (the `format = "file"` contract): `path`
 #'   when `path_with_samples` is `NULL`, otherwise `c(path, path_with_samples)`.
 #' @details
@@ -469,8 +525,11 @@ ssd_summarise <- function(
   dir_fit,
   dir_hc,
   path,
-  path_with_samples = NULL
+  path_with_samples = NULL,
+  samples_row_group_bytes = "100MB"
 ) {
+  chk::chk_string(samples_row_group_bytes)
+  local_duckplyr_config()
   glob <- file.path(dir_hc, "**", "part.parquet")
   hc_shards <- duckplyr::read_parquet_duckdb(
     glob,
@@ -490,9 +549,15 @@ ssd_summarise <- function(
   # The full summary retains every hc column (`dists`/`samples` included). The
   # same lazy read is written straight back out, so the potentially-large draws
   # never materialise in R either - the same no-R guarantee the compact
-  # projection above relies on.
+  # projection above relies on. Byte-budgeted row groups (insertion order
+  # relaxed for this write only) keep the writer's memory flat in the union's
+  # row count; see `compute_parquet_unordered()`.
   dir.create(dirname(path_with_samples), recursive = TRUE, showWarnings = FALSE)
-  duckplyr::compute_parquet(hc_shards, path_with_samples)
+  compute_parquet_unordered(
+    hc_shards,
+    path_with_samples,
+    samples_row_group_bytes
+  )
   c(path, path_with_samples)
 }
 
