@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9014</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9015</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -153,12 +153,12 @@
 <span>  <span class="va">datasets</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
-<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span>, <span class="fl">20L</span><span class="op">)</span>,</span>
+<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
 <span>  dists <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lnorm"</span>, <span class="st">"gamma"</span><span class="op">)</span>,</span>
 <span>  est_method <span class="op">=</span> <span class="st">"multi"</span>,</span>
 <span>  proportion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  nboot <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10L</span>, <span class="fl">100L</span><span class="op">)</span>,</span>
+<span>  nboot <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10L</span>, <span class="fl">50L</span><span class="op">)</span>,</span>
 <span>  ci_method <span class="op">=</span> <span class="st">"weighted_samples"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">scenario</span></span>
@@ -166,7 +166,7 @@
 <span><span class="co">#&gt;   seed:     42</span></span>
 <span><span class="co">#&gt;   nsim:     3</span></span>
 <span><span class="co">#&gt;   datasets: boron, cadmium</span></span>
-<span><span class="co">#&gt;   nrow:     5, 10, 20</span></span>
+<span><span class="co">#&gt;   nrow:     5, 10</span></span>
 <span><span class="co">#&gt;   replace:  FALSE</span></span>
 <span><span class="co">#&gt;   fit grid:</span></span>
 <span><span class="co">#&gt;     rescale: FALSE</span></span>
@@ -180,7 +180,7 @@
 <span><span class="co">#&gt;     est_method: multi (setting)</span></span>
 <span><span class="co">#&gt;     proportion: 0.05, 0.2 (setting)</span></span>
 <span><span class="co">#&gt;     ci: TRUE (setting)</span></span>
-<span><span class="co">#&gt;     nboot: 10, 100</span></span>
+<span><span class="co">#&gt;     nboot: 10, 50</span></span>
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
 <span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
@@ -314,8 +314,8 @@
 <span><span class="va">tasks</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_task_set&gt;</span></span>
 <span><span class="co">#&gt;   sample tasks: 6</span></span>
-<span><span class="co">#&gt;   fit    tasks: 18</span></span>
-<span><span class="co">#&gt;   hc     tasks: 36</span></span></code></pre></div>
+<span><span class="co">#&gt;   fit    tasks: 12</span></span>
+<span><span class="co">#&gt;   hc     tasks: 24</span></span></code></pre></div>
 </div>
 <p>The counts show how each step fans out from its parent. The key design choice is that the single expensive <strong>random draw</strong> is its own <code>sample</code> task, keyed only by <code>(dataset, sim, replace)</code>. The draw is of <code>n_max = max(nrow)</code> rows; every <code>nrow</code> value is then a cheap, RNG-free <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> <em>sub-truncation</em> of that one draw, done inline at the <code>fit</code> step. So <code>nrow</code> is an ordinary cross-join axis of the <code>fit</code> step and never multiplies the underlying draw — one draw is shared across all sample sizes.</p>
 <p>Each row carries a path-style <code>&lt;step&gt;_id</code> primary key (the Hive partition path) plus its parent step’s id as a foreign key, so dependencies are explicit and joinable:</p>
@@ -328,12 +328,12 @@
 <span><span class="co">#&gt; # A tibble: 6 × 5</span></span>
 <span><span class="co">#&gt;   dataset   sim replace n_max sample_id                          </span></span>
 <span><span class="co">#&gt;   &lt;chr&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;int&gt; &lt;chr&gt;                              </span></span>
-<span><span class="co">#&gt; 1 boron       1 FALSE      20 dataset=boron/sim=1/replace=FALSE  </span></span>
-<span><span class="co">#&gt; 2 boron       2 FALSE      20 dataset=boron/sim=2/replace=FALSE  </span></span>
-<span><span class="co">#&gt; 3 boron       3 FALSE      20 dataset=boron/sim=3/replace=FALSE  </span></span>
-<span><span class="co">#&gt; 4 cadmium     1 FALSE      20 dataset=cadmium/sim=1/replace=FALSE</span></span>
-<span><span class="co">#&gt; 5 cadmium     2 FALSE      20 dataset=cadmium/sim=2/replace=FALSE</span></span>
-<span><span class="co">#&gt; 6 cadmium     3 FALSE      20 dataset=cadmium/sim=3/replace=FALSE</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 boron       1 FALSE      10 dataset=boron/sim=1/replace=FALSE  </span></span>
+<span><span class="co">#&gt; 2 boron       2 FALSE      10 dataset=boron/sim=2/replace=FALSE  </span></span>
+<span><span class="co">#&gt; 3 boron       3 FALSE      10 dataset=boron/sim=3/replace=FALSE  </span></span>
+<span><span class="co">#&gt; 4 cadmium     1 FALSE      10 dataset=cadmium/sim=1/replace=FALSE</span></span>
+<span><span class="co">#&gt; 5 cadmium     2 FALSE      10 dataset=cadmium/sim=2/replace=FALSE</span></span>
+<span><span class="co">#&gt; 6 cadmium     3 FALSE      10 dataset=cadmium/sim=3/replace=FALSE</span></span></code></pre></div>
 </div>
 <p>The scalar <code>ci</code> is carried uniformly on the <code>hc</code> table (it is not an axis), as is the <code>est_method</code> setting. With <code>ci = TRUE</code> the bootstrap knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) fan out fully; a <code>ci = FALSE</code> scenario would instead give exactly one <code>hc</code> row per fit task, carrying <code>NA</code> for those bootstrap-only knobs (every requested <code>est_method</code> is summarised within each task from a single bootstrap, so it never fans out into separate tasks).</p>
 <div class="cell">
@@ -341,21 +341,21 @@
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
-<span><span class="co">#&gt;   tasks: 36</span></span>
-<span><span class="co">#&gt; # A tibble: 36 × 16</span></span>
+<span><span class="co">#&gt;   tasks: 24</span></span>
+<span><span class="co">#&gt; # A tibble: 24 × 16</span></span>
 <span><span class="co">#&gt;    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    </span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;lgl&gt;      &lt;lgl&gt;          &lt;chr&gt;       </span></span>
 <span><span class="co">#&gt;  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  2 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  3 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  4 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  5 boron       1 FALSE      20 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  6 boron       1 FALSE      20 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  7 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  8 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  9 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; 10 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; # ℹ 26 more rows</span></span>
+<span><span class="co">#&gt;  5 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  6 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  7 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  8 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  9 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; 10 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; # ℹ 14 more rows</span></span>
 <span><span class="co">#&gt; # ℹ 8 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, ci &lt;lgl&gt;,</span></span>
 <span><span class="co">#&gt; #   nboot &lt;int&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;</span></span></code></pre></div>
 </div>
@@ -376,21 +376,21 @@
 <code class="sourceCode R"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
-<span><span class="co">#&gt;   tasks: 36</span></span>
-<span><span class="co">#&gt; # A tibble: 36 × 17</span></span>
+<span><span class="co">#&gt;   tasks: 24</span></span>
+<span><span class="co">#&gt; # A tibble: 24 × 17</span></span>
 <span><span class="co">#&gt;    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    </span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;lgl&gt;      &lt;lgl&gt;          &lt;chr&gt;       </span></span>
 <span><span class="co">#&gt;  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  2 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  3 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  4 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  5 boron       1 FALSE      20 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  6 boron       1 FALSE      20 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  7 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  8 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  9 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; 10 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; # ℹ 26 more rows</span></span>
+<span><span class="co">#&gt;  5 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  6 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  7 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  8 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  9 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; 10 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; # ℹ 14 more rows</span></span>
 <span><span class="co">#&gt; # ℹ 9 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, ci &lt;lgl&gt;,</span></span>
 <span><span class="co">#&gt; #   nboot &lt;int&gt;, ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;,</span></span>
 <span><span class="co">#&gt; #   hc &lt;list&gt;</span></span></code></pre></div>
@@ -404,20 +404,20 @@
 <span>  names_sep <span class="op">=</span> <span class="st">"_"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">hcs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"ci"</span>, <span class="st">"hc_est_method"</span>, <span class="st">"hc_proportion"</span>, <span class="st">"hc_est"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt; # A tibble: 72 × 7</span></span>
+<span><span class="co">#&gt; # A tibble: 48 × 7</span></span>
 <span><span class="co">#&gt;    dataset   sim  nrow ci    hc_est_method hc_proportion hc_est</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;lgl&gt; &lt;chr&gt;                 &lt;dbl&gt;  &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 boron       1     5 TRUE  multi                  0.05   2.65</span></span>
-<span><span class="co">#&gt;  2 boron       1     5 TRUE  multi                  0.2    6.54</span></span>
-<span><span class="co">#&gt;  3 boron       1     5 TRUE  multi                  0.05   2.65</span></span>
-<span><span class="co">#&gt;  4 boron       1     5 TRUE  multi                  0.2    6.54</span></span>
-<span><span class="co">#&gt;  5 boron       1    10 TRUE  multi                  0.05   1.63</span></span>
-<span><span class="co">#&gt;  6 boron       1    10 TRUE  multi                  0.2    4.91</span></span>
-<span><span class="co">#&gt;  7 boron       1    10 TRUE  multi                  0.05   1.63</span></span>
-<span><span class="co">#&gt;  8 boron       1    10 TRUE  multi                  0.2    4.91</span></span>
-<span><span class="co">#&gt;  9 boron       1    20 TRUE  multi                  0.05   1.16</span></span>
-<span><span class="co">#&gt; 10 boron       1    20 TRUE  multi                  0.2    4.31</span></span>
-<span><span class="co">#&gt; # ℹ 62 more rows</span></span></code></pre></div>
+<span><span class="co">#&gt;  1 boron       1     5 TRUE  multi                  0.05  2.65 </span></span>
+<span><span class="co">#&gt;  2 boron       1     5 TRUE  multi                  0.2   6.54 </span></span>
+<span><span class="co">#&gt;  3 boron       1     5 TRUE  multi                  0.05  2.65 </span></span>
+<span><span class="co">#&gt;  4 boron       1     5 TRUE  multi                  0.2   6.54 </span></span>
+<span><span class="co">#&gt;  5 boron       1    10 TRUE  multi                  0.05  1.63 </span></span>
+<span><span class="co">#&gt;  6 boron       1    10 TRUE  multi                  0.2   4.91 </span></span>
+<span><span class="co">#&gt;  7 boron       1    10 TRUE  multi                  0.05  1.63 </span></span>
+<span><span class="co">#&gt;  8 boron       1    10 TRUE  multi                  0.2   4.91 </span></span>
+<span><span class="co">#&gt;  9 boron       2     5 TRUE  multi                  0.05  0.873</span></span>
+<span><span class="co">#&gt; 10 boron       2     5 TRUE  multi                  0.2   4.48 </span></span>
+<span><span class="co">#&gt; # ℹ 38 more rows</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="next-shards-and-the-targets-pipeline">Next: shards and the targets pipeline<a class="anchor" aria-label="anchor" href="#next-shards-and-the-targets-pipeline"></a>
 </h2>
