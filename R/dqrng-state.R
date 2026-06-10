@@ -67,8 +67,9 @@ local_dqrng_state <- function(seed, primer, .local_envir = parent.frame()) {
   chk::chk_length(primer, length = 2L)
   chk::chk_environment(.local_envir)
   # Entry precondition: refuse to start the task on a hijacked or torn-down
-  # backend. Stronger than the old `chk_dqrng_backend_active()` probe -- it
-  # verifies dqrng *specifically* holds base R's RNG slot. Non-destructive, and
+  # backend. Stronger than the cheap `dqrng_backend_active()` `RNGkind()` probe
+  # -- it verifies dqrng *specifically* holds base R's RNG slot. Non-destructive,
+  # and
   # runs before `dqset.seed()` (which overwrites the state), so it leaves the
   # seed untouched.
   chk_dqrng_backend_intact()

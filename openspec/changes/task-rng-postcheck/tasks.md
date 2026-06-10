@@ -14,7 +14,7 @@
 
 - [x] 2.1 **Entry precondition:** upgrade `local_dqrng_state()`'s guard (`R/dqrng-state.R`) from `chk_dqrng_backend_active()` to `chk_dqrng_backend_intact()` (called before `dqset.seed()`, which overwrites the state, so the entry witness leaves the seed untouched), so a task refuses to *start* on a foreign-hijacked or torn-down backend
 - [x] 2.2 **Exit postcondition:** in `local_dqrng_state()`, register a deferred witness on `.local_envir` alongside the existing `withr::defer(set_dqrng_state(old), ...)`, gated to the success path: `sentinel <- new.env(); withr::defer(if (!identical(returnValue(sentinel), sentinel)) chk_dqrng_backend_intact(), envir = .local_envir)`. The three `*_data_task_primer()` wrappers and `with_dqrng_state()` are **unchanged** (they already call `local_dqrng_state()`)
-- [x] 2.3 Retain `dqrng_backend_active()` / `chk_dqrng_backend_active()` as `local_dqrng_backend()`'s reentrancy no-op gate (it must stay cheap and side-effect-free; re-asserting `register_methods()` reseeds)
+- [x] 2.3 Retain `dqrng_backend_active()` (the `RNGkind()` predicate) as `local_dqrng_backend()`'s reentrancy no-op gate (it must stay cheap and side-effect-free; re-asserting `register_methods()` reseeds). Remove its aborting wrapper `chk_dqrng_backend_active()`, now dead code once the entry guard is upgraded to the witness
 - [x] 2.4 Confirm placement is inside `local_dqrng_state()` (per-task, reused by the `targets` shard body and §7 `replay-helper`), not in `ssd_run_scenario_baseline()` and not on `local_dqrng_backend()` (per-scenario), so each task/shard self-verifies and the offending task is localised
 
 ## 3. Tests and checks

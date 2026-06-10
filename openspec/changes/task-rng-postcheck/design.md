@@ -108,10 +108,10 @@ Internal only — no dependency change and no caller-visible behavioural change:
 
 - Add `chk_dqrng_backend_intact()` and the diagnostic helpers (`rng_slot_owner()`, `user_rng_providers()`) to `R/dqrng-backend.R`.
 - In `R/dqrng-state.R`: upgrade `local_dqrng_state()`'s entry guard from `chk_dqrng_backend_active()` to `chk_dqrng_backend_intact()`, and add the `returnValue()`-gated deferred exit witness alongside the existing state-restore defer. The three `*_data_task_primer()` wrappers are **unchanged**.
-- Retain `dqrng_backend_active()` / `chk_dqrng_backend_active()` as `local_dqrng_backend()`'s reentrancy no-op gate.
+- Retain `dqrng_backend_active()` (the `RNGkind()` predicate) as `local_dqrng_backend()`'s reentrancy no-op gate. Its aborting wrapper `chk_dqrng_backend_active()` was the old `local_dqrng_state()` entry guard; with the entry guard upgraded to the witness it has no caller left, so remove it as dead code.
 - `dqrng` stays in `Imports`; examples / vignettes / scaffolds / tests are **unchanged** (no `@examplesIf`, no added `library(dqrng)`), since dqrng is still auto-loaded.
 
-Reverting means removing the new functions and reverting `local_dqrng_state()` (entry guard back to `chk_dqrng_backend_active()`, drop the exit defer).
+Reverting means removing the new functions, restoring `chk_dqrng_backend_active()`, and reverting `local_dqrng_state()` (entry guard back to `chk_dqrng_backend_active()`, drop the exit defer).
 
 ## Open Questions
 

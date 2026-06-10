@@ -58,22 +58,6 @@ dqrng_backend_active <- function() {
   identical(RNGkind()[1L], "user-supplied")
 }
 
-# Assert the dqrng backend is active, aborting otherwise. A `chk`-style guard
-# (returns invisibly on success) for dqrng-path helpers such as
-# `local_dqrng_state()` that are only meaningful while a `local_dqrng_backend()`
-# scope is open. `call` defaults to the calling frame so the error is reported
-# in the context of the user-facing function (AGENTS.md error-call-origin rule).
-chk_dqrng_backend_active <- function(call = rlang::caller_call()) {
-  if (!dqrng_backend_active()) {
-    chk::abort_chk(
-      "The dqrng backend is not active. ",
-      "Open a `local_dqrng_backend()` scope first.",
-      call = call
-    )
-  }
-  invisible(NULL)
-}
-
 # Diagnostic: name the package that currently owns base R's `user_unif_rand`
 # slot. `getNativeSymbolInfo()` runs the same all-DLL `R_FindSymbol` search R's
 # `RNG_Init` uses, so the resolved DLL is the owner R would route `runif()`
@@ -111,13 +95,12 @@ user_rng_providers <- function() {
 }
 
 # Assert that *dqrng specifically* holds base R's user-supplied RNG slot,
-# aborting otherwise. The companion to `chk_dqrng_backend_active()`, but
-# stronger: the cheap `RNGkind()` probe answers "is *a* user-supplied RNG
-# active" and so is fooled by a foreign user-supplied RNG that has taken the
-# single process-global `user_unif_rand` slot; this answers "is *dqrng* the
-# active one". `dqrng_backend_active()` / `chk_dqrng_backend_active()` stay the
-# cheap reentrancy gate for `local_dqrng_backend()`; this is the per-task
-# integrity assertion.
+# aborting otherwise. Stronger than the `dqrng_backend_active()` probe: that
+# cheap `RNGkind()` probe answers "is *a* user-supplied RNG active" and so is
+# fooled by a foreign user-supplied RNG that has taken the single process-global
+# `user_unif_rand` slot; this answers "is *dqrng* the active one".
+# `dqrng_backend_active()` stays the cheap reentrancy gate for
+# `local_dqrng_backend()`; this is the per-task integrity assertion.
 #
 # The witness is dqrng's own state: a base-R `runif(1)` draw routes through the
 # `user_unif_rand` slot, so it advances dqrng's internal state iff dqrng is the
