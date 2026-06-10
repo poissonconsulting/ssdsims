@@ -72,6 +72,33 @@ be byte-identical whatever `SSDSIMS_DUCKDB_THREADS` and (sufficient)
 - **THEN** every produced shard and summary Parquet SHALL be byte-identical
   between the two runs
 
+### Requirement: The full summary writes bounded row groups
+`ssd_summarise()` SHALL write the full summary (`path_with_samples`, the
+output retaining the `dists`/`samples` list-columns) with an explicit Parquet
+`row_group_size`, sized so that one row group's `samples` payload stays
+within a fixed byte budget (about 100 MB) given the scenario's largest
+`nboot` — so the write's memory requirement is bounded by the row-group
+budget, not by the union's total row count. The targets factory
+SHALL derive this value from the scenario and pass it to the summary target;
+`ssd_summarise()` SHALL accept it as an argument with a conservative default
+for standalone use. The write SHALL preserve insertion order (deterministic
+output bytes for identical inputs). The compact summary write (list-columns
+projected out) SHALL keep the engine's default row-group sizing.
+
+#### Scenario: Union memory is flat in total rows
+- **WHEN** `ssd_summarise()` writes a full summary unioning more rows than fit
+  one row-group byte budget (e.g. thousands of rows of 50k-double `samples`
+  cells) under a DuckDB `memory_limit` of 1 GB
+- **THEN** the write SHALL succeed, and the output's Parquet metadata SHALL
+  show row groups within the byte budget rather than a single row group
+  spanning the union
+
+#### Scenario: Determinism is preserved
+- **WHEN** the same shard inputs are summarised twice with the same
+  configuration
+- **THEN** the full-summary Parquet bytes SHALL be identical across the two
+  runs (insertion order preserved; no order-relaxing engine options)
+
 ### Requirement: Nested-shard memory sizing is documented
 The helper's documentation and the cluster template SHALL state the empirical
 sizing rule for nested shards (measured in this change's `exploration/`

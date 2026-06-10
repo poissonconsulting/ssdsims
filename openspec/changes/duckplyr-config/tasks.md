@@ -34,46 +34,70 @@
   (`R/shard-runner.R`, beside its run-wide `local_dqrng_backend()`)
 - [ ] 2.3 `air format .`; `devtools::document()`
 
-## 3. Tests (`tests/testthat/test-duckplyr-config.R`)
+## 3. Bounded row groups for the full summary (`R/targets-runner.R`)
 
-- [ ] 3.1 Scope behaviour: inside a `local_duckplyr_config()` scope with the
+- [ ] 3.1 Add a `samples_row_group_size` argument to `ssd_summarise()`
+  (default `NULL`); when non-`NULL`, pass
+  `options = list(row_group_size = <value>)` to the `path_with_samples`
+  `compute_parquet()` call; the compact-summary write keeps default options
+- [ ] 3.2 Compute the default in the factory from the scenario:
+  `rows_per_group = max(1L, min(122880L, floor(budget / (max(nboot) * 8))))`
+  with a ~100 MB `budget`, and thread it into the `summary` target's command;
+  document the standalone fallback (a conservative constant) on
+  `ssd_summarise()`
+- [ ] 3.3 Roxygen-document the argument: why bounded row groups (the engine
+  buffers a whole row group of nested `samples`; the default writer puts the
+  whole union in one group, evidence in the `duckplyr-config` change's
+  `exploration/experiment-summary-union.R`), the determinism constraint (no
+  `preserve_insertion_order=false`), and the pushdown-granularity trade-off
+
+## 4. Tests (`tests/testthat/test-duckplyr-config.R`)
+
+- [ ] 4.1 Scope behaviour: inside a `local_duckplyr_config()` scope with the
   knobs unset, `threads` reports `1` and `memory_limit` reports the pre-scope
   value; with `SSDSIMS_DUCKDB_MEMORY_LIMIT` set (via `withr::local_envvar()`),
   `memory_limit` reports it
-- [ ] 3.2 Restore behaviour: set custom `threads`/`memory_limit` first, run a
+- [ ] 4.2 Restore behaviour: set custom `threads`/`memory_limit` first, run a
   scope (normal exit and error exit), assert the custom values are reported
   after; nested scopes restore layer by layer (spec scenarios "Prior settings
   are restored" / "Nested scopes are safe")
-- [ ] 3.3 Telemetry env vars: inside the scope `Sys.getenv()` reports the two
+- [ ] 4.3 Telemetry env vars: inside the scope `Sys.getenv()` reports the two
   `DUCKPLYR_FALLBACK_*` values as `"0"`; after the scope the prior values
   (set and unset cases) are back
-- [ ] 3.4 OOM is a catchable R error: under a deliberately tiny
+- [ ] 4.4 OOM is a catchable R error: under a deliberately tiny
   `SSDSIMS_DUCKDB_MEMORY_LIMIT` (e.g. `100MB`), `ssd_write_parquet()` of a
   nested frame sized just above the floor errors with DuckDB's out-of-memory
   message and the session stays usable (spec scenario "Memory limit follows
   the environment knob")
-- [ ] 3.5 Byte-identity: run a small `samples = TRUE` scenario through
+- [ ] 4.5 Byte-identity: run a small `samples = TRUE` scenario through
   `ssd_run_scenario_shards()` twice — default knobs vs
   `SSDSIMS_DUCKDB_THREADS=1` + a sufficient `SSDSIMS_DUCKDB_MEMORY_LIMIT` —
   and compare shard/summary file hashes (spec "Configuration never changes
   results"); keep the scenario tiny per the test-suite speed budget
-- [ ] 3.6 Runners apply the scope: assert `threads == 1` is observed *during* a
+- [ ] 4.6 Runners apply the scope: assert `threads == 1` is observed *during* a
   step runner body (e.g. via a mocked/wrapped seam per the test-suite AGENTS
   wrapping rule), not merely that the helper works in isolation
+- [ ] 4.7 Bounded summary row groups: a full summary written with
+  `samples_row_group_size = <n>` shows row groups of at most `n` rows in
+  `parquet_metadata()`, and two identical runs produce byte-identical output
+  (spec "The full summary writes bounded row groups"); keep the fixture tiny
+  (small `n`, short `samples` cells — the property under test is the
+  metadata/options plumbing and determinism, not the 1 GB floor itself, which
+  stays covered by `exploration/experiment-summary-union.R`)
 
-## 4. Templates and docs
+## 5. Templates and docs
 
-- [ ] 4.1 Cluster template (`inst/targets-templates/cluster/controller.R`): add
+- [ ] 5.1 Cluster template (`inst/targets-templates/cluster/controller.R`): add
   the `export SSDSIMS_DUCKDB_MEMORY_LIMIT=…` line to the `script_lines`
   example block, sized with headroom against `memory_gigabytes_per_cpu`
   (e.g. `3GB` of a 4 GB job), with the one-line sizing rule and a pointer to
   the helper docs; mention `SSDSIMS_DUCKDB_THREADS` defaults to single-thread
   so `cpus_per_task = 1` is correct as shipped
-- [ ] 4.2 `large/` and `small/` templates: a brief comment that the same env
+- [ ] 5.2 `large/` and `small/` templates: a brief comment that the same env
   knobs apply when running under a local controller
-- [ ] 4.3 ROADMAP.md: move `duckplyr-config` to Done (this change) and fold the
+- [ ] 5.3 ROADMAP.md: move `duckplyr-config` to Done (this change) and fold the
   `duckplyr-message` Next item into the same Done entry (delivered here);
   remove it from Next
-- [ ] 4.4 NEWS via the squash-merge PR title (Conventional Commit, e.g.
+- [ ] 5.4 NEWS via the squash-merge PR title (Conventional Commit, e.g.
   `feat: scope single-thread, memory-bounded, telemetry-silent duckplyr config
   to the targets pipeline`)

@@ -41,7 +41,24 @@ Four experiments (all under `exploration/`, RESULT tables reproducible with
    1 GB but fails at 500 MB; the Parquet writer on top pushes the floor to
    2 GB. Working rule: **a nested shard needs `memory_limit` ≳ 5 × its
    `samples` payload bytes**.
-4. **`experiment-duckplyr-noise.R`** — the pipeline's own surface
+4. **`experiment-summary-union.R`** — review insight: shard writes stay small
+   (a shard holds few task rows), so the row-group dimension bites at the
+   **full-summary union** (`ssd_summarise(path_with_samples =)`), which crosses
+   any per-shard bound. Unioning >2048 one-row nested Parquets (the verbatim
+   `read_parquet_duckdb(files)` |> `compute_parquet()` path, no R
+   materialisation) shows the default writer accumulates the *whole union*
+   toward its default 122 880-row groups: 2100 rows land in **one** row group
+   and need `memory_limit = '3GB'`; 4100 rows fail even at 3 GB — the floor
+   *scales with total rows*, so a relaxed summary memory budget is not a
+   stable fix. But the supposed 2048-row minimum row group does **not** hold
+   on duckdb 1.5.2: an explicit `ROW_GROUP_SIZE 100` is honoured exactly
+   (41 × 100-row groups) and makes the 4100-file union pass at
+   `memory_limit = '1GB'` with 465 MB peak RSS — **memory flat in total
+   rows**, with no compression penalty (0.181 MB/row in both layouts).
+   `ROW_GROUP_SIZE_BYTES '100MB'` (payload-aware; requires
+   `preserve_insertion_order = false`) passes even at 500 MB. The compact
+   summary (`samples` projected out) stays trivial (100 MB, 0.7 s).
+5. **`experiment-duckplyr-noise.R`** — the pipeline's own surface
    (namespace-only duckplyr, as ssdsims uses it) emits *nothing*, with or
    without silencing. The noise is one step removed: duckplyr **collects
    fallback-telemetry logs by default** (`DUCKPLYR_FALLBACK_COLLECT` unset ⇒
@@ -64,6 +81,8 @@ restored (verified on duckplyr 1.2.1 / duckdb 1.5.2).
   executing — and the user's prior settings restored afterwards.
 - Convert worker deaths (cgroup OOM kill) into loud, per-shard R errors that
   `error = "null"` can isolate.
+- Make the full-summary (`path_with_samples`) write memory-flat in the number
+  of unioned rows, so the single `summary` task needs no special memory budget.
 - Silence duckplyr's fallback-telemetry collection (and thus the downstream
   interactive attach banner) for pipeline-context use — the `duckplyr-message`
   roadmap item.
@@ -146,7 +165,35 @@ telemetry preferences are untouched. We do not set `DUCKPLYR_FALLBACK_INFO`
 (per-call fallback messages are opt-in and already silent) and we do not touch
 the user's persisted `fallback_config()`.
 
-### D4. The memory floor is documented guidance, not enforced arithmetic
+### D4. The full-summary write gets an explicit, bounded `ROW_GROUP_SIZE`
+
+`ssd_summarise()`'s `path_with_samples` write passes an explicit
+`row_group_size` to `duckplyr::compute_parquet()` (the `options` seam already
+exists), sized so one row group's `samples` payload stays within a fixed byte
+budget (~100 MB): `rows_per_group = clamp(budget / (max_nboot × 8), 1, 122880)`.
+The factory (`ssd_scenario_targets()`) knows the scenario's largest `nboot`, so
+it computes the value and threads it to the summary target;
+`ssd_summarise()` exposes it as an argument with a conservative fallback for
+standalone calls. The compact-summary write keeps the default options (its
+rows are tiny — 4100 rows passed at a 100 MB limit).
+
+*Why this over a relaxed summary memory budget*: the experiment shows the
+default writer's requirement grows with the union's **total row count** (one
+giant row group), so "give the summary task more memory" has no stable
+ceiling — it would re-break on the next bigger sweep. Bounded row groups make
+the write memory-flat (465 MB peak RSS for a 1.6 GB-payload union under a 1 GB
+limit) at zero compression cost.
+
+*Why `ROW_GROUP_SIZE` over `ROW_GROUP_SIZE_BYTES`*: the bytes knob is
+payload-aware but only takes effect with `preserve_insertion_order = false`,
+which surrenders deterministic row order — and with it the byte-identity
+property the spec demands of re-runs. A row count computed *from* the
+scenario's `nboot` is equally payload-aware in practice and keeps insertion
+order. Smaller row groups slightly coarsen predicate-pushdown granularity for
+readers of the full summary; that file is an archival artefact (the compact
+summary is the analysis surface), so the trade is accepted.
+
+### D5. The memory floor is documented guidance, not enforced arithmetic
 
 The helper's docs (and the cluster template comment) state the rule: writing an
 `hc` shard whose `samples` list-column holds `P` bytes needs
@@ -178,6 +225,13 @@ later (`cost-analysis-targets` territory).
 - [Memory floor is duckdb-version-specific] The 5× rule was measured on duckdb
   1.5.2. → Recorded as an empirical bound with the reproduction scripts kept in
   `exploration/`; re-measure on major engine upgrades.
+- [Sub-2048 `ROW_GROUP_SIZE` honoured is version-observed behaviour] duckdb
+  1.5.2 wrote exact 100-row groups, but a future engine could clamp small row
+  groups (the believed 2048 minimum), re-raising the summary floor to
+  ~5 × 2048 × max_nboot × 8 bytes (~4 GB at `nboot = 50000`). →
+  `experiment-summary-union.R` is the canary (re-run on engine upgrades); if a
+  clamp ever lands, the fallback is the documented one: read `samples` from
+  the per-shard Parquets and skip `path_with_samples` for very large `nboot`.
 
 ## Open Questions
 

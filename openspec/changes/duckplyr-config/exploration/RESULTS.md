@@ -118,3 +118,57 @@ Readings: the pipeline's own (namespace-only) surface is silent either way.
 The noise is the attach-time telemetry banner, gated on fallback logs
 existing; `DUCKPLYR_FALLBACK_COLLECT=0` prevents the logs and
 `DUCKPLYR_FALLBACK_AUTOUPLOAD=0` pre-answers the ask.
+
+## experiment-summary-union.R
+
+Review question: DuckDB's writer was believed to have a 2048-row minimum row
+group, so with 50k-double cells one minimum group would buffer
+2048 × 50000 × 8 ≈ 819 MB — making the **full-summary union**
+(`ssd_summarise(path_with_samples =)`, which crosses the 2048-row boundary)
+the pinch point, and raising: what is the minimum memory for unioning >2048
+one-row nested Parquets? Corpus: 4100 one-row Parquet files (one 50k-double
+`samples` cell each, ~0.2 MB/file, built in 56 s), unioned via the verbatim
+`ssd_summarise()` path (`read_parquet_duckdb(files)` |> `compute_parquet()`,
+no R materialisation), threads = 1. `row_groups` is the output's actual
+per-group row counts from `parquet_metadata()`.
+
+```
+RESULT ok=FALSE n_files=2100 memlim=500MB ... rss_peak_mb=734  error=failed to allocate 512.0 MiB
+RESULT ok=FALSE n_files=4100 memlim=500MB ... rss_peak_mb=746  error=(as above)
+RESULT ok=FALSE n_files=2100 memlim=800MB ... rss_peak_mb=1090 error=(as above)
+RESULT ok=FALSE n_files=4100 memlim=800MB ... rss_peak_mb=1103 error=(as above)
+RESULT ok=FALSE n_files=2100 memlim=1GB   ... rss_peak_mb=1211 error=failed to allocate 781 MiB
+RESULT ok=FALSE n_files=4100 memlim=1GB   ... rss_peak_mb=1409 error=(as above)
+RESULT ok=FALSE n_files=2100 memlim=1.5GB ... rss_peak_mb=1210 error=(as above)
+RESULT ok=FALSE n_files=4100 memlim=1.5GB ... rss_peak_mb=2014 error=(as above)
+RESULT ok=FALSE n_files=2100 memlim=2GB   ... rss_peak_mb=2809 error=(as above)
+RESULT ok=FALSE n_files=4100 memlim=2GB   ... rss_peak_mb=2240 error=(as above)
+RESULT ok=TRUE  n_files=2100 memlim=3GB   ... write_s=18.36 file_mb=380.1 rss_peak_mb=3520 row_groups=2100
+RESULT ok=FALSE n_files=4100 memlim=3GB   ... rss_peak_mb=4159 error=failed to pin block of size 256.0 KiB
+
+RESULT ok=TRUE n_files=4100 memlim=1GB   rowgroup=100   ... write_s=23.68 file_mb=741.6 rss_peak_mb=465 row_groups=100×41
+RESULT ok=TRUE n_files=4100 memlim=1GB   rgbytes=100MB order=false ... write_s=23.48 file_mb=741.6 rss_peak_mb=751 row_groups=246×16+164
+RESULT ok=TRUE n_files=4100 memlim=500MB rgbytes=100MB order=false ... write_s=23.52 file_mb=741.6 rss_peak_mb=723 row_groups=246×16+164
+
+RESULT ok=TRUE n_files=4100 memlim=100MB compact=TRUE ... write_s=0.71 file_mb=0.0 rss_peak_mb=235 row_groups=4100
+```
+
+Readings:
+
+- **Default writer config: the floor scales with TOTAL rows, not with a
+  2048-row minimum.** The writer accumulates rows toward its default
+  `ROW_GROUP_SIZE` of 122 880, so the whole union lands in one row group
+  (`row_groups=2100` at 3 GB): 2100 rows need 3 GB; 4100 rows fail even at
+  3 GB. "Relax the summary task's memory limit" is therefore not a stable fix
+  — the requirement grows with `nsim`/grid size.
+- **The 2048-row minimum premise does not hold on duckdb 1.5.2:**
+  `ROW_GROUP_SIZE 100` was honoured exactly (41 groups of 100 rows), and made
+  the same 4100-file union pass at `memory_limit='1GB'` with **465 MB** peak
+  RSS — memory now flat in total rows. No compression penalty either:
+  0.181 MB/row in both the one-group and 100-row-group layouts.
+- `ROW_GROUP_SIZE_BYTES '100MB'` (+ the required
+  `preserve_insertion_order=false`) is the payload-aware variant: groups of
+  246 rows (246 × 50k × 8 ≈ 98 MB), passing even at `memory_limit='500MB'` —
+  but it needs insertion order relaxed, which `ROW_GROUP_SIZE` does not.
+- The compact summary (`samples` projected out at the DuckDB level) remains
+  trivial: 4100 rows at `memory_limit='100MB'` in 0.7 s.

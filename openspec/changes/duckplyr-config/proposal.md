@@ -17,9 +17,16 @@ rows (~400 MB of draws) peaks at ~2.3 GB RSS and needs a 2 GB `memory_limit`
 that point, because the failing allocation is the list column's entire child
 array as one buffer. The control clinches it: the *same* 50M doubles written
 **flat** (long format) pass under a **100 MB** limit — nesting, not payload,
-is the culprit. So the pipeline must (a) pin threads and bound memory
-explicitly, and (b) size the bound to the nested-shard floor rather than assume
-DuckDB can spill its way under an arbitrary limit.
+is the culprit. The worst case is the **full-summary union**
+(`path_with_samples`): the default writer accumulates the whole union toward
+one 122 880-row row group, so its floor *grows with total rows* (2100 one-row
+nested shards need 3 GB; 4100 fail even there) — but an explicit, small
+Parquet `ROW_GROUP_SIZE` (honoured exactly on duckdb 1.5.2, no 2048-row
+clamp) makes the same union pass at a 1 GB limit with 465 MB peak RSS,
+memory-flat in row count and compression-neutral. So the pipeline must
+(a) pin threads and bound memory explicitly, (b) size the bound to the
+nested-shard floor rather than assume DuckDB can spill its way under an
+arbitrary limit, and (c) write the full summary with bounded row groups.
 
 Separately, duckplyr's fallback telemetry is noisy around the pipeline: with the
 default configuration every fallback event is logged to the user's home
@@ -50,6 +57,11 @@ with a multi-line "fallback events can be collected and uploaded…" banner
   single-core runner (`ssd_run_scenario_shards()`) apply the helper — duckplyr
   is configured **just in the context of the targets pipeline**, exactly as the
   roadmap item scopes it.
+- `ssd_summarise()`'s full-summary (`path_with_samples`) write passes an
+  explicit `row_group_size` — derived by the factory from the scenario's
+  largest `nboot` against a ~100 MB per-group budget — so the one task that
+  unions every `hc` row is memory-flat in total rows and needs no relaxed
+  memory budget (insertion order, and thus output determinism, preserved).
 - Documented sizing guidance (design.md + the helper's docs): writing an `hc`
   shard whose `samples` list-column holds `P` bytes of draws needs
   `memory_limit` ≳ 5 × `P`; the limit is a knob, not a magic constant, and the
