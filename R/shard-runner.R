@@ -53,8 +53,9 @@
 #'   [ssd_scenario_sample_shards()], [ssd_run_sample_step()].
 #' @export
 #' @examples
+#' library(dqrng)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   ssd_scenario_data(ssddata::ccme_boron),
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,

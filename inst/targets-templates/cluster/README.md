@@ -117,7 +117,7 @@ near the top of `_targets.R` to a single cheap cell, e.g.:
 
 ```r
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 2L,
   nrow = 5L,
   seed = 42L

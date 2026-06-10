@@ -23,7 +23,7 @@ baseline_hc_rows <- function(base) {
 
 test_that("shard-runner: per-task results match the in-memory baseline", {
   scenario <- ssd_define_scenario(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 2L,
     seed = 42L,
     nrow = c(5L, 10L),
@@ -56,7 +56,7 @@ test_that("shard-runner: per-task results match the in-memory baseline", {
 
 test_that("shard-runner: re-layout shifts shard paths but not results", {
   args <- list(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 2L,
     nrow = c(5L, 10L),
     seed = 42L,
@@ -92,7 +92,7 @@ test_that("shard-runner: a fit shard reads several sample shards (inner replace)
   # `replace` is a sample PATH axis but a fit INNER axis by default, so one fit
   # shard's tasks span two sample shards.
   scenario <- ssd_define_scenario(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
@@ -118,7 +118,7 @@ test_that("shard-runner: a fit shard reads several sample shards (inner replace)
 
 test_that("shard-runner: an hc shard reads several fit shards (coarse hc)", {
   scenario <- ssd_define_scenario(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 1L,
     seed = 42L,
     nrow = c(5L, 10L),
@@ -141,7 +141,7 @@ test_that("shard-runner: an hc shard reads several fit shards (coarse hc)", {
 
 test_that("shard-runner: shard count equals the path-cell count, not task count", {
   scenario <- ssd_define_scenario(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 2L,
     seed = 42L,
     nrow = c(5L, 10L),
@@ -170,7 +170,7 @@ test_that("shard-runner: shard count equals the path-cell count, not task count"
 
 test_that("shard-runner: re-running yields identical per-task results", {
   scenario <- ssd_define_scenario(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
@@ -190,7 +190,7 @@ test_that("shard-runner: re-running yields identical per-task results", {
 test_that("shard-runner: re-running with a changed partition_by leaves no stale shards", {
   dir <- withr::local_tempdir()
   base_args <- list(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 1L,
     nrow = c(5L, 10L),
     seed = 42L,
@@ -222,7 +222,7 @@ test_that("shard-runner: re-running with a changed partition_by leaves no stale 
 
 test_that("shard-runner: fit step aborts when a parent sample draw is missing", {
   scenario <- ssd_define_scenario(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
@@ -268,7 +268,7 @@ test_that("shard-runner: fit step aborts when a parent sample draw is missing", 
 
 test_that("shard-runner: a fit object round-trips losslessly through the encode/decode seam and a Parquet VARCHAR", {
   scenario <- ssd_define_scenario(
-    ssd_data(d = sr_dataset()),
+    ssd_scenario_data(d = sr_dataset()),
     nsim = 1L,
     seed = 42L,
     nrow = 6L,

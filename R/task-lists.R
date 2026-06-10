@@ -48,7 +48,7 @@
 #'   cross-join.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
+#' scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 3L, seed = 42L)
 #' tasks <- ssd_scenario_tasks(scenario)
 #' tasks
 #' tasks$hc
@@ -103,7 +103,7 @@ ssd_scenario_sample_tasks <- function(scenario) {
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   ssd_scenario_data(ssddata::ccme_boron),
 #'   nsim = 3L,
 #'   seed = 42L,
 #'   rescale = c(FALSE, TRUE)
@@ -128,7 +128,7 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   ssd_scenario_data(ssddata::ccme_boron),
 #'   nsim = 2L,
 #'   seed = 42L,
 #'   ci = TRUE,
@@ -178,8 +178,9 @@ ssd_scenario_hc_tasks <- function(scenario) {
 #'   (`sample` draws, `fits` objects, and `hc` tibbles).
 #' @export
 #' @examples
+#' library(dqrng)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   ssd_scenario_data(ssddata::ccme_boron),
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
@@ -569,10 +570,21 @@ hc_collapse_est_methods <- function(
 # the wrappers are schema-agnostic. `local_dqrng_state()`'s second argument is
 # still named `state` (a leftover, renamed in a separate change); it carries
 # the primer.
+#
+# Each body is bracketed: `local_dqrng_state()` guards the entry (via
+# `chk_dqrng_backend_active()`) and `chk_dqrng_backend_intact()` is the exit
+# postcondition -- it verifies dqrng was still the generator actually serving
+# the body's draws, aborting on a mid-task teardown or a foreign user-RNG
+# hijack instead of silently returning non-reproducible results. The check
+# lives here (not in the runner) so every caller of the per-task primitives --
+# the baseline loop, the `targets` shard body, the replay helper --
+# self-verifies per task, in its own process.
 
 sample_data_task_primer <- function(data, n_max, replace, seed, primer) {
   local_dqrng_state(seed, primer = primer)
-  sample_data_task(data, n_max, replace)
+  out <- sample_data_task(data, n_max, replace)
+  chk_dqrng_backend_intact()
+  out
 }
 
 fit_data_task_primer <- function(
@@ -589,7 +601,7 @@ fit_data_task_primer <- function(
   primer
 ) {
   local_dqrng_state(seed, primer = primer)
-  fit_data_task(
+  out <- fit_data_task(
     data,
     scenario = scenario,
     dists = dists,
@@ -600,6 +612,8 @@ fit_data_task_primer <- function(
     range_shape1 = range_shape1,
     range_shape2 = range_shape2
   )
+  chk_dqrng_backend_intact()
+  out
 }
 
 hc_data_task_primer <- function(
@@ -615,7 +629,7 @@ hc_data_task_primer <- function(
   samples = FALSE
 ) {
   local_dqrng_state(seed, primer = primer)
-  hc_data_task(
+  out <- hc_data_task(
     fits,
     proportion = proportion,
     ci = ci,
@@ -625,6 +639,8 @@ hc_data_task_primer <- function(
     parametric = parametric,
     samples = samples
   )
+  chk_dqrng_backend_intact()
+  out
 }
 
 # ---- ssdsims_tasks S3 class ------------------------------------------------

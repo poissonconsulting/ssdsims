@@ -23,6 +23,7 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
+library(dqrng)
 
 # Ingredient B — the SLURM controller (the one editable block; see controller.R).
 # `error = "continue"` is the cluster-independent keep-going (`make -k`) default:
@@ -42,7 +43,7 @@ tar_option_set(controller = controller, error = "continue")
 # confirms the controller + preflight before launching the full sweep. Then
 # (step 4) expand it to your own study, leaving the controller untouched.
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 2L,
   seed = 42L,
   nrow = c(5L, 10L), # c(5L, 6L, 10L, 20L, 50L),

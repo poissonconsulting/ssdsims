@@ -6,9 +6,10 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
+library(dqrng)
 
 scenario <- ssd_define_scenario(
-  ssd_data(d = readRDS("data.rds")),
+  ssd_scenario_data(d = readRDS("data.rds")),
   nsim = readRDS("nsim.rds"),
   seed = 42L,
   nrow = 6L,

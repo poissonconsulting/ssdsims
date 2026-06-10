@@ -32,7 +32,7 @@ template). The single-core \code{\link[=ssd_run_scenario_shards]{ssd_run_scenari
 approach: it \emph{owns} and clears a fixed \code{dir} on each run.
 }
 \examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 42L)
 scenario_results_dir(scenario)
 }
 \seealso{

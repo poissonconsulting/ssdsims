@@ -17,13 +17,15 @@ knitr:
 # dependencies. Skip evaluation gracefully if they are unavailable (e.g. on a
 # minimal CI runner) rather than failing the build.
 evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
-  requireNamespace("ssdtools", quietly = TRUE)
+  requireNamespace("ssdtools", quietly = TRUE) &&
+  requireNamespace("dqrng", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```
 
 ```{r}
 #| label: library
 library(ssdsims)
+library(dqrng)
 ```
 
 ## Why a declarative scenario?
@@ -51,23 +53,25 @@ north-star design.
 
 The four stages this vignette covers:
 
-1. **Assemble** the data with `ssd_data()`.
+1. **Assemble** the data with `ssd_scenario_data()` (and, for generated data,
+   `ssd_gen()`).
 2. **Declare** the scenario with `ssd_define_scenario()`.
 3. **Expand** it into per-step task tables with `ssd_scenario_tasks()`.
 4. **Run** the baseline in-process loop with `ssd_run_scenario_baseline()`.
 
-Stages 1--3 are side-effect-free. Only stage 4 touches the RNG.
+Stages 2--3 are side-effect-free; generation (`ssd_gen()`, in stage 1) and
+stage 4 draw random numbers under scoped, seeded dqrng state.
 
 ## Stage 1: assemble the data
 
-`ssd_data()` is the single entry point for dataset input. It validates each
+`ssd_scenario_data()` is the single entry point for dataset input. It validates each
 data frame --- every dataset must carry a numeric `Conc` column, the species
 sensitivity distribution convention --- and assembles them into a named
 collection.
 
 ```{r}
 #| label: ssd-data
-datasets <- ssd_data(
+datasets <- ssd_scenario_data(
   boron = ssddata::ccme_boron,
   cadmium = ssddata::ccme_cadmium
 )
@@ -80,10 +84,34 @@ derived from the argument expression by symbol capture (so a bare
 literal with no derivable name (e.g. a bare `data.frame(...)`) must be given an
 explicit name.
 
-`ssd_data()` is the extensible input point. A planned change
-(`scenario-input-types`) will let each input also be a data *generator* --- a
-`fitdists`/`tmbfit` object, a generator function, or a function-name string ---
-materialised by a dataset registry. For now each input must be a data frame.
+### Generated datasets with `ssd_gen()`
+
+Each dataset can also be *generated* rather than observed. `ssd_gen()` accepts
+the same generator inputs the legacy `ssd_run_scenario()` dispatches over ---
+a generator function, a function-name string, or a `fitdists`/`tmbfit` object
+(drawn from the matching `ssd_r<dist>` with the fit's estimates) --- and
+materialises each, **once**, to a `Conc` tibble of `.n` rows. The result
+composes with the data frames in `ssd_scenario_data()`, either as an unnamed
+argument or spliced with `!!!` (the two are equivalent):
+
+```{r}
+#| label: ssd-gen
+ssd_scenario_data(
+  boron = ssddata::ccme_boron,
+  ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)
+)
+```
+
+Both `.n` (the generated population size) and `.seed` are **required**, so
+unsized or irreproducible generation is impossible. Each generator draws on an
+independent dqrng stream keyed by its dataset *name* (with `.seed` as the base
+seed), so one `.seed` reproducibly fans out across all generators in a call;
+the global RNG state is untouched. Generation requires the suggested `dqrng`
+package to be loaded (`library(dqrng)`) --- ssdsims never loads it implicitly.
+
+A materialised generator dataset is a *fixture the scenario resamples*: once
+inside the collection it is an ordinary tibble, indistinguishable from a
+data-frame dataset downstream (the generator code is its provenance).
 
 ## Stage 2: declare the scenario
 
@@ -115,24 +143,16 @@ The `print()` method shows the declarative fields: the scalar `seed` and
 retained for the local runner but are not part of the declarative identity; the
 cluster path carries only the names.
 
-### Dataset input is flexible
+### Dataset input is the collection
 
-The preferred form is an `ssd_data()` collection (above), which owns validation
-and naming. For convenience the constructor also accepts bare data frame input,
-routed through the same `Conc` validation, in several forms:
+Dataset input is accepted **only** as an `ssd_scenario_data()` collection ---
+naming, validation, and (via `ssd_gen()`) generation all live there, so the
+constructor itself stays inert and draws no random numbers:
 
 ```{r}
-#| label: input-forms
-# 1. A single data frame; name derived from the expression ("ccme_boron").
-ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
-
-# 2. A single data frame with an explicit name.
-ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, name = "boron")
+#| label: input-form
+ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L)
 ```
-
-A named list (`list(boron = ..., cadmium = ...)`) takes names from the list; an
-unnamed list derives them per element. Supplying both a named list and `name=`
-is an error.
 
 ### `min_pmix` is referenced by name
 
@@ -183,7 +203,7 @@ When `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`,
 #| label: ci-false-error
 #| error: true
 ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 2L,
   seed = 1L,
   ci = FALSE,
@@ -244,10 +264,12 @@ children by the foreign-key id. It runs **in-process**, with no `targets`, no
 shard grouping, and no Parquet I/O.
 
 It **is reproducible without an external seed**: the runner opens one
-`local_dqrng_backend()` scope and seeds each task exactly once from
-`scenario$seed` plus a per-task primer (`task_primer()` over the task's
-identity), so two runs of a scenario with a fixed `seed` yield identical
-results, regardless of the order in which tasks run:
+`local_dqrng_backend()` scope (which requires the suggested `dqrng` package to
+be loaded --- hence the `library(dqrng)` at the top of this vignette) and seeds
+each task exactly once from `scenario$seed` plus a per-task primer
+(`task_primer()` over the task's identity), so two runs of a scenario with a
+fixed `seed` yield identical results, regardless of the order in which tasks
+run:
 
 ```{r}
 #| label: run-baseline

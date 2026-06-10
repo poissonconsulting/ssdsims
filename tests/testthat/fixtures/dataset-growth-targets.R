@@ -9,11 +9,12 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
+library(dqrng)
 
 datasets <- readRDS("datasets.rds")
 
 scenario <- ssd_define_scenario(
-  do.call(ssd_data, datasets),
+  do.call(ssd_scenario_data, datasets),
   nsim = 1L,
   seed = 42L,
   nrow = 6L,

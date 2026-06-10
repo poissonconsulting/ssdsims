@@ -20,13 +20,15 @@ evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE) &&
   requireNamespace("duckplyr", quietly = TRUE) &&
   requireNamespace("targets", quietly = TRUE) &&
-  requireNamespace("tarchetypes", quietly = TRUE)
+  requireNamespace("tarchetypes", quietly = TRUE) &&
+  requireNamespace("dqrng", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```
 
 ```{r}
 #| label: library
 library(ssdsims)
+library(dqrng)
 ```
 
 The ["Running a Sharded Pipeline"](sharded-pipeline.html) vignette materialises
@@ -113,7 +115,7 @@ network I/O of its own --- it just pairs each step shard with a no-op
 ```{r}
 #| label: scenario
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 2L,
   seed = 42L,
   nrow = 6L,

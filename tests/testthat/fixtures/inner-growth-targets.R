@@ -8,6 +8,7 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
+library(dqrng)
 
 loose <- function(n) 0.05
 strict <- function(n) 0.1
@@ -22,7 +23,7 @@ min_pmix <- if (isTRUE(readRDS("grow.rds"))) {
 }
 
 scenario <- ssd_define_scenario(
-  ssd_data(d = readRDS("data.rds")),
+  ssd_scenario_data(d = readRDS("data.rds")),
   nsim = 2L,
   seed = 42L,
   nrow = 6L,

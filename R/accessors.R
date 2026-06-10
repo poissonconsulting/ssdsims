@@ -1,6 +1,6 @@
 # Scenario accessors: isolate an already-materialised value from a scenario by
 # name (TARGETS-DESIGN.md section 1.1). Datasets are materialised inline by
-# `ssd_define_scenario()` (validated via `ssd_data()`); `min_pmix` functions are
+# `ssd_define_scenario()` (validated via `ssd_scenario_data()`); `min_pmix` functions are
 # materialised on the scenario keyed by name at construction. These accessors do
 # the one job a shard body needs: pull a value out by name. They perform no
 # registration, persistence, or re-validation - the values arrive ready to use.
@@ -26,7 +26,7 @@
 #' @seealso [scenario_min_pmix()] for the `min_pmix` counterpart.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+#' scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 42L)
 #' scenario_dataset(scenario, "ccme_boron")
 scenario_dataset <- function(scenario, name) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
@@ -65,7 +65,7 @@ scenario_dataset <- function(scenario, name) {
 #' @seealso [scenario_dataset()] for the dataset counterpart.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+#' scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 42L)
 #' scenario_min_pmix(scenario, "ssd_min_pmix")
 scenario_min_pmix <- function(scenario, name) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")

@@ -104,3 +104,46 @@ test_that("dqrng-backend: scenario execution leaves base R RNG unchanged", {
   post <- runif(3)
   expect_identical(pre, post)
 })
+
+# ---- dqrng_usable() / conditional-dependency gate --------------------------
+
+test_that("dqrng-backend: dqrng_usable is TRUE only when dqrng is loaded at >= 0.4.1", {
+  expect_true(dqrng_usable())
+  local_mocked_bindings(dqrng_usable = function() FALSE)
+  expect_snapshot(error = TRUE, {
+    local_dqrng_backend()
+  })
+})
+
+test_that("dqrng-backend: a failed-usable activation does not load dqrng", {
+  # The gate tests *already-loaded*, never `requireNamespace()`, so a rejected
+  # activation must not itself load a user-RNG provider.
+  local_mocked_bindings(dqrng_usable = function() FALSE)
+  expect_error(local_dqrng_backend())
+})
+
+# ---- chk_dqrng_backend_intact() witness ------------------------------------
+
+test_that("dqrng-backend: the intact witness returns invisibly and is non-destructive", {
+  local_dqrng_backend()
+  dqrng::dqset.seed(123L, stream = c(1L, 2L))
+  with_witness <- {
+    first <- runif(1)
+    chk_dqrng_backend_intact()
+    c(first, runif(1))
+  }
+  dqrng::dqset.seed(123L, stream = c(1L, 2L))
+  without_witness <- c(runif(1), runif(1))
+  # The witness consumes no net randomness: the draw sequence is identical.
+  expect_identical(with_witness, without_witness)
+})
+
+test_that("dqrng-backend: the witness aborts when the backend is torn down", {
+  local_dqrng_backend()
+  withr::defer(suppressWarnings(reset_dqrng_backend()))
+  # Tear the backend down mid-scope, then witness.
+  RNGkind("Mersenne-Twister")
+  expect_snapshot(error = TRUE, {
+    chk_dqrng_backend_intact()
+  })
+})

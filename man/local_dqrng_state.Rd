@@ -43,10 +43,13 @@ undisturbed, including on error.
 
 Both require an active dqrng backend: they abort unless a
 \code{\link[=local_dqrng_backend]{local_dqrng_backend()}} scope is open. This fails fast rather than silently
-seeding base R's Mersenne-Twister.
+seeding base R's Mersenne-Twister. Like the backend helper they also require
+the Suggested \code{dqrng} package (>= 0.4.1) to be already loaded
+(\code{library(dqrng)}); ssdsims never loads it implicitly.
 }
 \examples{
 
+library(dqrng)
 local_dqrng_backend()
 local_dqrng_state(42, c(1L, 2L))
 runif(3)

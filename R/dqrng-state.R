@@ -40,7 +40,9 @@ set_dqrng_state <- function(state) {
 #'
 #' Both require an active dqrng backend: they abort unless a
 #' [local_dqrng_backend()] scope is open. This fails fast rather than silently
-#' seeding base R's Mersenne-Twister.
+#' seeding base R's Mersenne-Twister. Like the backend helper they also require
+#' the Suggested `dqrng` package (>= 0.4.1) to be already loaded
+#' (`library(dqrng)`); ssdsims never loads it implicitly.
 #'
 #' @param seed `[whole number]`\cr A scalar seed passed to
 #'   [dqrng::dqset.seed()].
@@ -56,6 +58,7 @@ set_dqrng_state <- function(state) {
 #' @export
 #' @examples
 #'
+#' library(dqrng)
 #' local_dqrng_backend()
 #' local_dqrng_state(42, c(1L, 2L))
 #' runif(3)
@@ -66,6 +69,10 @@ local_dqrng_state <- function(seed, primer, .local_envir = parent.frame()) {
   chk::chk_integer(primer)
   chk::chk_length(primer, length = 2L)
   chk::chk_environment(.local_envir)
+  # Gate the `dqrng::` touches below: a *foreign* user-supplied RNG can satisfy
+  # the backend-active probe while dqrng itself is not loaded, and reaching
+  # `dqrng::` then would load it (the act the Suggests contract avoids).
+  chk_dqrng_usable()
   chk_dqrng_backend_active()
   old <- get_dqrng_state()
   withr::defer(set_dqrng_state(old), envir = .local_envir)

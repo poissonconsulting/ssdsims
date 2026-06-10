@@ -17,13 +17,15 @@ knitr:
 # duckplyr. Skip evaluation gracefully on a minimal runner rather than failing.
 evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE) &&
-  requireNamespace("duckplyr", quietly = TRUE)
+  requireNamespace("duckplyr", quietly = TRUE) &&
+  requireNamespace("dqrng", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```
 
 ```{r}
 #| label: library
 library(ssdsims)
+library(dqrng)
 ```
 
 The ["Defining a Scenario"](defining-a-scenario.html) vignette ends with the
@@ -58,7 +60,7 @@ per step, with at most one of `partition_by`/`bundle` naming a given step.
 ```{r}
 #| label: scenario
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 2L,
   seed = 42L,
   nrow = c(5L, 10L),
@@ -182,6 +184,7 @@ four-file variant (the scenario is inline in `_targets.R`, and a separate
 library(targets)
 library(tarchetypes)
 library(ssdsims)
+library(dqrng)
 source("scenario.R") # builds `scenario`
 ssd_scenario_targets(scenario) # the entire target list
 ```

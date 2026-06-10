@@ -42,7 +42,7 @@ NULL
 #'   ([ssd_scenario_sample_tasks()]) by `partition_by$sample`.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+#' scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 42L)
 #' ssd_scenario_sample_shards(scenario)
 ssd_scenario_sample_shards <- function(scenario) {
   scenario_shards(scenario, "sample")
@@ -55,7 +55,7 @@ ssd_scenario_sample_shards <- function(scenario) {
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   ssd_scenario_data(ssddata::ccme_boron),
 #'   nsim = 2L,
 #'   seed = 42L,
 #'   rescale = c(FALSE, TRUE)
@@ -72,7 +72,7 @@ ssd_scenario_fit_shards <- function(scenario) {
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   ssd_scenario_data(ssddata::ccme_boron),
 #'   nsim = 2L,
 #'   seed = 42L,
 #'   ci = TRUE

@@ -81,21 +81,21 @@ a \code{fit_id} foreign key referencing its parent fit task.
 
 }}
 \examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
+scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 3L, seed = 42L)
 tasks <- ssd_scenario_tasks(scenario)
 tasks
 tasks$hc
 ssd_scenario_tasks(scenario, "hc")
 ssd_scenario_sample_tasks(scenario)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 3L,
   seed = 42L,
   rescale = c(FALSE, TRUE)
 )
 ssd_scenario_fit_tasks(scenario)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 2L,
   seed = 42L,
   ci = TRUE,

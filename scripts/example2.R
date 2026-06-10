@@ -5,7 +5,7 @@
 ## example.R drives the legacy `ssd_run_scenario()` straight to results, this
 ## script walks the three stages the new pipeline separates:
 ##
-##   1. assemble + validate the data        -> ssd_data()
+##   1. assemble + validate the data        -> ssd_scenario_data()
 ##   2. declare the scenario (no RNG, no IO) -> ssd_define_scenario()
 ##   3. expand into per-step task tables     -> ssd_scenario_tasks()
 ##   4. run the baseline in-process loop      -> ssd_run_scenario_baseline()
@@ -18,10 +18,10 @@
 library(ssdsims)
 
 # --- 1. Assemble and validate the datasets --------------------------
-# `ssd_data()` is the single input entry point: it checks each frame for a
+# `ssd_scenario_data()` is the single input entry point: it checks each frame for a
 # numeric `Conc` column and names the collection (here from the argument
 # names). A scenario can also take a bare data frame directly.
-datasets <- ssd_data(
+datasets <- ssd_scenario_data(
   boron = ssddata::ccme_boron,
   cadmium = ssddata::ccme_cadmium
 )

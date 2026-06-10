@@ -12,6 +12,7 @@ ssd_run_scenario <- function(x, ...) UseMethod("ssd_run_scenario")
 #' @describeIn ssd_run_scenario Run scenario using data.frame to sample data
 #' @export
 #' @examples
+#' library(dqrng)
 #' ssd_run_scenario(ssddata::ccme_boron, nsim = 2)
 #'
 ssd_run_scenario.data.frame <- function(
@@ -72,6 +73,7 @@ ssd_run_scenario.data.frame <- function(
 #' @describeIn ssd_run_scenario Run scenario using fitdists object to generate data
 #' @export
 #' @examples
+#' library(dqrng)
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 #' ssd_run_scenario(fit, dist_sim = c("lnorm", "top"), nsim = 3)
 #'
@@ -133,6 +135,7 @@ ssd_run_scenario.fitdists <- function(
 #' @describeIn ssd_run_scenario Run scenario using tmbfit object to generate data
 #' @export
 #' @examples
+#' library(dqrng)
 #' fit <- ssdtools::ssd_fit_dists(ssddata::ccme_boron)
 #' ssd_run_scenario(fit[[1]], nsim = 3)
 #'
@@ -191,6 +194,7 @@ ssd_run_scenario.tmbfit <- function(
 #' @describeIn ssd_run_scenario Run scenario using name of function to generate sequence of random numbers
 #' @export
 #' @examples
+#' library(dqrng)
 #' ssd_run_scenario("rlnorm", nsim = 3)
 #'
 ssd_run_scenario.character <- function(
@@ -251,6 +255,7 @@ ssd_run_scenario.character <- function(
 #' @describeIn ssd_run_scenario Run scenario data using function to generate sequence of random numbers
 #' @export
 #' @examples
+#' library(dqrng)
 #' ssd_run_scenario(ssdtools::ssd_rlnorm, nsim = 3)
 #'
 ssd_run_scenario.function <- function(

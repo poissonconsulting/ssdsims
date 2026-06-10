@@ -30,7 +30,7 @@ enters a task identity (no byte-stability concern from byte-compilation or
 captured environments).
 }
 \examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 42L)
 scenario_min_pmix(scenario, "ssd_min_pmix")
 }
 \seealso{

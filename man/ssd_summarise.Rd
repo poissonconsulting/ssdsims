@@ -53,8 +53,9 @@ section 6.2).
 }
 \examples{
 \donttest{
+library(dqrng)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 1L,
   nrow = 6L,
   seed = 42L,

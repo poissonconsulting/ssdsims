@@ -3,9 +3,10 @@
 # runner). Both source this file, so they run the *same* study and their
 # results can be compared. Edit to taste.
 library(ssdsims)
+library(dqrng)
 
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim = 2L,
   seed = 42L,
   nrow = c(5L, 10L),
