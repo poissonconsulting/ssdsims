@@ -276,11 +276,11 @@ bootstrap), so every result already carries its own `proportion` and
 ```{r}
 #| label: unnest
 hcs <- tidyr::unnest(
-  out$hc[c("dataset", "sim", "nrow", "ci", "hc")],
+  out$hc[c("dataset", "sim", "nrow", "hc")],
   hc,
   names_sep = "_"
 )
-hcs[c("dataset", "sim", "nrow", "ci", "hc_est_method", "hc_proportion", "hc_est")]
+hcs[c("dataset", "sim", "nrow", "hc_est_method", "hc_proportion", "hc_est")]
 ```
 
 ## Next: shards and the targets pipeline
