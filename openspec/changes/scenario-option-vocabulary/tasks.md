@@ -34,18 +34,18 @@
 
 ## 2. Commit 2 — `refactor: rename simulation setting to scenario setting`
 
-- [ ] 2.1 Rename "simulation setting" → "scenario setting" across `R/`
+- [x] 2.1 Rename "simulation setting" → "scenario setting" across `R/`
       roxygen/comments, tests, vignettes, `TARGETS-DESIGN.md`, `ROADMAP.md`,
       `NEWS.md`, and `GLOSSARY.md` (retitle the **simulation setting** entry
       to **scenario setting**; retitle **axis** to **scenario axis
       (cross-join axis)** per design D5)
-- [ ] 2.2 Apply the delta-spec wording to `openspec/specs/` (scenario-setting
+- [x] 2.2 Apply the delta-spec wording to `openspec/specs/` (scenario-setting
       occurrences incl. the `est_method` RENAMED header) and rename the term
       across active changes and `archive/` contents
-- [ ] 2.3 `git mv openspec/changes/archive/2026-06-07-dists-simulation-setting
+- [x] 2.3 `git mv openspec/changes/archive/2026-06-07-dists-simulation-setting
       2026-06-07-dists-scenario-setting` and fix references to the old change
       name in live docs (design D4)
-- [ ] 2.4 Regenerate `man/`, run `air format .`, run `devtools::test()`;
+- [x] 2.4 Regenerate `man/`, run `air format .`, run `devtools::test()`;
       verify `git grep -i "simulation setting"` hits only this change's
       artifacts; commit
 

@@ -63,6 +63,15 @@ Terminology used throughout `ssdsims`.
   at that step, and the upstream partition path it depends on.
   Many tasks bundle into one **shard** (below) when they share
   the step's `partition_by` column values.
+- **scenario option**: The genus term for any declarative parameter of
+  `ssd_define_scenario()` that shapes the *results* — every scenario option
+  is either a **scenario axis** or a **scenario setting** (both below). The
+  word is always qualified ("scenario option", "scenario axis", "scenario
+  setting"); bare "option"/"setting" is never a term (cf. **crew option**,
+  the unrelated `crew`-controller sense). The required positional inputs
+  (`data`, `nsim`, `seed`) and `name` are **not** scenario options, nor are
+  the **layout arguments** `partition_by`/`bundle`/`upload` (they relocate
+  shards, never change a task's result) — those are *arguments*.
 - **scenario axis** (cross-join axis): A scenario option a step *fans out*
   over — one task per combination of the step's axis values. The
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
@@ -190,6 +199,51 @@ Terminology used throughout `ssdsims`.
 - **`nrow`**: The number of rows (species) in each simulated dataset.
 - **`replace`**: Whether the resampling that generates simulated data is
   performed with replacement.
+
+## Hierarchy
+
+The objects nest in four levels, from the whole research endeavour down to one
+unit of computation:
+
+- **simulation study**: The whole endeavour — a research question and the body
+  of runs that answer it (an ADEMP instance, below). A single study **may span
+  several designs**: e.g. parts with different performance-measure
+  schemas (HC5 accuracy vs distribution-selection frequency don't union into one
+  summary table), a small pilot run on a laptop and the confirmatory run on a
+  cluster (different controllers), or re-runs across package versions (different
+  run epochs). This is the package's term in `DESCRIPTION` and the README.
+- **design** (`ssd_design()`): A named set of scenarios run as
+  **one** pipeline — one `tar_make()`, one store, one scheduler, one
+  union-compatible `summary.parquet`. The DoE sense of *design* — the set of
+  conditions to run — generalising a single scenario's one regular grid to a
+  union of grids. *(In flight — introduced by the `scenario-combine` change.)*
+- **scenario** (`ssd_define_scenario()`): One declarative `ssdsims_scenario`
+  (its **scenario options**, `data`, `nsim`, `seed`).
+- **task**: One cell of a step's cross-join — the smallest unit of computation
+  (above).
+
+### Mapping to the simulation-study literature
+
+These terms are the *working* vocabulary; the names below are glosses for
+readers arriving from the design-of-experiments (DoE) and simulation-study
+literature — in particular the ADEMP framework of Morris, White & Crowther
+(2019), *Using simulation studies to evaluate statistical methods*, *Statistics
+in Medicine* 38(11):2074–2102 (doi:10.1002/sim.8086), which frames a study by
+its **A**ims, **D**ata-generating mechanisms, **E**stimands, **M**ethods, and
+**P**erformance measures, and discusses varying factors *fully factorially*.
+"Factor", "level", and "study" are **glosses only** — never working terms in
+this codebase (a DoE *factor varies by definition*, "level" collides with the
+Hive directory levels above, and "study" names the whole endeavour).
+
+| ssdsims (working term) | DoE / Morris et al. gloss |
+|---|---|
+| simulation study | the whole study (ADEMP instance) |
+| design | the experimental design — a union of regular sub-grids |
+| scenario axis | factor (a varied condition) |
+| axis value | level (a value the factor takes) |
+| task | factorial cell — note the literature's *"scenario"* is our **task** |
+| scenario setting | held-constant condition of the protocol |
+| `nsim` | number of repetitions per cell |
 
 ## SSD terms
 
