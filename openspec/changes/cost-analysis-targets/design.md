@@ -2,130 +2,167 @@
 
 The `cost-estimation` capability (`R/cost-estimate.R`) predicts a scenario's
 compute cost from a per-`ci_method` model `time = (base + slope × max(nboot, n0))
-× nrow_factor(nrow) + fixed_addend`. Its coefficients come from
-`ssd_calibrate_cost()`, a synthetic micro-benchmark that resamples a reference
-dataset and times tiny `ssd_hc()` calls — it never touches the real `targets`
-pipeline. A real run, meanwhile, leaves a complete record of ground-truth
-durations: `targets` writes a `seconds` field per target into its meta store,
-readable read-only with `targets::tar_meta()`.
+× nrow_factor(nrow) + fixed_addend`, calibrated by a synthetic micro-benchmark
+(`ssd_calibrate_cost()`) that never touches the real pipeline. A real run leaves
+ground truth behind at two granularities:
 
-The pipeline (`ssd_scenario_targets()`, `R/targets-runner.R`) fans a scenario out
-into one named, `format = "file"` shard target per `partition_by` path cell, via
-`tarchetypes::tar_map(values = <step>_shards, names = <path axes>)`. The minted
-names are `<step>_step_<pathcell>` (e.g. `hc_step_boron_1`). The shard layout —
-which axes a step partitions on and which task rows fall in each cell — is a pure
-function of the scenario (`ssd_scenario_<step>_shards()`,
-`scenario_partition_axes()`, `path_key()`), so a target name can be mapped back
-to its shard, and a shard's `tasks` list-column carries every axis value
-(`ci_method`, `nboot`, `nrow`, `dataset`, `sim`, …) the cost model keys on.
+- the `targets` meta store records wall `seconds` per *target* — i.e. per
+  **shard**, since `ssd_scenario_targets()` mints one named `format = "file"`
+  target per `partition_by` path cell (`<step>_step_<pathcell>`);
+- the *task* granularity does not exist anywhere today — an `hc` shard bundles
+  tasks with different `nboot`/`ci_method`, so shard seconds alone cannot be
+  attributed to the model's axes without inference.
 
-This change reads that store, attributes each shard target's `seconds` to the
-scenario shard (and its task axes) that produced it, and uses the result to
-validate and recalibrate the estimator.
+This change instruments the `fit`/`hc` runners with per-task timings carried
+**in the shard Parquets themselves**, and builds the analysis on top: measured
+per-task durations as the primary source, the targets store as the per-shard
+envelope and as the fallback for pre-timing runs.
+
+Constraints that shaped the design: deliverable-scale scenarios run to the order
+of ~450k shard files, so the shard-file count is the object budget; the
+shard-runner spec pins per-task results byte-identical to the in-memory baseline
+oracle; the invalidation and upload models content-hash the `format = "file"`
+Parquets; the per-scenario manifest is parked (no sidecar provenance mechanism
+exists or should be revived here).
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Read a completed run's per-target durations from the `targets` store and
-  attribute them to scenario shards/axes (`ssd_analyse_cost()`).
-- Recalibrate the existing `ssdsims_cost_calibration` model from an observed run's
-  `hc`-shard durations (`ssd_calibrate_cost_from_run()`), reusing the
-  `cost-estimation` fitting helpers so the object shape is identical.
-- Compare predicted vs observed in one object (`ssd_compare_cost()`).
-- Be strictly read-only: no pipeline execution, no RNG, no writes.
+- Measure per-task cost in-band: `.start`/`.end`/`.host` columns on the `fit`
+  and `hc` shard rows, captured by the step runners and the baseline runner.
+- Read a run's observed cost back and attribute it to scenario axes
+  (`ssd_analyse_cost()`); compare against the prediction (`ssd_compare_cost()`);
+  recalibrate the model from measured durations (`ssd_calibrate_cost_from_run()`).
+- Use the targets store for what only it can say: the per-shard envelope
+  (`target seconds − Σ task durations` = read/write/dispatch overhead, the
+  `partition_by`-tuning number) and the fallback for pre-timing runs.
+- Keep the analysis functions strictly read-only (no pipeline, no RNG, no writes).
 
 **Non-Goals:**
-- Changing the cost model's *form* or any `cost-estimation` requirement (reused
-  as-is).
-- Profiling within a shard (per-task timing inside one target) — `targets` times
-  at the target granularity, so the shard is the finest observable unit; per-task
-  attribution is by even division within a shard where needed, not measured.
-- Live progress monitoring of a running pipeline (this reads a *finished* store).
-- Any new on-disk artifact or manifest.
+- Changing the cost model's *form* or any `cost-estimation` requirement.
+- Sidecar files or any per-shard provenance artifact (no manifest revival): the
+  timing data rides inside `part.parquet`, adding zero files.
+- Timing the `sample` step (cheap; stays inside the model's `fixed_addend` —
+  and keeps the sample layer file-level deterministic).
+- Instrumenting the legacy `ssd_*_sims` family (waits for `migrate-public-api`).
+- Live progress monitoring of a running pipeline.
 
 ## Decisions
 
-### Attribute at the shard (target) granularity, divide to tasks only for hc fits
-`targets` records one `seconds` per target, and a target is a shard (many tasks),
-so the shard is the finest *measured* unit. For the totals (`total`, `longest`)
-this is exact: sum and max over shard `seconds`. For the per-axis breakdown and
-recalibration, an `hc` shard may bundle several tasks (different `nboot` /
-`ci_method`); the cost model attributes per task by the model's own predicted
-share, i.e. split a shard's observed `seconds` across its tasks in proportion to
-the *predicted* per-task seconds, then aggregate by axis. This keeps the
-breakdown keyed identically to `ssd_estimate_cost()` while staying honest that
-the measurement is per shard. *Alternative considered:* divide equally across a
-shard's tasks — rejected because `nboot` varies within a shard and equal division
-would mis-rank the costly cells; proportional-to-prediction is the least-biased
-split given only the shard total.
+### Timing columns in-band, not sidecars
+A per-shard `timings.parquet` sidecar would keep `part.parquet` byte-stable but
+**doubles the object count** (~450k → ~900k files at deliverable scale): inode
+pressure, blob-store object counts, and every glob/listing operation pay for a
+few bytes of timing per task. In-band columns add zero files, survive
+`shard-failure-survival`'s future shorter-shard semantics for free (survivors'
+timings are just surviving rows), and travel with uploads. *Rejected
+alternatives:* sidecar files (file count); the targets store alone (shard
+granularity only, targets-only, prunable, doesn't travel).
 
-### Resolve target → shard via the scenario, not by re-parsing Hive paths
-The target name suffix is produced by `tar_map`'s `names` from the path-axis
-columns; the cleanest inverse is to *regenerate* the expected names from the
-scenario (reuse `shard_cell_names()` / `scenario_partition_axes()` logic) and
-join the store's `name` column to them, rather than string-splitting
-`<step>_step_<...>` heuristically (axis values can themselves contain
-separators). The scenario is the source of truth for the layout; the store
-supplies only `name` and `seconds`. *Alternative considered:* parse the name with
-a regex — rejected as brittle against dataset names with underscores and against
-`partition_by` changes.
+### Byte-identity narrows to result columns — fit/hc only
+The shard-runner contract ("per-task results byte-identical to the baseline
+oracle") is restated over **result columns** joined on `<step>_id`, with
+`.start`/`.end`/`.host` enumerated out (a delta on the `shard-runner` spec).
+`sample` is not timed, so sample shards keep full file-level determinism. The
+real cost is that a `fit`/`hc` shard's **file hash is no longer deterministic
+across recomputes**: a forced recompute with identical results now re-runs
+dependents and re-uploads (see Risks). Traced against the §8 extension stories
+this loss is narrow — inner-axis growth changes result bytes anyway, and the
+code-edit-without-result-change case is what the §8.3 pin
+(`tar_cue(depend = FALSE)`) is designed for.
 
-### Recalibration reuses `calibrate_coefficients()` / `calibrate_nrow_factor()`
-`R/cost-estimate.R` already fits `time ~ pmax(nboot, n0)` per `ci_method` and the
-bounded `nrow_factor` from a `sweep` data frame with columns `nrow`, `ci_method`,
-`nboot`, `time`. `ssd_calibrate_cost_from_run()` builds that same `sweep` frame
-from observed `hc`-shard per-task seconds and calls the existing (unexported)
-helpers, so the run-derived `ssdsims_cost_calibration` is byte-shape-identical to
-a sweep-derived one and drops straight into `ssd_estimate_cost()`. Only the
-provenance differs (a `source = "run"` marker plus the store path and the
-observed run date). *Alternative considered:* a separate fitter — rejected as
-duplication; the model form is shared by contract.
+### `.start`/`.end` as UTC timestamps, `.host` as the CPU description
+Start+end (not duration-only) costs the same storage and is strictly richer: it
+reconstructs the run's actual concurrency (per-worker Gantt, straggler
+detection, whether the longest task gated wall time). Stored as Parquet
+TIMESTAMP (UTC) via duckplyr; duration is derived. `.host` carries the existing
+`cost_cpu_info()` description — the grain the architecture-specific calibration
+pools on (identical cluster nodes pool together; a nodename would fragment
+them). On the `hc` layer the values repeat across a task's `proportion` rows and
+RLE-compress to ~nothing.
 
-### `targets` becomes a hard requirement for these functions, via `check_installed`
-`targets` is in `Suggests`. The new functions `rlang::check_installed("targets")`
-at entry and call `targets::tar_meta()` / `targets::tar_config_get()`; the package
-still installs without `targets`, matching how `ssd_scenario_targets()` already
-guards `targets`/`tarchetypes`. *Alternative considered:* promote `targets` to
-`Imports` — rejected; the rest of the package (scenario, task tables, single-core
-runner) needs no `targets`, and the existing factory already uses the
-`check_installed` pattern.
+### Capture in the runners, not the task primitives
+The `*_data_task_primer()` primitives return domain objects (a `fitdists`, an hc
+tibble); bracketing each task in the step-runner loops (`ssd_run_fit_step()`,
+`ssd_run_hc_step()`, and the baseline's fit/hc loops) keeps the primitives pure
+and the capture in one obvious place per runner. `Sys.time()` is RNG-neutral and
+its microsecond resolution is ample against `fixed_addend`-scale (~0.05 s) tasks.
+
+### Summaries keep the timing columns
+`ssd_summarise()` continues to project out `dists`/`samples` but retains
+`.start`/`.end`/`.host`: tiny scalar columns that make observed hc cost
+queryable from `summary.parquet` alone — no 450k-file glob, and it works after
+upload when shards are remote. `ssd_analyse_cost()` itself reads the shard glob
+(it needs the `fit` layer too, and projects only id + timing columns at the
+DuckDB level, never decoding blobs); the summary is the convenient ad-hoc query
+surface, not the function's input.
+
+### Targets store: envelope and fallback, resolved via the scenario
+With measured task durations in-band, `tar_meta()$seconds` is demoted to what
+only it can say: the per-shard envelope (`target seconds − Σ task durations`),
+and the fallback for runs predating the timing columns (attribution proportional
+to the *predicted* per-task cost, marked as inferred). Target names resolve back
+to shards by **regenerating** the expected `<step>_step_<pathcell>` names from
+the scenario (reusing the `shard_cell_names()`/`scenario_partition_axes()`
+logic) and joining on the store's `name` column — never by string-parsing the
+name (axis values can contain separators). Unmatched targets are reported, not
+silently dropped; `NA`-seconds (errored/unbuilt) targets are excluded from
+totals with the contributing count surfaced.
+
+### Recalibration reuses the existing fitters, host-aware
+`ssd_calibrate_cost_from_run()` builds the same sweep frame
+(`nrow`, `ci_method`, `nboot`, `time`) `ssd_calibrate_cost()` fits — now from
+measured hc task durations — and calls the existing unexported
+`calibrate_coefficients()`/`calibrate_nrow_factor()`, so the run-derived
+`ssdsims_cost_calibration` is shape-identical and drops straight into
+`ssd_estimate_cost()`. The fixed addend comes from measured fit durations (the
+sample remainder stays assumed-negligible). Because the calibration is
+architecture-specific, mixed `.host` values are never pooled silently: the
+caller picks a host or the function aborts listing them. Provenance records the
+run-derived source and date.
 
 ### S3 objects mirror the cost-estimation pattern
 `ssdsims_cost_analysis` and `ssdsims_cost_comparison` follow the existing
-`ssdsims_cost_estimate` shape: a list with `difftime` totals, a `breakdown`
-tibble, and provenance, plus `format`/`print` methods reusing `format_duration()`.
-This keeps the three cost objects visually and structurally consistent.
+`ssdsims_cost_estimate` shape (difftime totals, `breakdown` tibble, provenance)
+with `format`/`print` methods reusing `format_duration()`.
 
 ## Risks / Trade-offs
 
-- [Per-task attribution within a multi-task `hc` shard is inferred, not measured]
-  → Document it: totals/longest are exact at shard granularity; the per-axis
-  split is proportional-to-prediction. A user wanting per-task ground truth can
-  push more axes into `partition_by` so each task is its own shard.
-- [A target name regenerated from the scenario may not match the store if the
-  scenario or `partition_by` changed since the run] → Join on name and report
-  unmatched targets rather than silently dropping or aborting; surface the matched
-  count so a mismatch is visible.
-- [Store schema / `tar_meta()` columns could shift across `targets` versions] →
-  Depend only on the long-stable `name` and `seconds` columns; guard the
-  `check_installed` minimum if a floor is needed.
-- [Errored shards carry `NA` seconds] → Exclude from totals (spec requirement),
-  count contributors, so a partially-failed run still analyses cleanly.
+- [Forced recompute of a fit/hc shard with identical results now cascades:
+  dependents re-run and `upload_<step>` re-ships, because the file hash includes
+  volatile timing columns] → Scoped to fit/hc (sample unaffected); inner-axis
+  growth changed bytes anyway; the §8.3 pin covers code-edit recomputes;
+  documented in the factory's invalidation-model docs. Watch the re-upload arm
+  at scale — egress on a forced refresh is the practical cost.
+- [Schema change on fit/hc shards and summaries breaks existing readers/tests]
+  → Pre-release package (0.0.0.9015, breaking allowed); oracle and
+  atomic-rewrite tests move to result-column comparisons; snapshots update once.
+- [Mixed-host results trees (cluster + local debugging shards) would corrupt a
+  pooled calibration] → `.host` in-band; recalibration refuses silent pooling.
+- [Regenerated target names may not match the store if the scenario or
+  `partition_by` changed since the run] → Join-and-report: unmatched targets are
+  surfaced with counts, never silently dropped, never fatal.
+- [`tar_meta()` schema drift across targets versions] → Depend only on the
+  long-stable `name`/`seconds` columns.
+- [Clock skew across cluster nodes makes cross-node `.start` ordering
+  approximate] → Durations are within-node differences (unaffected); document
+  that cross-node Gantt reconstruction is approximate.
 
 ## Migration Plan
 
-Purely additive: new file `R/cost-analysis.R`, new exports, new vignette, new
-`_pkgdown.yml` entries. No existing function, object, or output changes, so no
-rollback beyond reverting the new file and its exports. `targets` stays a
-`Suggests`; only the new functions require it at call time.
+Additive API plus an output-schema change on the fit/hc layers. Order of
+landing inside the change: (1) runner instrumentation + shard-runner spec delta
++ test migration to result-column identity; (2) analysis functions consuming the
+columns; (3) docs/vignette. Pre-release, no compatibility shim: old results
+trees simply lack the columns and route to the tar_meta fallback. Rollback is
+reverting the runner edits and the new file; no on-disk migration exists either
+way.
 
 ## Open Questions
 
-- Should `ssd_compare_cost()` also emit a per-`ci_method` predicted/observed slope
-  ratio (a finer recalibration diagnostic) or is the total/longest ratio enough
-  for the first cut? Leaning to start with totals/longest and add the per-cell
-  diagnostic if the worked vignette shows it is needed.
-- Where the observed run used real parallelism, the store's `seconds` is per-target
-  wall time; summing gives serial-equivalent total (consistent with
-  `ssd_estimate_cost()`'s serial total). Confirm the vignette frames "total" as
-  serial-equivalent to avoid confusion with elapsed wall time under workers.
+- The hc longest-*task* is now measured, but the longest-*shard* (the actual
+  dispatch unit under crew) comes from the envelope; the analysis print method
+  should probably show both. Decide the exact print layout during implementation.
+- Whether `ssd_compare_cost()` should also emit per-`ci_method` predicted/observed
+  slope ratios (a finer diagnostic) — start with totals/longest and let the
+  vignette's worked example decide.

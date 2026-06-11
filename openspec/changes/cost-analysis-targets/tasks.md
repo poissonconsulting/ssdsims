@@ -1,72 +1,92 @@
-## 1. Target-name → shard resolver
+## 1. Timing instrumentation (fit/hc runners + baseline)
 
-- [ ] 1.1 Add an internal resolver in `R/cost-analysis.R` that regenerates the
-  expected `<step>_step_<pathcell>` shard target names for a scenario (reusing
-  `scenario_partition_axes()` / the `shard_cell_names()` naming logic) and
-  returns a tibble mapping each shard target name to its step and the shard's
-  `tasks` rows.
-- [ ] 1.2 Join the store's `tar_meta()` `name`/`seconds` rows to the regenerated
-  names; exclude non-shard targets (`summary`, `upload_<step>`) from per-task
-  attribution; report the count of matched shard targets and surface unmatched
-  ones rather than aborting.
-- [ ] 1.3 Unit-test the resolver against `ssd_scenario_<step>_shards()` output for
-  a small scenario (names match the shards; non-shard names excluded).
+- [ ] 1.1 Bracket each task body in `ssd_run_fit_step()` and `ssd_run_hc_step()`
+  with `Sys.time()` and write `.start`/`.end` (UTC, Parquet TIMESTAMP) and
+  `.host` (`cost_cpu_info()`) columns into the shard rows; on hc the values
+  repeat across a task's `proportion` rows. `sample` runner untouched.
+- [ ] 1.2 Add the same columns to `ssd_run_scenario_baseline()`'s in-memory
+  `fit`/`hc` tibbles (legacy `ssd_*_sims` untouched).
+- [ ] 1.3 Keep `.start`/`.end`/`.host` in both `ssd_summarise()` outputs while
+  still projecting out `dists`/`samples` from the compact summary.
+- [ ] 1.4 Migrate the byte-identity oracle, re-layout, and atomic-rewrite tests
+  to result-column comparisons (timing columns excluded, joined on `<step>_id`);
+  add a test that `sample` shards stay file-level byte-identical and that
+  fit/hc result columns are unchanged by instrumentation; update shard-schema
+  snapshots.
+- [ ] 1.5 Document the invalidation consequence in `ssd_scenario_targets()`'s
+  roxygen (fit/hc file hashes are volatile across recomputes; the §8.3 pin
+  covers code-edit recomputes).
 
-## 2. `ssd_analyse_cost()`
+## 2. Target-name → shard resolver (tar_meta layer)
 
-- [ ] 2.1 Implement `ssd_analyse_cost(scenario, store = targets::tar_config_get("store"))`:
-  `rlang::check_installed("targets")`, read the store, attribute shard `seconds`,
-  return an `ssdsims_cost_analysis` object (observed total, observed longest
-  shard, per-axis `ci_method` × `nboot` breakdown).
-- [ ] 2.2 Attribute a multi-task `hc` shard's seconds to its tasks proportional to
-  the calibrated predicted per-task seconds (design "Decisions"); aggregate the
-  breakdown keyed identically to `ssd_estimate_cost()`.
-- [ ] 2.3 Exclude `NA`/missing-`seconds` (errored/unbuilt) targets from totals and
-  report the contributing-target count.
-- [ ] 2.4 Add `format.ssdsims_cost_analysis` / `print.ssdsims_cost_analysis`
-  reusing `format_duration()`, mirroring the `ssdsims_cost_estimate` methods.
+- [ ] 2.1 Add an internal resolver in `R/cost-analysis.R` that regenerates the
+  expected `<step>_step_<pathcell>` names from the scenario (reusing
+  `shard_cell_names()`/`scenario_partition_axes()` logic) and joins them to
+  `tar_meta()`'s `name`/`seconds`; exclude `summary`/`upload_<step>`; report
+  matched/unmatched counts; exclude `NA`-seconds targets from totals.
+- [ ] 2.2 Unit-test the resolver against `ssd_scenario_<step>_shards()` for a
+  small scenario (names match; non-shard names excluded; unmatched reported).
 
-## 3. `ssd_calibrate_cost_from_run()`
+## 3. `ssd_analyse_cost()`
 
-- [ ] 3.1 Implement `ssd_calibrate_cost_from_run(scenario, store = ...)`: build the
-  `sweep` frame (`nrow`, `ci_method`, `nboot`, `time`) from observed `hc`-shard
-  per-task seconds and call the existing `calibrate_coefficients()` /
-  `calibrate_nrow_factor()` to return an `ssdsims_cost_calibration`.
-- [ ] 3.2 Set provenance to mark the calibration run-derived (a `source = "run"`
-  marker, the store path, the observed-run date) so it is distinguishable from a
-  `ssd_calibrate_cost()` sweep result; confirm it drops into `ssd_estimate_cost()`.
+- [ ] 3.1 Implement `ssd_analyse_cost()`: read the fit/hc shard glob projecting
+  only id + timing columns at the DuckDB level (never decoding blobs), compute
+  measured per-task durations, and return an `ssdsims_cost_analysis` (observed
+  total, observed longest task, `ci_method` × `nboot` breakdown keyed like
+  `ssd_estimate_cost()`'s); accept a baseline result as input too.
+- [ ] 3.2 When a `targets` store is supplied, add the per-shard envelope
+  (`target seconds − Σ task durations`) via the task-2 resolver; for pre-timing
+  shards fall back to proportional-to-prediction attribution and mark the
+  result inferred rather than measured.
+- [ ] 3.3 Add `format`/`print` methods reusing `format_duration()`; show
+  measured vs inferred provenance and (when available) longest task vs longest
+  shard envelope.
 
-## 4. `ssd_compare_cost()`
+## 4. `ssd_calibrate_cost_from_run()`
 
-- [ ] 4.1 Implement `ssd_compare_cost(scenario, store = ..., calibration = ssd_cost_calibration())`
-  placing `ssd_estimate_cost()` beside `ssd_analyse_cost()`; return an
-  `ssdsims_cost_comparison` reporting predicted/observed total and longest plus
-  the predicted/observed ratios.
-- [ ] 4.2 Add `format.ssdsims_cost_comparison` / `print.ssdsims_cost_comparison`.
+- [ ] 4.1 Build the sweep frame (`nrow`, `ci_method`, `nboot`, `time`) from
+  measured hc task durations and derive the fixed addend from measured fit
+  durations; fit via the existing `calibrate_coefficients()` /
+  `calibrate_nrow_factor()`.
+- [ ] 4.2 Make it host-aware: never silently pool distinct `.host` values —
+  explicit host argument or abort listing the hosts found.
+- [ ] 4.3 Set run-derived provenance (source, observed-run date); test the
+  result drops into `ssd_estimate_cost()` unchanged.
 
-## 5. Read-only guarantees & tests
+## 5. `ssd_compare_cost()`
 
-- [ ] 5.1 Test that `ssd_analyse_cost()` / `ssd_compare_cost()` leave
-  `.Random.seed` unchanged and write no files (a `withr::with_tempdir` + seed
-  snapshot assertion, mirroring the cost-estimation read-only tests).
-- [ ] 5.2 Add a deterministic store fixture (a tiny scenario run, or a synthesised
-  `tar_meta()`-shaped tibble) under `tests/testthat/` so the analysis assertions
-  and snapshots do not require a live cluster run.
-- [ ] 5.3 Snapshot the `print()` output of the three new objects.
+- [ ] 5.1 Implement `ssd_compare_cost()` placing `ssd_estimate_cost()` beside
+  `ssd_analyse_cost()`; return an `ssdsims_cost_comparison` with
+  predicted/observed totals, longest, and their ratios.
+- [ ] 5.2 Add `format`/`print` methods.
 
-## 6. Exports, docs, vignette
+## 6. Read-only guarantees & tests
 
-- [ ] 6.1 Roxygen-document the new functions; run `devtools::document()` so
-  `NAMESPACE` gains the exports and S3 methods.
-- [ ] 6.2 Add the new functions to `_pkgdown.yml`'s cost reference section.
-- [ ] 6.3 Add a `cost-analysis` vignette demonstrating the analyse → compare →
-  recalibrate loop on a small worked run; frame "total" as serial-equivalent.
-- [ ] 6.4 If the model's *form* discovery needs proof-of-work, put scripts under
-  `openspec/changes/cost-analysis-targets/exploration/` (never the repo top level).
+- [ ] 6.1 Test that `ssd_analyse_cost()` / `ssd_compare_cost()` leave
+  `.Random.seed` unchanged and write no files.
+- [ ] 6.2 Build a deterministic fixture: a tiny scenario run through
+  `ssd_run_scenario_shards()` (timing columns in-band) plus a synthesised
+  `tar_meta()`-shaped tibble for the envelope/fallback paths — no live cluster
+  needed.
+- [ ] 6.3 Snapshot the `print()` output of the new objects (use the
+  deterministic `test_cost_calibration()` fixture pattern).
 
-## 7. Finalise
+## 7. Exports, docs, vignette
 
-- [ ] 7.1 Format with `air`; run `devtools::check()` (or `R CMD check`) clean.
-- [ ] 7.2 `openspec validate cost-analysis-targets --strict` passes.
-- [ ] 7.3 Update `ROADMAP.md`: move `[cost-analysis-targets]` to its in-flight
-  state and add a `NEWS.md` bullet if appropriate.
+- [ ] 7.1 Roxygen-document the new functions; `devtools::document()` for
+  `NAMESPACE` exports and S3 methods.
+- [ ] 7.2 Add the new functions to `_pkgdown.yml`'s cost reference section.
+- [ ] 7.3 Add the `cost-analysis` vignette demonstrating analyse → compare →
+  recalibrate on a small worked run; frame the observed total as
+  serial-equivalent compute, distinct from wall time under workers.
+- [ ] 7.4 Any proof-of-work scripts go under
+  `openspec/changes/cost-analysis-targets/exploration/` (never the repo top
+  level).
+
+## 8. Finalise
+
+- [ ] 8.1 Format with `air`; `devtools::check()` clean.
+- [ ] 8.2 `openspec validate cost-analysis-targets --strict` passes.
+- [ ] 8.3 Update `ROADMAP.md` (in-flight marker) and `TARGETS-DESIGN.md` /
+  `GLOSSARY.md` if the timing columns warrant a mention in the shard contract
+  prose.
