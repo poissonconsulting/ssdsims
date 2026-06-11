@@ -234,6 +234,7 @@ NULL
 #' ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
 ssd_run_sample_step <- function(tasks, scenario, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  local_duckplyr_config()
   local_dqrng_backend()
   draws <- vector("list", nrow(tasks))
   for (i in seq_len(nrow(tasks))) {
@@ -292,6 +293,7 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 #' }
 ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  local_duckplyr_config()
   local_dqrng_backend()
   # Read each distinct parent `sample` shard once, then isolate each task's draw
   # in memory by `sample_id` (tasks in this shard may span several sample shards).
@@ -370,6 +372,7 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #' }
 ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  local_duckplyr_config()
   local_dqrng_backend()
   # Read each distinct parent `fit` shard once, then isolate each task's fit in
   # memory by `fit_id` (an hc shard typically spans several fit shards).
@@ -434,6 +437,25 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' populated only when the scenario set `samples = TRUE`, so the full summary is
 #' the analysis-ready estimates plus the per-row draws.
 #'
+#' @section Memory and the full summary's row groups:
+#' The full summary is written in **byte-budgeted Parquet row groups**
+#' (`samples_row_group_bytes`, default `"100MB"`), so its memory requirement
+#' follows the per-group budget - about five times the budget - rather than
+#' the union's total row count, and the row-group row count adapts to the
+#' `samples` cell size (large groups for small draws, small groups for large
+#' ones). The engine accepts the byte budget because the pipeline
+#' configuration scope holds `preserve_insertion_order = false` (restored
+#' when `ssd_summarise()` returns); it is refused while preserving order, and
+#' only the global setting counts - the per-copy `PRESERVE_ORDER` option
+#' cannot substitute. The trade: the full summary's **row order is not
+#' contractual** - re-summarising the same shards yields the same rows
+#' (address them by `hc_id`/`fit_id`), but their order and the file's bytes
+#' may differ. Under the default single thread, writes were observed in input
+#' order and byte-identical across runs regardless. Evidence: the
+#' `duckplyr-config` change's `exploration/experiment-summary-union.R`,
+#' `exploration/experiment-rgbytes.R`, and
+#' `exploration/experiment-preserve-order-copy-option.R`.
+#'
 #' @param dir_sample The `sample` results root.
 #' @param dir_fit The `fit` results root.
 #' @param dir_hc The `hc` results root.
@@ -442,6 +464,10 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' @param path_with_samples Optional output Parquet path for a full summary that
 #'   retains the `dists`/`samples` list-columns. `NULL` (the default) writes only
 #'   the compact summary.
+#' @param samples_row_group_bytes The Parquet row-group byte budget for the
+#'   `path_with_samples` write (a string DuckDB's `ROW_GROUP_SIZE_BYTES`
+#'   accepts, default `"100MB"`); see the *Memory and the full summary's row
+#'   groups* section. Ignored when `path_with_samples` is `NULL`.
 #' @return The summary Parquet path(s) (the `format = "file"` contract): `path`
 #'   when `path_with_samples` is `NULL`, otherwise `c(path, path_with_samples)`.
 #' @details
@@ -475,8 +501,11 @@ ssd_summarise <- function(
   dir_fit,
   dir_hc,
   path,
-  path_with_samples = NULL
+  path_with_samples = NULL,
+  samples_row_group_bytes = "100MB"
 ) {
+  chk::chk_string(samples_row_group_bytes)
+  local_duckplyr_config()
   glob <- file.path(dir_hc, "**", "part.parquet")
   hc_shards <- duckplyr::read_parquet_duckdb(
     glob,
@@ -496,9 +525,18 @@ ssd_summarise <- function(
   # The full summary retains every hc column (`dists`/`samples` included). The
   # same lazy read is written straight back out, so the potentially-large draws
   # never materialise in R either - the same no-R guarantee the compact
-  # projection above relies on.
+  # projection above relies on. Byte-budgeted row groups keep the writer's
+  # memory flat in the union's row count; the engine accepts the byte budget
+  # because `local_duckplyr_config()` (above) relaxed `preserve_insertion_order`
+  # for this scope - it is refused while preserving order, and only the GLOBAL
+  # setting counts (the per-copy `PRESERVE_ORDER` option cannot substitute; the
+  # `duckplyr-config` change's `exploration/` has the probe).
   dir.create(dirname(path_with_samples), recursive = TRUE, showWarnings = FALSE)
-  duckplyr::compute_parquet(hc_shards, path_with_samples)
+  duckplyr::compute_parquet(
+    hc_shards,
+    path_with_samples,
+    options = list(row_group_size_bytes = samples_row_group_bytes)
+  )
   c(path, path_with_samples)
 }
 
