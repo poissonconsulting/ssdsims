@@ -13,7 +13,7 @@
 
 ## 3. Scenario constructor and storage
 
-- [x] 3.1 In `R/scenario.R`, move `est_method` out of the hc-axis block into the contiguous simulation-settings block, landing it after `dists` (which `dists-simulation-setting` places first): combined block order `dists`, `est_method`, `proportion`, `ci`, `samples`. Keep validation (character, non-`NA`, unique, subset of `ssdtools::ssd_est_methods()`, length ≥ 1).
+- [x] 3.1 In `R/scenario.R`, move `est_method` out of the hc-axis block into the contiguous scenario-settings block, landing it after `dists` (which `dists-scenario-setting` places first): combined block order `dists`, `est_method`, `proportion`, `ci`, `samples`. Keep validation (character, non-`NA`, unique, subset of `ssdtools::ssd_est_methods()`, length ≥ 1).
 - [x] 3.2 Store `est_method` at `scenario$hc$est_method` as a setting and render it with the hc settings in `print.ssdsims_scenario()` (axes `nboot`/`ci_method`/`parametric` first, then `est_method`/`proportion`/`ci`/`samples`).
 
 ## 4. Correctness gate
@@ -23,7 +23,7 @@
 
 ## 5. Call sites, docs, snapshots
 
-- [x] 5.1 Sweep call sites (examples in `@examples`, `tests/`, `scripts/`, `vignettes/`, `inst/targets-templates/`) to pass `est_method` in the new signature position. This is the **same** sweep `dists-simulation-setting` owns — one pass reorders both moved formals to the combined end-state, so only re-check `est_method` here if the dists sweep has already landed.
+- [x] 5.1 Sweep call sites (examples in `@examples`, `tests/`, `scripts/`, `vignettes/`, `inst/targets-templates/`) to pass `est_method` in the new signature position. This is the **same** sweep `dists-scenario-setting` owns — one pass reorders both moved formals to the combined end-state, so only re-check `est_method` here if the dists sweep has already landed.
 - [x] 5.2 Update roxygen docs and run `devtools::document()`; update `GLOSSARY.md`/`TARGETS-DESIGN.md` references that list `est_method` as an hc axis.
 - [x] 5.3 Re-record affected snapshots (printed scenarios, hc task-count assertions).
 - [x] 5.4 Run `air format .`, `devtools::test()`, and `devtools::check()`; verify the est_method axis is ~3× cheaper on a small `ci = TRUE` scenario.

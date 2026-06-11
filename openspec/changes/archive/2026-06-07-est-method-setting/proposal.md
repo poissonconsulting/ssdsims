@@ -20,7 +20,7 @@ motivating scenario (10 sims × 4 `nrow` × 7 `ci_method` × 4 `nboot`,
 the axis change (see Impact) and change numerically while staying statistically
 equivalent.
 
-This is the same re-classification `dists-simulation-setting` applied to `dists`,
+This is the same re-classification `dists-scenario-setting` applied to `dists`,
 but unlike that one (a label-only fix — `dists` was never an axis in code) this
 change **removes a real fan-out**: `est_method` is computed-together, like
 `proportion` already is (one `ssd_hc()` call serves a whole `proportion` vector,
@@ -28,7 +28,7 @@ and `proportion` is absent from `task_axes("hc")`).
 
 ## What Changes
 
-- **Re-classify `est_method` as an hc-level simulation setting**, not a
+- **Re-classify `est_method` as an hc-level scenario setting**, not a
   cross-join axis. Like `proportion`, it becomes a within-result dimension: one
   bootstrap per `(dataset, sim, replace, nrow, fit-grid, nboot, ci_method,
   parametric)` cell yields **all** requested `est_method` summaries.
@@ -43,7 +43,7 @@ and `proportion` is absent from `task_axes("hc")`).
   `ssd_hc()` once per method. Result rows remain one-per-`est_method` (it stays a
   column on each `hc` tibble).
 - **Move `est_method` in the `ssd_define_scenario()` signature** out of the hc
-  grid block into the contiguous simulation-settings block, beside
+  grid block into the contiguous scenario-settings block, beside
   `proportion`/`ci`/`samples`; store it under `scenario$hc` as a setting, not an
   axis. `print.ssdsims_scenario()` renders it among the hc settings.
 - **Update `partition_by`/`bundle` vocabulary** so `est_method` is no longer an
@@ -73,7 +73,7 @@ post-hoc against the differently-seeded old pipeline.
 - `task-lists`: the hc task table no longer fans out over `est_method`
   (`task_axes("hc")` drops it); the `ci = TRUE` fan-out is `nboot × ci_method ×
   parametric`, and `ci = FALSE` yields one hc row per fit task.
-- `scenario-definition`: `est_method` is an hc-level **simulation setting** in
+- `scenario-definition`: `est_method` is an hc-level **scenario setting** in
   the role-grouping requirement and the signature's settings block, stored under
   `scenario$hc`.
 

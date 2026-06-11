@@ -81,7 +81,7 @@
 
 ## Refactoring
 
-- Reclassify `est_method` and `dists` as hc/fit simulation settings (#127).
+- Reclassify `est_method` and `dists` as hc/fit scenario settings (#127).
 
 ## Testing
 
@@ -118,7 +118,7 @@
 
 ## Documentation
 
-- Reclassify `dists` as fit-level simulation setting (#119).
+- Reclassify `dists` as fit-level scenario setting (#119).
 
 ### roadmap
 

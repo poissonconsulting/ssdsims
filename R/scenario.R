@@ -46,7 +46,7 @@
 #'
 #' # `dists` and `est_method`
 #'
-#' `dists` and `est_method` are **simulation settings**, not cross-join axes -
+#' `dists` and `est_method` are **scenario settings**, not cross-join axes -
 #' they are absent from `task_axes("fit")`/`task_axes("hc")`, so they never
 #' multiply tasks or enter the per-task RNG primer. `dists` is the *fit*-level
 #' setting: the whole character vector is handed to one `ssd_fit_dists()` call
@@ -97,8 +97,8 @@
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
 #'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`,
-#'   `parametric` (`ci` and `est_method` are hc simulation settings, not axes;
-#'   `dists` is the fit-level simulation setting).
+#'   `parametric` (`ci` and `est_method` are hc scenario settings, not axes;
+#'   `dists` is the fit-level scenario setting).
 #'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
@@ -786,7 +786,7 @@ print.ssdsims_scenario <- function(x, ...) {
 }
 
 #' Print a step's argument grid in stored (signature) order, flagging the
-#' simulation settings (the scenario options absent from `task_axes(step)`)
+#' scenario settings (the scenario options absent from `task_axes(step)`)
 #' with `(setting)`. Stored order mirrors the signature grouping: the
 #' non-`ci`-gated settings (`dists`, `est_method`, `proportion`) come first,
 #' then `ci`, then the options it gates (`nboot`/`ci_method`/`parametric`,

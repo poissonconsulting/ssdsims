@@ -2,33 +2,33 @@
 
 ## 1. Commit 1 — `refactor: rename knob to scenario option`
 
-- [ ] 1.1 Rename "knob" → "scenario option" (with anaphora per design D2, and
+- [x] 1.1 Rename "knob" → "scenario option" (with anaphora per design D2, and
       "bootstrap-only knobs" → "bootstrap-only scenario options" /
       "bootstrap axes" in fan-out contexts) across `R/` roxygen and comments
       (`scenario.R`, `task-lists.R`, `manifest.R`, `targets-runner.R`),
       reviewing each hunk for grammar — no blind `sed`
-- [ ] 1.2 Change the `validate_scenario_ci()` error to the design D3 wording
+- [x] 1.2 Change the `validate_scenario_ci()` error to the design D3 wording
       ("Bootstrap-only scenario option ('nboot') cannot be set when
       `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the
       option."), update `tests/testthat/test-scenario.R` expectations and
       regenerate `_snaps/scenario.md`
-- [ ] 1.3 Rename "knob" in test names/comments (`test-scenario.R`,
+- [x] 1.3 Rename "knob" in test names/comments (`test-scenario.R`,
       `test-task-lists.R`, `test-task-shards.R`, `test-manifest.R`) and the
       runtime fixture `knobs.rds`/`knobs` → `opts.rds`/`opts` in
       `fixtures/slice-invalidation-targets.R` + `test-task-shards.R` (design
       D4)
-- [ ] 1.4 Rename the three "crew configuration knob" uses to "crew option"
+- [x] 1.4 Rename the three "crew configuration knob" uses to "crew option"
       (`inst/targets-templates/cluster/controller.R`, its `README.md`, and
       the archived `cluster-pipeline` design)
-- [ ] 1.5 Rename "knob" across docs: `GLOSSARY.md` (entry prose only — the
+- [x] 1.5 Rename "knob" across docs: `GLOSSARY.md` (entry prose only — the
       genus entry itself lands in 3.2), `TARGETS-DESIGN.md`, `AGENTS.md`,
       `ROADMAP.md`, vignettes, `scripts/example2.R`, `NEWS.md`, and
       `openspec/specs/` main specs (apply the delta-spec wording, including
       the two RENAMED requirement headers and the Purpose line of
       `scenario-definition`)
-- [ ] 1.6 Rename "knob" in `openspec/changes/` active changes and `archive/`
+- [x] 1.6 Rename "knob" in `openspec/changes/` active changes and `archive/`
       (all files; old term remains only in this change's artifacts)
-- [ ] 1.7 Regenerate `man/` (`devtools::document()`), run `air format .`,
+- [x] 1.7 Regenerate `man/` (`devtools::document()`), run `air format .`,
       run `devtools::test()`; verify `git grep -i knob` hits only this
       change's artifacts; commit
 

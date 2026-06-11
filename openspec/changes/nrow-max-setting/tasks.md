@@ -1,8 +1,8 @@
 ## 1. `nrow_max` setting in the constructor (`R/scenario.R`, `R/params.R`)
 
-- [ ] 1.1 Add `nrow_max` to `ssd_define_scenario()` in the contiguous simulation-settings block (after `parametric`, with `proportion`/`ci`/`samples`); `chk::chk_whole_number(nrow_max)`, default `1000L`; store it on the scenario (decide top-level `scenario$nrow_max` vs `scenario$sample$nrow_max` — see design Open Questions).
+- [ ] 1.1 Add `nrow_max` to `ssd_define_scenario()` in the contiguous scenario-settings block (after `parametric`, with `proportion`/`ci`/`samples`); `chk::chk_whole_number(nrow_max)`, default `1000L`; store it on the scenario (decide top-level `scenario$nrow_max` vs `scenario$sample$nrow_max` — see design Open Questions).
 - [ ] 1.2 Move/extend `nrow` validation to check each `nrow` against the effective draw size: `nrow <= nrow(data)` for `replace = FALSE`, `nrow <= nrow_max` for `replace = TRUE`; abort in the user-facing frame (`call = environment()`), keeping the existing `[5, 1000]` range check.
-- [ ] 1.3 Add the `@param nrow_max` roxygen in `R/params.R`; have `print.ssdsims_scenario()` render `nrow_max` among the simulation settings.
+- [ ] 1.3 Add the `@param nrow_max` roxygen in `R/params.R`; have `print.ssdsims_scenario()` render `nrow_max` among the scenario settings.
 
 ## 2. Drop the carried columns from the task tables (`R/task-lists.R`)
 
@@ -20,7 +20,7 @@
 ## 4. Docs and design
 
 - [ ] 4.1 Update `TARGETS-DESIGN.md` §5 prose (the `n_max = max(scenario$nrow)` derivation → the fixed `nrow_max` draw and the retired re-draw churn). (`ROADMAP.md` entry already added at propose.)
-- [ ] 4.2 `GLOSSARY.md`: rework the `n_max` carried-column entry (it is no longer a row column) and add a `nrow_max` entry (a simulation setting; the fixed draw size).
+- [ ] 4.2 `GLOSSARY.md`: rework the `n_max` carried-column entry (it is no longer a row column) and add a `nrow_max` entry (a scenario setting; the fixed draw size).
 - [ ] 4.3 `devtools::document()`; regenerate `man/`; sweep example scripts / `inst/targets-templates/` for any reliance on the derived draw size, and add `nrow_max` where illustrative.
 
 ## 5. Tests and snapshots

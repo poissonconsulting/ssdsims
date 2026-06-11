@@ -360,7 +360,7 @@ task_axes <- function(step) {
     "range_shape1",
     "range_shape2"
   )
-  # `ci` and `est_method` are hc simulation settings, not axes. `ci` is a scalar
+  # `ci` and `est_method` are hc scenario settings, not axes. `ci` is a scalar
   # flag (the point estimate is invariant to it) and `est_method` is summarised
   # within a task from its single bootstrap sample set (the CI is
   # est_method-invariant, the point `est` analytical), so neither carries
@@ -486,7 +486,7 @@ hc_data_task <- function(
 
 # Summarise every requested `est_method` from a SINGLE bootstrap per hc cell.
 #
-# `est_method` is an hc simulation setting, not a bootstrap axis: the bootstrap
+# `est_method` is an hc scenario setting, not a bootstrap axis: the bootstrap
 # CI (`se`/`lcl`/`ucl`, and any retained `samples`) is est_method-invariant and
 # each method's point `est` is analytical and seed-independent (verified in the
 # `est-method-setting` change's `exploration/est-method-invariance.R`). So when

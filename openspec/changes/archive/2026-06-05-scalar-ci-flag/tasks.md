@@ -3,9 +3,9 @@
 - [x] 1.1 Replace the `ci` validation (`chk_logical` + `chk_not_any_na` + `chk_unique` + `chk_length(ci, upper = 2L)`) with `chk::chk_flag(ci)`; keep the default `ci = FALSE`
 - [x] 1.2 Simplify the bootstrap-option guard from `if (length(ci) == 1L && isFALSE(ci))` to `if (isFALSE(ci))`, and change the message escape hatch from "Set `ci = c(FALSE, TRUE)` to enable bootstrap" to "Set `ci = TRUE` to enable bootstrap"
 - [x] 1.3 Update the `ssd_define_scenario()` roxygen: the *"# `ci = FALSE`"* section (scalar flag; estimate invariant; `ci = TRUE` superset; `ci = FALSE` cheap/bootstrap-free) **and** the `@param partition_by` line that enumerates the hc vocabulary (`hc` adds `ci`, `nboot`, …) — drop `ci` there
-- [x] 1.4 Reorder the `ssd_define_scenario()` signature by role so the **simulation settings** are contiguous: keep data/`seed`/`nsim`/`name` first, then the cross-join axes (`nrow`, `replace`, `dists`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`, `nboot`, `est_method`, `ci_method`, `parametric`), then the simulation settings (`proportion`, `ci`, `samples`), then `partition_by`, `bundle`, `upload`. Concretely, move `proportion = 0.05` and `ci = FALSE` down from inside the hc axes to sit before `samples = FALSE`
+- [x] 1.4 Reorder the `ssd_define_scenario()` signature by role so the **scenario settings** are contiguous: keep data/`seed`/`nsim`/`name` first, then the cross-join axes (`nrow`, `replace`, `dists`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`, `nboot`, `est_method`, `ci_method`, `parametric`), then the scenario settings (`proportion`, `ci`, `samples`), then `partition_by`, `bundle`, `upload`. Concretely, move `proportion = 0.05` and `ci = FALSE` down from inside the hc axes to sit before `samples = FALSE`
 - [x] 1.5 Mirror the role order in the stored `hc` list (`scenario$hc <- list(nboot, est_method, ci_method, parametric, proportion, ci, samples)`) and reorder the roxygen `@param`/`@inheritParams` so the generated `man/` lists `proportion`/`ci`/`samples` together
-- [x] 1.6 Confirm `print.ssdsims_scenario()` renders the hc scenario options in the new role order — hc axes first, then the simulation settings `proportion`/`ci`/`samples` (covered by the print snapshot in §9)
+- [x] 1.6 Confirm `print.ssdsims_scenario()` renders the hc scenario options in the new role order — hc axes first, then the scenario settings `proportion`/`ci`/`samples` (covered by the print snapshot in §9)
 
 ## 2. Task axes and hc grid (`R/task-lists.R`)
 
@@ -38,7 +38,7 @@
 
 - [x] 7.1 `R/params.R`: tighten the `@param ci` text to "scalar flag … (not a cross-join axis; the point estimate is identical whether `TRUE`/`FALSE`)"
 - [x] 7.2 Run `devtools::document()` so `man/ssd_define_scenario.Rd`, `man/ssd_hc_sims.Rd`, `man/ssd_scenario_hc_shards.Rd`, and the partition vocabulary docs regenerate
-- [x] 7.3 (Done in this change) `TARGETS-DESIGN.md` §1.2 rewritten to "`ci` is a scalar flag (not an axis)"; §1/§5 sidebar, hash section, hc step-table row, and pitfall table updated; §12 Cleanup bullet + status snapshot added. `GLOSSARY.md` gains the **simulation setting** term and its `axis`/`ci` entries updated to point at it. Verify these read correctly against the final code
+- [x] 7.3 (Done in this change) `TARGETS-DESIGN.md` §1.2 rewritten to "`ci` is a scalar flag (not an axis)"; §1/§5 sidebar, hash section, hc step-table row, and pitfall table updated; §12 Cleanup bullet + status snapshot added. `GLOSSARY.md` gains the **scenario setting** term and its `axis`/`ci` entries updated to point at it. Verify these read correctly against the final code
 
 ## 8. Templates and example scripts
 

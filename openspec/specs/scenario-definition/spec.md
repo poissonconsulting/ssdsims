@@ -107,7 +107,7 @@ The package SHALL define, for each step, the inner (Parquet-column) axes as that
 
 #### Scenario: Per-step vocabularies match #80's task_axes()
 - **WHEN** the axis vocabulary is queried per step
-- **THEN** it SHALL equal `task_axes(step)`: `sample` = `dataset`, `sim`, `replace`; `fit` adds `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`, `parametric` (`ci` and `est_method` are hc simulation settings, not axes — see *"ci is a scalar flag selecting bootstrap confidence intervals"* and *"est_method is an hc simulation setting computed from shared samples"*)
+- **THEN** it SHALL equal `task_axes(step)`: `sample` = `dataset`, `sim`, `replace`; `fit` adds `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`, `parametric` (`ci` and `est_method` are hc scenario settings, not axes — see *"ci is a scalar flag selecting bootstrap confidence intervals"* and *"est_method is an hc scenario setting computed from shared samples"*)
 
 #### Scenario: Steps partition independently — no cross-step constraint
 - **WHEN** a step's path axes are a valid subset of its own vocabulary but differ arbitrarily from its parent step's path axes (e.g. finer or coarser on a shared axis)
@@ -183,8 +183,8 @@ The package SHALL expose `ssd_data()` as the single entry point that assembles o
 - **WHEN** the `hc` axis vocabulary (`task_axes("hc")`) is queried
 - **THEN** it SHALL NOT contain `"ci"`, so `ci` is neither a path axis nor an inner axis and does not change the per-task primer; it is applied uniformly to every hc task
 
-### Requirement: est_method is an hc simulation setting computed from shared samples
-`ssd_define_scenario()` SHALL accept `est_method` as an hc-level **simulation
+### Requirement: est_method is an hc scenario setting computed from shared samples
+`ssd_define_scenario()` SHALL accept `est_method` as an hc-level **scenario
 setting** (default `"multi"`), validated as a non-`NA`, unique character vector
 that is a subset of `ssdtools::ssd_est_methods()`, stored at
 `scenario$hc$est_method`, and passed to the hc step. `est_method` SHALL NOT be a
@@ -196,7 +196,7 @@ multiply hc tasks; instead every requested method SHALL be summarised from the
 that task's `hc` tibble). The role mirrors `proportion`: a within-result
 dimension consumed inside one bootstrap, not a task multiplier.
 
-#### Scenario: est_method defaults to multi and is stored as a setting
+#### Scenario: est_method defaults to multi and is stored as a scenario setting
 - **WHEN** `ssd_define_scenario()` is called without `est_method`
 - **THEN** `scenario$hc$est_method` SHALL be `"multi"`, and `task_axes("hc")` SHALL NOT contain `"est_method"`
 
@@ -209,13 +209,13 @@ dimension consumed inside one bootstrap, not a task multiplier.
 - **THEN** the constructor SHALL abort, because `"est_method"` is not in the `hc` step's axis vocabulary
 
 ### Requirement: Constructor arguments are grouped by role
-`ssd_define_scenario()` SHALL order its arguments by role: (1) the required data/`seed`/`nsim` inputs and the dataset `name`; (2) the **structural cross-join axes** (`nrow`, `replace`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`); (3) the **non-`ci`-gated simulation settings** — scenario options that are valid and meaningful even when `ci = FALSE`: `dists` (fit-level), then `est_method` and `proportion` (hc-level, shaping the analytical point estimate); (4) `ci`, then the scenario options it **gates** — the bootstrap **cross-join axes** `nboot`/`ci_method`/`parametric` (which `ci = FALSE` rejects) and the `samples` setting (which only retains bootstrap draws); (5) the **layout and remaining arguments** (`partition_by`, `bundle`, `upload`). A simulation setting is any scenario option absent from `task_axes(step)`: it never multiplies tasks, but is consumed inside each task — fanning out within the task's output (`est_method`, `proportion`) or applied uniformly (`ci`, `dists`, `samples`). `dists` is the **fit**-level setting (a single character vector handed whole to every fit task's `ssd_fit_dists()` call, absent from `task_axes("fit")`); `est_method`/`proportion`/`ci`/`samples` are **hc**-level. `est_method` and `proportion` SHALL precede `ci` (a `ci = FALSE` scenario still selects an `est_method` and `proportion` for its analytical estimate); the bootstrap-only scenario options `nboot`/`ci_method`/`parametric` and `samples` SHALL follow `ci`. Storage SHALL remain step-based: `dists` is stored at `scenario$fit$dists` and the hc scenario options at `scenario$hc` in signature order (`est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, `samples`). `print.ssdsims_scenario()` SHALL render each grid in that stored order (settings flagged) and render `dists` among the fit scenario options, marked as a setting rather than an axis.
+`ssd_define_scenario()` SHALL order its arguments by role: (1) the required data/`seed`/`nsim` inputs and the dataset `name`; (2) the **structural scenario axes** (`nrow`, `replace`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`); (3) the **non-`ci`-gated scenario settings** — scenario options that are valid and meaningful even when `ci = FALSE`: `dists` (fit-level), then `est_method` and `proportion` (hc-level, shaping the analytical point estimate); (4) `ci`, then the scenario options it **gates** — the bootstrap **axes** `nboot`/`ci_method`/`parametric` (which `ci = FALSE` rejects) and the `samples` setting (which only retains bootstrap draws); (5) the **layout and remaining arguments** (`partition_by`, `bundle`, `upload`). A scenario setting is any scenario option absent from `task_axes(step)`: it never multiplies tasks, but is consumed inside each task — fanning out within the task's output (`est_method`, `proportion`) or applied uniformly (`ci`, `dists`, `samples`). `dists` is the **fit**-level scenario setting (a single character vector handed whole to every fit task's `ssd_fit_dists()` call, absent from `task_axes("fit")`); `est_method`/`proportion`/`ci`/`samples` are **hc**-level. `est_method` and `proportion` SHALL precede `ci` (a `ci = FALSE` scenario still selects an `est_method` and `proportion` for its analytical estimate); the bootstrap-only scenario options `nboot`/`ci_method`/`parametric` and `samples` SHALL follow `ci`. Storage SHALL remain step-based: `dists` is stored at `scenario$fit$dists` and the hc scenario options at `scenario$hc` in signature order (`est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, `samples`). `print.ssdsims_scenario()` SHALL render each grid in that stored order (settings flagged) and render `dists` among the fit scenario options, marked as a setting rather than an axis.
 
-#### Scenario: non-ci-gated settings precede ci; gated scenario options follow it
+#### Scenario: non-ci-gated scenario settings precede ci; gated scenario options follow it
 - **WHEN** the `ssd_define_scenario()` signature is inspected
-- **THEN** `dists`, `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, and `samples` SHALL appear adjacent to one another in that order, after the last structural axis (`range_shape2`) and before the layout arguments (`partition_by`, `bundle`, `upload`), so the non-`ci`-gated settings precede `ci` and the scenario options it gates follow it
+- **THEN** `dists`, `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, and `samples` SHALL appear adjacent to one another in that order, after the last structural axis (`range_shape2`) and before the layout arguments (`partition_by`, `bundle`, `upload`), so the non-`ci`-gated scenario settings precede `ci` and the scenario options it gates follow it
 
-#### Scenario: dists is a simulation setting, not an axis
+#### Scenario: dists is a scenario setting, not an axis
 - **WHEN** the fit-step axis vocabulary (`task_axes("fit")`) is queried
 - **THEN** it SHALL NOT contain `"dists"`, so `dists` is neither a path axis nor an inner axis and does not enter the per-task primer; it is applied uniformly to every fit task and stored at `scenario$fit$dists`
 

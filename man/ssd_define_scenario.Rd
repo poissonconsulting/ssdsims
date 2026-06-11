@@ -126,8 +126,8 @@ columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: \code{sample} = \code{dataset}, \code{sim}, \code{replace}; \code{fit} adds
 \code{nrow}, \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix},
 \code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{nboot}, \code{ci_method},
-\code{parametric} (\code{ci} and \code{est_method} are hc simulation settings, not axes;
-\code{dists} is the fit-level simulation setting).
+\code{parametric} (\code{ci} and \code{est_method} are hc scenario settings, not axes;
+\code{dists} is the fit-level scenario setting).
 \code{"nrow"} is rejected only for \code{sample} (the
 shared draw carries no \code{nrow} axis; the \code{fit} step truncates it inline), and
 is a valid path axis for \code{fit}/\code{hc}. Steps partition \strong{independently} -
@@ -197,7 +197,7 @@ so set \code{ci = TRUE} to enable bootstrap, or omit the options.
 }
 
 \section{\code{dists} and \code{est_method}}{
-\code{dists} and \code{est_method} are \strong{simulation settings}, not cross-join axes -
+\code{dists} and \code{est_method} are \strong{scenario settings}, not cross-join axes -
 they are absent from \code{task_axes("fit")}/\code{task_axes("hc")}, so they never
 multiply tasks or enter the per-task RNG primer. \code{dists} is the \emph{fit}-level
 setting: the whole character vector is handed to one \code{ssd_fit_dists()} call

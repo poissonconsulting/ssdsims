@@ -32,7 +32,7 @@ storage/plumbing change, not an identity one.
 
 **Goals:**
 
-- Add an explicit `nrow_max` simulation setting (the fixed shared-draw size,
+- Add an explicit `nrow_max` scenario setting (the fixed shared-draw size,
   high default) replacing the derived `n_max = max(nrow)`, so extending `nrow`
   (within the draw size) never re-draws.
 - Complete *Direction B*: move the last two carried columns (`n_max`, `ci`) off
@@ -51,10 +51,10 @@ storage/plumbing change, not an identity one.
 
 ## Decisions
 
-### Decision: `nrow_max` is a scenario-level simulation setting, default high
+### Decision: `nrow_max` is a scenario-level scenario setting, default high
 
 `nrow_max` is a single `chk_whole_number`, default `1000L`, stored on the
-scenario and placed among the non-`ci`-gated simulation settings of
+scenario and placed among the non-`ci`-gated scenario settings of
 `ssd_define_scenario()` — leading them as the sample-level setting, before
 `dists` (fit) and `est_method`/`proportion` (hc), and ahead of `ci` (it is not
 `ci`-gated; the draw happens regardless). It is **not** an axis (absent from
@@ -102,8 +102,8 @@ baseline runner reads both from `scenario$…` as it already does for
 canonicalisation in `hc_grid_tbl()` stays — it keys off the scalar `ci` (now read
 from the scenario), it just no longer emits a `ci` column.
 
-*Rationale:* one uniform rule — *a simulation setting is never a row column;
-identity is all a row holds* — matching the GLOSSARY definition of "simulation
+*Rationale:* one uniform rule — *a scenario setting is never a row column;
+identity is all a row holds* — matching the GLOSSARY definition of "scenario
 setting". Smaller, purely-identity shard rows; `nrow_max`/`ci` stored once.
 
 *Alternative considered — Direction A (everything on the row): make
