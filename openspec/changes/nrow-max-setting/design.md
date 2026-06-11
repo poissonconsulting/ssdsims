@@ -165,13 +165,16 @@ unchanged.
 
 ## Open Questions
 
-- **Default value of `nrow_max`.** `1000L` recommended; confirm (lower, e.g.
-  `200L`, trims `replace = TRUE` `sample`-shard storage at the cost of a lower
-  no-churn ceiling for `nrow`).
-- **`replace = FALSE` over-spec: cap silently or validate?** This design caps to
-  `min(nrow_max, nrow(data))` (silent full permutation). The alternative is to
-  abort when `nrow_max > nrow(data)`. Capping keeps "one high default" working;
-  confirm that is preferred over an explicit error.
-- **Where to store `nrow_max` on the scenario** — top-level `scenario$nrow_max`
-  vs. a `scenario$sample$nrow_max` (a `sample`-step home mirroring `scenario$hc`).
-  Either is slice-able; pick for accessor consistency.
+All resolved at implementation:
+
+- **Default value of `nrow_max`.** Resolved: `1000L` (matching the `nrow` range
+  ceiling, so the default never constrains `nrow`).
+- **`replace = FALSE` over-spec: cap silently or validate?** Resolved: cap to
+  `min(nrow_max, nrow(data))` (silent full permutation), keeping "one high
+  default" working. `nrow` itself is still validated against that effective
+  draw size, so a truncation can never exceed the draw.
+- **Where to store `nrow_max` on the scenario.** Resolved: top-level
+  `scenario$nrow_max`, beside the other sample-level knobs (`nrow`, `replace`),
+  which are all top-level — there is no `scenario$sample` home to mirror, and
+  one scalar does not justify minting one. The `sample` slice carries it
+  top-level too.
