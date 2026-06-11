@@ -73,11 +73,12 @@ fit-task identity with each row of the scenario's \code{hc} argument grid
 \code{est_method} setting are applied uniformly to every hc row - neither is a
 cross-join axis; \code{ci} rides as a carried column and every requested
 \code{est_method} is summarised within each task from its single bootstrap sample
-set. When \code{ci = FALSE} the bootstrap-only knobs (\code{nboot}, \code{ci_method},
-\code{parametric}) are canonically \code{NA} and there is no fan-out axis, so the grid
-is exactly one hc row per fit task; when \code{ci = TRUE} the grid fans out across
-\verb{nboot x ci_method x parametric}. Each row carries an \code{hc_id} primary key and
-a \code{fit_id} foreign key referencing its parent fit task.
+set. When \code{ci = FALSE} the bootstrap-only scenario options (\code{nboot},
+\code{ci_method}, \code{parametric}) are canonically \code{NA} and there is no fan-out
+axis, so the grid is exactly one hc row per fit task; when \code{ci = TRUE} the
+grid fans out across \verb{nboot x ci_method x parametric}. Each row carries an
+\code{hc_id} primary key and a \code{fit_id} foreign key referencing its parent fit
+task.
 
 }}
 \examples{

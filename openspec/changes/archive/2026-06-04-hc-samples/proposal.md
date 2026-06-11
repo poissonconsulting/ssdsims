@@ -4,7 +4,7 @@
 
 ## What Changes
 
-- Add a scalar logical `samples` knob to `ssd_define_scenario()` (default `FALSE`), stored at `scenario$hc$samples`, validated as a flag, and rendered by `print()` alongside the other hc knobs.
+- Add a scalar logical `samples` option to `ssd_define_scenario()` (default `FALSE`), stored at `scenario$hc$samples`, validated as a flag, and rendered by `print()` alongside the other hc scenario options.
 - Thread it to `ssd_hc()` via `hc_data_task()`/`hc_data_task_primer()` and both runners (baseline + per-shard), so `samples = TRUE` retains the bootstrap draws.
 - Keep it **off** the grid and **off** the task identity / RNG primer: it is a length-1 superset flag (a single `TRUE` subsumes `FALSE`), and it does not change `est`/`lcl`/`ucl`. A change re-runs the hc step (the discarded draws must be re-bootstrapped) but yields byte-identical estimates; invalidation comes from `scenario` being the hc step's input, not from the hash.
 - `ssd_summarize()` drops the `dists`/`samples` list-columns (projection pushdown) so the analysis-ready summary stays tidy; the draws remain in the per-shard hc Parquet.
@@ -12,7 +12,7 @@
 ## Capabilities
 
 ### Modified Capabilities
-- `scenario-definition`: `ssd_define_scenario()` gains the scalar `samples` knob (default `FALSE`), stored on `scenario$hc` and passed through to `ssd_hc()` for output retention only.
+- `scenario-definition`: `ssd_define_scenario()` gains the scalar `samples` option (default `FALSE`), stored on `scenario$hc` and passed through to `ssd_hc()` for output retention only.
 
 ## Impact
 

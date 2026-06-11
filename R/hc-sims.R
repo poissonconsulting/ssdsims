@@ -72,7 +72,7 @@ ssd_hc_sims <- function(
   )
   trace_rng_kind()
 
-  # `est_method` is an hc simulation setting, not part of the factorial
+  # `est_method` is an hc scenario setting, not part of the factorial
   # expansion: every requested method is summarised within each cell from its
   # single bootstrap sample set, so it is passed whole to `hc_seed()` rather than
   # crossed into the grid (see `hc_collapse_est_methods()`).

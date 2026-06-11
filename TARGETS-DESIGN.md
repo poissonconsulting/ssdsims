@@ -67,7 +67,7 @@ The most consequential design choices, with section refs:
   The per-task body calls `local_dqrng_state(seed, primer)`
   exactly once and then runs the (state-less) ssdtools / dplyr ops
   against the ambient RNG. No `state =` argument on the inner ops.
-- **Scenario is purely declarative (§1).** Stores `seed`, knobs,
+- **Scenario is purely declarative (§1).** Stores `seed`, scenario options,
   and *names* of datasets and `min_pmix` entries; the values are
   **materialised on the scenario, reached by name via accessors** (§1.1). Names enter the per-task hash,
   function definitions do not (so a code edit / JIT does not move tasks
@@ -166,7 +166,7 @@ ssdsims_scenario
 │                  the scenario, reached by name (§1.1)
 ├── hc           ← list of ssd_hc() argument vectors; ci is a scalar
 │                  flag (not an axis, §1.2) — when ci = FALSE the
-│                  bootstrap-only knobs (nboot, ci_method, parametric)
+│                  bootstrap-only options (nboot, ci_method, parametric)
 │                  are stored as NA on the hc tasks
 └── partition_by ← list(data = ..., fit = ..., hc = ...) of character
                    vectors picking the Hive partition axes per step;
@@ -195,7 +195,7 @@ Three design points distinguish this from the current code:
    sequences.
 2. **Datasets and `min_pmix` are keyed by name.** Both are materialised
    on the scenario and reached by name via accessors (§1.1); the scenario
-   stores the names as its identity surface (a few names + numeric knobs)
+   stores the names as its identity surface (a few names + numeric options)
    and the per-task hash (§2) keys on the name, ignoring function-body
    contents — so a non-behavior-changing code edit to a `min_pmix`
    function does *not* invalidate cached results. See §1.1.
@@ -248,7 +248,7 @@ reasons the hash keys on the name:
    bypasses all of these. (Source edits that change behavior are
    the user's contract — pin `ssdtools` and R versions in the
    manifest, §9.)
-2. **A stable identity surface.** The names (plus numeric knobs) are
+2. **A stable identity surface.** The names (plus numeric options) are
    what the §9 manifest records and what task identities are built
    from, independent of the materialised values that ride on the
    scenario for execution. (Datasets are tiny, so carrying them inline
@@ -305,19 +305,19 @@ FALSE` — same `est`, plus the populated `se` / `lcl` / `ucl`. Running both in
 one scenario would only emit a redundant point-estimate row per fit-task, so
 `ci` is a single either/or choice: `ci = FALSE` for cheap, bootstrap-free point
 estimates, or `ci = TRUE` for estimates plus CIs. This makes `ci` a
-**simulation setting** (GLOSSARY) — a non-axis knob consumed within each task —
+**scenario setting** (GLOSSARY) — a non-axis scenario option consumed within each task —
 alongside `samples` (applied uniformly) and `proportion` (which fans out within
 the task's own output). The three are grouped together in the
 `ssd_define_scenario()` signature, after the axes.
 
 Because the estimate carries no `ci`-dependence, `ci` is **excluded from
 `task_axes("hc")` and the per-task primer** and applied uniformly to every hc
-task. The bootstrap-only knobs (`nboot`, `ci_method`, `parametric`) only affect
+task. The bootstrap-only scenario options (`nboot`, `ci_method`, `parametric`) only affect
 the bootstrap:
 
-- If `ci = FALSE`, those knobs are meaningless: supplying any of them aborts at
+- If `ci = FALSE`, those options are meaningless: supplying any of them aborts at
   scenario construction (set `ci = TRUE` or omit them), and the hc-task table
-  stores them as `NA`. `est_method` is an hc simulation setting (not an axis), so
+  stores them as `NA`. `est_method` is an hc scenario setting (not an axis), so
   this leaves no fan-out axis at all — exactly one hc row per fit task.
 - If `ci = TRUE`, the hc grid fans out across `nboot × ci_method × parametric`.
 
@@ -332,7 +332,7 @@ A `ci = FALSE` scenario instead yields exactly one hc row per fit task with
 `nboot` / `ci_method` / `parametric` all `NA` (every requested `est_method` is
 summarised within that single task). The hash of an `NA`-bearing row is
 well-defined as long as `NA` is encoded canonically — `task_primer()` does this
-via `rlang::hash()` on the named list — so the `NA` bootstrap knobs never
+via `rlang::hash()` on the named list — so the `NA` bootstrap axes never
 allocate phantom streams to combinations that don't exist in practice.
 
 ---
@@ -441,9 +441,9 @@ fit task: data-task identity plus the fit-arg-grid row (`rescale`,
 `computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
 `range_shape2`). For an hc task: fit-task identity plus the hc-arg-
 grid row (`nboot`, `ci_method`, `parametric`). `ci` and `est_method` are
-hc simulation settings, **not** in the hash (§1.2; `est_method` is summarised
+hc scenario settings, **not** in the hash (§1.2; `est_method` is summarised
 within the task from a single bootstrap sample set); when `ci = FALSE` the
-bootstrap-only knobs are `NA` in that row (canonically encoded).
+bootstrap-only scenario options are `NA` in that row (canonically encoded).
 
 Function-valued parameters (`min_pmix`) are referenced **by name**
 (§1.1) so that a recompile/JIT does not move the task to a different
@@ -756,7 +756,7 @@ m:n shard graph is *generated* from the single key (project each task's
 references **many** parent tasks (a **set-valued** foreign key = a
 shared-axis glob, the same read), and this applies at **all three
 layers**, not just `hc`: one may reduce over any axis a layer carries
-(`sim`/`replace` at all three, `nrow` at `fit`/`hc`, the bootstrap knobs
+(`sim`/`replace` at all three, `nrow` at `fit`/`hc`, the bootstrap axes
 at `hc` only). The §6 `summary` is today's monolithic, un-sharded
 instance of that fan-in over all three layers; a sharded version is
 three reduce steps, each with a set-valued key to its own layer. A step
@@ -801,7 +801,7 @@ these task tables:
 | -------- | ---------------------------------------------- | ---- | ---------------------------------------------------------- |
 | `sample` | `dataset, sim, replace`                        | yes  | one draw of `n_max = max(nrow)` rows (carried column)      |
 | `fit`    | `sample` axes, `nrow` `× fit grid`             | yes  | truncates `head(sample, nrow)` inline (RNG-free) then fits |
-| `hc`     | fit axes `× hc grid` (scalar `ci`, §1.2)       | yes  | `ci` is a scalar flag, not an axis; bootstrap knobs `NA` when `ci = FALSE` |
+| `hc`     | fit axes `× hc grid` (scalar `ci`, §1.2)       | yes  | `ci` is a scalar flag, not an axis; bootstrap axes `NA` when `ci = FALSE` |
 
 This keeps the sub-truncation property **structural**: there is
 exactly one `sample` task per `(dataset, sim, replace)`, so the
@@ -864,7 +864,7 @@ Why static fits this design specifically:
 - **The scenario need not live in a target.** It is a construction-time
   object; `ssd_scenario_*_shards(scenario)` evaluate at sourcing time
   and feed `tar_map()`'s `values`. `targets` still tracks the scenario
-  as a referenced global, so editing a knob still invalidates the
+  as a referenced global, so editing a scenario option still invalidates the
   dependent shards — tracking is not lost by taking it out of a target.
 - **Named, addressable shards.** Each shard is its own DAG node
   (`fit_step_boron_sim1_rescaleFALSE`), so `tar_read()` /
@@ -1078,11 +1078,11 @@ for precise per-shard edges, so adding new data shards mints new
 targets and leaves existing fit shards untouched — no directory-hash
 indirection required to avoid spurious rebuilds.
 
-**Dependencies and what re-runs on a knob change** (applied to the
+**Dependencies and what re-runs on a scenario-option change** (applied to the
 2/4/2 shard counts above; "1 shard re-runs" = its Parquet is
 rewritten with the new task set):
 
-| Knob change                       | data_step (2 shards)              | fit_step (4 shards)               | hc_step (2 shards)                | summary |
+| Option change                     | data_step (2 shards)              | fit_step (4 shards)               | hc_step (2 shards)                | summary |
 | --------------------------------- | --------------------------------- | --------------------------------- | --------------------------------- | ------- |
 | dataset appended (path axis everywhere) | new shards only             | new shards only                   | new shards only                   | re-run  |
 | `sim` value (= `nsim` grows; path axis everywhere) | new shards only  | new shards only                   | new shards only                   | re-run  |
@@ -1117,7 +1117,7 @@ new fine shard). Two complementary fixes, by driver:
   `scenario_results_dir(scenario)` = `results/layout=<hash(partition_by)>`,
   so a split change yields a fresh root (never *mixed* with the old) while
   the same layout reuses its root (cache + `error = "null"` survivors
-  preserved). Non-layout knobs (seed, grids) keep the root and just rewrite
+  preserved). Non-layout arguments (seed, grids) keep the root and just rewrite
   shard paths at the same depth (§8.1). Pruning an orphaned layout root and
   manifest-driven reads are deferred to `manifest`/`shard-atomic-rewrite`.
 
@@ -1731,7 +1731,7 @@ more (smaller) Parquets up front. This escape hatch applies only to
 the genuine inner *axes* (`min_pmix`, `nboot`, `est_method`,
 `ci_method`, `parametric`): they are in `task_axes(step)`, so they
 can be promoted to path axes. `dists` is in the table for its cost,
-not its category — it is a fit-level **simulation setting**, not an
+not its category — it is a fit-level **scenario setting**, not an
 axis, so it cannot be a partition level and its rewrite is intrinsic
 (changing `dists` re-fits the *contents* of every fit task, rather
 than adding a row).
@@ -1911,11 +1911,11 @@ wrapping each per-distribution / per-bootstrap iteration in ssdsims
 with its own dqrng stream and aggregating, or (b) an ssdtools change
 to expose the inner loops. Sketch only; out of scope.
 
-The two knobs sit on **opposite** sides of the axis/setting split
+The two scenario options sit on **opposite** sides of the axis/setting split
 (GLOSSARY.md), and their cache behaviour differs accordingly — the
 heading is *not* "neither is an axis":
 
-- **`dists` is a fit-level *simulation setting*, not an axis.** It is
+- **`dists` is a fit-level *scenario setting*, not an axis.** It is
   a single character vector applied uniformly to every fit task (one
   model-averaged `ssd_fit_dists()` call per task); it is absent from
   `task_axes("fit")`, so it never enters a **primer** or a
@@ -2005,7 +2005,7 @@ the methods mid-session (not inside a scenario runner) use the same
 | `nrow` invalidates data states for the same `sim`    | §5 — `nrow` is never an axis: data state keyed by `(dataset, sim, replace)`, slice truncates to `n`.    |
 | Single-dataset scenarios only                        | §1.1 — datasets are materialised on the scenario, keyed by name; cross-join axis.                 |
 | Function-arg edits invalidate caches                 | §1.1 — `min_pmix` referenced by name; function body edits do not move tasks across streams. |
-| Bootstrap-only knobs spuriously fan out under `ci=FALSE` | §1.2 — `ci` is a scalar flag (not an axis); under `ci=FALSE` the bootstrap-only knobs are rejected at construction and stored `NA`, so they never fan out. |
+| Bootstrap-only options spuriously fan out under `ci=FALSE` | §1.2 — `ci` is a scalar flag (not an axis); under `ci=FALSE` the bootstrap-only options are rejected at construction and stored `NA`, so they never fan out. |
 | Branch failure unreproducible off the cluster        | §7 — task row + upstream shard replays the failing task via `_state` primitives.          |
 | Code fix re-runs every branch by hash invalidation   | §8.3 — `tar_cue(depend = FALSE)` pins shards against the edit; §8.4 — `tar_invalidate()` / `unlink()` refreshes only the chosen shards. |
 | Off-cluster access to Parquet outputs                | §6.1 — the runner's `upload` argument adds a per-shard `upload_<step>` target (content-hashed, `ssd_upload_dryrun()` offline) to a configurable object store (e.g. Azure Blob), and `ssd_open_uploaded()` reads it back in place. |
@@ -2102,7 +2102,7 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   rescale, est_method, nboot, ci, ...)`, forwarding the input data
   through `ssd_data()` (a tiny normaliser that validates the `Conc`
   column and tibble shape). Stores only declarative fields (seed,
-  knobs, dataset names — the datasets themselves are materialised on the
+  scenario options, dataset names — the datasets themselves are materialised on the
   scenario, reached by name via `scenario-accessors`). No RNG, no tasks,
   no targets yet. **Scoped to
   data-frame input only** (single or list); the other generator inputs
@@ -2180,15 +2180,15 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   bare symbol in every step command (`ssd_run_<step>_step(tasks, scenario,
   …)`), so the **whole scenario object is a dependency of every shard
   target** across all three steps. Editing *any* scenario field — even a
-  knob that feeds only one step, or only the output layer (e.g. `samples`,
+  scenario option that feeds only one step, or only the output layer (e.g. `samples`,
   which is `hc`-only) — therefore invalidates and rebuilds **all** shards,
   not just the affected step's. Project each step's command onto the
   **minimal slice** of the scenario it actually consumes (the resolved
   per-step inputs / the fields that reach that step's per-task body and
   primer), so a change to a step-irrelevant field leaves the other steps'
-  shards cached. Test: change an `hc`-only knob on a `tar_make()`-d
+  shards cached. Test: change an `hc`-only scenario option on a `tar_make()`-d
   scenario and assert only `hc` (and `summary`) rebuild while `sample`/`fit`
-  shards are skipped; change a `fit`-only knob and assert `sample` stays
+  shards are skipped; change a `fit`-only option and assert `sample` stays
   cached. **Depends on** `task-tables` (the factory it refines); pairs with
   `path-axis-growth` (the path-axis counterpart of the same minimal-rebuild
   contract) and is finalised against the invalidation model pinned by
@@ -2224,7 +2224,7 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   `targets`-integration + caching half only (its smoke test moves to
   `shard-runner-baseline`). Depends on `task-tables` and
   `shard-runner-baseline`.
-- **`partition-by`** — §5 / §1 — scenario knob `partition_by`
+- **`partition-by`** — §5 / §1 — scenario argument `partition_by`
   (named list per step) picks which task-table columns become
   Hive path levels and which become Parquet columns. Default per
   step ships as documented in §5. Test: changing `partition_by`
@@ -2244,7 +2244,7 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   doubles the hc work for a redundant point-estimate row. Removes `"ci"` from
   `task_axes("hc")` and the per-task primer, **retires the §1.2 `ci = FALSE`
   collapse** (the `hc_grid_tbl()` branching collapses to one grid keyed by the
-  scalar `ci`), and keeps the bootstrap-knob guard with `ci = TRUE` as the
+  scalar `ci`), and keeps the bootstrap-option guard with `ci = TRUE` as the
   enablement path. `ci = FALSE` stays the cheap, bootstrap-free,
   point-estimate mode — a scenario-wide either/or, not combinable with `TRUE`.
   Removing `ci` from the primer shifts the hc bootstrap stream, so CIs
@@ -2270,19 +2270,19 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   the spec; the benchmark is preserved in the change's `exploration` (the
   `benchmark-blob-encoding.R` script). Independent tidy-up with no dependants;
   not on the dependency DAG.
-- **`dists-simulation-setting`** — Reconcile `dists`'s classification across the
+- **`dists-scenario-setting`** — Reconcile `dists`'s classification across the
   spec, signature, and docs. `dists` is absent from `task_axes("fit")` — a
-  fit-level **simulation setting** (one model-averaged `ssd_fit_dists()` per
+  fit-level **scenario setting** (one model-averaged `ssd_fit_dists()` per
   task, applied uniformly), not a cross-join axis — but the `scenario-definition`
   role-grouping requirement listed it among the axes and the signature wedged it
   in the fit-axis block. This change moved `dists` to lead the contiguous
-  simulation-settings block (`… parametric, dists, proportion, ci, samples`),
+  scenario-settings block (`… parametric, dists, proportion, ci, samples`),
   corrected the spec, and swept call sites. Behaviour-preserving (no task-graph,
   primer, or shard change); paired with the §9 / GLOSSARY corrections that also
   fixed the stale *"`dists` and `nboot` are not fit/hc grid axes"* heading
   (`nboot` **is** an hc axis). Independent tidy-up; not on the dependency DAG.
 - **`est-method-setting`** — Reclassify `est_method` from an hc cross-join axis
-  to an hc-level **simulation setting** (the same shape as `dists-simulation-setting`
+  to an hc-level **scenario setting** (the same shape as `dists-scenario-setting`
   / `scalar-ci-flag`: `scenario-definition` + `task-lists` + `hazard-concentrations`
   deltas). `est_method` is removed from `task_axes("hc")`; the hc fan-out becomes
   `nboot × ci_method × parametric` and a single bootstrap per cell yields every
@@ -2470,7 +2470,7 @@ minimal-rebuild contracts (`step-scenario-slice`, `path-axis-growth`,
 `shard-atomic-rewrite`), the `manifest`, and now `cluster-pipeline`,
 `cloud-upload`, and `task-rng-postcheck` (the last treated as merged for this
 split). Off the DAG, the independent tidy-ups `scalar-ci-flag`,
-`blob-storage-format`, `dists-simulation-setting`, `est-method-setting`,
+`blob-storage-format`, `dists-scenario-setting`, `est-method-setting`,
 `cost-estimation`, and `dual-summary-outputs` are likewise archived (prose
 bullets above, no Mermaid nodes).
 

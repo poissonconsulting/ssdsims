@@ -40,13 +40,13 @@
 #' `ci = FALSE` (same `est`, plus the `se`/`lcl`/`ucl` columns). The choice is
 #' scenario-wide either/or: `ci = FALSE` for cheap, bootstrap-free point
 #' estimates, or `ci = TRUE` for estimates plus confidence intervals. When
-#' `ci = FALSE`, the bootstrap-only knobs `nboot`, `ci_method`, and `parametric`
-#' are meaningless; passing any of them in that case is an error, so set
-#' `ci = TRUE` to enable bootstrap, or omit the knobs.
+#' `ci = FALSE`, the bootstrap-only scenario options `nboot`, `ci_method`, and
+#' `parametric` are meaningless; passing any of them in that case is an error,
+#' so set `ci = TRUE` to enable bootstrap, or omit the options.
 #'
 #' # `dists` and `est_method`
 #'
-#' `dists` and `est_method` are **simulation settings**, not cross-join axes -
+#' `dists` and `est_method` are **scenario settings**, not cross-join axes -
 #' they are absent from `task_axes("fit")`/`task_axes("hc")`, so they never
 #' multiply tasks or enter the per-task RNG primer. `dists` is the *fit*-level
 #' setting: the whole character vector is handed to one `ssd_fit_dists()` call
@@ -97,8 +97,8 @@
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
 #'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`,
-#'   `parametric` (`ci` and `est_method` are hc simulation settings, not axes;
-#'   `dists` is the fit-level simulation setting).
+#'   `parametric` (`ci` and `est_method` are hc scenario settings, not axes;
+#'   `dists` is the fit-level scenario setting).
 #'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
@@ -154,7 +154,7 @@ ssd_define_scenario <- function(
   call <- environment()
   chk::chk_unused(...)
 
-  # --- scalar / vector knob validation ----------------------------------
+  # --- scalar / vector scenario-option validation ------------------------
   if (missing(seed)) {
     chk::abort_chk(
       "`seed` must be supplied (a scalar whole number); ",
@@ -258,7 +258,7 @@ ssd_define_scenario <- function(
   # `samples` is output-retention only (scalar, not a grid axis or task axis).
   chk::chk_flag(samples)
 
-  # --- ci = FALSE rejects bootstrap-only knobs ---------------------------
+  # --- ci = FALSE rejects bootstrap-only scenario options ----------------
   if (isFALSE(ci)) {
     passed <- c(
       if (!missing(nboot)) "nboot",
@@ -267,12 +267,12 @@ ssd_define_scenario <- function(
     )
     if (length(passed)) {
       chk::abort_chk(
-        "Bootstrap-only knob",
+        "Bootstrap-only scenario option",
         if (length(passed) > 1L) "s" else "",
         " (",
         chk::cc(passed, conj = " and "),
         ") cannot be set when `ci = FALSE`. ",
-        "Set `ci = TRUE` to enable bootstrap, or omit the knob",
+        "Set `ci = TRUE` to enable bootstrap, or omit the option",
         if (length(passed) > 1L) "s" else "",
         ".",
         call = call
@@ -786,10 +786,11 @@ print.ssdsims_scenario <- function(x, ...) {
 }
 
 #' Print a step's argument grid in stored (signature) order, flagging the
-#' simulation settings (the knobs absent from `task_axes(step)`) with
-#' `(setting)`. Stored order mirrors the signature grouping: the non-`ci`-gated
-#' settings (`dists`, `est_method`, `proportion`) come first, then `ci`, then the
-#' knobs it gates (`nboot`/`ci_method`/`parametric`, `samples`). So the hc grid
+#' scenario settings (the scenario options absent from `task_axes(step)`)
+#' with `(setting)`. Stored order mirrors the signature grouping: the
+#' non-`ci`-gated settings (`dists`, `est_method`, `proportion`) come first,
+#' then `ci`, then the options it gates (`nboot`/`ci_method`/`parametric`,
+#' `samples`). So the hc grid
 #' renders `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`,
 #' `samples`, and the fit grid renders `dists` after its axes.
 #' @noRd

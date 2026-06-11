@@ -120,11 +120,12 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #'   `est_method` setting are applied uniformly to every hc row - neither is a
 #'   cross-join axis; `ci` rides as a carried column and every requested
 #'   `est_method` is summarised within each task from its single bootstrap sample
-#'   set. When `ci = FALSE` the bootstrap-only knobs (`nboot`, `ci_method`,
-#'   `parametric`) are canonically `NA` and there is no fan-out axis, so the grid
-#'   is exactly one hc row per fit task; when `ci = TRUE` the grid fans out across
-#'   `nboot x ci_method x parametric`. Each row carries an `hc_id` primary key and
-#'   a `fit_id` foreign key referencing its parent fit task.
+#'   set. When `ci = FALSE` the bootstrap-only scenario options (`nboot`,
+#'   `ci_method`, `parametric`) are canonically `NA` and there is no fan-out
+#'   axis, so the grid is exactly one hc row per fit task; when `ci = TRUE` the
+#'   grid fans out across `nboot x ci_method x parametric`. Each row carries an
+#'   `hc_id` primary key and a `fit_id` foreign key referencing its parent fit
+#'   task.
 #' @export
 #' @examples
 #' scenario <- ssd_define_scenario(
@@ -323,7 +324,7 @@ hc_grid_tbl <- function(scenario) {
   # `ci` is emitted as a (single-valued) carried column the runners read, but
   # it is not an hc axis, so it never enters the per-task primer.
   if (isFALSE(hc$ci)) {
-    # Bootstrap-only knobs are canonically NA when ci = FALSE so they cannot
+    # Bootstrap-only scenario options are canonically NA when ci = FALSE so they cannot
     # enter task identity; with `est_method` now an hc setting (not an axis),
     # there is no fan-out axis, so this is exactly one hc row per fit task.
     tidyr::expand_grid(
@@ -359,7 +360,7 @@ task_axes <- function(step) {
     "range_shape1",
     "range_shape2"
   )
-  # `ci` and `est_method` are hc simulation settings, not axes. `ci` is a scalar
+  # `ci` and `est_method` are hc scenario settings, not axes. `ci` is a scalar
   # flag (the point estimate is invariant to it) and `est_method` is summarised
   # within a task from its single bootstrap sample set (the CI is
   # est_method-invariant, the point `est` analytical), so neither carries
@@ -485,7 +486,7 @@ hc_data_task <- function(
 
 # Summarise every requested `est_method` from a SINGLE bootstrap per hc cell.
 #
-# `est_method` is an hc simulation setting, not a bootstrap axis: the bootstrap
+# `est_method` is an hc scenario setting, not a bootstrap axis: the bootstrap
 # CI (`se`/`lcl`/`ucl`, and any retained `samples`) is est_method-invariant and
 # each method's point `est` is analytical and seed-independent (verified in the
 # `est-method-setting` change's `exploration/est-method-invariance.R`). So when

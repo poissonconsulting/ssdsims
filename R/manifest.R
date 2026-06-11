@@ -61,10 +61,10 @@ ssd_write_manifest <- function(scenario, dir) {
 #' declarative fields and session-info block written by [ssd_write_manifest()]
 #' (and the `completed_shards` tail added by [ssd_assemble_manifest()]) without
 #' lossy coercion: `seed`/`nboot` are restored as whole numbers and logical
-#' knobs (`rescale`, `parametric`, ...) as logicals.
+#' scenario options (`rescale`, `parametric`, ...) as logicals.
 #'
 #' @inheritParams ssd_write_manifest
-#' @return The manifest as an R list, with the scalar/vector knob types of the
+#' @return The manifest as an R list, with the scalar/vector option types of the
 #'   written scenario restored.
 #' @seealso [ssd_write_manifest()].
 #' @keywords internal

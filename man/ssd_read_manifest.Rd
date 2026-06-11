@@ -11,7 +11,7 @@ ssd_read_manifest(dir)
 does not exist).}
 }
 \value{
-The manifest as an R list, with the scalar/vector knob types of the
+The manifest as an R list, with the scalar/vector option types of the
 written scenario restored.
 }
 \description{
@@ -19,7 +19,7 @@ Reads \verb{<dir>/manifest.json} back into an R list, round-tripping the
 declarative fields and session-info block written by \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}
 (and the \code{completed_shards} tail added by \code{\link[=ssd_assemble_manifest]{ssd_assemble_manifest()}}) without
 lossy coercion: \code{seed}/\code{nboot} are restored as whole numbers and logical
-knobs (\code{rescale}, \code{parametric}, ...) as logicals.
+scenario options (\code{rescale}, \code{parametric}, ...) as logicals.
 }
 \seealso{
 \code{\link[=ssd_write_manifest]{ssd_write_manifest()}}.

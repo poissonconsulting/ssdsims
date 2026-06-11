@@ -218,7 +218,7 @@ See `.github/workflows/` for pipeline configs.
 
 The package is transitioning from immediate `ssd_run_scenario()` execution to a cluster-based targets pipeline. Key shifts:
 
-- **Scenario object** (`ssd_define_scenario()`) — Declarative, construction-time, contains only `seed`, knobs, dataset names, and arg grids.
+- **Scenario object** (`ssd_define_scenario()`) — Declarative, construction-time, contains only `seed`, scenario options, dataset names, and arg grids.
 - **Per-task RNG** — Each task gets a primer derived from `rlang::hash(task_params)`, seeded via `dqrng::dqset.seed(seed, stream = primer)`.
 - **Shards** — Parquet files grouped by `partition_by` axes, stored in a Hive-partitioned directory tree.
 - **Static branching** (default) — `tar_map()` mints one named target per shard at sourcing time.

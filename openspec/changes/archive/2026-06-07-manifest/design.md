@@ -26,7 +26,7 @@ The manifest is provenance/verification metadata, so it must not sit upstream of
 
 ### Decision: JSON sidecar, not Parquet
 
-§8.5 calls the manifest "a small JSON sidecar." JSON is human-readable, diffable, and portable, and the manifest is tiny (a few names, numeric knobs, version strings, and one entry per shard). The bulk results stay Parquet; only this metadata is JSON. `jsonlite::write_json(..., auto_unbox = TRUE, pretty = TRUE)` / `read_json(..., simplifyVector = FALSE)` give a stable round-trip. *Alternative considered:* a Parquet/`yaml` manifest — rejected; JSON matches the design and needs no extra heavy dependency beyond `jsonlite`.
+§8.5 calls the manifest "a small JSON sidecar." JSON is human-readable, diffable, and portable, and the manifest is tiny (a few names, numeric options, version strings, and one entry per shard). The bulk results stay Parquet; only this metadata is JSON. `jsonlite::write_json(..., auto_unbox = TRUE, pretty = TRUE)` / `read_json(..., simplifyVector = FALSE)` give a stable round-trip. *Alternative considered:* a Parquet/`yaml` manifest — rejected; JSON matches the design and needs no extra heavy dependency beyond `jsonlite`.
 
 ### Decision: the assembler hashes shards on disk; per-shard sidecars are the at-write-time enhancement
 
@@ -69,7 +69,7 @@ Consequence: `manifest` carries **no cloud-specific surface** (head + per-shard 
 - **Sidecar proliferation** (one `meta.json` per shard) → mitigated: they are tiny, live inside the shard's own partition directory, and are unioned by the assembler; they also double as the per-shard integrity record §7's replay reads.
 - **Manifest/head drift if the scenario changes mid-run** → the head is a pure function of the scenario; the pipeline writes it at init from the same construction-time object that mints the shards (§6 static branching), so head and shard set cannot disagree within a run. *Across* runs, an **expansion** changes the scenario, so the head is re-written from the expanded scenario before re-assembling the tail (the write-head-then-assemble-tail contract above) — it tracks the current grid rather than drifting.
 - **`digest` / `ssd_file_sha256()` ownership** → this change introduces both (in a shared utils file); `scenario-accessors` no longer needs them since it dropped dataset persistence, so there is no cross-change ordering to coordinate.
-- **`jsonlite` numeric/integer fidelity** → use `auto_unbox = TRUE` and read with `simplifyVector = FALSE`; cover integer `seed`/`nboot` and logical knobs in a round-trip test so coercions are caught.
+- **`jsonlite` numeric/integer fidelity** → use `auto_unbox = TRUE` and read with `simplifyVector = FALSE`; cover integer `seed`/`nboot` and logical options in a round-trip test so coercions are caught.
 
 ## Open Questions
 

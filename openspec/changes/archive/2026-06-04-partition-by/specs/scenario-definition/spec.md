@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: Configurable, validated partition_by knob with a complementary bundle entry point
+### Requirement: Configurable, validated partition_by argument with a complementary bundle entry point
 `ssd_define_scenario()` SHALL accept an optional `partition_by` argument and a complementary optional `bundle` argument. Each, when supplied, is a named list keyed by task step (`sample`/`fit`/`hc`; `task-list-loop-baseline`, #80, with the `data` truncation folded into `fit`) and MAY be partial (cover a subset of steps). A `partition_by` entry SHALL be a character vector of **path-axis** names; a `bundle` entry SHALL be a character vector of **inner-axis** names; in both cases the vector SHALL be unique, free of missing values, and a subset of that step's vocabulary (`task_axes(step)`). For each step **at most one** of `partition_by`/`bundle` SHALL name it; a step named in **both** SHALL abort. A step named in **neither** SHALL use its documented default. The constructor SHALL normalize the two into a single stored `partition_by` — a complete `sample`/`fit`/`hc` **path** list: a `bundle` entry becomes its path complement `setdiff(task_axes(step), bundle[[step]])`, and defaults fill unnamed steps. The constructor SHALL abort, in the context of the user-facing function, with an informative error naming the offending step and axis when any condition is violated.
 
 #### Scenario: Defaults populated when absent

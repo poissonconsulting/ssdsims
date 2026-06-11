@@ -67,7 +67,8 @@ typically spans several fit shards), isolate each task's fit by \code{fit_id},
 deserialise the \code{fitdists} object, and estimate the hazard concentration with
 the per-task \verb{(seed, primer)} through \code{hc_data_task_primer()}. Each task's hc
 tibble (one or more rows - the \code{proportion} fan-out, with the scalar \code{ci}
-applied uniformly and bootstrap-only knobs \code{NA} when \code{ci = FALSE}) is tagged
+applied uniformly and bootstrap-only scenario options \code{NA} when
+\code{ci = FALSE}) is tagged
 with its \code{hc_id} and parent \code{fit_id}, stacked, and written as one Parquet at
 the shard's partition path.
 

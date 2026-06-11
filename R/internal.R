@@ -110,7 +110,7 @@ hc_state <- function(
     ci = ci,
     state = state
   )
-  # `est_method` is an hc simulation setting summarised within the cell from a
+  # `est_method` is an hc scenario setting summarised within the cell from a
   # single bootstrap sample set (see `hc_collapse_est_methods()`); the bootstrap
   # is the only RNG consumer, so it runs inside the seeded state. `nboot` and
   # `ci_method` ride as outer columns on the `ssd_hc_sims()` factorial grid and
