@@ -53,7 +53,18 @@ controller <- crew.cluster::crew_controller_slurm(
       # and your scratch path here.
       "#SBATCH --account=YOUR_ALLOCATION", # <-- your account/allocation
       "module load R/4.3", # <-- the module that provides R + deps
-      "export TMPDIR=/scratch/$USER/ssdsims" # <-- writable scratch for tempdir()
+      "export TMPDIR=/scratch/$USER/ssdsims", # <-- writable scratch for tempdir()
+      # DuckDB memory on the worker. ssdsims caps duckplyr/DuckDB at 1GB per
+      # worker by default (and at a single thread, so `cpus_per_task = 1`
+      # above is correct as shipped). Raise the cap here, keeping headroom
+      # for R's own footprint within the job: R holds a shard's draws while
+      # DuckDB ingests them, so budget roughly half the job for DuckDB (3GB
+      # of a 4GB job). A higher cap is only ever needed for shards carrying a
+      # large nested `samples` payload (rule of thumb: a shard with P bytes
+      # of draws needs ~5 x P); the summary target never needs it (its writer
+      # is byte-budgeted - see ?ssd_summarise). A too-low cap fails the shard
+      # loud and isolated (error = "null"), never the whole job.
+      "export SSDSIMS_DUCKDB_MEMORY_LIMIT=3GB" # <-- DuckDB cap per worker
     )
   )
 )
