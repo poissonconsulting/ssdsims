@@ -81,20 +81,20 @@ The package SHALL expose `ssd_data()` as the single entry point that assembles o
 - **WHEN** `ssd_data(boron = df1, df2)` is called
 - **THEN** names SHALL be taken from the argument name (`"boron"`) or by symbol capture for the unnamed argument, and duplicate names SHALL abort with an informative error
 
-### Requirement: ci = FALSE rejects bootstrap-only knobs
-When `ci = FALSE` is the only confidence-interval setting, `ssd_define_scenario()` SHALL abort with an error if any bootstrap-only knobs (`nboot`, `ci_method`, or `parametric`) are passed, enforcing that the user either omit those knobs or explicitly set `ci = c(FALSE, TRUE)` to enable bootstrap.
+### Requirement: ci = FALSE rejects bootstrap-only scenario options
+When `ci = FALSE` is the only confidence-interval setting, `ssd_define_scenario()` SHALL abort with an error if any bootstrap-only scenario options (`nboot`, `ci_method`, or `parametric`) are passed, enforcing that the user either omit those options or explicitly set `ci = c(FALSE, TRUE)` to enable bootstrap.
 
-#### Scenario: Bootstrap knobs rejected when ci = FALSE
+#### Scenario: Bootstrap-only scenario options rejected when ci = FALSE
 - **WHEN** `ssd_define_scenario(..., ci = FALSE, nboot = 1000)` is called
-- **THEN** the function SHALL abort with an informative error stating that bootstrap-only knobs are not allowed when `ci = FALSE`
+- **THEN** the function SHALL abort with an informative error stating that bootstrap-only scenario options are not allowed when `ci = FALSE`
 
 #### Scenario: User must explicitly enable bootstrap
 - **WHEN** the user wants bootstrap confidence intervals
 - **THEN** they SHALL set `ci = c(FALSE, TRUE)` (not just `ci = TRUE`) to signal both pointwise and bootstrap estimates; omitting the `ci = FALSE` case reduces the scenario's asymmetry
 
-#### Scenario: Both ci values retains bootstrap knobs
+#### Scenario: Both ci values retains the bootstrap axes
 - **WHEN** `ssd_define_scenario(..., ci = c(FALSE, TRUE), nboot = c(100, 1000), ci_method = "weighted_samples")` is called
-- **THEN** the bootstrap knobs SHALL be retained and no error SHALL be emitted; the `ci = FALSE` row will collapse to NA knobs at task-expansion time (§1.2 of the design)
+- **THEN** the bootstrap axes SHALL be retained and no error SHALL be emitted; the `ci = FALSE` row will collapse to NA options at task-expansion time (§1.2 of the design)
 
 ### Requirement: Argument validation
 `ssd_define_scenario()` SHALL validate its declarative arguments and abort with an informative error on invalid input.

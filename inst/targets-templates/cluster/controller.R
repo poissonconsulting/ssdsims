@@ -61,7 +61,7 @@ controller <- crew.cluster::crew_controller_slurm(
 # Shard-target <-> SLURM-job packing (TARGETS-DESIGN.md section 11 Q6).
 # `targets` + `crew` dispatch the independent per-shard targets across SLURM
 # jobs; shards are the unit of parallelism either way. How many shard targets
-# ride in one SLURM job is a `crew` knob, NOT hard-coded as 1:1:
+# ride in one SLURM job is a `crew` option, NOT hard-coded as 1:1:
 #   * `workers` (above) caps concurrent SLURM jobs.
 #   * `tasks_max` on the controller packs up to N shard targets per worker/job
 #     (the default lets one worker serve many shards over its lifetime -> many

@@ -120,7 +120,8 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #'   `est_method` setting are applied uniformly to every hc row - neither is a
 #'   cross-join axis; `ci` rides as a carried column and every requested
 #'   `est_method` is summarised within each task from its single bootstrap sample
-#'   set. When `ci = FALSE` the bootstrap-only knobs (`nboot`, `ci_method`,
+#'   set. When `ci = FALSE` the bootstrap-only scenario options (`nboot`,
+#'   `ci_method`,
 #'   `parametric`) are canonically `NA` and there is no fan-out axis, so the grid
 #'   is exactly one hc row per fit task; when `ci = TRUE` the grid fans out across
 #'   `nboot x ci_method x parametric`. Each row carries an `hc_id` primary key and
@@ -323,7 +324,7 @@ hc_grid_tbl <- function(scenario) {
   # `ci` is emitted as a (single-valued) carried column the runners read, but
   # it is not an hc axis, so it never enters the per-task primer.
   if (isFALSE(hc$ci)) {
-    # Bootstrap-only knobs are canonically NA when ci = FALSE so they cannot
+    # Bootstrap-only scenario options are canonically NA when ci = FALSE so they cannot
     # enter task identity; with `est_method` now an hc setting (not an axis),
     # there is no fan-out axis, so this is exactly one hc row per fit task.
     tidyr::expand_grid(

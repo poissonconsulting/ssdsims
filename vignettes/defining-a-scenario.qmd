@@ -31,9 +31,9 @@ library(ssdsims)
 ssdsims is moving from running a simulation study *immediately* (the legacy
 `ssd_run_scenario()`) to a cluster-friendly [targets](https://docs.ropensci.org/targets/)
 pipeline. The root of that pipeline is a **scenario**: a small, purely
-declarative description of the study you want to run. It contains only the
-knobs --- a seed, the number of simulations, the sample sizes, the dataset
-*names*, and the fit/hc argument grids. It draws **no** random numbers, expands
+declarative description of the study you want to run. It contains only
+declarative arguments --- a seed, the number of simulations, the sample sizes,
+the dataset *names*, and the fit/hc argument grids. It draws **no** random numbers, expands
 **no** tasks, writes **nothing**, and has **no** dependency on `targets`.
 
 Keeping the scenario declarative buys two things:
@@ -89,8 +89,8 @@ materialised by a dataset registry. For now each input must be a data frame.
 
 `ssd_define_scenario()` is the constructor. Its required arguments are the
 dataset input, `nsim` (the replicate count), and `seed` (the RNG root --- it has
-no default because changing it fully re-roots every draw). Everything else is a
-knob with a sensible default.
+no default because changing it fully re-roots every draw). Everything else is
+a scenario option with a sensible default.
 
 ```{r}
 #| label: define-scenario
@@ -136,7 +136,7 @@ is an error.
 
 ### `min_pmix` is referenced by name
 
-The `min_pmix` knob is referenced **by name**: the name --- not the function
+The `min_pmix` option is referenced **by name**: the name --- not the function
 body --- is what enters the task identity and hashes, so the scenario's identity
 stays stable under a recompile or a cosmetic edit. You can pass a character
 vector of names directly, or a function (or list of functions) whose name is
@@ -175,9 +175,9 @@ plus the `se`/`lcl`/`ucl` columns). The choice is a scenario-wide either/or:
 `ci = TRUE` for estimates plus bootstrap intervals (as in the scenario above),
 or `ci = FALSE` for cheap, bootstrap-free point estimates only.
 
-When `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`,
+When `ci = FALSE`, the bootstrap-only scenario options (`nboot`, `ci_method`,
 `parametric`) are meaningless, so passing any of them is an error --- set
-`ci = TRUE` to enable the bootstrap, or omit the knob:
+`ci = TRUE` to enable the bootstrap, or omit the option:
 
 ```{r}
 #| label: ci-false-error
@@ -221,10 +221,10 @@ tasks$sample
 ```
 
 The scalar `ci` is carried uniformly on the `hc` table (it is not an axis), as
-is the `est_method` setting. With `ci = TRUE` the bootstrap knobs (`nboot`,
+is the `est_method` setting. With `ci = TRUE` the bootstrap axes (`nboot`,
 `ci_method`, `parametric`) fan out fully; a `ci = FALSE` scenario would instead
 give exactly one `hc` row per fit task, carrying `NA` for those bootstrap-only
-knobs (every requested `est_method` is summarised within each task from a single
+scenario options (every requested `est_method` is summarised within each task from a single
 bootstrap, so it never fans out into separate tasks).
 
 ```{r}

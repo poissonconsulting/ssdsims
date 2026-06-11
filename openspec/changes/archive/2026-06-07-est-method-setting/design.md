@@ -133,7 +133,7 @@ exploration record:
   role-grouping requirement already has `dists` removed from the axes clause and
   named in the settings block, so the two deltas **compose**. (Per PR review the
   non-`ci`-gated settings `dists`/`est_method`/`proportion` — valid when
-  `ci = FALSE` — precede `ci`, and the knobs `ci` gates follow it (the bootstrap
+  `ci = FALSE` — precede `ci`, and the scenario options `ci` gates follow it (the bootstrap
   axes `nboot`/`ci_method`/`parametric` and `samples`):
   `… range_shape2, dists, est_method, proportion, ci, nboot, ci_method,
   parametric, samples, partition_by …`.) `dists-simulation-setting`
@@ -142,7 +142,7 @@ exploration record:
   slots `est_method` into that block on top of the real bootstrap-collapse work.
   **Archive order: `dists-simulation-setting` first, then this change** — the
   last-synced delta wins the requirement text, and only this (rebased) delta
-  carries both knobs moved.
+  carries both options moved.
 
 ## Migration Plan
 

@@ -6,7 +6,7 @@
 ## 2. Manifest head: writer and reader
 
 - [x] 2.1 Add `ssd_write_manifest(scenario, dir)` in `R/manifest.R`: write `<dir>/manifest.json` with `seed`, `datasets`, `min_pmix`, `fit`, `hc`, `partition_by` and the complete session info captured at write time via `sessioninfo::session_info()` (serialised as a `session_info` block: `platform` + a `name -> version` package map), surfacing `r_version`/`dqrng_version`/`ssdtools_version` as a flat subset; fall back to `utils::sessionInfo()` if `sessioninfo` is unavailable (`jsonlite::write_json(auto_unbox = TRUE, pretty = TRUE)`)
-- [x] 2.2 Add `ssd_read_manifest(dir)`: read with `simplifyVector = FALSE` and restore whole-number/logical knob types so the round-trip is lossless
+- [x] 2.2 Add `ssd_read_manifest(dir)`: read with `simplifyVector = FALSE` and restore whole-number/logical option types so the round-trip is lossless
 
 ## 3. Per-shard recording
 
@@ -24,7 +24,7 @@
 
 ## 6. Tests and checks
 
-- [x] 6.1 `tests/testthat/test-manifest.R`: write/read round-trip preserves declarative fields and the session-info block (incl. the `r`/`dqrng`/`ssdtools` subset), with `seed`/`nboot` whole numbers and logical knobs intact
+- [x] 6.1 `tests/testthat/test-manifest.R`: write/read round-trip preserves declarative fields and the session-info block (incl. the `r`/`dqrng`/`ssdtools` subset), with `seed`/`nboot` whole numbers and logical options intact
 - [x] 6.2 `ssd_record_shard()` writes a per-shard `meta.json` sidecar; concurrent records do not collide (distinct sidecars)
 - [x] 6.3 Assembler builds `completed_shards` by hashing shards on disk; prefers a sidecar's recorded sha when present; a shard with no Parquet is absent
 - [x] 6.4 Re-assembly is idempotent: after a manifest is assembled and a further shard Parquet appears (an expansion), re-running the assembler unions the new shard in and leaves the unchanged shard's entry intact (`TARGETS-DESIGN.md` §8.6)

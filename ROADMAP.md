@@ -88,10 +88,10 @@ is also queued, ready to propose.
 - ✅ 2026-06-04 [task-primer] [🔗](openspec/changes/archive/2026-06-04-task-primer/) — `task_primer(params)` 64-bit hash with NA-as-`INT_MIN` encoding.
 - ✅ 2026-06-04 [primer-primitives] [🔗](openspec/changes/archive/2026-06-04-primer-primitives/) — Refactor the `_state` primitives so each task installs its primer exactly once, then runs state-less ops.
 - ✅ 2026-06-04 [scenario-accessors] [🔗](openspec/changes/archive/2026-06-04-scenario-accessors/) — Materialise datasets / `min_pmix` on the scenario, reached by name via accessors (no registry).
-- ✅ 2026-06-04 [partition-by] [🔗](openspec/changes/archive/2026-06-04-partition-by/) — Scenario `partition_by` knob choosing Hive path levels vs Parquet columns per step.
+- ✅ 2026-06-04 [partition-by] [🔗](openspec/changes/archive/2026-06-04-partition-by/) — Scenario `partition_by` argument choosing Hive path levels vs Parquet columns per step.
 - ✅ 2026-06-04 [task-tables] [🔗](openspec/changes/archive/2026-06-04-task-tables/) — Per-step task tables with `(seed, primer)` plus the `*_shards` wrappers feeding `tar_map`'s `values` (static branching).
 - ✅ 2026-06-04 [shard-runner-baseline] [🔗](openspec/changes/archive/2026-06-04-shard-runner-baseline/) — Single-core Hive-Parquet shard runner proving the write → glob-read → filter loop + m:n parent resolution in plain R.
-- ✅ 2026-06-04 [hc-samples] [🔗](openspec/changes/archive/2026-06-04-hc-samples/) — Opt-in scalar `samples` knob retaining `ssd_hc()`'s per-row bootstrap draws (output retention only, RNG-neutral).
+- ✅ 2026-06-04 [hc-samples] [🔗](openspec/changes/archive/2026-06-04-hc-samples/) — Opt-in scalar `samples` option retaining `ssd_hc()`'s per-row bootstrap draws (output retention only, RNG-neutral).
 - ✅ 2026-06-05 [hive-partitioning] [🔗](openspec/changes/archive/2026-06-05-hive-partitioning/) — Wire the Hive write/read into the `targets` branches and pin the content-hash invalidation model (per-child Option-3 edges over the m:n fan-in).
 - ✅ 2026-06-05 [step-scenario-slice] [🔗](openspec/changes/archive/2026-06-05-step-scenario-slice/) — Project each step's command onto its minimal scenario slice (and the `sample` slice per dataset), so a step-irrelevant edit leaves the other steps' shards cached.
 - ✅ 2026-06-05 [path-axis-growth] [🔗](openspec/changes/archive/2026-06-05-path-axis-growth/) — Assert end-to-end that appending a dataset / growing `nsim` mints only new shards and caches the rest.

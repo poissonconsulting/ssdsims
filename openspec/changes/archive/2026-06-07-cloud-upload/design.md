@@ -48,7 +48,7 @@ Move `upload` off the scenario onto `ssd_scenario_targets(scenario, ..., root, u
 
 ### Decision: `...` + `check_dots_empty()` to force named arguments
 
-`ssd_scenario_targets()` grows from two to three optional knobs (`root`, `upload`, `cue`). Placing `...` immediately after `scenario` and calling `rlang::check_dots_empty()` forces all three to be passed by name, so a positional `ssd_scenario_targets(scenario, my_upload)` or a misspelled `uplaod =` aborts loudly instead of silently binding to the wrong parameter. This is cheap insurance now that destinations are easy to confuse with roots (both are path-like). *Alternative considered:* leave them positional — rejected; `root` and `upload` are both string/path-shaped and trivially transposable.
+`ssd_scenario_targets()` grows from two to three optional arguments (`root`, `upload`, `cue`). Placing `...` immediately after `scenario` and calling `rlang::check_dots_empty()` forces all three to be passed by name, so a positional `ssd_scenario_targets(scenario, my_upload)` or a misspelled `uplaod =` aborts loudly instead of silently binding to the wrong parameter. This is cheap insurance now that destinations are easy to confuse with roots (both are path-like). *Alternative considered:* leave them positional — rejected; `root` and `upload` are both string/path-shaped and trivially transposable.
 
 ### Decision: `upload = NULL` vs `ssd_upload_dryrun()` are distinct and both supported
 

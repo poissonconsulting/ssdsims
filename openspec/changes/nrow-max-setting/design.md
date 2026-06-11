@@ -44,7 +44,7 @@ storage/plumbing change, not an identity one.
 
 - No change to task identity / primer / partitioning (`n_max`/`ci` were never
   axes).
-- No change to the point-estimate computation or to which knobs are axes.
+- No change to the point-estimate computation or to which scenario options are axes.
 - *Direction A* ("everything on the row") — explicitly rejected (below).
 - Removing the `seed`/`primer` columns the shard path attaches per row — they
   are genuinely per-task (the primer is hashed from identity) and stay.
@@ -98,7 +98,7 @@ is the natural, churn-free behaviour. (Flagged in Open Questions.)
 the slice: `ssd_run_sample_step()` computes `D` from `nrow_max` + the dataset
 (was `t$n_max`); `ssd_run_hc_step()` reads `ci` from the slice (was `t$ci`); the
 baseline runner reads both from `scenario$…` as it already does for
-`proportion`/`samples`/`dists`. The `ci = FALSE ⟹ bootstrap-only knobs NA`
+`proportion`/`samples`/`dists`. The `ci = FALSE ⟹ bootstrap-only scenario options NA`
 canonicalisation in `hc_grid_tbl()` stays — it keys off the scalar `ci` (now read
 from the scenario), it just no longer emits a `ci` column.
 
@@ -119,7 +119,7 @@ state.
 With `nrow_max` on the `sample` slice, changing `nrow_max` invalidates the
 `sample` slice → rebuilds `sample` and downstream (correct: the draw changed).
 With `ci` on the `hc` slice, changing `ci` rebuilds only `hc`/`summary`
-(consistent with the existing *"Changing an hc-only knob rebuilds only hc"*
+(consistent with the existing *"Changing an hc-only scenario option rebuilds only hc"*
 contract). Extending `nrow` within the draw size now leaves the `sample` shard
 **cached** and mints only new `nrow`-keyed `fit` shards — the old "widen
 `max(nrow)` re-draws the sample shard" scenario is replaced by this stronger
@@ -139,7 +139,7 @@ moot (the draw size no longer grows with `nrow`).
   draw stores `nrow_max` rows. `sample` shards hold resampled `Conc` rows (no fit
   blobs), so they are small relative to the `fit` blob layer; `1000L` is modest.
   The default is tunable per scenario for the rare large case.
-- **Five specs touched (incl. archived ones).** → Larger surface than a one-knob
+- **Five specs touched (incl. archived ones).** → Larger surface than a one-option
   tidy-up, but each delta is mechanical and the behaviour is preserved except the
   intended draw-size change; `openspec validate --strict` gates each.
 

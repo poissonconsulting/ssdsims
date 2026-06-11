@@ -37,7 +37,7 @@ churn.
 - **Direction B — a task row carries only its identity.** The `sample` task
   table drops the `n_max` column and the `hc` task table drops the `ci` column;
   both values move into the scenario slice and are read there by the runners
-  (the `ci = FALSE ⟹ bootstrap-only knobs NA` canonicalisation stays — it is
+  (the `ci = FALSE ⟹ bootstrap-only scenario options NA` canonicalisation stays — it is
   keyed off the scalar `ci`, which now lives in the slice, not an emitted
   column). The `sample` runner computes its draw size from `nrow_max` + the
   dataset (both already in the slice). After this change every task row is

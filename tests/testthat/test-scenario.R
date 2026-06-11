@@ -87,10 +87,10 @@ test_that("scenario-definition: minimal construction stores declarative fields",
   expect_identical(s$hc$ci, FALSE)
 })
 
-test_that("scenario-definition: non-ci-gated settings precede ci, gated knobs follow", {
+test_that("scenario-definition: non-ci-gated settings precede ci, gated options follow", {
   fmls <- names(formals(ssd_define_scenario))
   # The non-`ci`-gated settings (`dists`, `est_method`, `proportion` — all valid
-  # and meaningful when `ci = FALSE`) come first, then `ci`, then the knobs it
+  # and meaningful when `ci = FALSE`) come first, then `ci`, then the options it
   # gates: the bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when
   # `ci = FALSE`) and `samples` (only retains bootstrap draws). Contiguous, after
   # the last structural axis (`range_shape2`) and before the partitioning args.
@@ -633,7 +633,7 @@ test_that("scenario-definition: bad data in a list aborts via ssd_data", {
   })
 })
 
-# ---- ci = FALSE rejects bootstrap-only knobs -------------------------------
+# ---- ci = FALSE rejects bootstrap-only scenario options --------------------
 
 test_that("scenario-definition: ci = FALSE rejects an explicit nboot", {
   expect_snapshot(error = TRUE, {
@@ -668,7 +668,7 @@ test_that("scenario-definition: ci = FALSE rejects ci_method and parametric", {
   })
 })
 
-test_that("scenario-definition: ci = FALSE alone is fine with default knobs", {
+test_that("scenario-definition: ci = FALSE alone is fine with default scenario options", {
   expect_s3_class(
     ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, ci = FALSE),
     "ssdsims_scenario"
@@ -686,7 +686,7 @@ test_that("scenario-definition: a vector ci is rejected", {
   })
 })
 
-test_that("scenario-definition: scalar ci = TRUE retains bootstrap knobs", {
+test_that("scenario-definition: scalar ci = TRUE retains the bootstrap axes", {
   s <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
@@ -747,7 +747,7 @@ test_that("scenario-definition: print is stable for a single dataset", {
   )
 })
 
-test_that("scenario-definition: print is stable for multiple datasets and vector knobs", {
+test_that("scenario-definition: print is stable for multiple datasets and vector scenario options", {
   expect_snapshot(
     ssd_define_scenario(
       list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),

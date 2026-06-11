@@ -15,7 +15,7 @@ test_that("task-lists: sample table has D * nsim * R rows with axes populated", 
   expect_identical(unique(tasks$replace), FALSE)
 })
 
-test_that("task-lists: the scenario replace knob is a sample axis", {
+test_that("task-lists: the replace scenario option is a sample axis", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
@@ -110,7 +110,7 @@ test_that("task-lists: ci is not an hc axis", {
   expect_false("ci" %in% task_axes("hc"))
 })
 
-test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
+test_that("task-lists: ci = FALSE leaves bootstrap-only scenario options NA", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,
@@ -131,7 +131,7 @@ test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
   expect_true(all(is.na(hc_tasks$parametric)))
 })
 
-test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
+test_that("task-lists: ci = TRUE fans out over the bootstrap axes", {
   scenario <- ssd_define_scenario(
     ssddata::ccme_boron,
     nsim = 2L,

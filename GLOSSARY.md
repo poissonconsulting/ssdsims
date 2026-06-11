@@ -10,7 +10,7 @@ Terminology used throughout `ssdsims`.
   the scenario's RNG root — one of the three **required positional**
   arguments (`data, nsim, seed`), **not** a grid **axis** or a
   **simulation setting** (below). Its canonical call-site slot is third,
-  immediately after `nsim` and before any `...` knob (e.g. `nrow`).
+  immediately after `nsim` and before any `...` scenario option (e.g. `nrow`).
 - **state**: The full internal state of an RNG. For L'Ecuyer-CMRG,
   the state is a length-7 integer vector assignable to
   `.Random.seed` (it cannot be passed to `set.seed()`). For dqrng,
@@ -63,7 +63,7 @@ Terminology used throughout `ssdsims`.
   at that step, and the upstream partition path it depends on.
   Many tasks bundle into one **shard** (below) when they share
   the step's `partition_by` column values.
-- **axis** (cross-join axis): A scenario knob a step *fans out*
+- **axis** (cross-join axis): A scenario option a step *fans out*
   over — one task per combination of the step's axis values. The
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
   `fit` adds the fit-grid axes (`rescale`, `computable`,
@@ -76,7 +76,7 @@ Terminology used throughout `ssdsims`.
   `nrow` is deliberately not a `sample` axis because every `nrow` is
   a sub-truncation of one `n_max`-row draw (TARGETS-DESIGN.md §5),
   so it is an axis only of the (RNG-free) `data` truncation step.
-- **simulation setting**: A scenario knob that is **not** an axis — it is
+- **simulation setting**: A scenario option that is **not** an axis — it is
   absent from `task_axes(step)`, so it never creates a task, enters the
   per-task **primer**, or becomes a **shard**/**partition** level. Its effect
   is realised *inside* each task: it either fans out within the task's own
@@ -90,7 +90,7 @@ Terminology used throughout `ssdsims`.
   `est_method`, `proportion`, `ci`, and `samples` are **hc**-level. In the
   `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`dists`,
   `est_method`, `proportion` — each valid and meaningful when `ci = FALSE`) come
-  before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
+  before `ci`; the options `ci` **gates** then follow it — the bootstrap axes
   `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
   (which only retains bootstrap draws).
 - **partition**: A Hive directory level keyed by an axis value
@@ -127,7 +127,7 @@ Terminology used throughout `ssdsims`.
   Parquet columns that vary row-to-row inside a shard. Together
   `path ⊎ inner = task_axes(step)`.
 - **`partition_by`**: The per-step **path axes** — the canonical
-  sharding knob (`scenario$partition_by`, a `sample`/`fit`/`hc` named
+  sharding argument (`scenario$partition_by`, a `sample`/`fit`/`hc` named
   list). `partition_by[[step]]` is a subset of `task_axes(step)` whose
   values become the shard's Hive path, one shard per cell; shard count
   is `Π |path axis|`. More path axes → finer (more, smaller) shards.
