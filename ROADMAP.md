@@ -63,9 +63,6 @@ artifacts yet is also queued, ready to propose.
 
 ## Next
 
-- ‼️ \[duckplyr-config\] Configure duckplyr to work with reduced main
-  memory and using only a single thread, just in the context of the
-  targets pipeline.
 - ‼️ \[nrow-max-setting\] Add an explicit `nrow_max` draw-size setting
   (default `1000L`), decoupling the draw from the `nrow` axis to retire
   the §5 re-draw churn, and move the last carried columns (`n_max`,
@@ -92,7 +89,6 @@ artifacts yet is also queued, ready to propose.
   job.
 - 😀 \[azure-summary\] Conveniently access the summary Parquet files
   from Azure.
-- 😀 \[duckplyr-message\] Turn off noise from duckplyr.
 
 ## Later
 
@@ -268,6 +264,21 @@ artifacts yet is also queued, ready to propose.
   — Optional `path_with_samples` full summary retaining the
   `dists`/`samples` list-columns, emitted iff `scenario$hc$samples` is
   `TRUE` (#140).
+- ✅ 2026-06-10 \[duckplyr-config\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/duckplyr-config/)
+  — Pipeline-scoped duckplyr/DuckDB configuration: a
+  `local_duckplyr_config()` scope on the step runners,
+  [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md),
+  and
+  [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
+  pins a single thread and a 1GB default `memory_limit` (env knobs
+  `SSDSIMS_DUCKDB_THREADS`/`SSDSIMS_DUCKDB_MEMORY_LIMIT`), relaxes
+  `preserve_insertion_order` (scope-wide; per-write COPY options cannot
+  carry it), and the full summary writes byte-budgeted row groups
+  (`samples_row_group_bytes`). Folds in \[duckplyr-message\]: the scope
+  silences duckplyr’s fallback telemetry
+  (`DUCKPLYR_FALLBACK_COLLECT=0`/`DUCKPLYR_FALLBACK_AUTOUPLOAD=0`)
+  (#151). *The change directory is not yet physically archived.*
 
 ## Decisions
 
