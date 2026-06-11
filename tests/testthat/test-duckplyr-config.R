@@ -43,9 +43,12 @@ test_that("config scope pins one thread, a 1GB default limit, relaxed order", {
     settings <- dc_settings()
     expect_identical(settings$threads, 1L)
     expect_identical(settings$memory_limit, one_gb)
-    expect_false(settings$preserve_order)
+    expect_false(settings$preserve_insertion_order)
   })
-  expect_identical(dc_settings()$preserve_order, before$preserve_order)
+  expect_identical(
+    dc_settings()$preserve_insertion_order,
+    before$preserve_insertion_order
+  )
 })
 
 test_that("config scope honours the env knobs", {

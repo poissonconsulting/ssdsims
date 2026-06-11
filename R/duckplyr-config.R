@@ -20,13 +20,15 @@ duckplyr_current_settings <- function() {
     paste0(
       "SELECT current_setting('threads') AS threads, ",
       "current_setting('memory_limit') AS memory_limit, ",
-      "current_setting('preserve_insertion_order') AS preserve_order"
+      "current_setting('preserve_insertion_order') AS preserve_insertion_order"
     )
   )))
   list(
     threads = as.integer(settings$threads[[1L]]),
     memory_limit = settings$memory_limit[[1L]],
-    preserve_order = isTRUE(as.logical(settings$preserve_order[[1L]]))
+    preserve_insertion_order = isTRUE(as.logical(settings$preserve_insertion_order[[
+      1L
+    ]]))
   )
 }
 
@@ -157,7 +159,7 @@ local_duckplyr_config <- function(.local_envir = parent.frame()) {
       duckplyr::db_exec(paste0("SET memory_limit = '", restore_limit, "'"))
       duckplyr::db_exec(paste0(
         "SET preserve_insertion_order = ",
-        if (prior$preserve_order) "true" else "false"
+        if (prior$preserve_insertion_order) "true" else "false"
       ))
     },
     envir = .local_envir
