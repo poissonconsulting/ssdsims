@@ -51,31 +51,31 @@
 
 ## 3. Commit 3 — `docs: add glossary hierarchy and DoE mapping`
 
-- [ ] 3.1 Cleanup pass: re-read every paragraph touched by 1.x/2.x for
+- [x] 3.1 Cleanup pass: re-read every paragraph touched by 1.x/2.x for
       grammar, line-wrap (80-col Markdown), and always-qualified discipline
       (no bare "option"/"setting" introducing a term); catch stragglers via
       `git grep -niE "knob|simulation setting"`
-- [ ] 3.2 Add the **scenario option** genus entry to `GLOSSARY.md` (design
+- [x] 3.2 Add the **scenario option** genus entry to `GLOSSARY.md` (design
       D1: axis|setting dichotomy; `data`/`nsim`/`seed`/`name` and the layout
       arguments `partition_by`/`bundle`/`upload` are excluded) and align the
       scenario-axis/scenario-setting entries with it
-- [ ] 3.3 Add the GLOSSARY "Hierarchy" section: simulation study ⊃ design
+- [x] 3.3 Add the GLOSSARY "Hierarchy" section: simulation study ⊃ design
       (`ssd_design()`, marked in-flight → `scenario-combine`) ⊃ scenario ⊃
       task, with the multi-design-study examples (design D5)
-- [ ] 3.4 Add the literature mapping table to `GLOSSARY.md` with citations —
+- [x] 3.4 Add the literature mapping table to `GLOSSARY.md` with citations —
       Morris, White & Crowther (2019) *Statistics in Medicine* 38:2074–2102
       (ADEMP, factors varied factorially) and DoE factor/level/cell — mapping
       scenario axis ≈ factor, axis value ≈ level, task ≈ factorial cell (the
       literature's "scenario"), scenario setting ≈ held-constant condition,
       `nsim` ≈ repetitions per cell; note "factor"/"level"/"study" are
       glosses, never working terms
-- [ ] 3.5 Final verification: `devtools::test()`, `devtools::document()`
+- [x] 3.5 Final verification: `devtools::test()`, `devtools::document()`
       diff-clean, `air format .` clean, full `R CMD check` if time permits;
       commit
 
 ## 4. PR
 
-- [ ] 4.1 Push branch `claude/happy-curie-8te0ci` and open the PR titled
+- [x] 4.1 Push branch `claude/happy-curie-8te0ci` and open the PR titled
       `refactor: rename knob/simulation-setting vocabulary to scenario
       option/axis/setting`, description capturing the final vocabulary table
       and scope decisions
