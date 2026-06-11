@@ -219,3 +219,33 @@ Readings:
   (groups of 79 rows ≈ 31.6 MB). The same ≳ 5× rule as the shard writes, now
   applied to the *budget* instead of the whole union — i.e. arbitrarily
   tunable.
+
+## experiment-preserve-order-copy-option.R
+
+Implementation-review question: could the insertion-order relaxation ride on
+`compute_parquet(options = )` as a COPY option (next to
+`row_group_size_bytes`), avoiding any global `SET`? duckdb 1.5.2,
+threads = 1, the 5000-row x 10-double fixture.
+
+```
+RESULT copy-option preserve_insertion_order=FALSE                  -> ERR: Not implemented: Unrecognized option "preserve_insertion_order"
+RESULT copy-option preserve_order=FALSE alone                      -> OK groups: 5000
+RESULT copy-option preserve_order=FALSE + rgbytes=100KB            -> ERR: Binder: ROW_GROUP_SIZE_BYTES does not work while preserving insertion order
+RESULT global false + copy-option preserve_order=TRUE + rgbytes=100KB -> OK groups: 2048+2048+904
+RESULT global false + rgbytes=100KB only                           -> OK groups: 2048+2048+904
+```
+
+Readings: `PRESERVE_ORDER` *is* a recognised COPY option, but the
+`ROW_GROUP_SIZE_BYTES` Binder validation consults only the **global**
+`preserve_insertion_order` setting - per-copy `PRESERVE_ORDER FALSE` with a
+byte budget is still refused, while global-false with per-copy
+`PRESERVE_ORDER TRUE` is accepted. So the byte-budgeted write cannot be
+expressed per COPY; the global setting must be `false` regardless. Decision:
+fold `preserve_insertion_order = false` into the `local_duckplyr_config()`
+scope (snapshot/restored like `threads`/`memory_limit`) and drop the
+`compute_parquet_unordered()` wrapper - the full-summary write becomes a
+plain `compute_parquet(options = list(row_group_size_bytes = ...))` inside
+the already-open scope. Implication recorded in the spec: with the scope
+relaxing order globally, per-file byte-identity of pipeline writes is the
+observed single-producer behaviour of the default `threads = 1` - raising
+`SSDSIMS_DUCKDB_THREADS` may reorder rows (value-identity still holds).

@@ -66,18 +66,22 @@ section 6.2).
 \section{Memory and the full summary's row groups}{
 
 The full summary is written in \strong{byte-budgeted Parquet row groups}
-(\code{samples_row_group_bytes}, default \code{"100MB"}) with the engine's
-\code{preserve_insertion_order} relaxed for that one write (and restored after),
-so its memory requirement follows the per-group budget - about five times
-the budget - rather than the union's total row count, and the row-group
-row count adapts to the \code{samples} cell size (large groups for small draws,
-small groups for large ones). The trade: the full summary's \strong{row order is
-not contractual} - re-summarising the same shards yields the same rows
+(\code{samples_row_group_bytes}, default \code{"100MB"}), so its memory requirement
+follows the per-group budget - about five times the budget - rather than
+the union's total row count, and the row-group row count adapts to the
+\code{samples} cell size (large groups for small draws, small groups for large
+ones). The engine accepts the byte budget because the pipeline
+configuration scope holds \code{preserve_insertion_order = false} (restored
+when \code{ssd_summarise()} returns); it is refused while preserving order, and
+only the global setting counts - the per-copy \code{PRESERVE_ORDER} option
+cannot substitute. The trade: the full summary's \strong{row order is not
+contractual} - re-summarising the same shards yields the same rows
 (address them by \code{hc_id}/\code{fit_id}), but their order and the file's bytes
-may differ. The compact summary keeps the engine's default ordered writer
-and is byte-identical across re-runs. Evidence: the \code{duckplyr-config}
-change's \code{exploration/experiment-summary-union.R} and
-\code{exploration/experiment-rgbytes.R}.
+may differ. Under the default single thread, writes were observed in input
+order and byte-identical across runs regardless. Evidence: the
+\code{duckplyr-config} change's \code{exploration/experiment-summary-union.R},
+\code{exploration/experiment-rgbytes.R}, and
+\code{exploration/experiment-preserve-order-copy-option.R}.
 }
 
 \examples{

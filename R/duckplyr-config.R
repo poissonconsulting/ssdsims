@@ -11,19 +11,22 @@
 
 # The DuckDB settings a config scope touches, read back via
 # `duckplyr::read_sql_duckdb()` (the snapshot the deferred restore replays).
-# `threads` arrives numeric; `memory_limit` arrives as the engine's RENDERED
-# string (e.g. "953.6 MiB"), which is lossy - see
-# `duckplyr_memory_limit_restore()` for the round-trip-exact restore value.
+# `threads` arrives numeric and `preserve_insertion_order` boolean;
+# `memory_limit` arrives as the engine's RENDERED string (e.g. "953.6 MiB"),
+# which is lossy - see `duckplyr_memory_limit_restore()` for the
+# round-trip-exact restore value.
 duckplyr_current_settings <- function() {
   settings <- tibble::as_tibble(dplyr::collect(duckplyr::read_sql_duckdb(
     paste0(
       "SELECT current_setting('threads') AS threads, ",
-      "current_setting('memory_limit') AS memory_limit"
+      "current_setting('memory_limit') AS memory_limit, ",
+      "current_setting('preserve_insertion_order') AS preserve_order"
     )
   )))
   list(
     threads = as.integer(settings$threads[[1L]]),
-    memory_limit = settings$memory_limit[[1L]]
+    memory_limit = settings$memory_limit[[1L]],
+    preserve_order = isTRUE(as.logical(settings$preserve_order[[1L]]))
   )
 }
 
@@ -105,6 +108,16 @@ duckplyr_env_memory_limit <- function() {
 #'   `DUCKPLYR_FALLBACK_AUTOUPLOAD=0`, scoped env vars), so pipeline work
 #'   neither writes fallback logs nor seeds duckplyr's interactive attach-time
 #'   banner.
+#' * DuckDB `preserve_insertion_order` is set to `false`, so the full-summary
+#'   write may pass `ROW_GROUP_SIZE_BYTES` (the engine refuses it while
+#'   preserving order, and its Binder check consults only the GLOBAL setting -
+#'   the per-copy `PRESERVE_ORDER` option cannot substitute; see the
+#'   `duckplyr-config` change's
+#'   `exploration/experiment-preserve-order-copy-option.R`). Under the default
+#'   single thread there is one producer, so writes were observed in input
+#'   order and byte-identical across runs regardless; with
+#'   `SSDSIMS_DUCKDB_THREADS` raised above one, row order within written
+#'   files is no longer guaranteed (values are unaffected).
 #'
 #' **Raising the memory limit**: set the env var - on a cluster via the
 #' controller's `script_lines` (e.g. `export SSDSIMS_DUCKDB_MEMORY_LIMIT=3GB`
@@ -142,11 +155,16 @@ local_duckplyr_config <- function(.local_envir = parent.frame()) {
     {
       duckplyr::db_exec(paste0("SET threads TO ", prior$threads))
       duckplyr::db_exec(paste0("SET memory_limit = '", restore_limit, "'"))
+      duckplyr::db_exec(paste0(
+        "SET preserve_insertion_order = ",
+        if (prior$preserve_order) "true" else "false"
+      ))
     },
     envir = .local_envir
   )
   duckplyr::db_exec(paste0("SET threads TO ", threads))
   duckplyr::db_exec(paste0("SET memory_limit = '", memory_limit, "'"))
+  duckplyr::db_exec("SET preserve_insertion_order = false")
   withr::local_envvar(
     DUCKPLYR_FALLBACK_COLLECT = "0",
     DUCKPLYR_FALLBACK_AUTOUPLOAD = "0",

@@ -7,10 +7,13 @@ The package SHALL provide an internal, withr-style scope helper
 (`local_duckplyr_config()`) that configures duckplyr's managed DuckDB
 connection for pipeline work and restores the prior configuration when the
 scope exits. Within the scope the helper SHALL set DuckDB `threads` from
-`SSDSIMS_DUCKDB_THREADS` (defaulting to `1` when unset) and SHALL set DuckDB
+`SSDSIMS_DUCKDB_THREADS` (defaulting to `1` when unset), SHALL set DuckDB
 `memory_limit` from `SSDSIMS_DUCKDB_MEMORY_LIMIT` (defaulting to `1GB` when
 unset, so a worker is never one forgotten variable away from the engine's
-machine-derived default). The per-shard step runners (`ssd_run_sample_step()`,
+machine-derived default), and SHALL set DuckDB `preserve_insertion_order` to
+`false` (the byte-budgeted summary write is refused while preserving order,
+and the engine consults only the global setting — a per-copy `PRESERVE_ORDER`
+option cannot substitute). The per-shard step runners (`ssd_run_sample_step()`,
 `ssd_run_fit_step()`, `ssd_run_hc_step()`), the summary fan-in
 (`ssd_summarise()`), and the single-core runner (`ssd_run_scenario_shards()`)
 SHALL each apply this scope for the duration of their body. The configuration
@@ -43,6 +46,12 @@ duckplyr/DuckDB settings SHALL be left untouched.
 - **THEN** the inner scope's exit SHALL restore the outer scope's settings and
   the outer scope's exit SHALL restore the original settings
 
+#### Scenario: Insertion order is relaxed within the scope and restored after
+- **WHEN** a step runner or `ssd_summarise()` executes
+- **THEN** DuckDB `preserve_insertion_order` SHALL be `false` while the body
+  executes and SHALL be back at its pre-call value after the call returns (or
+  errors)
+
 ### Requirement: Pipeline-context duckplyr telemetry silence
 Within the configuration scope the package SHALL disable duckplyr's
 fallback-telemetry collection and its autoupload prompt by scoping the
@@ -66,11 +75,14 @@ configuration SHALL NOT be modified.
 
 ### Requirement: Configuration never changes results
 The pipeline-scoped configuration SHALL affect resource usage and chatter
-only: for a fixed scenario, the written shard Parquets and the compact
-summary SHALL be byte-identical, and the full summary (`path_with_samples`)
-SHALL be value-identical (the same multiset of rows; see the byte-budgeted
-row-groups requirement), whatever `SSDSIMS_DUCKDB_THREADS` and (sufficient)
-`SSDSIMS_DUCKDB_MEMORY_LIMIT` values are in effect.
+only: for a fixed scenario, all written Parquets SHALL be value-identical
+(the same multiset of rows per file) whatever `SSDSIMS_DUCKDB_THREADS` and
+(sufficient) `SSDSIMS_DUCKDB_MEMORY_LIMIT` values are in effect. Under the
+default single-threaded configuration the written shard Parquets and the
+compact summary SHALL additionally be byte-identical across runs (one
+producer writes in input order even with insertion order relaxed); with
+`SSDSIMS_DUCKDB_THREADS` raised above one, row order within written files is
+not guaranteed and byte-identity MAY be lost (values are unaffected).
 
 #### Scenario: Byte-identical shards under constrained configuration
 - **WHEN** the same scenario is run once with default configuration and once
@@ -84,17 +96,16 @@ row-groups requirement), whatever `SSDSIMS_DUCKDB_THREADS` and (sufficient)
 `ssd_summarise()` SHALL write the full summary (`path_with_samples`, the
 output retaining the `dists`/`samples` list-columns) with an explicit Parquet
 `ROW_GROUP_SIZE_BYTES` budget (default about 100 MB, exposed as an argument),
-setting the engine's `preserve_insertion_order` to `false` for that write and
-restoring it afterwards — so the write's memory requirement is bounded by the
-row-group byte budget, not by the union's total row count, and the row-group
-row count adapts to the `samples` cell size (large groups for small draws,
-small groups for large draws). Because insertion order is relaxed, the full
-summary's guarantee is **value-identity**: re-summarising the same shards
-SHALL yield the same multiset of rows, while row order and file bytes MAY
-differ; consumers SHALL address rows by their keys (`hc_id`/`fit_id`), never
-by position. The compact summary write (list-columns projected out) SHALL
-keep the engine's default ordered writer and its byte-identity across
-re-runs.
+relying on the configuration scope's `preserve_insertion_order = false` —
+so the write's memory requirement is bounded by the row-group byte budget,
+not by the union's total row count, and the row-group row count adapts to
+the `samples` cell size (large groups for small draws, small groups for
+large draws). Because insertion order is relaxed, the full summary's
+guarantee is **value-identity**: re-summarising the same shards SHALL yield
+the same multiset of rows, while row order and file bytes MAY differ;
+consumers SHALL address rows by their keys (`hc_id`/`fit_id`), never by
+position. The compact summary write (list-columns projected out) SHALL keep
+the engine's default row-group sizing.
 
 #### Scenario: Union memory is flat in total rows
 - **WHEN** `ssd_summarise()` writes a full summary unioning more rows than fit
@@ -117,10 +128,10 @@ re-runs.
   (equal after ordering by key), and the compact summaries SHALL be
   byte-identical
 
-#### Scenario: Insertion order is restored after the write
-- **WHEN** the full-summary write completes (or errors)
+#### Scenario: Insertion order is restored after the summary returns
+- **WHEN** `ssd_summarise()` returns (or errors)
 - **THEN** the connection's `preserve_insertion_order` setting SHALL be back
-  at its pre-write value
+  at its pre-call value (the configuration scope's restore)
 
 ### Requirement: Nested-shard memory sizing is documented
 The helper's documentation and the cluster template SHALL state the empirical

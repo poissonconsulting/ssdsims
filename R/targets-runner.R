@@ -52,40 +52,6 @@ ssd_read_parquet <- function(path) {
   )))
 }
 
-#' Write a lazy duckplyr table to Parquet in byte-budgeted row groups.
-#'
-#' The full-summary (`path_with_samples`) writer. DuckDB's default ordered
-#' Parquet sink accumulates rows toward its 122 880-row row groups and must
-#' buffer a whole row group of nested `samples` draws, so its memory floor
-#' grows with the union's TOTAL row count (the `duckplyr-config` change's
-#' `exploration/experiment-summary-union.R`). `ROW_GROUP_SIZE_BYTES` caps
-#' that buffer payload-adaptively (large groups for small draws, small groups
-#' for large ones) but the engine refuses it - a loud Binder error, never a
-#' silent ignore - unless insertion order is relaxed: the ordered sink cuts
-#' row groups on its ordered batcher's row-count boundaries and cannot flush
-#' early on a byte budget while later-ordered batches are pending. So
-#' `preserve_insertion_order` is set to `false` for this one write and
-#' restored on exit (error included); the compact summary and the shard
-#' writes keep the ordered writer and their byte-identity. Output row order
-#' is therefore non-contractual here - value-identity only; consumers address
-#' rows by their keys.
-#' @noRd
-compute_parquet_unordered <- function(tbl, path, row_group_bytes) {
-  prior <- tibble::as_tibble(dplyr::collect(duckplyr::read_sql_duckdb(
-    "SELECT current_setting('preserve_insertion_order') AS preserve"
-  )))$preserve[[1L]]
-  duckplyr::db_exec("SET preserve_insertion_order = false")
-  withr::defer(duckplyr::db_exec(paste0(
-    "SET preserve_insertion_order = ",
-    if (isTRUE(as.logical(prior))) "true" else "false"
-  )))
-  duckplyr::compute_parquet(
-    tbl,
-    path,
-    options = list(row_group_size_bytes = row_group_bytes)
-  )
-}
-
 #' Serialise an arbitrary R object to an ASCII string (Parquet-storable).
 #'
 #' The single encode/decode seam through which a non-tabular per-task result
@@ -467,18 +433,22 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #'
 #' @section Memory and the full summary's row groups:
 #' The full summary is written in **byte-budgeted Parquet row groups**
-#' (`samples_row_group_bytes`, default `"100MB"`) with the engine's
-#' `preserve_insertion_order` relaxed for that one write (and restored after),
-#' so its memory requirement follows the per-group budget - about five times
-#' the budget - rather than the union's total row count, and the row-group
-#' row count adapts to the `samples` cell size (large groups for small draws,
-#' small groups for large ones). The trade: the full summary's **row order is
-#' not contractual** - re-summarising the same shards yields the same rows
+#' (`samples_row_group_bytes`, default `"100MB"`), so its memory requirement
+#' follows the per-group budget - about five times the budget - rather than
+#' the union's total row count, and the row-group row count adapts to the
+#' `samples` cell size (large groups for small draws, small groups for large
+#' ones). The engine accepts the byte budget because the pipeline
+#' configuration scope holds `preserve_insertion_order = false` (restored
+#' when `ssd_summarise()` returns); it is refused while preserving order, and
+#' only the global setting counts - the per-copy `PRESERVE_ORDER` option
+#' cannot substitute. The trade: the full summary's **row order is not
+#' contractual** - re-summarising the same shards yields the same rows
 #' (address them by `hc_id`/`fit_id`), but their order and the file's bytes
-#' may differ. The compact summary keeps the engine's default ordered writer
-#' and is byte-identical across re-runs. Evidence: the `duckplyr-config`
-#' change's `exploration/experiment-summary-union.R` and
-#' `exploration/experiment-rgbytes.R`.
+#' may differ. Under the default single thread, writes were observed in input
+#' order and byte-identical across runs regardless. Evidence: the
+#' `duckplyr-config` change's `exploration/experiment-summary-union.R`,
+#' `exploration/experiment-rgbytes.R`, and
+#' `exploration/experiment-preserve-order-copy-option.R`.
 #'
 #' @param dir_sample The `sample` results root.
 #' @param dir_fit The `fit` results root.
@@ -549,14 +519,17 @@ ssd_summarise <- function(
   # The full summary retains every hc column (`dists`/`samples` included). The
   # same lazy read is written straight back out, so the potentially-large draws
   # never materialise in R either - the same no-R guarantee the compact
-  # projection above relies on. Byte-budgeted row groups (insertion order
-  # relaxed for this write only) keep the writer's memory flat in the union's
-  # row count; see `compute_parquet_unordered()`.
+  # projection above relies on. Byte-budgeted row groups keep the writer's
+  # memory flat in the union's row count; the engine accepts the byte budget
+  # because `local_duckplyr_config()` (above) relaxed `preserve_insertion_order`
+  # for this scope - it is refused while preserving order, and only the GLOBAL
+  # setting counts (the per-copy `PRESERVE_ORDER` option cannot substitute; the
+  # `duckplyr-config` change's `exploration/` has the probe).
   dir.create(dirname(path_with_samples), recursive = TRUE, showWarnings = FALSE)
-  compute_parquet_unordered(
+  duckplyr::compute_parquet(
     hc_shards,
     path_with_samples,
-    samples_row_group_bytes
+    options = list(row_group_size_bytes = samples_row_group_bytes)
   )
   c(path, path_with_samples)
 }

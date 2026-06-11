@@ -59,14 +59,15 @@ with a multi-line "fallback events can be collected and uploaded…" banner
   is configured **just in the context of the targets pipeline**, exactly as the
   roadmap item scopes it.
 - `ssd_summarise()`'s full-summary (`path_with_samples`) write passes an
-  explicit `ROW_GROUP_SIZE_BYTES` budget (default `100MB`) with
-  `preserve_insertion_order = false` scoped to that one write — so the one
-  task that unions every `hc` row is memory-flat in total rows, needs no
-  relaxed memory budget, and the row groups adapt to the `samples` cell size
-  (13 000-row groups at `nboot = 1000`, 246-row groups at 50k draws). Row
-  order in that file becomes non-contractual (value-identity guaranteed
-  instead; observed byte-identical and in order under `threads = 1`); the
-  shards and the compact summary keep byte-identity.
+  explicit `ROW_GROUP_SIZE_BYTES` budget (default `100MB`) — so the one task
+  that unions every `hc` row is memory-flat in total rows, needs no relaxed
+  memory budget, and the row groups adapt to the `samples` cell size
+  (13 000-row groups at `nboot = 1000`, 246-row groups at 50k draws). The
+  required `preserve_insertion_order = false` is held by the configuration
+  scope (it cannot be expressed per write — probed in `exploration/`), so
+  row order within pipeline-written files becomes non-contractual
+  (value-identity guaranteed instead; under the default `threads = 1` every
+  write was observed byte-identical and in input order).
 - Documented sizing guidance (design.md + the helper's docs): writing an `hc`
   shard whose `samples` list-column holds `P` bytes of draws needs
   `memory_limit` ≳ 5 × `P`; the limit is a knob, not a magic constant, and the

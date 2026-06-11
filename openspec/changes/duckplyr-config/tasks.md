@@ -41,11 +41,15 @@
   `options = list(row_group_size_bytes = <value>)` to the
   `path_with_samples` `compute_parquet()` call; the compact-summary write
   keeps default options and the ordered writer
-- [x] 3.2 Scope `SET preserve_insertion_order = false` around that one write
-  (snapshot via `read_sql_duckdb()`, restore via `withr::defer()` — the same
-  mechanics as `local_duckplyr_config()`), so the compact write and the rest
-  of the scope keep ordered output; the engine refuses the bytes option
-  without it (Binder error), so a regression here fails loud, never silently
+- [x] 3.2 Hold `preserve_insertion_order = false` in `local_duckplyr_config()`
+  (snapshotted and restored like `threads`/`memory_limit`) rather than around
+  the one write: probed in
+  `exploration/experiment-preserve-order-copy-option.R`, the relaxation
+  cannot be passed per write (`preserve_insertion_order` is not a COPY
+  option; `PRESERVE_ORDER` is, but the `ROW_GROUP_SIZE_BYTES` Binder check
+  consults only the global setting), and the engine refuses the bytes option
+  without it (Binder error), so a regression fails loud, never silently; the
+  interim per-write wrapper `compute_parquet_unordered()` was dropped
 - [x] 3.3 Roxygen-document the argument: why a byte budget (the engine buffers
   whole row groups of nested `samples`; the default ordered writer puts the
   whole union in ONE group, so its memory floor grows with total rows —

@@ -122,8 +122,10 @@ One internal helper, `local_duckplyr_config(.local_envir = parent.frame())`
 `ssd_run_scenario_shards()` — mirroring how `local_dqrng_backend()` already
 scopes the RNG backend there. It:
 
-1. snapshots `threads` and `memory_limit` via `duckplyr::read_sql_duckdb()`,
-2. applies the pipeline settings via `duckplyr::db_exec("SET …")`,
+1. snapshots `threads`, `memory_limit`, and `preserve_insertion_order` via
+   `duckplyr::read_sql_duckdb()`,
+2. applies the pipeline settings via `duckplyr::db_exec("SET …")` (including
+   `preserve_insertion_order = false` — see D4),
 3. scopes `DUCKPLYR_FALLBACK_COLLECT = "0"` and
    `DUCKPLYR_FALLBACK_AUTOUPLOAD = "0"` via `withr::local_envvar()`,
 4. registers a `withr::defer()` that `SET`s the snapshotted values back.
@@ -186,14 +188,22 @@ telemetry preferences are untouched. We do not set `DUCKPLYR_FALLBACK_INFO`
 (per-call fallback messages are opt-in and already silent) and we do not touch
 the user's persisted `fallback_config()`.
 
-### D4. The full-summary write uses `ROW_GROUP_SIZE_BYTES` with insertion order relaxed
+### D4. The full-summary write uses `ROW_GROUP_SIZE_BYTES`; the scope relaxes insertion order
 
 `ssd_summarise()`'s `path_with_samples` write passes
 `row_group_size_bytes = '100MB'` (a documented argument with that default) to
-`duckplyr::compute_parquet()`, with `preserve_insertion_order = false` set —
-and afterwards restored — **around that one write only**. The compact-summary
-write keeps default options and ordered output (its rows are tiny — 4100 rows
-passed at a 100 MB limit).
+`duckplyr::compute_parquet()`. The required `preserve_insertion_order = false`
+lives in the `local_duckplyr_config()` scope (D1) — snapshot/restored like
+`threads` and `memory_limit` — because it **cannot** be expressed per write:
+`exploration/experiment-preserve-order-copy-option.R` shows
+`preserve_insertion_order` is not a COPY option, and while `PRESERVE_ORDER`
+is one, the `ROW_GROUP_SIZE_BYTES` Binder validation consults only the
+*global* setting (per-copy `PRESERVE_ORDER FALSE` + a byte budget is still
+refused). A dedicated per-write SET/restore wrapper
+(`compute_parquet_unordered()`, an earlier iteration) was dropped as
+redundant once the scope carries the setting. The compact-summary write
+keeps default row-group sizing (its rows are tiny — 4100 rows passed at a
+100 MB limit).
 
 *Why this over a relaxed summary memory budget*: the union experiment shows
 the default writer's requirement grows with the union's **total row count**
@@ -268,12 +278,17 @@ later (`cost-analysis-targets` territory).
 - [Memory floor is duckdb-version-specific] The 5× rule was measured on duckdb
   1.5.2. → Recorded as an empirical bound with the reproduction scripts kept in
   `exploration/`; re-measure on major engine upgrades.
-- [Full-summary row order is not contractual] With
-  `preserve_insertion_order = false` the engine does not promise output
-  order; under `threads = 1` it was observed byte-identical and in input
-  order, but an engine upgrade may legitimately change either. → Accepted at
-  review (the file is queried, not diffed); the spec demands value-identity
-  only, and consumers address rows by `hc_id`, never by position.
+- [Row order within written files is not contractual] With
+  `preserve_insertion_order = false` held for the whole configuration scope
+  (D4), the engine does not promise output order for *any* pipeline write;
+  under the default `threads = 1` every write was observed byte-identical
+  and in input order (single producer), but raising
+  `SSDSIMS_DUCKDB_THREADS` may reorder rows — and a byte-unstable shard
+  rewrite would also re-trigger downstream `targets` (a cache-efficiency
+  cost, never a correctness one). → Accepted at review (files are queried,
+  not diffed); the spec demands value-identity in general and byte-identity
+  only under the single-threaded default, and consumers address rows by
+  their keys, never by position.
 - [Writer byte-flushing behaviour is version-observed] duckdb 1.5.2 honours
   `ROW_GROUP_SIZE_BYTES` exactly (groups of 246/79 rows as budgeted) and
   refuses it loudly when ordering is preserved; a future engine could change

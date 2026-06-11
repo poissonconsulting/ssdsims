@@ -31,18 +31,21 @@ dc_rendered_limit <- function(value) {
 
 # ---- scope behaviour (task 4.1) ---------------------------------------------
 
-test_that("config scope pins one thread and a 1GB default memory limit", {
+test_that("config scope pins one thread, a 1GB default limit, relaxed order", {
   withr::local_envvar(
     SSDSIMS_DUCKDB_THREADS = NA,
     SSDSIMS_DUCKDB_MEMORY_LIMIT = NA
   )
   one_gb <- dc_rendered_limit("1GB")
+  before <- dc_settings()
   local({
     local_duckplyr_config()
     settings <- dc_settings()
     expect_identical(settings$threads, 1L)
     expect_identical(settings$memory_limit, one_gb)
+    expect_false(settings$preserve_order)
   })
+  expect_identical(dc_settings()$preserve_order, before$preserve_order)
 })
 
 test_that("config scope honours the env knobs", {
