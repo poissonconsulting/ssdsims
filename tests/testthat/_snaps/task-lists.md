@@ -8,10 +8,10 @@
         axes:  dataset, sim, replace
         tasks: 2
       # A tibble: 2 x 4
-        dataset      sim replace sample_id                             
-        <chr>      <int> <lgl>   <chr>                                 
-      1 ccme_boron     1 FALSE   dataset=ccme_boron/sim=1/replace=FALSE
-      2 ccme_boron     2 FALSE   dataset=ccme_boron/sim=2/replace=FALSE
+        dataset      sim replace sample_id                            
+        <chr>      <int> <lgl>   <chr>                                
+      1 ccme_boron     1 TRUE    dataset=ccme_boron/sim=1/replace=TRUE
+      2 ccme_boron     2 TRUE    dataset=ccme_boron/sim=2/replace=TRUE
 
 ---
 
@@ -25,10 +25,10 @@
       # A tibble: 4 x 12
         dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
         <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-      1 ccme_boron     1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-      2 ccme_boron     1 FALSE       5 TRUE    FALSE      TRUE           ssd_min_pmix
-      3 ccme_boron     1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-      4 ccme_boron     1 FALSE      10 TRUE    FALSE      TRUE           ssd_min_pmix
+      1 ccme_boron     1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+      2 ccme_boron     1 TRUE        5 TRUE    FALSE      TRUE           ssd_min_pmix
+      3 ccme_boron     1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+      4 ccme_boron     1 TRUE       10 TRUE    FALSE      TRUE           ssd_min_pmix
       # i 4 more variables: range_shape1 <list>, range_shape2 <list>, fit_id <chr>,
       #   sample_id <chr>
 
@@ -44,8 +44,8 @@
       # A tibble: 2 x 15
         dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
         <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-      1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-      2 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
+      1 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+      2 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
       # i 7 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
       #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 

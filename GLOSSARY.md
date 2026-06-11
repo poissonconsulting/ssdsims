@@ -202,7 +202,8 @@ Terminology used throughout `ssdsims`.
   that draw, so adding `nrow` values (within the effective draw size) never
   re-draws (TARGETS-DESIGN.md §5).
 - **`replace`**: Whether the resampling that generates simulated data is
-  performed with replacement.
+  performed with replacement (default `TRUE`; `FALSE` draws a permutation,
+  capping the effective draw — and so each `nrow` — at the dataset size).
 
 ## SSD terms
 

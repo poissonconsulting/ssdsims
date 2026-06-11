@@ -126,7 +126,54 @@ test_that("scenario-definition: nrow exceeding the effective draw size errors", 
       ssddata::ccme_boron,
       nsim = 2L,
       seed = 1L,
-      nrow = c(10L, 30L)
+      nrow = c(10L, 30L),
+      replace = FALSE
+    )
+  })
+})
+
+test_that("scenario-definition: the default replace = TRUE frees nrow from the dataset size", {
+  # ccme_boron has 28 rows; with the default (replace = TRUE) the draw is
+  # nrow_max rows, so nrow may exceed the dataset size.
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 2L,
+    seed = 1L,
+    nrow = 50L
+  )
+  expect_identical(s$replace, TRUE)
+  expect_identical(unique(ssd_scenario_sample_tasks(s)$replace), TRUE)
+})
+
+test_that("scenario-definition: mixed replace aborts on an nrow infeasible for the FALSE draw", {
+  # The grid is a rectangular cross-join: every nrow must be feasible under
+  # every included replace value, so the infeasible (replace = FALSE,
+  # nrow = 50) cell aborts the whole scenario - no silent cell dropout - even
+  # though the replace = TRUE cell could support it.
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 2L,
+      seed = 1L,
+      nrow = 50L,
+      replace = c(FALSE, TRUE)
+    )
+  })
+})
+
+test_that("scenario-definition: the replace = FALSE abort names the offending dataset", {
+  # `big` (40 rows) supports nrow = 35; `small` (20 rows) does not - the
+  # error identifies which dataset is too small.
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssd_data(
+        big = data.frame(Conc = exp(seq(-1, 2, length.out = 40))),
+        small = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
+      ),
+      nsim = 2L,
+      seed = 1L,
+      nrow = 35L,
+      replace = c(FALSE, TRUE)
     )
   })
 })
@@ -148,7 +195,8 @@ test_that("scenario-definition: nrow at the effective draw size is accepted", {
       ssddata::ccme_boron,
       nsim = 2L,
       seed = 1L,
-      nrow = nrow(ssddata::ccme_boron)
+      nrow = nrow(ssddata::ccme_boron),
+      replace = FALSE
     ),
     "ssdsims_scenario"
   )

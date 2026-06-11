@@ -83,6 +83,12 @@
 #'   [ssd_data()] collection.
 #' @param seed A scalar whole number; the scenario's RNG root. Required -
 #'   changing it fully re-roots the scenario's random-number draws.
+#' @param replace A logical vector (a cross-join axis of one or two values)
+#'   specifying whether the shared `sample` draw resamples with replacement.
+#'   Defaults to `TRUE` (the standard resampling model, drawing `nrow_max`
+#'   rows, so `nrow` is not capped by the dataset size); `FALSE` draws a
+#'   permutation, capping the effective draw - and so each `nrow` - at the
+#'   dataset size.
 #' @param min_pmix The `min_pmix` function(s), referenced **by name**. Supply
 #'   either a character vector of names, or a function (or list of functions)
 #'   with a single argument that inputs the number of rows of data and returns
@@ -145,7 +151,7 @@ ssd_define_scenario <- function(
   ...,
   name = NULL,
   nrow = 6L,
-  replace = FALSE,
+  replace = TRUE,
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,

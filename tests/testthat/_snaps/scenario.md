@@ -51,10 +51,29 @@
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = c(10L,
-        30L))
+        30L), replace = FALSE)
     Condition
       Error in `ssd_define_scenario()`:
       ! `nrow` value 30 exceeds the effective draw size for dataset "ccme_boron": the draw is `min(nrow_max, nrow(data))` = 28 rows when `replace = FALSE`.
+
+# scenario-definition: mixed replace aborts on an nrow infeasible for the FALSE draw
+
+    Code
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 50L,
+      replace = c(FALSE, TRUE))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow` value 50 exceeds the effective draw size for dataset "ccme_boron": the draw is `min(nrow_max, nrow(data))` = 28 rows when `replace = FALSE`.
+
+# scenario-definition: the replace = FALSE abort names the offending dataset
+
+    Code
+      ssd_define_scenario(ssd_data(big = data.frame(Conc = exp(seq(-1, 2, length.out = 40))),
+      small = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))), nsim = 2L, seed = 1L,
+      nrow = 35L, replace = c(FALSE, TRUE))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow` value 35 exceeds the effective draw size for dataset "small": the draw is `min(nrow_max, nrow(data))` = 20 rows when `replace = FALSE`.
 
 # scenario-definition: min_pmix rejects non-function list elements
 
@@ -313,7 +332,7 @@
         nsim:     100
         datasets: ccme_boron
         nrow:     5, 10
-        replace:  FALSE
+        replace:  TRUE
         nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE
@@ -355,7 +374,7 @@
         nsim:     50
         datasets: boron, cadmium
         nrow:     5, 6, 10
-        replace:  FALSE
+        replace:  TRUE
         nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE, TRUE

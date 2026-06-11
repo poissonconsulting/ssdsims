@@ -206,8 +206,9 @@ tasks
 The counts show how each step fans out from its parent. The key design choice
 is that the single expensive **random draw** is its own `sample` task, keyed
 only by `(dataset, sim, replace)`. The draw is sized by the scenario's fixed
-`nrow_max` setting (capped at the dataset size when `replace = FALSE`, so the
-high default draws the full permutation); every `nrow` value is then a cheap,
+`nrow_max` setting (`nrow_max` resampled rows under the default
+`replace = TRUE`; capped at the dataset size --- the full permutation --- when
+`replace = FALSE`); every `nrow` value is then a cheap,
 RNG-free `head()` *sub-truncation* of that one draw, done inline at the `fit`
 step. So `nrow` is an ordinary cross-join axis of the `fit` step and never
 multiplies the underlying draw --- one draw is shared across all sample sizes,

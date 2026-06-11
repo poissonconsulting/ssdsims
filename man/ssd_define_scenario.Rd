@@ -11,7 +11,7 @@ ssd_define_scenario(
   ...,
   name = NULL,
   nrow = 6L,
-  replace = FALSE,
+  replace = TRUE,
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
@@ -49,7 +49,12 @@ overriding the derived name. Must not be combined with a named list or an
 
 \item{nrow}{A positive whole number of the minimum number of non-missing rows.}
 
-\item{replace}{A logical vector specifying whether to sample with replacement.}
+\item{replace}{A logical vector (a cross-join axis of one or two values)
+specifying whether the shared \code{sample} draw resamples with replacement.
+Defaults to \code{TRUE} (the standard resampling model, drawing \code{nrow_max}
+rows, so \code{nrow} is not capped by the dataset size); \code{FALSE} draws a
+permutation, capping the effective draw - and so each \code{nrow} - at the
+dataset size.}
 
 \item{rescale}{A flag specifying whether to leave the values unchanged (FALSE) or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values (TRUE) or a string specifying whether to leave the values unchanged ("no") or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values ("geomean") or to logistically transform ("odds").}
 

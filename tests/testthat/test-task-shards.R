@@ -141,7 +141,7 @@ test_that("task-shards: step runners write one Parquet and read upstream by path
 
   sp <- ssd_run_sample_step(ss$tasks[[1]], scenario, file.path(dir, "sample"))
   expect_true(file.exists(sp))
-  expect_match(sp, "dataset=d/sim=1/replace=FALSE/part.parquet$")
+  expect_match(sp, "dataset=d/sim=1/replace=TRUE/part.parquet$")
   # the sample draw came from the scenario's dataset (the accessor)
   draw <- ssd_read_parquet(sp)
   expect_true("Conc" %in% names(draw))

@@ -8,11 +8,11 @@ test_that("task-lists: sample table has D * nsim * R rows with axes populated", 
     nrow = c(5L, 10L)
   )
   tasks <- ssd_scenario_sample_tasks(scenario)
-  # D = 2 datasets, nsim = 3, R = 1 (replace defaults to FALSE)
+  # D = 2 datasets, nsim = 3, R = 1 (replace defaults to TRUE)
   expect_identical(nrow(tasks), 6L)
   expect_setequal(tasks$dataset, c("boron", "cadmium"))
   expect_setequal(tasks$sim, 1:3)
-  expect_identical(unique(tasks$replace), FALSE)
+  expect_identical(unique(tasks$replace), TRUE)
 })
 
 test_that("task-lists: the scenario replace knob is a sample axis", {
@@ -274,8 +274,8 @@ test_that("task-lists: each table carries a path-style id and parent foreign key
   expect_setequal(
     tasks$sample$sample_id,
     c(
-      "dataset=ccme_boron/sim=1/replace=FALSE",
-      "dataset=ccme_boron/sim=2/replace=FALSE"
+      "dataset=ccme_boron/sim=1/replace=TRUE",
+      "dataset=ccme_boron/sim=2/replace=TRUE"
     )
   )
   # fit id extends its sample foreign key with the nrow (and fit-grid) axes
@@ -383,6 +383,7 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
     nsim = 1L,
     seed = 42L,
     nrow = c(5L, 6L),
+    replace = FALSE,
     dists = "lnorm"
   )
   tmp <- withr::local_tempdir()
@@ -392,8 +393,9 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   expect_s3_class(out$sample$sample[[1L]], "data.frame")
   expect_s3_class(out$fit$fits[[1L]], "fitdists")
   expect_s3_class(out$hc$hc[[1L]], "data.frame")
-  # one shared draw of the effective draw size - min(nrow_max, nrow(data)),
-  # the full permutation here; both nrow fits truncate that same draw
+  # one shared draw of the effective draw size - min(nrow_max, nrow(data))
+  # under replace = FALSE, the full permutation here; both nrow fits truncate
+  # that same draw
   expect_identical(
     nrow(out$sample$sample[[1L]]),
     nrow(ssddata::ccme_boron)
