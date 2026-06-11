@@ -154,18 +154,24 @@ ssd_test_upload <- function(upload) {
   UseMethod("ssd_test_upload")
 }
 
-#' Ship One Shard to an Upload Destination
+#' Ship Shard (or Summary) Parquet Files to an Upload Destination
 #'
-#' A generic, dispatched on the upload object's class, that ships one shard
-#' Parquet to the destination and returns the **local** `path` (so the paired
-#' `upload_<step>` target stays `format = "file"`). For an Azure destination it
-#' uploads the file at `path` to
-#' `<url>/<container>[/<prefix>]/<step>/<partition-path>/part.parquet` (the
-#' optional `prefix` subdirectory from [ssd_upload_azure()]);
-#' when the required credentials are **absent** it aborts with a loud error -
-#' never a silent no-op - so intent to skip the network is only ever expressed
-#' by passing [ssd_upload_dryrun()]. For a dry-run destination it performs no
-#' network I/O, records a skip, and returns the local `path`.
+#' A generic, dispatched on the upload object's class, that ships the local
+#' Parquet file(s) at `path` to the destination and returns the **local**
+#' `path` unchanged (so the paired upload target stays `format = "file"`).
+#' The per-shard `upload_<step>` targets pass one path; the `upload_summary`
+#' target passes the summary Parquet path(s) - `summary.parquet` plus, when the
+#' scenario retains the bootstrap draws, `summary-samples.parquet`. For an
+#' Azure destination it resolves the credentials **once per call** and uploads
+#' each file to `<url>/<container>[/<prefix>]/<key>`, where the key is the
+#' file's path below the layout-keyed results root (a shard's
+#' `<step>/<partition-path>/part.parquet`, the summary's `summary.parquet` /
+#' `summary-samples.parquet`; the optional `prefix` subdirectory comes from
+#' [ssd_upload_azure()]); when the required credentials are **absent** it
+#' aborts with a loud error - never a silent no-op - so intent to skip the
+#' network is only ever expressed by passing [ssd_upload_dryrun()]. For a
+#' dry-run destination it performs no network I/O, records a skip per file,
+#' and returns the local `path`.
 #'
 #' @section Adding a backend:
 #' The destination set is open and extended by a **constructor-plus-methods**
@@ -186,10 +192,12 @@ ssd_test_upload <- function(upload) {
 #' The package ships only the Azure and dry-run backends; no speculative
 #' backends are added.
 #'
-#' @param path The local shard Parquet path (the `<step>_step` target's value).
+#' @param path The local Parquet path(s) - a character vector of one or more
+#'   files (a `<step>_step` target's single shard path, or the `summary`
+#'   target's path(s)).
 #' @inheritParams ssd_test_upload
-#' @return The local `path` (a string), so the `upload_<step>` target stays
-#'   `format = "file"`.
+#' @return The local `path` (a character vector), unchanged, so the paired
+#'   upload target stays `format = "file"`.
 #' @seealso [ssd_test_upload()], [ssd_open_uploaded()], [ssd_scenario_targets()].
 #' @export
 #' @examples
@@ -207,7 +215,10 @@ ssd_upload_shard <- function(path, upload) {
 #' right after an upload (`TARGETS-DESIGN.md` section 6.1). For an Azure
 #' destination it returns a **lazy** `duckplyr`/DuckDB table over the Hive glob
 #' `<container>[/<prefix>]/<step>/**/part.parquet` (honouring the destination's
-#' optional `prefix` subdirectory), read **in place** via DuckDB's `azure`
+#' optional `prefix` subdirectory) - or, for the combined summaries, the single
+#' blob `summary.parquet` (`step = "summary"`) / `summary-samples.parquet`
+#' (`step = "summary_samples"`, shipped only when the scenario set
+#' `samples = TRUE`) - read **in place** via DuckDB's `azure`
 #' extension (predicate pushdown straight against blob storage - **no
 #' download**), composable with `dplyr` verbs so a one-line
 #' `ssd_open_uploaded(upload, step) |> dplyr::count()` is the immediate
@@ -219,8 +230,10 @@ ssd_upload_shard <- function(path, upload) {
 #' be read directly.
 #'
 #' @inheritParams ssd_test_upload
-#' @param step One of `"sample"`, `"fit"`, `"hc"` (the step layer to read), or
-#'   `"summary"` (the uploaded combined summary).
+#' @param step One of `"sample"`, `"fit"`, `"hc"` (the step layer to read),
+#'   `"summary"` (the uploaded compact summary), or `"summary_samples"` (the
+#'   uploaded full summary retaining the `dists`/`samples` list-columns,
+#'   shipped only when the scenario set `samples = TRUE`).
 #' @return A lazy, `dplyr`-composable table over the uploaded results.
 #' @seealso [ssd_upload_shard()], [ssd_test_upload()].
 #' @export
@@ -239,14 +252,20 @@ ssd_open_uploaded <- function(upload, step) {
 #' upload object's class, that fans a step's **uploaded** shards into a single
 #' **lazy** `duckplyr` table read **in place** (no download). For an Azure
 #' destination it reads the `<container>[/<prefix>]/<step>/**/part.parquet` Hive
-#' glob via DuckDB's `azure` extension - resolving the **same** front-end
+#' glob - or, for the combined summaries, the single blob `summary.parquet`
+#' (`step = "summary"`) / `summary-samples.parquet` (`step = "summary_samples"`,
+#' shipped only when the scenario set `samples = TRUE`) - via DuckDB's `azure`
+#' extension - resolving the **same** front-end
 #' secret as the write path and remapping it (with the account derived from
 #' `url`) into a DuckDB `azure` secret - and returns the union as a lazy
 #' `duckplyr` tibble (not collected, so the read and projection stay in DuckDB).
 #' By default it projects away the heavy `dists`/`samples` list-columns (the
 #' analysis-ready summary, mirroring [ssd_summarise()]); pass
 #' `drop_samples = FALSE` to keep them when the in-flight bootstrap `samples`
-#' are needed. The default method
+#' are needed. Because the uploaded compact summary physically lacks those
+#' columns, `step = "summary"` with `drop_samples = FALSE` aborts pointing at
+#' `step = "summary_samples"` rather than silently returning a sample-less
+#' table. The default method
 #' (an unknown destination) and the dry-run method both abort.
 #'
 #' @inheritParams ssd_open_uploaded
@@ -304,11 +323,15 @@ ssd_test_upload.ssdsims_upload_dryrun <- function(upload) {
 
 #' @export
 ssd_upload_shard.ssdsims_upload_dryrun <- function(path, upload) {
-  chk::chk_string(path)
-  rlang::inform(
-    paste0("Dry-run upload: skipped ", encodeString(path, quote = "\""), "."),
-    class = "ssdsims_upload_skip"
-  )
+  chk::chk_character(path)
+  chk::chk_not_any_na(path)
+  chk::chk_not_empty(path)
+  for (p in path) {
+    rlang::inform(
+      paste0("Dry-run upload: skipped ", encodeString(p, quote = "\""), "."),
+      class = "ssdsims_upload_skip"
+    )
+  }
   path
 }
 
@@ -357,21 +380,31 @@ ssd_test_upload.ssdsims_upload_azure_blob <- function(upload) {
 
 #' @export
 ssd_upload_shard.ssdsims_upload_azure_blob <- function(path, upload) {
-  chk::chk_string(path)
+  chk::chk_character(path)
+  chk::chk_not_any_na(path)
+  chk::chk_not_empty(path)
   azure_check_installed()
   creds <- resolve_azure_credentials(call = rlang::caller_env())
   container <- azure_container_endpoint(upload, creds)
-  AzureStor::upload_blob(
-    container,
-    src = path,
-    dest = azure_blob_dest(upload, upload_blob_key(path))
-  )
+  # A plain loop (not purrr) keeps this frame out of an upload error's header
+  # (error-call-origin); credentials and the endpoint are resolved once per
+  # call, not per file.
+  for (p in path) {
+    AzureStor::upload_blob(
+      container,
+      src = p,
+      dest = azure_blob_dest(upload, upload_blob_key(p))
+    )
+  }
   path
 }
 
 #' @export
 ssd_open_uploaded.ssdsims_upload_azure_blob <- function(upload, step) {
-  step <- rlang::arg_match0(step, c("sample", "fit", "hc", "summary"))
+  step <- rlang::arg_match0(
+    step,
+    c("sample", "fit", "hc", "summary", "summary_samples")
+  )
   rlang::check_installed("duckplyr")
   creds <- resolve_azure_credentials(call = rlang::caller_env())
   azure_load_duckdb_extension(creds, upload$account, call = rlang::caller_env())
@@ -387,8 +420,25 @@ ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   step = "hc",
   drop_samples = TRUE
 ) {
-  step <- rlang::arg_match0(step, c("sample", "fit", "hc", "summary"))
+  step <- rlang::arg_match0(
+    step,
+    c("sample", "fit", "hc", "summary", "summary_samples")
+  )
   chk::chk_flag(drop_samples)
+  # The uploaded compact summary physically lacks the `dists`/`samples`
+  # list-columns, so honouring `drop_samples = FALSE` against it is impossible
+  # - abort (before any credential/extension work) rather than silently
+  # returning a sample-less table.
+  if (step == "summary" && !drop_samples) {
+    chk::abort_chk(
+      "The uploaded compact summary (`step = \"summary\"`) does not carry the ",
+      "`dists`/`samples` list-columns, so `drop_samples = FALSE` cannot be ",
+      "honoured. Read the uploaded full summary with ",
+      "`step = \"summary_samples\"` instead (shipped only when the scenario ",
+      "set `samples = TRUE`).",
+      call = rlang::caller_env()
+    )
+  }
   rlang::check_installed("duckplyr")
   # Fetch the SAME credentials used for uploading and remap them into a DuckDB
   # `azure` secret (shared with `ssd_upload_shard()`/`ssd_open_uploaded()` - one
@@ -563,14 +613,16 @@ azure_blob_dest <- function(upload, key) {
 
 # The DuckDB `azure` glob for a step layer:
 # `az://<container>[/<prefix>]/<step>/**/part.parquet` (or the single
-# `[<prefix>/]summary.parquet` for the combined summary), addressing the uploaded
-# shards in place via the `azure` extension.
+# `[<prefix>/]summary.parquet` / `[<prefix>/]summary-samples.parquet` for the
+# combined summaries), addressing the uploaded shards in place via the `azure`
+# extension.
 azure_glob <- function(upload, step) {
-  tail <- if (step == "summary") {
-    "summary.parquet"
-  } else {
+  tail <- switch(
+    step,
+    summary = "summary.parquet",
+    summary_samples = "summary-samples.parquet",
     sprintf("%s/**/part.parquet", step)
-  }
+  )
   sprintf("az://%s/%s", upload$container, azure_blob_dest(upload, tail))
 }
 

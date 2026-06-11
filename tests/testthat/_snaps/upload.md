@@ -68,6 +68,22 @@
       Error:
       ! Azure credentials are incomplete: no authentication secret was found. Set `SSDSIMS_AZURE_STORAGE_KEY` (account-key auth), or `SSDSIMS_AZURE_STORAGE_SAS` (SAS auth), or the service-principal trio `SSDSIMS_AZURE_TENANT_ID`/`SSDSIMS_AZURE_CLIENT_ID`/`SSDSIMS_AZURE_CLIENT_SECRET` (missing: 'SSDSIMS_AZURE_TENANT_ID', 'SSDSIMS_AZURE_CLIENT_ID' and 'SSDSIMS_AZURE_CLIENT_SECRET'). The storage account name is taken from the destination `url`, not the environment.
 
+# cloud-upload: ssd_upload_shard() validates path as a character vector
+
+    Code
+      ssd_upload_shard(character(0L), ssd_upload_dryrun())
+    Condition
+      Error in `ssd_upload_shard.ssdsims_upload_dryrun()`:
+      ! `path` must not be empty (zero length).
+
+---
+
+    Code
+      ssd_upload_shard(1L, ssd_upload_dryrun())
+    Condition
+      Error in `ssd_upload_shard.ssdsims_upload_dryrun()`:
+      ! `path` must be character.
+
 # cloud-upload: Azure ssd_upload_shard() with absent credentials fails loud
 
     Code
@@ -130,7 +146,7 @@
       ssd_summarise_uploaded(upload, step = "nope")
     Condition
       Error in `ssd_summarise_uploaded()`:
-      ! `step` must be one of "sample", "fit", "hc", or "summary", not "nope".
+      ! `step` must be one of "sample", "fit", "hc", "summary", or "summary_samples", not "nope".
 
 ---
 
@@ -139,6 +155,14 @@
     Condition
       Error in `ssd_summarise_uploaded.ssdsims_upload_azure_blob()`:
       ! `drop_samples` must be a flag (TRUE or FALSE).
+
+# cloud-upload: the compact summary cannot pretend to carry samples
+
+    Code
+      ssd_summarise_uploaded(upload, step = "summary", drop_samples = FALSE)
+    Condition
+      Error:
+      ! The uploaded compact summary (`step = "summary"`) does not carry the `dists`/`samples` list-columns, so `drop_samples = FALSE` cannot be honoured. Read the uploaded full summary with `step = "summary_samples"` instead (shipped only when the scenario set `samples = TRUE`).
 
 # cloud-upload: root, upload, and cue must be passed by name
 

@@ -140,6 +140,13 @@ names_dry <- target_names(targets_dry)
 grep("^upload_", names_dry, value = TRUE)
 ```
 
+The **summary ships too**: alongside the per-shard pairs, the single
+`upload_summary` target (visible above) takes the `summary` fan-in's output and
+ships the combined `summary.parquet` --- and, when the scenario sets
+`samples = TRUE`, the full `summary-samples.parquet` alongside it. Like the
+shard pairs it is content-hashed, so the summary re-ships only when its bytes
+change.
+
 Contrast `upload = NULL` --- the default --- which emits **no** upload nodes at
 all:
 
@@ -234,6 +241,23 @@ ssd_summarise_uploaded(upload, step = "hc") # analysis-ready summary tibble
 ssd_summarise_uploaded(upload, step = "hc", drop_samples = FALSE) # keep samples
 ```
 
+The **uploaded summaries** are addressable the same way: `step = "summary"` is
+the combined compact summary the `upload_summary` target shipped, and
+`step = "summary_samples"` the full summary retaining the `dists`/`samples`
+list-columns (uploaded only when the scenario set `samples = TRUE`). Because the
+compact blob physically lacks those columns,
+`ssd_summarise_uploaded(upload, "summary", drop_samples = FALSE)` aborts and
+points you at `step = "summary_samples"` instead of silently returning a
+sample-less table:
+
+```{r}
+#| label: summary-uploaded
+#| eval: false
+ssd_open_uploaded(upload, step = "summary") |> dplyr::count()
+ssd_summarise_uploaded(upload, step = "summary") # the uploaded compact summary
+ssd_summarise_uploaded(upload, step = "summary_samples", drop_samples = FALSE)
+```
+
 ## What to pay attention to
 
 ::: {.callout-important}
@@ -254,7 +278,10 @@ ssd_summarise_uploaded(upload, step = "hc", drop_samples = FALSE) # keep samples
 - **Unchanged shards are not re-uploaded.** Each `upload_<step>` target takes the
   shard's path as a `format = "file"` input, so `targets` re-uploads a shard only
   when its content hash changes --- a re-driven `tar_make()` that rebuilt nothing
-  uploads nothing; a partial extension uploads only the new shards.
+  uploads nothing; a partial extension uploads only the new shards. The same
+  holds for `upload_summary`: the summary re-ships only when its bytes change
+  (e.g. after a grown run), and `summary-samples.parquet` exists at the
+  destination only when the scenario set `samples = TRUE`.
 - **The read-back is in place.** `ssd_open_uploaded()` predicate-pushes straight
   against blob storage --- it does **not** download the Parquet.
 :::

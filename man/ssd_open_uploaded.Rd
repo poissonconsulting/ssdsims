@@ -10,8 +10,10 @@ ssd_open_uploaded(upload, step)
 \item{upload}{An upload destination from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or
 \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}.}
 
-\item{step}{One of \code{"sample"}, \code{"fit"}, \code{"hc"} (the step layer to read), or
-\code{"summary"} (the uploaded combined summary).}
+\item{step}{One of \code{"sample"}, \code{"fit"}, \code{"hc"} (the step layer to read),
+\code{"summary"} (the uploaded compact summary), or \code{"summary_samples"} (the
+uploaded full summary retaining the \code{dists}/\code{samples} list-columns,
+shipped only when the scenario set \code{samples = TRUE}).}
 }
 \value{
 A lazy, \code{dplyr}-composable table over the uploaded results.
@@ -22,7 +24,10 @@ A generic, dispatched on the upload object's class, that opens the
 right after an upload (\code{TARGETS-DESIGN.md} section 6.1). For an Azure
 destination it returns a \strong{lazy} \code{duckplyr}/DuckDB table over the Hive glob
 \verb{<container>[/<prefix>]/<step>/**/part.parquet} (honouring the destination's
-optional \code{prefix} subdirectory), read \strong{in place} via DuckDB's \code{azure}
+optional \code{prefix} subdirectory) - or, for the combined summaries, the single
+blob \code{summary.parquet} (\code{step = "summary"}) / \code{summary-samples.parquet}
+(\code{step = "summary_samples"}, shipped only when the scenario set
+\code{samples = TRUE}) - read \strong{in place} via DuckDB's \code{azure}
 extension (predicate pushdown straight against blob storage - \strong{no
 download}), composable with \code{dplyr} verbs so a one-line
 \code{ssd_open_uploaded(upload, step) |> dplyr::count()} is the immediate

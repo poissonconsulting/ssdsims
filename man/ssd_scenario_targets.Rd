@@ -116,12 +116,17 @@ To parallelise the shards, set a controller (e.g. a mirai-backed
 \section{Uploading shards to cloud storage (\code{upload})}{
 
 \code{upload} is the \strong{remote-destination sibling of \code{root}} (default \code{NULL}).
-With \code{upload = NULL} the pipeline contains \strong{no} \verb{upload_<step>} targets -
+With \code{upload = NULL} the pipeline contains \strong{no} upload targets -
 the clean default DAG for a non-uploader. With a non-\code{NULL} upload object the
 factory pairs each step shard with an \verb{upload_<step>} target in the same
 \code{tar_map} (\code{format = "file"}, \code{error = "null"}), so an unchanged shard is
 never re-uploaded (content-hash skip) and a per-shard upload failure isolates
-to its own branch. Pass \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}} for no-op upload targets that
+to its own branch; it also pairs the \code{summary} fan-in with a single
+\code{upload_summary} target (same \code{format = "file"}, \code{error = "null"} contract)
+that ships the combined summary Parquet - and, when the scenario sets
+\code{samples = TRUE}, the full \code{summary-samples.parquet} alongside it - with the
+same content-hash skip, so the summary re-ships only when its bytes change.
+Pass \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}} for no-op upload targets that
 reach no network (exercising the DAG shape offline / in CI) or
 \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} to ship to Azure. The factory performs \strong{no} network
 I/O and never runs the \code{\link[=ssd_test_upload]{ssd_test_upload()}} probe: it only assembles the
@@ -131,7 +136,7 @@ side-effect free. Run \code{ssd_test_upload(upload)} yourself as a one-line
 preflight before \code{tar_make()} to confirm credentials and connectivity up
 front; a missing credential still fails loud per-shard at upload time as a
 backstop. The per-task results are byte-identical across all three \code{upload}
-modes; only the presence and behaviour of the \verb{upload_<step>} targets differ.
+modes; only the presence and behaviour of the upload targets differ.
 }
 
 \examples{
