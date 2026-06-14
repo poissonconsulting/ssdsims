@@ -152,16 +152,23 @@ recalibration is performed.
 The three cost-analysis functions SHALL additionally accept an `ssdsims_design`
 (the `ssd_design()` collection from the `scenario-combine` capability) — namely
 `ssd_analyse_cost()`, `ssd_compare_cost()`, and `ssd_calibrate_cost_from_run()` —
-and roll observed cost up across the design's member scenarios. Each member's observed cost SHALL be read from its own
-`<root>/scenario=<name>/layout=<hash>` results tree exactly as the scenario form
-reads a standalone run. `ssd_analyse_cost()` SHALL return an
+and roll observed cost up across the design's member scenarios. Because
+`ssd_design_targets()` groups members by `seed` and writes one **shared**
+`<root>/seed=<value>/layout=<hash>` tree per seed group (a cell shared by several
+members is built once), each member's observed cost SHALL be read from its seed
+group's shared results tree **filtered to that member's `hc_id`/`fit_id` task
+identities** — the same projection `ssd_summarise_member()` uses — not from a
+per-member results tree. `ssd_analyse_cost()` SHALL return an
 `ssdsims_cost_analysis` whose breakdown carries a leading `scenario` column (the
 member name) above the `ci_method` × `nboot` axes and design-level totals
 (observed total = sum over members; observed longest = maximum single task across
 members), skipping members with no readable run and reporting the
-contributing-member count. The scenario *name* SHALL NOT enter any duration or
-result value. The design forms SHALL be read-only (no pipeline, no RNG, no
-writes), and the scenario-level behaviour SHALL be unchanged.
+contributing-member count. The design total is **per-member accounting**: a cell
+shared by several members contributes to each member's total (what each scenario
+costs), so the design total may exceed the design's once-built shared compute. The
+scenario *name* SHALL NOT enter any duration or result value. The design forms
+SHALL be read-only (no pipeline, no RNG, no writes), and the scenario-level
+behaviour SHALL be unchanged.
 
 #### Scenario: Design totals equal the sum of member analyses
 - **WHEN** `ssd_analyse_cost(design, root = <root>)` is called on a design whose members have all run
@@ -180,36 +187,41 @@ When analysing a design, `ssd_analyse_cost()` SHALL be able to read every
 member's hc per-task timings from the combined `<root>/summary.parquet` (the
 `scenario-combine` design summary, which carries a `scenario` identity column
 and, because the per-scenario compact summaries retain `.start`/`.end`/`.host`,
-the hc timing columns) in a single DuckDB read, without globbing each member's
-shard tree. The `fit`-layer durations (the addend) SHALL still come from the
-per-member `fit` shard globs. When the combined summary is absent or lacks the
-timing columns, the analysis SHALL fall back to per-member shard globs with no
-change to the reported totals.
+the hc timing columns) in a single DuckDB read, grouped by `scenario`, without
+globbing each member's shard tree. The `fit`-layer durations (the addend) SHALL
+still come from each member's `fit` shards (its seed group's shared `fit` tree
+filtered to the member's `fit_id`s). When the combined summary is absent or lacks
+the timing columns, the analysis SHALL fall back to per-member shard reads with
+no change to the reported totals.
 
 #### Scenario: Design hc cost comes from the combined summary in one read
 - **WHEN** the combined `<root>/summary.parquet` carries the members' hc timing columns and a `scenario` column
 - **THEN** `ssd_analyse_cost(design)` SHALL derive every member's hc observed cost from that single file, grouped by `scenario`, without a per-member hc shard glob
 
-#### Scenario: Missing combined summary falls back to per-member globs
+#### Scenario: Missing combined summary falls back to per-member reads
 - **WHEN** the combined summary is absent or lacks the timing columns
-- **THEN** the analysis SHALL read each member's hc timings from its `scenario=<name>` shard tree, with identical totals
+- **THEN** the analysis SHALL read each member's hc timings from its seed group's shared `hc` tree filtered to the member's `hc_id`s, with identical totals
 
-### Requirement: The store resolver is design-aware (one store, prefixed names)
+### Requirement: The store resolver is design-aware (one store, seed-woven shared shards)
 Given a design's single `targets` store, `ssd_analyse_cost()` SHALL read one
-`tar_meta()` covering every member and resolve each shard target by regenerating
-the expected names *per member with the design's `<name>_` prefix*
-(`<name>_<step>_step_<pathcell>`) and the member's `scenario=<name>` root, then
-joining on the store's `name` column — never parsing the name string. Per-member
-envelope overhead and the pre-timing fallback SHALL be computed per member and
-summed to the design total. The combined `summary` target and every
-`<name>_upload_<step>` target SHALL be excluded from shard attribution; targets
-with `NA` seconds SHALL be excluded from totals; unmatched targets SHALL be
-reported with their count, never silently dropped and never fatal.
+`tar_meta()` covering every seed group and resolve each shard target by
+regenerating the expected names *per seed group with the `seed` woven in*
+(`<step>_step_<seed>_<pathcell>`, the `ssd_design_targets()` naming — `tar_map()`
+over the union shard tables keyed on `c("seed", <path axes>)`) from the union
+shard tables, then joining on the store's `name` column — never parsing the name
+string. Because shards are **shared** across the members of a seed group, the
+per-shard envelope overhead (`target seconds − Σ task durations`) SHALL be
+computed once per shared shard (per seed group) and summed to the design total —
+not attributed per member. The combined top-level `summary` target, every
+per-member `summary_<name>` target, and every `upload_<step>` target SHALL be
+excluded from shard attribution; targets with `NA` seconds SHALL be excluded from
+totals; unmatched targets SHALL be reported with their count, never silently
+dropped and never fatal.
 
-#### Scenario: Prefixed target names resolve to the right member
-- **WHEN** the store holds `a_hc_step_<cell>` and `b_hc_step_<cell>` targets for design members `a` and `b`
-- **THEN** each SHALL resolve to its own member's shard under `scenario=a` / `scenario=b`, and the per-member envelope overhead SHALL aggregate to a design total
+#### Scenario: Seed-woven shard target names resolve to their seed group's shard
+- **WHEN** the store holds `hc_step_<seed>_<cell>` targets for the design's seed groups
+- **THEN** each SHALL resolve to its seed group's shared shard by the regenerated `<step>_step_<seed>_<pathcell>` name, and the per-shard envelope overhead SHALL aggregate to a design total
 
-#### Scenario: Combined summary, upload, and unmatched targets are handled
-- **WHEN** the store contains the top-level `summary` target, `<name>_upload_<step>` targets, and a target matching no regenerated member name
-- **THEN** none of the former SHALL be attributed to a member's shards and the unmatched target SHALL be reported with its count rather than dropped or aborting
+#### Scenario: Combined summary, per-member summaries, upload, and unmatched targets are handled
+- **WHEN** the store contains the top-level `summary` target, the per-member `summary_<name>` targets, `upload_<step>` targets, and a target matching no regenerated shard name
+- **THEN** none of the former SHALL be attributed to a shard and the unmatched target SHALL be reported with its count rather than dropped or aborting
