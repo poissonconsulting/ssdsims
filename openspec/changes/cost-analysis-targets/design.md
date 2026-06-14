@@ -128,21 +128,43 @@ with `format`/`print` methods reusing `format_duration()`.
 
 ### Design-level rollup folds in here, gated on `scenario-combine`
 The design-level forms of the three functions (accepting an `ssdsims_design` and
-aggregating across its per-scenario result trees) were drafted as a standalone
+aggregating across its member scenarios) were drafted as a standalone
 `cost-analysis-design` change and are **folded into this change** rather than
 shipped separately: they belong to the same `cost-analysis` capability and reuse
-this change's scenario-level functions, resolver, and objects. They depend on
-`scenario-combine`'s `ssd_design()` / `<name>_` prefix / `scenario=<name>` roots /
-combined summary, so they are the last tasks (group 9) and land after
-`scenario-combine`. The aggregation is defined as a **collection-agnostic seam**
-(combine breakdowns, reduce to design totals, pool measured frames host-aware,
-derive per-member addressing) that the thin `ssdsims_design` methods delegate to;
-a working, unit-tested prototype of that seam — written against already-landed
-code, so independent of `ssd_design()` — is kept as proof of work under
-`exploration/design-rollup-seam/` (excluded from the package build) to be promoted
-into `R/` when the dependencies land, rather than re-derived. *Rejected
-alternative:* keep `cost-analysis-design` standalone — it forked one capability
-across two changes and shipped a seam ahead of its only consumer.
+this change's scenario-level functions, resolver, and objects. They are the last
+tasks (group 9) and land after `scenario-combine`.
+
+**Addressing — corrected to the landed `scenario-combine` (the drafted
+`scenario=<name>` roots / `<name>_` prefix were never shipped).** As built,
+`ssd_design_targets()` groups members by `seed` and writes one **shared**
+`<root>/seed=<value>/layout=<hash>` tree per seed group (computed via the landed
+`design_results_dir()`); a cell shared by several members is built **once**, and
+the shard target names weave the `seed` in (`<step>_step_<seed>_<pathcell>`, from
+`tar_map()` keyed on `c("seed", <path axes>)`) — there is no per-member root and
+no `<name>_` shard prefix. Per-member observed cost is therefore recovered by
+**filtering the shared shards to the member's `hc_id`/`fit_id`s** (exactly as
+`ssd_summarise_member()` does), and the design store resolver regenerates the
+seed-woven shard names **per seed group** (not per member). The combined
+`<root>/summary.parquet` carries a `scenario` column and — because
+`ssd_summarise_member()` projects out only `dists`/`samples` — retains the hc
+timing columns, so it is a valid one-read fast path; the per-shard envelope is
+computed once per shared shard (per seed group) since shards are shared. The
+design total is **per-member accounting** (Σ members), so a shared cell counts
+once per member — it answers "what each member costs", and can exceed the design's
+once-built shared compute.
+
+The aggregation is defined as a **collection-agnostic seam** (combine breakdowns,
+reduce to design totals, pool measured frames host-aware) that the thin
+`ssdsims_design` methods delegate to; a working, unit-tested prototype of that
+seam is kept as proof of work under `exploration/design-rollup-seam/` (excluded
+from the package build). Promote `combine_cost_breakdowns()`,
+`design_cost_totals()`, `pool_calibration_from_frames()`, and
+`format_design_breakdown()` into `R/` as-is; the prototype's
+`design_member_addressing()` (which derived `scenario=<name>` roots and `<name>_`
+prefixes) is **superseded** by the landed `design_results_dir()` + `hc_id`/`fit_id`
+filtering and SHALL NOT be promoted. *Rejected alternative:* keep
+`cost-analysis-design` standalone — it forked one capability across two changes
+and shipped a seam ahead of its only consumer.
 
 ## Risks / Trade-offs
 

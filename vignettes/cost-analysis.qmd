@@ -133,6 +133,41 @@ than one `.host` (a cluster of mixed node types) requires an explicit `host =`,
 or the function aborts listing the hosts it found. The result's provenance records
 that it was derived from a run.
 
+## Across a design
+
+A [design](scenario-to-design.html) (`ssd_design()`) runs several scenarios as one
+pipeline. The same three functions accept a design and **roll the observed cost up
+across its members**: `ssd_analyse_cost(design, root = ...)` returns a breakdown
+with a leading `scenario` column and design totals, `ssd_compare_cost(design)`
+places the design's summed prediction beside it, and
+`ssd_calibrate_cost_from_run(design)` pools every member's measured durations into
+one host-aware calibration.
+
+```{r}
+#| label: design
+#| eval: false
+design <- ssd_design(coarse = scenario, dense = other_scenario)
+
+# Per-scenario observed breakdown + design totals (read from the run's results
+# root; the combined <root>/summary.parquet is used as a one-read fast path when
+# present, else each member is read from its seed group's shared shards).
+ssd_analyse_cost(design, root = "results")
+
+# Predicted (Σ members) vs observed, with ratios.
+ssd_compare_cost(design, root = "results")
+
+# One calibration pooled across all members (host-aware).
+ssd_calibrate_cost_from_run(design, root = "results")
+```
+
+Because `ssd_design_targets()` writes one **shared** `seed=/layout=` tree per seed
+group --- a cell shared by several members is computed once --- the design total is
+**per-member accounting**: a shared cell counts toward each member that includes
+it (it answers "what does each scenario cost"), so the design total can exceed the
+design's once-built shared compute. As at the scenario level, recalibration never
+silently pools timings across CPUs: a design spanning more than one `.host`
+requires an explicit `host =`.
+
 ## The loop
 
 Putting it together --- predict, run, measure, compare, recalibrate, predict
