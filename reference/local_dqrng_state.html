@@ -120,12 +120,12 @@ seeding base R's Mersenne-Twister.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="local_dqrng_backend.html">local_dqrng_backend</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">local_dqrng_state</span><span class="op">(</span><span class="fl">42</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in local_dqrng_state(42, c(1L, 2L)):</span> The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in local_dqrng_state(42, c(1L, 2L)):</span> The dqrng backend is not intact: it was reset mid-task. Base R's RNG is now `Mersenne-Twister`, not dqrng's pcg64, so the task's draws did not come from dqrng.</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.2926078 0.8011529 0.1608404</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.8011529 0.1608404 0.8040301</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">with_dqrng_state</span><span class="op">(</span><span class="fl">42</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">2L</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in local_dqrng_state(seed, primer):</span> The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in local_dqrng_state(seed, primer):</span> The dqrng backend is not intact: it was reset mid-task. Base R's RNG is now `Mersenne-Twister`, not dqrng's pcg64, so the task's draws did not come from dqrng.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

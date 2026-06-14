@@ -80,10 +80,10 @@ Mersenne-Twister.
 
 local_dqrng_backend()
 local_dqrng_state(42, c(1L, 2L))
-#> Error in local_dqrng_state(42, c(1L, 2L)): The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.
+#> Error in local_dqrng_state(42, c(1L, 2L)): The dqrng backend is not intact: it was reset mid-task. Base R's RNG is now `Mersenne-Twister`, not dqrng's pcg64, so the task's draws did not come from dqrng.
 runif(3)
-#> [1] 0.2926078 0.8011529 0.1608404
+#> [1] 0.8011529 0.1608404 0.8040301
 
 with_dqrng_state(42, c(1L, 2L), runif(3))
-#> Error in local_dqrng_state(seed, primer): The dqrng backend is not active. Open a `local_dqrng_backend()` scope first.
+#> Error in local_dqrng_state(seed, primer): The dqrng backend is not intact: it was reset mid-task. Base R's RNG is now `Mersenne-Twister`, not dqrng's pcg64, so the task's draws did not come from dqrng.
 ```
