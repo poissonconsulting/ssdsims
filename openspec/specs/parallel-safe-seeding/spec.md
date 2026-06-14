@@ -3,9 +3,7 @@
 ## Purpose
 
 Provide RNG helpers that produce reproducible, non-overlapping random number streams across simulations and streams, so that parallel or distributed simulation runs yield deterministic results without statistical correlation between workers. The capability spans two RNG paths: the legacy L'Ecuyer-CMRG helpers, and the targets-based dqrng path. It distinguishes a *seed* (a scalar integer) from a *state* — for L'Ecuyer-CMRG the full length-7 `.Random.seed` vector, and for dqrng the length-2 integer *primer* passed to `dqrng::dqset.seed()`'s `stream` argument — exposing scoped helpers for each.
-
 ## Requirements
-
 ### Requirement: Scoped L'Ecuyer-CMRG seeding from a scalar seed
 The package SHALL expose `with_lecuyer_cmrg_seed(seed, code)` and `local_lecuyer_cmrg_seed(seed, .local_envir)` that pin the RNG kind to `L'Ecuyer-CMRG` with `Inversion` normal kind and `Rejection` sample kind and seed it from a scalar integer `seed`. `with_lecuyer_cmrg_seed()` SHALL forward to `local_lecuyer_cmrg_seed()`.
 
@@ -236,3 +234,32 @@ The `sample`-step draw SHALL be a single `sample_data_task_primer()` of `n_max =
 #### Scenario: Backend reset after the run
 - **WHEN** `ssd_run_scenario_baseline()` returns (or errors)
 - **THEN** the dqrng backend SHALL be reset and the caller's base RNG state SHALL be unchanged
+
+### Requirement: Per-task dqrng backend integrity brackets
+The per-task dqrng state installer (`local_dqrng_state()`) SHALL bracket each task's draws with the dqrng-specific integrity witness (`dqrng-backend` capability) on **both** ends, verifying that dqrng specifically (not merely *some* user-supplied RNG) holds base R's RNG slot. Both brackets SHALL live in `local_dqrng_state()` itself — the seed-and-run wrappers (`sample_data_task_primer()`, `fit_data_task_primer()`, `hc_data_task_primer()`) and `with_dqrng_state()` already route through it and SHALL require no additional integrity wiring:
+
+- **Entry precondition** — before installing the task seed, `local_dqrng_state()` SHALL assert backend integrity via the witness, upgrading the previous cheap `RNGkind()`-based guard, so a task refuses to *start* on a foreign-hijacked or torn-down backend.
+- **Exit postcondition** — `local_dqrng_state()` SHALL register a deferred witness on the task frame (alongside its existing state-restore defer) that runs when the frame exits, asserting backend integrity again. The deferred witness SHALL run only when the task frame exits **normally** (the success path) and SHALL be skipped when the frame is unwinding due to an error or other non-local exit, so it never masks the task body's own error. (`base::returnValue()` with a per-call unique sentinel distinguishes the two.)
+
+In either bracket the witness SHALL abort if the backend is not intact, so a foreign-RNG hijack present before the task starts, or a mid-task teardown/hijack on an otherwise-successful task, causes the task to fail loudly rather than silently return draws that did not come from dqrng's pcg64. The cheap `dqrng_backend_active()` probe SHALL be retained only as the reentrancy no-op gate inside `local_dqrng_backend()`.
+
+#### Scenario: Task succeeds when the backend stays intact
+- **WHEN** a task runs through `local_dqrng_state()` under an active `local_dqrng_backend()` scope and the dqrng backend is the bound generator at task entry and remains so until the task frame exits normally
+- **THEN** both the entry and the exit integrity checks SHALL pass and the task SHALL return its result normally
+
+#### Scenario: Task aborts at entry on a corrupted backend
+- **WHEN** the dqrng backend is not intact when the task starts (a foreign user-supplied RNG already holds the slot, or base R RNG has been routed back to a non-user-supplied generator) and `local_dqrng_state()` is called
+- **THEN** the entry integrity check SHALL abort the task with an informative error reported in the user-facing frame, before the task body draws
+
+#### Scenario: Task aborts when the backend is torn down before a normal return
+- **WHEN** the dqrng backend is reset or switched away from dqrng during a task body (e.g. base R RNG is routed back to a non-user-supplied generator, or a foreign user-supplied RNG is installed) such that dqrng no longer serves base R's draws, and the task body nonetheless completes and the frame begins to exit normally
+- **THEN** the deferred exit integrity check SHALL abort the task with an informative error reported in the user-facing frame, rather than returning the task's (non-dqrng) draws
+
+#### Scenario: Exit check does not mask a task-body error
+- **WHEN** a task body raises an error (so the task frame unwinds abnormally), regardless of whether the dqrng backend is intact at that point
+- **THEN** the deferred exit integrity check SHALL NOT run, and the task body's original error SHALL propagate unchanged
+
+#### Scenario: Brackets do not perturb reproducibility
+- **WHEN** the same seeded task is run twice, once exercising the entry and exit integrity checks and once with them disabled
+- **THEN** the two task results SHALL be identical — each witness draw is rolled back and consumes no net randomness
+
