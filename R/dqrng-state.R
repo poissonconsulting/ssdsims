@@ -66,9 +66,38 @@ local_dqrng_state <- function(seed, primer, .local_envir = parent.frame()) {
   chk::chk_integer(primer)
   chk::chk_length(primer, length = 2L)
   chk::chk_environment(.local_envir)
-  chk_dqrng_backend_active()
+  # Entry precondition: refuse to start the task on a hijacked or torn-down
+  # backend. Stronger than the cheap `dqrng_backend_active()` `RNGkind()` probe
+  # -- it verifies dqrng *specifically* holds base R's RNG slot. Non-destructive,
+  # and
+  # runs before `dqset.seed()` (which overwrites the state), so it leaves the
+  # seed untouched.
+  chk_dqrng_backend_intact()
   old <- get_dqrng_state()
   withr::defer(set_dqrng_state(old), envir = .local_envir)
+  # Exit postcondition: re-assert integrity when the task frame unwinds, so a
+  # mid-task teardown or foreign-RNG hijack aborts the task loudly instead of
+  # returning non-dqrng draws. The witness rides this `withr::defer()` (the same
+  # mechanism that restores the state above), so the seed-and-run wrappers and
+  # `with_dqrng_state()` need no integrity code of their own. It is gated to the
+  # success path via `returnValue()` and a per-call unique sentinel: on an error
+  # / non-local exit `returnValue()` yields the sentinel and the witness is
+  # skipped, so a failing task body's own error is never masked by a witness
+  # abort. See `exploration/user-rng-conflict/case8-task-brackets.R`.
+  #
+  # The exit witness fires on a normal *function* (closure) return -- which is
+  # every real task path: the `*_data_task_primer()` wrappers and
+  # `with_dqrng_state()` are closures. `returnValue()` does not report a normal
+  # return for an `eval()`/`local()` frame, so the exit witness is skipped there
+  # (the entry witness still runs, and the state-restore defer above still
+  # fires); this only affects ad-hoc `local({...})` use, not task execution.
+  sentinel <- new.env()
+  withr::defer(
+    if (!identical(returnValue(sentinel), sentinel)) {
+      chk_dqrng_backend_intact()
+    },
+    envir = .local_envir
+  )
   dqrng::dqset.seed(seed, stream = primer)
   invisible(primer)
 }

@@ -620,3 +620,34 @@ test_that("scenario-definition: samples = TRUE works with multiple dists and ci 
   lens <- unlist(lapply(out$hc$hc, function(h) lengths(h$samples)))
   expect_true(all(lens == 0L))
 })
+
+test_that("parallel-safe-seeding: *_data_task_primer self-verifies the dqrng backend", {
+  data <- ssddata::ccme_boron
+  primer <- task_primer(list(dataset = "boron", sim = 1L, replace = FALSE))
+
+  # Healthy: under an active backend the wrapper returns normally. (The fit/hc
+  # wrappers share the identical local_dqrng_state() bracket as their first line
+  # and are exercised on the healthy path by the reproduce tests above.)
+  local_dqrng_backend()
+  expect_s3_class(
+    sample_data_task_primer(data, 6L, FALSE, 42L, primer),
+    "data.frame"
+  )
+
+  # Exit postcondition: the wrappers are closures, so if the task body leaves
+  # the backend torn down by the time it returns, the wrapper's deferred exit
+  # witness aborts rather than yielding non-dqrng draws. Mock the state-less op
+  # to tear the backend down mid-body.
+  local_dqrng_backend()
+  withr::defer(suppressWarnings(RNGkind("Mersenne-Twister")))
+  testthat::local_mocked_bindings(
+    sample_data_task = function(...) {
+      suppressWarnings(RNGkind("Mersenne-Twister"))
+      data
+    }
+  )
+  expect_error(
+    sample_data_task_primer(data, 6L, FALSE, 42L, primer),
+    "dqrng backend is not intact"
+  )
+})
