@@ -109,7 +109,7 @@ seam these methods delegate to lives, **as proof of work only**, under
 `design_member_addressing()` is **superseded** by `design_results_dir()` +
 `hc_id`/`fit_id` filtering and is not promoted.
 
-- [ ] 9.1 Add `ssd_analyse_cost.ssdsims_design()`: unpack the design into its
+- [x] 9.1 Add `ssd_analyse_cost.ssdsims_design()`: unpack the design into its
   named members, analyse each member from its seed group's shared
   `design_results_dir(member, root)` tree **filtered to the member's
   `hc_id`/`fit_id`s** (the scenario-level core, applied to the member's filtered
@@ -117,33 +117,33 @@ seam these methods delegate to lives, **as proof of work only**, under
   a leading `scenario` column and design totals (observed total = Σ members,
   per-member accounting; longest = max members); skip members with no readable run
   and report the contributing-member count.
-- [ ] 9.2 Combined-summary fast path: read every member's hc timings from
+- [x] 9.2 Combined-summary fast path: read every member's hc timings from
   `<root>/summary.parquet` (grouped by its `scenario` column; the per-member
   summaries retain the timing columns) in one DuckDB read when present, falling
   back to per-member reads of the seed-group `hc` tree filtered by `hc_id` with
   identical totals; the `fit` addend always from the member's seed-group `fit`
   shards filtered by `fit_id`.
-- [ ] 9.3 Design-aware store resolver: one `tar_meta()`; regenerate the seed-woven
+- [x] 9.3 Design-aware store resolver: one `tar_meta()`; regenerate the seed-woven
   shard names **per seed group** (`<step>_step_<seed>_<pathcell>` from the union
   shard tables keyed on `c("seed", <path axes>)`, reusing the group-2 resolver
   logic), join on `name`; the per-shard envelope overhead computed **once per
   shared shard** (per seed group) and summed to the design total; exclude the
   combined `summary`, every per-member `summary_<name>`, and every `upload_<step>`
   target; report unmatched/`NA` targets, never fatal.
-- [ ] 9.4 Add `ssd_compare_cost.ssdsims_design()` (design predicted = Σ members'
+- [x] 9.4 Add `ssd_compare_cost.ssdsims_design()` (design predicted = Σ members'
   `ssd_estimate_cost()`, beside the design observed analysis; design totals,
   ratios, and per-`scenario` rows) and
   `ssd_calibrate_cost_from_run.ssdsims_design()` (pool the members' measured
   hc/fit durations into one host-aware recalibration via
   `pool_calibration_from_frames()`).
-- [ ] 9.5 Design-aware `format`/`print` for `ssdsims_cost_analysis` /
+- [x] 9.5 Design-aware `format`/`print` for `ssdsims_cost_analysis` /
   `ssdsims_cost_comparison`: render the per-`scenario` breakdown and design totals
   when a `scenario` column is present; scenario-level output byte-unchanged.
-- [ ] 9.6 Tests: end-to-end two-scenario design (design totals = sum of per-member
+- [x] 9.6 Tests: end-to-end two-scenario design (design totals = sum of per-member
   analyses; per-`scenario` breakdown; a member with no run excluded with the count
   reported); fast-path vs per-member-read fallback identical totals; seed-woven
   store resolver across the shared `seed=/layout=` trees; mixed-host design aborts;
   design-vs-scenario print snapshots; read-only assertions.
-- [ ] 9.7 Extend the `cost-analysis` vignette with a design section (analyse →
+- [x] 9.7 Extend the `cost-analysis` vignette with a design section (analyse →
   compare → recalibrate over a small two-scenario design); roxygen + `man/` for
   the design methods; `_pkgdown.yml` entries.
