@@ -64,8 +64,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = c(5L, 10L),
   rescale = c(FALSE, TRUE),
-  dists = c("lnorm", "gamma")
-)
+  dists = ssd_distset(set = c("lnorm", "gamma")))
 scenario
 ```
 
@@ -83,6 +82,54 @@ shown in `print()` are its complement):
 ```{r}
 #| label: axes
 scenario$partition_by$fit
+```
+
+### `distset`: bundled by default, promotable to the path
+
+When a scenario declares several distribution sets (pools carved from one union
+fit, see the *defining-a-scenario* vignette), `distset` --- the set *name* --- is
+an `hc` axis. By default it is an **inner** (bundled) axis: the `hc` path stays
+`c("dataset", "sim")`, so **one** hc shard holds every pool for a
+`(dataset, sim)` cell, the runner decodes the union fit *once*, and subsets it
+N ways in memory. This keeps shard counts sane (35 datasets × 1000 sims × 7
+pools would otherwise be 245k tiny Parquets):
+
+```{r}
+#| label: distset-bundled
+multi <- ssd_define_scenario(
+  data,
+  nsim = 2L,
+  seed = 42L,
+  dists = ssd_distset(
+    BCANZ = ssdtools::ssd_dists_bcanz(),
+    Iwasaki = c("burrIII3", "gamma", "llogis", "lnorm", "weibull"),
+    lnorm = "lnorm"
+  )
+)
+# distset is an inner (bundled) hc axis by default
+multi$partition_by$hc
+nrow(ssd_scenario_hc_shards(multi)) # one hc shard per (dataset, sim) cell
+```
+
+Promote `distset` to a path axis (one shard per pool per cell) when you want
+per-pool shards --- e.g. to cache and re-upload pools independently, or because a
+later-added pool should mint only its own new hc shards while every existing
+shard stays cached (the fit layer carries no `distset`, so its shards are never
+touched):
+
+```{r}
+#| label: distset-path
+per_pool <- ssd_define_scenario(
+  data,
+  nsim = 2L,
+  seed = 42L,
+  dists = ssd_distset(
+    BCANZ = ssdtools::ssd_dists_bcanz(),
+    lnorm = "lnorm"
+  ),
+  partition_by = list(hc = c("dataset", "sim", "distset"))
+)
+nrow(ssd_scenario_hc_shards(per_pool)) # one hc shard per (dataset, sim, distset)
 ```
 
 ## Run it single core, over shards

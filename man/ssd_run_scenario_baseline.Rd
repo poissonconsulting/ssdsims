@@ -50,7 +50,7 @@ scenario <- ssd_define_scenario(
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 out <- ssd_run_scenario_baseline(scenario)
 out$hc

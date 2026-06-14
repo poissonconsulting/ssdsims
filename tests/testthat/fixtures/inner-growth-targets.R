@@ -27,7 +27,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = 6L,
   min_pmix = min_pmix,
-  dists = "lnorm",
+  dists = ssd_distset(lnorm = "lnorm"),
   partition_by = list(
     sample = c("dataset", "sim"),
     fit = c("dataset", "sim"),

@@ -37,7 +37,7 @@ is also queued, ready to propose.
 
 <!-- What is actively being worked on this cycle. -->
 
-- ‼️⏳ [distset-hc-axis] Iwasaki.
+- ‼️🛠️ [distset-hc-axis] Iwasaki.
 - ‼️⏳ [scenario-combine] **Blocked by distset-hc-axis**. Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline.
 - ‼️⏳ [cost-analysis-targets] **Blocked by scenario-combine**. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.
 - ‼️⏳ [replace-default-true] Set the default as `replace = TRUE`, silently discard infeasible tasks with `replace = FALSE` and too many rows. Interacts with `nrow-max-setting`.

@@ -84,3 +84,49 @@ scenario_min_pmix <- function(scenario, name) {
   }
   scenario$min_pmix_fns[[name]]
 }
+
+#' Isolate a Distribution Set from a Scenario by Name
+#'
+#' Returns the member character vector of the distribution set stored on
+#' `scenario` under `name` (from `scenario$hc$distsets`). [ssd_define_scenario()]
+#' validates each set at construction (via [ssd_distset()]), so this accessor
+#' performs no registration, persistence, or re-validation - it just isolates the
+#' members the hc runner subsets the parent union fit by. Aborts with an
+#' informative error when `name` is not one of the scenario's distribution-set
+#' names.
+#'
+#' Names - not members - drive task hashing (`TARGETS-DESIGN.md` section 1.1):
+#' the hc-task path carries the `distset` *name*, and this accessor resolves it
+#' back to the member vector at run time, so the members never enter a task
+#' identity (the same by-name pattern as `min_pmix` and datasets).
+#'
+#' @inheritParams scenario_dataset
+#' @param name A scalar string naming one of the scenario's distribution sets.
+#' @return The member character vector of the distribution set stored under
+#'   `name`.
+#' @seealso [ssd_distset()], [scenario_min_pmix()].
+#' @export
+#' @examples
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(
+#'   data,
+#'   nsim = 1L,
+#'   seed = 42L,
+#'   dists = ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())
+#' )
+#' scenario_distset(scenario, "BCANZ")
+scenario_distset <- function(scenario, name) {
+  chk::chk_s3_class(scenario, "ssdsims_scenario")
+  chk::chk_string(name)
+  known <- names(scenario$hc$distsets)
+  if (!name %in% known) {
+    chk::abort_chk(
+      "Unknown distribution set ",
+      encodeString(name, quote = "\""),
+      "; scenario distribution sets are ",
+      chk::cc(known, conj = " and "),
+      "."
+    )
+  }
+  scenario$hc$distsets[[name]]
+}

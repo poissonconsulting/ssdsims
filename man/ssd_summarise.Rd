@@ -92,7 +92,7 @@ scenario <- ssd_define_scenario(
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 # Materialise the shards single-core, then fan in the hc layer.
 run <- ssd_run_scenario_shards(scenario)

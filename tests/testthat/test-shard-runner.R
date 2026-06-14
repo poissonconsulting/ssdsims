@@ -19,6 +19,123 @@ baseline_hc_rows <- function(base) {
   do.call(rbind, rows)
 }
 
+# ---- distset: multi-set baseline == shards, byte-identical per task (6.2) ---
+
+test_that("shard-runner: a multi-set scenario agrees with the baseline per (hc_id, distset)", {
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(d = sr_dataset()),
+    nsim = 2L,
+    seed = 42L,
+    nrow = 6L,
+    dists = ssd_distset(
+      BCANZ = ssdtools::ssd_dists_bcanz(),
+      Iwasaki = c("burrIII3", "gamma", "llogis", "lnorm", "weibull"),
+      lnorm = "lnorm"
+    )
+  )
+  run <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
+  base <- ssd_run_scenario_baseline(scenario)
+
+  # The fit step fits the union once; one hc shard per (dataset, sim) holds all
+  # three pools (distset bundled by default).
+  expect_length(run$fit, nrow(ssd_scenario_fit_tasks(scenario)))
+  expect_length(run$hc, 2L) # (dataset, sim) cells
+
+  hc_pipe <- ssd_read_parquet(file.path(run$dir, "hc", "**", "part.parquet"))
+  expect_true("distset" %in% names(hc_pipe))
+  expect_setequal(unique(hc_pipe$distset), c("BCANZ", "Iwasaki", "lnorm"))
+
+  # The pipeline tags each row with distset; the baseline carries distset on the
+  # hc task row, so stack it onto each per-task tibble for the join.
+  base_rows <- do.call(
+    rbind,
+    Map(
+      function(tb, id, ds) {
+        tb <- tibble::as_tibble(tb)
+        tb$hc_id <- id
+        tb$distset <- ds
+        tb
+      },
+      base$hc$hc,
+      base$hc$hc_id,
+      base$hc$distset
+    )
+  )
+  key <- function(t) {
+    t[order(t$hc_id, t$dist), c("hc_id", "distset", "dist", "est")]
+  }
+  expect_equal(key(hc_pipe), key(base_rows))
+})
+
+# ---- distset: an empty subset emits no rows; summarise unions survivors (6.5)
+
+test_that("shard-runner: a set whose members all dropped emits zero rows and survivors are unioned", {
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(d = sr_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = ssd_distset(lnorm = "lnorm", gamma = "gamma")
+  )
+  dir <- withr::local_tempdir()
+  run <- ssd_run_scenario_shards(scenario, dir = dir)
+
+  # Simulate the `gamma` members all dropping from the union fit: rewrite each
+  # fit shard's blob to a fit of `lnorm` only (so `subset(fit, "gamma")` is
+  # empty), keeping the `fit_id` so the hc step still resolves its parent.
+  fit_files <- list.files(
+    file.path(dir, "fit"),
+    pattern = "part.parquet",
+    recursive = TRUE,
+    full.names = TRUE
+  )
+  for (f in fit_files) {
+    tb <- ssd_read_parquet(f)
+    for (i in seq_len(nrow(tb))) {
+      local_dqrng_backend()
+      lnorm_only <- ssdtools::ssd_fit_dists(
+        utils::head(sr_dataset(), 6L),
+        dists = "lnorm",
+        silent = TRUE,
+        nrow = 5L
+      )
+      tb$fit_blob[i] <- encode_obj(lnorm_only)
+    }
+    ssd_write_parquet(tb, f)
+  }
+
+  # Re-run only the hc step over the doctored fit shards.
+  unlink(file.path(dir, "hc"), recursive = TRUE)
+  local_duckplyr_config()
+  local_dqrng_backend()
+  hc_shards <- ssd_scenario_hc_shards(scenario)
+  for (i in seq_len(nrow(hc_shards))) {
+    ssd_run_hc_step(
+      hc_shards$tasks[[i]],
+      scenario,
+      file.path(dir, "fit"),
+      file.path(dir, "hc")
+    )
+  }
+
+  hc_pipe <- ssd_read_parquet(file.path(dir, "hc", "**", "part.parquet"))
+  # gamma all-dropped -> zero rows for that distset; lnorm survives.
+  expect_setequal(unique(hc_pipe$distset), "lnorm")
+  expect_false("gamma" %in% hc_pipe$distset)
+
+  # ssd_summarise() unions the survivors (the lnorm rows).
+  summary_path <- file.path(dir, "summary.parquet")
+  ssd_summarise(
+    file.path(dir, "sample"),
+    file.path(dir, "fit"),
+    file.path(dir, "hc"),
+    summary_path
+  )
+  summ <- ssd_read_parquet(summary_path)
+  expect_setequal(unique(summ$distset), "lnorm")
+  expect_gt(nrow(summ), 0L)
+})
+
 # ---- oracle: results match the in-memory baseline (task 5.1) ---------------
 
 test_that("shard-runner: per-task results match the in-memory baseline", {
@@ -28,7 +145,7 @@ test_that("shard-runner: per-task results match the in-memory baseline", {
     seed = 42L,
     nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
-    dists = c("lnorm", "gamma")
+    dists = ssd_distset(set = c("lnorm", "gamma"))
   )
   run <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
   base <- ssd_run_scenario_baseline(scenario)
@@ -61,7 +178,7 @@ test_that("shard-runner: re-layout shifts shard paths but not results", {
     nrow = c(5L, 10L),
     seed = 42L,
     rescale = c(FALSE, TRUE),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   fine <- do.call(ssd_define_scenario, args)
   coarse <- do.call(
@@ -97,7 +214,7 @@ test_that("shard-runner: a fit shard reads several sample shards (inner replace)
     seed = 42L,
     nrow = 6L,
     replace = c(FALSE, TRUE),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   run <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
   # two sample shards (replace in the sample path), one fit shard (replace inner)
@@ -123,7 +240,7 @@ test_that("shard-runner: an hc shard reads several fit shards (coarse hc)", {
     seed = 42L,
     nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   run <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
   # default: fit shards on (dataset, sim, nrow, rescale) = 4; hc on (dataset, sim) = 1
@@ -146,7 +263,7 @@ test_that("shard-runner: shard count equals the path-cell count, not task count"
     seed = 42L,
     nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   run <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
   # sample path (dataset, sim, replace): 1 * 2 * 1 = 2
@@ -174,7 +291,7 @@ test_that("shard-runner: re-running yields identical per-task results", {
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   run1 <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
   run2 <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
@@ -195,7 +312,7 @@ test_that("shard-runner: re-running with a changed partition_by leaves no stale 
     nrow = c(5L, 10L),
     seed = 42L,
     rescale = c(FALSE, TRUE),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   fine <- do.call(ssd_define_scenario, base_args)
   run_fine <- ssd_run_scenario_shards(fine, dir = dir)
@@ -226,7 +343,7 @@ test_that("shard-runner: fit step aborts when a parent sample draw is missing", 
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   dir <- withr::local_tempdir()
   sample_dir <- file.path(dir, "sample")
@@ -272,7 +389,7 @@ test_that("shard-runner: a fit object round-trips losslessly through the encode/
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = c("lnorm", "gamma")
+    dists = ssd_distset(set = c("lnorm", "gamma"))
   )
   fit <- ssd_run_scenario_baseline(scenario)$fit$fits[[1L]]
 
