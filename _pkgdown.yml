@@ -11,6 +11,8 @@ reference:
   contents:
   - ssd_scenario_data
   - ssd_gen
+  - ssd_pmix
+  - ssd_distset
   - ssd_define_scenario
   - ssd_scenario_tasks
   - ssd_run_scenario_baseline
@@ -73,6 +75,7 @@ reference:
   contents:
   - scenario_dataset
   - scenario_min_pmix
+  - scenario_distset
 
 - title: Reproducible RNG
   desc: >

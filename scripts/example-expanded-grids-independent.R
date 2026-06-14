@@ -98,7 +98,7 @@ fit_list <- list(
     rescale = FALSE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE
@@ -110,7 +110,7 @@ fit_list <- list(
     rescale = TRUE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE
@@ -122,7 +122,7 @@ fit_list <- list(
     rescale = FALSE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE
@@ -134,7 +134,7 @@ fit_list <- list(
     rescale = TRUE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE
@@ -146,7 +146,7 @@ fit_list <- list(
     rescale = FALSE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE
@@ -158,7 +158,7 @@ fit_list <- list(
     rescale = TRUE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE
@@ -170,7 +170,7 @@ fit_list <- list(
     rescale = FALSE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE
@@ -182,7 +182,7 @@ fit_list <- list(
     rescale = TRUE,
     computable = FALSE,
     at_boundary_ok = TRUE,
-    min_pmix = ssdtools::ssd_min_pmix,
+    min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
     range_shape1 = c(0.05, 20),
     range_shape2 = c(0.05, 20),
     silent = TRUE

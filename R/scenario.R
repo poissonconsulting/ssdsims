@@ -99,17 +99,14 @@
 #'   rows, so `nrow` is not capped by the dataset size); `FALSE` draws a
 #'   permutation, capping the effective draw - and so each `nrow` - at the
 #'   dataset size.
-#' @param min_pmix The `min_pmix` function(s), referenced **by name**. Supply
-#'   either a character vector of names, or a function (or list of functions)
-#'   with a single argument that inputs the number of rows of data and returns
-#'   a proportion between 0 and 0.5 - in which case the name is derived from the
-#'   argument expression (e.g. `ssdtools::ssd_min_pmix` gives `"ssd_min_pmix"`),
-#'   mirroring dataset name derivation. The name is what the task path hashes;
-#'   the resolved single-argument function is additionally materialised on the
-#'   scenario (keyed by name) for execution and isolated via
-#'   [scenario_min_pmix()]. A name-string is resolved to a function at
-#'   construction (from `ssdtools` or the caller's environment), failing fast if
-#'   it cannot be resolved to a single-argument function.
+#' @param min_pmix An [ssd_pmix()] collection of one or more single-argument
+#'   `min_pmix` functions, referenced **by name**. This is the only accepted
+#'   form; a bare function, a plain list, or a character vector of names is
+#'   rejected (no string-to-function resolution). The collection's name (not the
+#'   function value) is what the task path hashes; the function is materialised
+#'   on the scenario (keyed by name) for execution and isolated via
+#'   [scenario_min_pmix()]. Defaults to
+#'   `ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)`.
 #' @param dists An [ssd_distset()] collection of one or more named distribution
 #'   sets (pools model-averaged together to form one SSD). The fit step fits the
 #'   **union** of every set's members once; the hc step subsets that union fit
@@ -174,7 +171,7 @@ ssd_define_scenario <- function(
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
-  min_pmix = list(ssdtools::ssd_min_pmix),
+  min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   nrow_max = 1000L,
@@ -189,8 +186,6 @@ ssd_define_scenario <- function(
   partition_by = NULL,
   bundle = NULL
 ) {
-  min_pmix_expr <- rlang::enexpr(min_pmix)
-  user_env <- rlang::caller_env()
   call <- environment()
   chk::chk_unused(...)
 
@@ -389,12 +384,7 @@ ssd_define_scenario <- function(
   }
 
   # --- min_pmix: names for hashing + functions materialised for execution -
-  min_pmix_spec <- scenario_min_pmix_materialise(
-    min_pmix,
-    min_pmix_expr,
-    env = user_env,
-    call = call
-  )
+  min_pmix_spec <- scenario_pmix_spec(min_pmix, call = call)
 
   partition_by <- validate_partition_by(partition_by, bundle, call = call)
 
@@ -654,151 +644,28 @@ expr_to_name <- function(expr) {
   NULL
 }
 
-#' Derive per-element names from a captured `list(...)` expression.
-#' @noRd
-list_expr_names <- function(
-  list_expr,
-  label = "dataset",
-  call = rlang::caller_env()
-) {
-  if (!rlang::is_call(list_expr, "list")) {
-    chk::abort_chk(
-      "Unable to derive ",
-      label,
-      " names from the list argument; ",
-      "supply a named list (e.g. `list(boron = ...)`).",
-      call = call
-    )
-  }
-  elems <- rlang::call_args(list_expr)
-  nms <- vapply(
-    elems,
-    function(e) expr_to_name(e) %||% NA_character_,
-    character(1),
-    USE.NAMES = FALSE
-  )
-  if (anyNA(nms)) {
-    chk::abort_chk(
-      "Unable to derive a name for every ",
-      label,
-      " in the list; ",
-      "supply a named list (e.g. `list(boron = ...)`).",
-      call = call
-    )
-  }
-  nms
-}
-
-#' Materialise `min_pmix` names *and* functions from the value and captured
-#' argument expression.
+#' Extract `min_pmix` names and functions from an `ssd_pmix()` collection.
 #'
 #' Returns `list(names = <character>, fns = <named list of functions>)`. The
-#' names are what the task path hashes (mirroring dataset name derivation); the
-#' functions ride on the scenario for execution, isolated later by name via
-#' [scenario_min_pmix()]. Accepts:
-#'
-#' * a character vector of names - each resolved to a single-argument function
-#'   at construction (from `ssdtools` or `env`), failing fast if unresolvable;
-#' * a function - validated, its name derived by symbol capture, kept under
-#'   that name;
-#' * a list of functions - each validated, names taken from the list or derived
-#'   per element, kept under those names.
-#'
-#' The names never carry function values into a hash (`task_axes("fit")` keys on
-#' the name only).
+#' input SHALL be an `ssdsims_pmix` collection (from [ssd_pmix()]), which already
+#' carries validated single-argument functions keyed by name - there is **no**
+#' string-to-function resolution and **no** expression capture. The names are
+#' what the task path hashes; the functions ride on the scenario for execution,
+#' isolated later by name via [scenario_min_pmix()]. Any other input form (a bare
+#' function, a plain list, or a character vector of names) aborts in the context
+#' of `call` (the user-facing function) with a message naming `ssd_pmix()`.
 #' @noRd
-scenario_min_pmix_materialise <- function(
-  min_pmix,
-  min_pmix_expr,
-  env = rlang::caller_env(),
-  call = rlang::caller_env()
-) {
-  if (is.character(min_pmix)) {
-    if (anyNA(min_pmix)) {
-      chk::abort_chk("`min_pmix` names must not be missing.", call = call)
-    }
-    if (anyDuplicated(min_pmix)) {
-      chk::abort_chk("`min_pmix` names must be unique.", call = call)
-    }
-    # Plain loop (not `lapply`/`purrr::map`) so an unresolvable-name abort
-    # surfaces from `ssd_define_scenario()`, not an internal map frame
-    # (error-call-origin rule).
-    fns <- vector("list", length(min_pmix))
-    for (i in seq_along(min_pmix)) {
-      fns[[i]] <- resolve_min_pmix_name(min_pmix[[i]], env = env, call = call)
-    }
-    return(list(names = min_pmix, fns = rlang::set_names(fns, min_pmix)))
-  }
-
-  if (is.function(min_pmix)) {
-    check_min_pmix_function(min_pmix, call = call)
-    nm <- expr_to_name(min_pmix_expr)
-    if (is.null(nm)) {
-      chk::abort_chk(
-        "Unable to derive a name for `min_pmix`; ",
-        "supply it by name (a character vector).",
-        call = call
-      )
-    }
-    return(list(names = nm, fns = rlang::set_names(list(min_pmix), nm)))
-  }
-
-  if (is.list(min_pmix)) {
-    for (entry in min_pmix) {
-      check_min_pmix_function(entry, call = call)
-    }
-    list_names <- names(min_pmix)
-    if (!is.null(list_names) && all(nzchar(list_names))) {
-      nms <- list_names
-    } else {
-      nms <- list_expr_names(min_pmix_expr, label = "min_pmix", call = call)
-    }
-    if (anyDuplicated(nms)) {
-      chk::abort_chk("`min_pmix` names must be unique.", call = call)
-    }
-    return(list(names = nms, fns = rlang::set_names(min_pmix, nms)))
-  }
-
-  chk::abort_chk(
-    "`min_pmix` must be a character vector of names, ",
-    "or a function or list of functions.",
-    call = call
-  )
-}
-
-#' Resolve a `min_pmix` name to a single-argument function at construction.
-#'
-#' Looks the name up in `ssdtools` first, then `env` (the caller's environment,
-#' searched inheritably). Aborts in the context of `call` when the name cannot
-#' be resolved to a single-argument function.
-#' @noRd
-resolve_min_pmix_name <- function(name, env, call = rlang::caller_env()) {
-  out <- rlang::env_get(rlang::ns_env("ssdtools"), name, default = NULL)
-  if (!rlang::is_function(out)) {
-    out <- rlang::env_get(env, name, default = NULL, inherit = TRUE)
-  }
-  if (!rlang::is_function(out) || length(formals(out)) != 1L) {
+scenario_pmix_spec <- function(min_pmix, call = rlang::caller_env()) {
+  if (!inherits(min_pmix, "ssdsims_pmix")) {
     chk::abort_chk(
-      "Unable to resolve `min_pmix` name ",
-      encodeString(name, quote = "\""),
-      " to a single-argument function.",
+      "`min_pmix` must be an `ssd_pmix()` collection; ",
+      "wrap the function(s) with `ssd_pmix()` ",
+      "(a bare function, a plain list, or a character vector is not accepted).",
       call = call
     )
   }
-  out
-}
-
-#' Assert a `min_pmix` entry is a single-argument function (in the context of
-#' `call`).
-#' @noRd
-check_min_pmix_function <- function(f, call = rlang::caller_env()) {
-  if (!is.function(f) || length(formals(f)) != 1L) {
-    chk::abort_chk(
-      "Each `min_pmix` function must take a single argument ",
-      "(the number of rows).",
-      call = call
-    )
-  }
+  fns <- unclass(min_pmix)
+  list(names = names(fns), fns = fns)
 }
 
 #' @export

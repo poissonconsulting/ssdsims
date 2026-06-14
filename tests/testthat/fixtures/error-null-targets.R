@@ -13,7 +13,7 @@ scenario <- ssd_define_scenario(
   nsim = 2L,
   seed = 42L,
   nrow = 6L,
-  min_pmix = boom,
+  min_pmix = ssd_pmix(boom = boom),
   dists = ssd_distset(lnorm = "lnorm")
 )
 
