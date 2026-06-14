@@ -338,8 +338,9 @@ cost_cpu_info <- function() {
 #' @seealso [ssd_calibrate_cost()] and [ssd_cost_calibration()].
 #' @export
 #' @examples
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   data,
 #'   nsim = 10L,
 #'   seed = 42L,
 #'   ci = TRUE,

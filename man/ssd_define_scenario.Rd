@@ -9,7 +9,6 @@ ssd_define_scenario(
   nsim,
   seed,
   ...,
-  name = NULL,
   nrow = 6L,
   replace = FALSE,
   rescale = FALSE,
@@ -31,9 +30,9 @@ ssd_define_scenario(
 )
 }
 \arguments{
-\item{data}{An \code{\link[=ssd_data]{ssd_data()}} collection (preferred), or - for convenience -
-a single data frame or a (named or unnamed) list of data frames. Bare
-inputs are validated via the same \code{Conc} contract as \code{\link[=ssd_data]{ssd_data()}}.}
+\item{data}{An \code{\link[=ssd_scenario_data]{ssd_scenario_data()}} collection: a validated, named
+collection of \code{Conc} tibbles assembled from data frames and/or
+\code{\link[=ssd_gen]{ssd_gen()}} generator datasets.}
 
 \item{nsim}{A count of the number of data sets to generate.}
 
@@ -41,10 +40,6 @@ inputs are validated via the same \code{Conc} contract as \code{\link[=ssd_data]
 changing it fully re-roots the scenario's random-number draws.}
 
 \item{...}{Unused; must be empty.}
-
-\item{name}{An optional dataset name for the single-data-frame form,
-overriding the derived name. Must not be combined with a named list or an
-\code{\link[=ssd_data]{ssd_data()}} collection.}
 
 \item{nrow}{A positive whole number of the minimum number of non-missing rows.}
 
@@ -159,29 +154,26 @@ grids. It performs \strong{no} random-number generation, \strong{no} task expans
 and has \strong{no} dependency on \code{targets}.
 }
 \details{
-Input data is forwarded through \code{\link[=ssd_data]{ssd_data()}} for validation (a numeric
-\code{Conc} column is required) and retained on the scenario (as \verb{$data}) so a
-local run (\code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}}) can sample it directly. The dataset
-\emph{names} (\verb{$datasets}) are what the targets/cluster path hashes; the validated
-tibbles ride on the scenario and are isolated by name via \code{\link[=scenario_dataset]{scenario_dataset()}},
-so the hash need not carry the data frames.
+Input data arrives as an \code{\link[=ssd_scenario_data]{ssd_scenario_data()}} collection (already
+validated: a numeric \code{Conc} column is required) and is retained on the
+scenario (as \verb{$data}) so a local run (\code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}}) can
+sample it directly. The dataset \emph{names} (\verb{$datasets}) are what the
+targets/cluster path hashes; the validated tibbles ride on the scenario and
+are isolated by name via \code{\link[=scenario_dataset]{scenario_dataset()}}, so the hash need not carry
+the data frames.
 }
 \section{Dataset input}{
-The preferred form is an \code{\link[=ssd_data]{ssd_data()}} collection, which owns validation and
-naming: \code{ssd_define_scenario(ssd_data(boron = ccme_boron, cadmium = ccme_cadmium), ...)}. For convenience, bare data frame input is also
-accepted in four forms (routed through the same \code{Conc} validation):
-\enumerate{
-\item A single data frame, name derived from the argument expression:
-\code{ssd_define_scenario(ssddata::ccme_boron, ...)} gives \code{"ccme_boron"}.
-\item A single data frame with an explicit \verb{name=}:
-\code{ssd_define_scenario(ssddata::ccme_boron, name = "boron", ...)}.
-\item A named list, names taken from the list:
-\code{ssd_define_scenario(list(boron = ccme_boron, cadmium = ccme_cadmium), ...)}.
-\item An unnamed list, names derived per element:
-\code{ssd_define_scenario(list(ccme_boron, ccme_cadmium), ...)}.
-}
+Dataset input is accepted \strong{only} as an \code{\link[=ssd_scenario_data]{ssd_scenario_data()}} collection,
+which owns validation and naming. Assemble it first, then pass it in:
 
-Supplying both a named list and \verb{name=} is an error.
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{data <- ssd_scenario_data(boron = ccme_boron, cadmium = ccme_cadmium)
+scenario <- ssd_define_scenario(data, ...)
+}\if{html}{\out{</div>}}
+
+Generator inputs (a \code{fitdists}/\code{tmbfit} object, a generator function, or a
+function-name string) are materialised - once, reproducibly - by \code{\link[=ssd_gen]{ssd_gen()}}
+and composed into the same collection; the constructor itself performs \strong{no}
+random-number generation.
 }
 
 \section{\code{ci}}{
@@ -210,5 +202,7 @@ method within a task without fanning out into separate tasks.
 }
 
 \examples{
-ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+scenario
 }

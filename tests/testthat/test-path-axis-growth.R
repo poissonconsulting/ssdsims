@@ -35,7 +35,7 @@ test_that("path-axis-growth: appending a dataset builds only the new dataset's s
   # the captured shard names are one per shard of each step's shard table (so the
   # skip/build sets below are derived from `ssd_scenario_*_shards()`, not strings)
   scenario <- ssd_define_scenario(
-    ssd_data(d1 = numeric_dataset()),
+    ssd_scenario_data(d1 = numeric_dataset()),
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
@@ -90,7 +90,7 @@ test_that("path-axis-growth: growing nsim builds only the new sim cells' shards 
   orig <- growth_state()
 
   scenario <- ssd_define_scenario(
-    ssd_data(d = numeric_dataset()),
+    ssd_scenario_data(d = numeric_dataset()),
     nsim = 2L,
     seed = 42L,
     nrow = 6L,

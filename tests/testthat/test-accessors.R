@@ -2,7 +2,10 @@
 
 test_that("scenario-accessors: scenario_dataset returns the materialised tibble", {
   s <- ssd_define_scenario(
-    ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    ssd_scenario_data(
+      boron = ssddata::ccme_boron,
+      cadmium = ssddata::ccme_cadmium
+    ),
     nsim = 1L,
     seed = 1L
   )
@@ -13,7 +16,11 @@ test_that("scenario-accessors: scenario_dataset returns the materialised tibble"
 })
 
 test_that("scenario-accessors: scenario_dataset errors on an unknown name", {
-  s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 1L
+  )
   expect_snapshot(error = TRUE, {
     scenario_dataset(s, "nope")
   })
@@ -22,7 +29,11 @@ test_that("scenario-accessors: scenario_dataset errors on an unknown name", {
 # ---- scenario_min_pmix() ---------------------------------------------------
 
 test_that("scenario-accessors: scenario_min_pmix returns the materialised function", {
-  s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 1L
+  )
   fn <- scenario_min_pmix(s, "ssd_min_pmix")
   expect_true(is.function(fn))
   expect_identical(fn, ssdtools::ssd_min_pmix)
@@ -30,7 +41,11 @@ test_that("scenario-accessors: scenario_min_pmix returns the materialised functi
 })
 
 test_that("scenario-accessors: scenario_min_pmix errors on an unknown name", {
-  s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 1L
+  )
   expect_snapshot(error = TRUE, {
     scenario_min_pmix(s, "nope")
   })
@@ -39,7 +54,11 @@ test_that("scenario-accessors: scenario_min_pmix errors on an unknown name", {
 # ---- resolve_min_pmix() rewired to the accessor ----------------------------
 
 test_that("scenario-accessors: resolve_min_pmix resolves via the accessor", {
-  s <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 1L
+  )
   # The runtime resolver now reads off the scenario, returning the same
   # function the accessor (and the old ssdtools lookup) yields.
   expect_identical(
@@ -51,7 +70,7 @@ test_that("scenario-accessors: resolve_min_pmix resolves via the accessor", {
 
 test_that("scenario-accessors: baseline runner's default min_pmix is unchanged", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
@@ -69,7 +88,10 @@ test_that("scenario-accessors: baseline runner's default min_pmix is unchanged",
 
 test_that("scenario-accessors: each step's slice carries its runner's inputs", {
   scenario <- ssd_define_scenario(
-    ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    ssd_scenario_data(
+      boron = ssddata::ccme_boron,
+      cadmium = ssddata::ccme_cadmium
+    ),
     nsim = 1L,
     seed = 1L,
     dists = c("lnorm", "gamma")
@@ -112,9 +134,13 @@ test_that("scenario-accessors: each step's slice carries its runner's inputs", {
 
 test_that("scenario-accessors: the sample slice carries only the named dataset(s)", {
   df <- data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
-  two <- ssd_define_scenario(ssd_data(a = df, b = df), nsim = 1L, seed = 1L)
+  two <- ssd_define_scenario(
+    ssd_scenario_data(a = df, b = df),
+    nsim = 1L,
+    seed = 1L
+  )
   three <- ssd_define_scenario(
-    ssd_data(a = df, b = df, c = df),
+    ssd_scenario_data(a = df, b = df, c = df),
     nsim = 1L,
     seed = 1L
   )
@@ -129,7 +155,7 @@ test_that("scenario-accessors: the sample slice carries only the named dataset(s
 
 test_that("scenario-accessors: scenario_step_slice is deterministic and hashable", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     dists = "lnorm"

@@ -80,11 +80,7 @@ The package SHALL expose `ssd_gen(..., .n, .seed)` that accepts ONLY generator-s
 - **THEN** `.Random.seed` SHALL be unchanged after the call (the scoped generation restores it)
 
 ### Requirement: dqrng-backed, reproducible generation
-`ssd_gen()` SHALL draw under an active dqrng pcg64 backend and SHALL reuse `task-rng-postcheck` to enforce a dqrng-only contract. It SHALL gate every dqrng touch behind `dqrng_usable()`, aborting with actionable guidance (`library(dqrng)`, `>= 0.4.1`) when dqrng is not already loaded rather than loading a user-RNG provider implicitly. After each generator runs, it SHALL verify via `chk_dqrng_backend_intact()` that the draw came from dqrng, aborting when a generator escaped dqrng (e.g. drew from base R after switching `RNGkind`). A generator that consumes no randomness SHALL pass.
-
-#### Scenario: dqrng not loaded is rejected
-- **WHEN** `ssd_gen()` is called while `dqrng` is not loaded (`dqrng_usable()` is `FALSE`)
-- **THEN** the function SHALL abort with an informative error directing the user to `library(dqrng)`
+`ssd_gen()` SHALL draw under an active dqrng pcg64 backend and SHALL reuse `task-rng-postcheck`'s per-task integrity witness to enforce that each draw actually came from dqrng. Each generator SHALL be seeded through `local_dqrng_state()`, which brackets the draw with `chk_dqrng_backend_intact()`; `ssd_gen()` SHALL abort when a generator escaped dqrng (e.g. drew from base R after switching `RNGkind`), since such a draw is not reproducible under `.seed`. A generator that consumes no randomness SHALL pass.
 
 #### Scenario: A generator escaping dqrng is rejected
 - **WHEN** a generator draws from the base R RNG (escaping the dqrng backend)

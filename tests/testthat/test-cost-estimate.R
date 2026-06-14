@@ -26,7 +26,7 @@ test_that("cost-estimation: calibration print renders coefficients and caveat", 
 
 test_that("cost-estimation: estimation runs no RNG and alters no seed", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     ci = TRUE,
@@ -47,7 +47,7 @@ test_that("cost-estimation: estimation runs no RNG and alters no seed", {
 
 test_that("cost-estimation: proportion and est_method do not change the total", {
   lean <- ssd_define_scenario(
-    ssd_data(boron = ssddata::ccme_boron),
+    ssd_scenario_data(boron = ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     ci = TRUE,
@@ -57,7 +57,7 @@ test_that("cost-estimation: proportion and est_method do not change the total", 
     proportion = 0.05
   )
   fat <- ssd_define_scenario(
-    ssd_data(boron = ssddata::ccme_boron),
+    ssd_scenario_data(boron = ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     ci = TRUE,
@@ -77,7 +77,7 @@ test_that("cost-estimation: proportion and est_method do not change the total", 
 
 test_that("cost-estimation: longest task is the costliest multi cell at max nboot", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 3L,
     seed = 42L,
     ci = TRUE,
@@ -128,7 +128,7 @@ test_that("cost-estimation: ci = FALSE tasks cost only the fixed addend", {
 
 test_that("cost-estimation: estimate print is stable", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     ci = TRUE,
@@ -162,7 +162,7 @@ test_that("cost-estimation: a single call calibrates a usable object", {
   expect_identical(cal$provenance$sweep_grid$nboot, c(10L, 20L))
   # The freshly fitted calibration drives the estimator just like the default.
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
     ci = TRUE,

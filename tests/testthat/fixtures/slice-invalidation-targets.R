@@ -11,7 +11,7 @@ library(ssdsims)
 knobs <- readRDS("knobs.rds")
 
 scenario <- ssd_define_scenario(
-  ssd_data(d = readRDS("data.rds")),
+  ssd_scenario_data(d = readRDS("data.rds")),
   nsim = 1L,
   seed = 42L,
   nrow = 6L,

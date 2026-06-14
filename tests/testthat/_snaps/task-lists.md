@@ -1,8 +1,8 @@
 # task-lists: printing a task table is informative
 
     Code
-      ssd_scenario_sample_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 2L,
-      seed = 42L))
+      ssd_scenario_sample_tasks(ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 2L, seed = 42L))
     Output
       <ssdsims_tasks: sample>
         axes:  dataset, sim, replace
@@ -16,8 +16,8 @@
 ---
 
     Code
-      ssd_scenario_fit_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 1L,
-      seed = 42L, nrow = c(5L, 10L), rescale = c(FALSE, TRUE)))
+      ssd_scenario_fit_tasks(ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 1L, seed = 42L, nrow = c(5L, 10L), rescale = c(FALSE, TRUE)))
     Output
       <ssdsims_tasks: fit>
         axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
@@ -35,8 +35,8 @@
 ---
 
     Code
-      ssd_scenario_hc_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L,
-      ci = TRUE, nboot = c(10L, 100L)))
+      ssd_scenario_hc_tasks(ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 1L, seed = 42L, ci = TRUE, nboot = c(10L, 100L)))
     Output
       <ssdsims_tasks: hc>
         axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
@@ -52,8 +52,9 @@
 # task-lists: printing a task set reports per-step counts
 
     Code
-      ssd_scenario_tasks(ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L,
-      nrow = c(5L, 10L), rescale = c(FALSE, TRUE), ci = TRUE, nboot = c(10L, 100L)))
+      ssd_scenario_tasks(ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 2L, seed = 42L, nrow = c(5L, 10L), rescale = c(FALSE, TRUE), ci = TRUE,
+      nboot = c(10L, 100L)))
     Output
       <ssdsims_task_set>
         sample tasks: 2

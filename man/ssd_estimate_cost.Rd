@@ -37,8 +37,9 @@ parallelism; wall-time under \code{n} workers is roughly
 \code{max(longest_task, total / n)}, computed by the caller.
 }
 \examples{
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 10L,
   seed = 42L,
   ci = TRUE,
