@@ -2,18 +2,18 @@
 
 ## 1. `ssd_design()` collection constructor + consistency contract
 
-- [ ] 1.1 Add `R/design.R` with exported `ssd_design(...)`: capture names from
+- [x] 1.1 Add `R/design.R` with exported `ssd_design(...)`: capture names from
       explicit argument names or derive from the argument expression
       (reuse/mirror the `ssd_data()` derivation helpers in `R/data.R`), return a
       named list of scenarios classed `ssdsims_design`
-- [ ] 1.2 Validate shape: at least one scenario (empty call aborts; a design of
+- [x] 1.2 Validate shape: at least one scenario (empty call aborts; a design of
       one is valid), every element an `ssdsims_scenario` (`chk_s3_class`), names
       unique, non-empty, non-`NA`, matching `^[A-Za-z][A-Za-z0-9_]*$`
-- [ ] 1.3 Enforce the name→value consistency contract across members: same
+- [x] 1.3 Enforce the name→value consistency contract across members: same
       `dataset` name ⟹ identical data, same `min_pmix` name ⟹ identical function,
       same `distset` name ⟹ identical members, and identical `partition_by`;
       informative errors naming the offending binding; construction RNG-free
-- [ ] 1.4 Unit tests in `tests/testthat/test-design.R`: derived vs explicit
+- [x] 1.4 Unit tests in `tests/testthat/test-design.R`: derived vs explicit
       names, input order, design of one, empty-call, duplicate/unsafe-name and
       non-scenario errors, each consistency violation aborts, `.Random.seed`
       untouched
