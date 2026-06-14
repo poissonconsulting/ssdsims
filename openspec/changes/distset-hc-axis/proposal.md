@@ -13,13 +13,16 @@ identical per-distribution fits and differ only in the analytical re-averaging.
 
 ## What Changes
 
-- **Accept a named list of distribution *sets* for `dists`.** A distribution set
-  is the pool of distributions model-averaged together to form one SSD (one
-  `est`). `dists = list(BCANZ = ssd_dists_bcanz(), Iwasaki = c("burrIII3", ...),
-  lnorm = "lnorm", ...)` declares several pools; a bare character vector keeps
-  today's behaviour (one anonymous pool, no new axis). The set **name** — not its
-  members — is what hashes onto the task path, mirroring the by-name treatment of
-  `min_pmix` and datasets.
+- **BREAKING — add `ssd_distset()` and require it for `dists`.** A distribution
+  set is the pool of distributions model-averaged together to form one SSD (one
+  `est`). `ssd_distset(BCANZ = ssd_dists_bcanz(), Iwasaki = c("burrIII3", ...),
+  lnorm = "lnorm")` returns a validated `ssdsims_distset` collection (owning
+  set-name and member validation **by value**, the `ssd_scenario_data()` precedent);
+  `ssd_define_scenario(dists = ...)` SHALL accept **only** that collection. A
+  bare character vector or a plain list SHALL abort with a message naming
+  `ssd_distset()` (no silent fallback, no expression-archaeology for names). The
+  set **name** — not its members — is what hashes onto the task path, mirroring
+  the by-name treatment of `min_pmix` and datasets.
 - **Fit the union once.** The fit step fits `sort(unique(unlist(dists)))` (the
   superset every pool needs) as a single model-averaged fit per fit task;
   `scenario$fit$dists` becomes that union. The named sets are stored separately
@@ -63,10 +66,11 @@ a re-baseline of any existing CI snapshots.
 <!-- None: this extends existing capabilities (no new spec file). -->
 
 ### Modified Capabilities
-- `scenario-definition`: `dists` accepts a named list of distribution sets;
-  the constructor derives and stores the fit **union** (`scenario$fit$dists`) and
-  the named sets (`scenario$hc$distsets`); validation, role-grouping, and the
-  print method cover the set list.
+- `scenario-definition`: add `ssd_distset()` as the validated, by-value
+  collection constructor for `dists`; `ssd_define_scenario()` requires an
+  `ssd_distset()` collection (bare vector / plain list abort loudly), derives and
+  stores the fit **union** (`scenario$fit$dists`) and the named sets
+  (`scenario$hc$distsets`); the print method covers the set list.
 - `task-lists`: `task_axes("hc")` gains `"distset"`; the hc task table fans out
   over the declared sets (their **names** as the axis values), each row carrying
   its set name and parent `fit_id`; the fit table is unchanged (it fits the
@@ -85,15 +89,20 @@ a re-baseline of any existing CI snapshots.
 
 - **Specs**: `scenario-definition`, `task-lists`, `hazard-concentrations`,
   `task-shards`, `scenario-accessors` deltas.
-- **Code**: `R/scenario.R` (`dists` signature/validation/union derivation/storage
+- **Code**: new `R/distset.R` (`ssd_distset()` constructor, validator, print
+  method), `R/scenario.R` (`dists` requires the collection; union derivation/storage
   in `fit`+`hc`, print, `partition_by` vocabulary in `validate_axis_list()`),
   `R/task-lists.R` (`task_axes("hc")`, hc task-table fan-out, `hc_data_task_primer()`
   subset), `R/accessors.R` (`scenario_distset()`, hc slice in `scenario_step_slice()`),
   `R/targets-runner.R` / `R/shard-runner.R` (`ssd_run_hc_step()` reads/decodes
   parent fit once and subsets per distset task), `R/hc-sims.R`/`R/internal.R` (the
   in-memory hc path, kept consistent), `NAMESPACE`/`man/` (new export).
-- **Back-compatibility**: a bare character `dists` behaves exactly as today (one
-  anonymous pool, no `distset` axis), so existing scenarios are unaffected.
+- **BREAKING**: `dists` now requires an `ssd_distset()` collection; a bare
+  character vector (today's form) aborts loudly. Existing call sites migrate
+  `dists = ssd_dists_bcanz()` → `dists = ssd_distset(BCANZ = ssd_dists_bcanz())`.
+- **Independence**: this change is independent of `pmix-constructor`; it owns the
+  `dists`/`ssd_distset()` input, that change owns `min_pmix`/`ssd_pmix()`. They
+  extend `scenario-definition` in disjoint requirements (no ordering between them).
 - **RNG / re-baseline**: adding `distset` to `task_axes("hc")` makes it part of
   the hc primer, re-seeding every hc task; `est` is unchanged (analytical),
   bootstrap CIs change numerically (statistically equivalent). No stored-CI
