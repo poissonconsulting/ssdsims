@@ -38,7 +38,7 @@
       Error in `ssd_define_scenario()`:
       ! `nrow_max` must be a whole number (non-missing integer scalar or double equivalent).
 
-# scenario-definition: nrow exceeding the effective draw size errors
+# scenario-definition: nrow exceeding nrow_max under replace = TRUE errors
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 50L,
@@ -47,33 +47,14 @@
       Error in `ssd_define_scenario()`:
       ! `nrow` value 50 exceeds the shared draw size: the draw is `nrow_max` (20) rows when `replace = TRUE`.
 
----
+# scenario-definition: an all-infeasible replace = FALSE grid aborts
 
     Code
-      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = c(10L,
-        30L), replace = FALSE)
+      ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L, nrow = 50L,
+      replace = FALSE)
     Condition
       Error in `ssd_define_scenario()`:
-      ! `nrow` value 30 exceeds the effective draw size for dataset "ccme_boron": the draw is `min(nrow_max, nrow(data))` = 28 rows when `replace = FALSE`.
-
-# scenario-definition: mixed replace aborts on an nrow infeasible for the FALSE draw
-
-    Code
-      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 50L,
-      replace = c(FALSE, TRUE))
-    Condition
-      Error in `ssd_define_scenario()`:
-      ! `nrow` value 50 exceeds the effective draw size for dataset "ccme_boron": the draw is `min(nrow_max, nrow(data))` = 28 rows when `replace = FALSE`.
-
-# scenario-definition: the replace = FALSE abort names the offending dataset
-
-    Code
-      ssd_define_scenario(ssd_data(big = data.frame(Conc = exp(seq(-1, 2, length.out = 40))),
-      small = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))), nsim = 2L, seed = 1L,
-      nrow = 35L, replace = c(FALSE, TRUE))
-    Condition
-      Error in `ssd_define_scenario()`:
-      ! `nrow` value 35 exceeds the effective draw size for dataset "small": the draw is `min(nrow_max, nrow(data))` = 20 rows when `replace = FALSE`.
+      ! No feasible `sample` task: with `replace = FALSE`, every `nrow` (50) exceeds every dataset's effective draw size (`min(nrow_max, nrow(data))`), so the scenario would produce nothing.
 
 # scenario-definition: min_pmix rejects non-function list elements
 

@@ -293,11 +293,32 @@ sample_task_grid <- function(scenario) {
   # `nrow_max` setting, resolved by the runner against each dataset
   # (TARGETS-DESIGN.md section 5) - not stored as a row column - so the table
   # carries only the task identity and `nrow` never multiplies the draw.
-  tidyr::expand_grid(
+  grid <- tidyr::expand_grid(
     dataset = scenario$datasets,
     sim = seq_len(scenario$nsim),
     replace = scenario$replace
   )
+  # Silently discard a `(dataset, replace = FALSE)` cell only when *no* `nrow`
+  # is feasible for its permutation draw (every `nrow` exceeds
+  # `min(nrow_max, nrow(data))`): a single feasible `nrow` keeps the shared
+  # draw alive, and `replace = TRUE` cells are always feasible. This mirrors
+  # the per-`nrow` discard in `fit_task_table()` so no orphan `sample` draw is
+  # produced with no `fit` consumer.
+  keep <- grid$replace |
+    vapply(
+      grid$dataset,
+      function(d) any(scenario$nrow <= false_draw_size(scenario, d)),
+      logical(1)
+    )
+  grid[keep, , drop = FALSE]
+}
+
+# Per-dataset effective draw size under `replace = FALSE` (the permutation cap,
+# `min(nrow_max, nrow(data))`). The single source of truth for which
+# `(dataset, replace = FALSE, nrow)` cells are feasible, shared by the
+# `sample`/`fit` grid filters and the constructor's empty-grid guard.
+false_draw_size <- function(scenario, dataset) {
+  effective_draw_size(scenario$nrow_max, scenario$data[[dataset]], FALSE)
 }
 
 fit_grid_tbl <- function(scenario) {
@@ -321,6 +342,18 @@ fit_task_table <- function(scenario) {
     replace = scenario$replace,
     nrow = scenario$nrow
   )
+  # Silently discard the infeasible `replace = FALSE` cells: a permutation draw
+  # cannot exceed `min(nrow_max, nrow(data))`, so a larger `nrow` has no valid
+  # `replace = FALSE` draw for that dataset. `replace = TRUE` cells (capped at
+  # `nrow_max`, validated at construction) and feasible `replace = FALSE` cells
+  # are kept. The grid is therefore the cross-join minus these cells - still a
+  # deterministic function of the scenario.
+  caps <- vapply(
+    base$dataset,
+    function(d) false_draw_size(scenario, d),
+    integer(1)
+  )
+  base <- base[base$replace | base$nrow <= caps, , drop = FALSE]
   dplyr::cross_join(base, fit_grid_tbl(scenario))
 }
 

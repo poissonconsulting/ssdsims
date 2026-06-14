@@ -311,11 +311,16 @@ ssd_define_scenario <- function(
   datasets <- scenario_datasets(data, name, data_expr, call = call)
 
   # --- nrow vs the effective draw size ------------------------------------
-  # The shared `sample` draw is the fixed `nrow_max` setting (not
-  # `max(nrow)`): `nrow_max` rows when `replace = TRUE`, capped at the dataset
-  # size (`min(nrow_max, nrow(data))`) when `replace = FALSE`. Every `nrow`
-  # truncates that draw, so it must not exceed it. Plain loops keep internal
-  # frames out of the error header (error-call-origin rule).
+  # The shared `sample` draw is the fixed `nrow_max` setting (not `max(nrow)`):
+  # `nrow_max` rows when `replace = TRUE`, capped at the dataset size
+  # (`min(nrow_max, nrow(data))`) when `replace = FALSE`. Two cases are hard
+  # construction errors; the partial-infeasibility case is handled by a silent
+  # per-cell discard in task expansion (`sample_task_grid()`/`fit_task_table()`),
+  # not here, so the stored scenario records the axes the user asked for.
+  #
+  # (1) `nrow > nrow_max` while `replace` includes `TRUE`: `nrow_max` is the
+  #     scenario's own draw ceiling, independent of any dataset, so exceeding it
+  #     is a misconfiguration rather than an infeasible cell.
   if (any(replace) && any(nrow > nrow_max)) {
     bad <- nrow[nrow > nrow_max]
     chk::abort_chk(
@@ -329,24 +334,27 @@ ssd_define_scenario <- function(
       call = call
     )
   }
-  if (any(!replace)) {
-    for (nm in names(datasets)) {
-      draw_size <- effective_draw_size(nrow_max, datasets[[nm]], FALSE)
-      bad <- nrow[nrow > draw_size]
-      if (length(bad)) {
-        chk::abort_chk(
-          "`nrow` value",
-          if (length(bad) > 1L) "s " else " ",
-          chk::cc(bad, conj = " and "),
-          if (length(bad) > 1L) " exceed" else " exceeds",
-          " the effective draw size for dataset ",
-          encodeString(nm, quote = "\""),
-          ": the draw is `min(nrow_max, nrow(data))` = ",
-          draw_size,
-          " rows when `replace = FALSE`.",
-          call = call
-        )
-      }
+  # (2) A `replace = FALSE`-only scenario whose every `(dataset, nrow)` cell is
+  #     infeasible (every `nrow` above every dataset's effective draw size)
+  #     would discard to nothing, so it aborts rather than producing an empty
+  #     pipeline. With `replace = TRUE` present, the with-replacement cells are
+  #     always feasible (checked above), so the grid can never be empty.
+  if (!any(replace)) {
+    any_feasible <- any(vapply(
+      names(datasets),
+      function(nm) {
+        any(nrow <= effective_draw_size(nrow_max, datasets[[nm]], FALSE))
+      },
+      logical(1)
+    ))
+    if (!any_feasible) {
+      chk::abort_chk(
+        "No feasible `sample` task: with `replace = FALSE`, every `nrow` (",
+        chk::cc(nrow, conj = " and "),
+        ") exceeds every dataset's effective draw size ",
+        "(`min(nrow_max, nrow(data))`), so the scenario would produce nothing.",
+        call = call
+      )
     }
   }
 

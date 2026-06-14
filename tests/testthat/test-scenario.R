@@ -107,8 +107,9 @@ test_that("scenario-definition: nrow_max must be a whole number", {
   })
 })
 
-test_that("scenario-definition: nrow exceeding the effective draw size errors", {
-  # replace = TRUE: the draw is `nrow_max` rows.
+test_that("scenario-definition: nrow exceeding nrow_max under replace = TRUE errors", {
+  # replace = TRUE: the draw is `nrow_max` rows (the scenario's own ceiling,
+  # independent of any dataset), so an `nrow` above it is a misconfiguration.
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
       ssddata::ccme_boron,
@@ -117,17 +118,6 @@ test_that("scenario-definition: nrow exceeding the effective draw size errors", 
       nrow = 50L,
       replace = TRUE,
       nrow_max = 20L
-    )
-  })
-  # replace = FALSE: the draw is min(nrow_max, nrow(data)) rows (ccme_boron
-  # has 28), so an `nrow` above the dataset size is rejected.
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssddata::ccme_boron,
-      nsim = 2L,
-      seed = 1L,
-      nrow = c(10L, 30L),
-      replace = FALSE
     )
   })
 })
@@ -145,35 +135,69 @@ test_that("scenario-definition: the default replace = TRUE frees nrow from the d
   expect_identical(unique(ssd_scenario_sample_tasks(s)$replace), TRUE)
 })
 
-test_that("scenario-definition: mixed replace aborts on an nrow infeasible for the FALSE draw", {
-  # The grid is a rectangular cross-join: every nrow must be feasible under
-  # every included replace value, so the infeasible (replace = FALSE,
-  # nrow = 50) cell aborts the whole scenario - no silent cell dropout - even
-  # though the replace = TRUE cell could support it.
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
+test_that("scenario-definition: an infeasible replace = FALSE nrow is discarded, feasible ones kept", {
+  # ccme_boron has 28 rows; under replace = FALSE the permutation cap is 28, so
+  # nrow = 30 is silently discarded while nrow = 10 survives - construction
+  # succeeds and the fit grid carries only the feasible nrow.
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    seed = 1L,
+    nrow = c(10L, 30L),
+    replace = FALSE
+  )
+  fit <- ssd_scenario_fit_tasks(s)
+  expect_setequal(fit$nrow, 10L)
+  expect_identical(unique(fit$replace), FALSE)
+})
+
+test_that("scenario-definition: mixed replace discards an nrow infeasible for the FALSE draw", {
+  # boron has 28 rows; nrow = 50 > 28, so the replace = FALSE cell at nrow = 50
+  # is silently discarded (no abort, no warning) while the replace = TRUE cell
+  # (capped at nrow_max) survives.
+  expect_no_warning(
+    s <- ssd_define_scenario(
       ssddata::ccme_boron,
-      nsim = 2L,
+      nsim = 1L,
       seed = 1L,
       nrow = 50L,
       replace = c(FALSE, TRUE)
     )
-  })
+  )
+  combos <- unique(ssd_scenario_fit_tasks(s)[c("replace", "nrow")])
+  expect_true(any(combos$replace & combos$nrow == 50L))
+  expect_false(any(!combos$replace & combos$nrow == 50L))
 })
 
-test_that("scenario-definition: the replace = FALSE abort names the offending dataset", {
-  # `big` (40 rows) supports nrow = 35; `small` (20 rows) does not - the
-  # error identifies which dataset is too small.
+test_that("scenario-definition: the replace = FALSE discard is per dataset", {
+  # `big` (40 rows) keeps its replace = FALSE cell at nrow = 35; `small`
+  # (20 rows) drops it. Both keep their replace = TRUE cell.
+  s <- ssd_define_scenario(
+    ssd_data(
+      big = data.frame(Conc = exp(seq(-1, 2, length.out = 40))),
+      small = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
+    ),
+    nsim = 1L,
+    seed = 1L,
+    nrow = 35L,
+    replace = c(FALSE, TRUE)
+  )
+  fit <- ssd_scenario_fit_tasks(s)
+  expect_setequal(fit$dataset[!fit$replace & fit$nrow == 35L], "big")
+  expect_setequal(fit$dataset[fit$replace & fit$nrow == 35L], c("big", "small"))
+})
+
+test_that("scenario-definition: an all-infeasible replace = FALSE grid aborts", {
+  # replace = FALSE only, every nrow above every dataset's cap -> empty grid,
+  # so the constructor aborts rather than returning a scenario that produces
+  # nothing.
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
-      ssd_data(
-        big = data.frame(Conc = exp(seq(-1, 2, length.out = 40))),
-        small = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
-      ),
-      nsim = 2L,
+      ssddata::ccme_boron,
+      nsim = 1L,
       seed = 1L,
-      nrow = 35L,
-      replace = c(FALSE, TRUE)
+      nrow = 50L,
+      replace = FALSE
     )
   })
 })
