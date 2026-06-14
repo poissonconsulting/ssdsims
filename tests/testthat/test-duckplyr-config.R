@@ -211,7 +211,7 @@ test_that("step runners pin threads to 1 while the body runs", {
     }
   )
   scenario <- ssd_define_scenario(
-    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 6)))),
+    ssd_scenario_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 6)))),
     nsim = 1L,
     seed = 42L,
     nrow = 5L,
@@ -312,7 +312,7 @@ test_that("full summary writes byte-budgeted row groups, value-identical", {
 
 test_that("constrained configuration leaves results byte-identical", {
   scenario <- ssd_define_scenario(
-    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 6)))),
+    ssd_scenario_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 6)))),
     nsim = 1L,
     seed = 42L,
     nrow = 5L,

@@ -1,6 +1,6 @@
 test_that("manifest: write/read round-trip preserves declarative fields", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     rescale = c(TRUE, FALSE),
@@ -20,7 +20,7 @@ test_that("manifest: write/read round-trip preserves declarative fields", {
 
 test_that("manifest: round-trip keeps seed/nboot whole and knobs logical", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 7L,
     rescale = c(TRUE, FALSE),
@@ -39,7 +39,11 @@ test_that("manifest: round-trip keeps seed/nboot whole and knobs logical", {
 })
 
 test_that("manifest: records complete session info plus the version subset", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 1L
+  )
   dir <- withr::local_tempdir()
   ssd_write_manifest(scenario, dir)
   manifest <- ssd_read_manifest(dir)
@@ -95,7 +99,11 @@ test_that("manifest: concurrent shard records write distinct sidecars", {
 })
 
 test_that("manifest: assembler hashes shards that have no sidecar", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 1L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 1L
+  )
   dir <- withr::local_tempdir()
   ssd_write_manifest(scenario, dir)
 

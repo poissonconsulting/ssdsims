@@ -9,7 +9,8 @@ reference:
     task tables (`sample`, `fit`, `hc`) that the targets-based pipeline
     builds on, with a baseline loop runner.
   contents:
-  - ssd_data
+  - ssd_scenario_data
+  - ssd_gen
   - ssd_define_scenario
   - ssd_scenario_tasks
   - ssd_run_scenario_baseline

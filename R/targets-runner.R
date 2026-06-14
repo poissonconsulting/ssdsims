@@ -92,7 +92,8 @@ decode_obj <- function(s) {
 #' @seealso [ssd_run_scenario_shards()], [ssd_summarise()].
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 #' scenario_results_dir(scenario)
 scenario_results_dir <- function(scenario, root = "results") {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
@@ -228,7 +229,8 @@ NULL
 #'   can isolate and re-order it.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 #' shards <- ssd_scenario_sample_shards(scenario)
 #' dir <- tempfile()
 #' ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
@@ -271,8 +273,9 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   data,
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
@@ -344,8 +347,9 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   data,
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
@@ -480,8 +484,9 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   data,
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
@@ -616,7 +621,8 @@ edge_block <- function(names) {
 #' library(targets)
 #' library(tarchetypes)
 #' library(ssdsims)
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 #' ssd_scenario_targets(scenario)
 #' ```
 #'
@@ -728,7 +734,8 @@ edge_block <- function(names) {
 #' library(targets)
 #' library(tarchetypes)
 #' library(ssdsims)
-#' scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 #' ssd_scenario_targets(scenario)
 #'
 #' # Pair each shard with a (no-op) upload target, exercised offline:

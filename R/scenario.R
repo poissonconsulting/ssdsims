@@ -7,30 +7,28 @@
 #' grids. It performs **no** random-number generation, **no** task expansion,
 #' and has **no** dependency on `targets`.
 #'
-#' Input data is forwarded through [ssd_data()] for validation (a numeric
-#' `Conc` column is required) and retained on the scenario (as `$data`) so a
-#' local run ([ssd_run_scenario_baseline()]) can sample it directly. The dataset
-#' *names* (`$datasets`) are what the targets/cluster path hashes; the validated
-#' tibbles ride on the scenario and are isolated by name via [scenario_dataset()],
-#' so the hash need not carry the data frames.
+#' Input data arrives as an [ssd_scenario_data()] collection (already
+#' validated: a numeric `Conc` column is required) and is retained on the
+#' scenario (as `$data`) so a local run ([ssd_run_scenario_baseline()]) can
+#' sample it directly. The dataset *names* (`$datasets`) are what the
+#' targets/cluster path hashes; the validated tibbles ride on the scenario and
+#' are isolated by name via [scenario_dataset()], so the hash need not carry
+#' the data frames.
 #'
 #' # Dataset input
 #'
-#' The preferred form is an [ssd_data()] collection, which owns validation and
-#' naming: `ssd_define_scenario(ssd_data(boron = ccme_boron, cadmium =
-#' ccme_cadmium), ...)`. For convenience, bare data frame input is also
-#' accepted in four forms (routed through the same `Conc` validation):
+#' Dataset input is accepted **only** as an [ssd_scenario_data()] collection,
+#' which owns validation and naming. Assemble it first, then pass it in:
 #'
-#' 1. A single data frame, name derived from the argument expression:
-#'    `ssd_define_scenario(ssddata::ccme_boron, ...)` gives `"ccme_boron"`.
-#' 2. A single data frame with an explicit `name=`:
-#'    `ssd_define_scenario(ssddata::ccme_boron, name = "boron", ...)`.
-#' 3. A named list, names taken from the list:
-#'    `ssd_define_scenario(list(boron = ccme_boron, cadmium = ccme_cadmium), ...)`.
-#' 4. An unnamed list, names derived per element:
-#'    `ssd_define_scenario(list(ccme_boron, ccme_cadmium), ...)`.
+#' ```r
+#' data <- ssd_scenario_data(boron = ccme_boron, cadmium = ccme_cadmium)
+#' scenario <- ssd_define_scenario(data, ...)
+#' ```
 #'
-#' Supplying both a named list and `name=` is an error.
+#' Generator inputs (a `fitdists`/`tmbfit` object, a generator function, or a
+#' function-name string) are materialised - once, reproducibly - by [ssd_gen()]
+#' and composed into the same collection; the constructor itself performs **no**
+#' random-number generation.
 #'
 #' # `nrow_max`
 #'
@@ -75,12 +73,9 @@
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
 #' @inheritParams params
-#' @param data An [ssd_data()] collection (preferred), or - for convenience -
-#'   a single data frame or a (named or unnamed) list of data frames. Bare
-#'   inputs are validated via the same `Conc` contract as [ssd_data()].
-#' @param name An optional dataset name for the single-data-frame form,
-#'   overriding the derived name. Must not be combined with a named list or an
-#'   [ssd_data()] collection.
+#' @param data An [ssd_scenario_data()] collection: a validated, named
+#'   collection of `Conc` tibbles assembled from data frames and/or
+#'   [ssd_gen()] generator datasets.
 #' @param seed A scalar whole number; the scenario's RNG root. Required -
 #'   changing it fully re-roots the scenario's random-number draws.
 #' @param nrow A whole-number vector of sample sizes (the `fit`-step truncation
@@ -149,13 +144,14 @@
 #' @return An S3 object of class `ssdsims_scenario`.
 #' @export
 #' @examples
-#' ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+#' scenario
 ssd_define_scenario <- function(
   data,
   nsim,
   seed,
   ...,
-  name = NULL,
   nrow = 6L,
   replace = TRUE,
   rescale = FALSE,
@@ -176,7 +172,6 @@ ssd_define_scenario <- function(
   partition_by = NULL,
   bundle = NULL
 ) {
-  data_expr <- rlang::enexpr(data)
   min_pmix_expr <- rlang::enexpr(min_pmix)
   user_env <- rlang::caller_env()
   call <- environment()
@@ -214,15 +209,19 @@ ssd_define_scenario <- function(
   chk::chk_unique(nrow)
   chk::chk_length(nrow, upper = Inf)
   # `nrow` is bounded below by the fit floor (5) and above by `nrow_max` (the
-  # fixed draw size). The message cites `nrow_max`'s value so a raised ceiling
-  # is discoverable. (Per-dataset `replace = FALSE` infeasibility - `nrow`
-  # within `nrow_max` but above a dataset's row count - is handled later by a
-  # silent discard in task expansion, not here.)
-  if (any(nrow < 5L) || any(nrow > nrow_max)) {
+  # fixed draw size). The message names `nrow_max` (and its value) so a raised
+  # ceiling is discoverable, and lists the offending value(s). (Per-dataset
+  # `replace = FALSE` infeasibility - `nrow` within `nrow_max` but above a
+  # dataset's row count - is handled later by a silent discard in task
+  # expansion, not here.)
+  bad_nrow <- nrow[nrow < 5L | nrow > nrow_max]
+  if (length(bad_nrow)) {
     chk::abort_chk(
-      "`nrow` must have values between 5 and `nrow_max` (= ",
+      "`nrow` must be between 5 and `nrow_max` (",
       nrow_max,
-      ").",
+      "), not ",
+      chk::cc(bad_nrow, conj = " or "),
+      ".",
       call = call
     )
   }
@@ -232,7 +231,6 @@ ssd_define_scenario <- function(
   chk::chk_unique(replace)
   chk::chk_length(replace, upper = 2L)
 
-  chk::chk_null_or(name, vld = chk::vld_string)
   # `partition_by`/`bundle` are validated and normalised below.
 
   # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
@@ -328,8 +326,8 @@ ssd_define_scenario <- function(
     }
   }
 
-  # --- datasets: validated and retained as an ssd_data() collection ------
-  datasets <- scenario_datasets(data, name, data_expr, call = call)
+  # --- datasets: an already-validated ssd_scenario_data() collection -----
+  datasets <- scenario_datasets(data, call = call)
 
   # --- replace = FALSE empty-grid guard -----------------------------------
   # `nrow` is already bounded by `[5, nrow_max]` above (the `nrow_max` draw is
@@ -585,85 +583,24 @@ scenario_partition_axes <- function(scenario, step) {
   list(path = path, inner = setdiff(task_axes(step), path))
 }
 
-#' Validate and retain the constructor's `data` argument.
+#' Assert and retain the constructor's `data` argument.
 #'
-#' Accepts an `ssd_data()` collection (returned as-is), a single data frame, or
-#' a list of data frames, and returns a validated, named `ssd_data()` collection
-#' (an `ssdsims_data` object). The scenario retains this for local runs; the
-#' targets/cluster path uses only `names()` of it.
+#' `data` must be an `ssd_scenario_data()` collection (an `ssdsims_data`
+#' object) - bare data frames and lists are not accepted; naming and
+#' validation (including generator materialisation, via `ssd_gen()`) happen
+#' before construction. The scenario retains the collection for local runs;
+#' the targets/cluster path uses only `names()` of it.
 #' @noRd
-scenario_datasets <- function(
-  data,
-  name,
-  data_expr,
-  call = rlang::caller_env()
-) {
-  if (inherits(data, "ssdsims_data")) {
-    if (!is.null(name)) {
-      chk::abort_chk(
-        "`name` must not be supplied when `data` is an `ssd_data()` collection.",
-        call = call
-      )
-    }
-    return(data)
+scenario_datasets <- function(data, call = rlang::caller_env()) {
+  if (!inherits(data, "ssdsims_data")) {
+    chk::abort_chk(
+      "`data` must be an `ssd_scenario_data()` collection; assemble data ",
+      "frames (and `ssd_gen()` generator datasets) with ",
+      "`ssd_scenario_data()`.",
+      call = call
+    )
   }
-
-  if (is.data.frame(data)) {
-    if (is.null(name)) {
-      name <- expr_to_name(data_expr)
-      if (is.null(name)) {
-        chk::abort_chk(
-          "Unable to derive a dataset name from the data argument; ",
-          "supply an explicit `name=` or use `ssd_data()`.",
-          call = call
-        )
-      }
-    }
-    tibble <- ssd_data_validate(data, name = name, call = call)
-    return(structure(
-      rlang::set_names(list(tibble), name),
-      class = "ssdsims_data"
-    ))
-  }
-
-  if (is.list(data)) {
-    list_names <- names(data)
-    is_named <- !is.null(list_names) && all(nzchar(list_names))
-    if (is_named) {
-      if (!is.null(name)) {
-        chk::abort_chk(
-          "`name` must not be supplied with a named list of datasets.",
-          call = call
-        )
-      }
-      nms <- list_names
-    } else {
-      if (!is.null(name)) {
-        chk::abort_chk(
-          "`name` applies only to a single data frame; ",
-          "use a named list or `ssd_data()` for multiple datasets.",
-          call = call
-        )
-      }
-      nms <- list_expr_names(data_expr, label = "dataset", call = call)
-    }
-    if (anyDuplicated(nms)) {
-      chk::abort_chk("Dataset names must be unique.", call = call)
-    }
-    # Loop (not `purrr::map2`) so a validation error surfaces as
-    # `ssd_define_scenario()`, not a `purrr` frame (error-call-origin rule).
-    tibbles <- vector("list", length(data))
-    for (i in seq_along(data)) {
-      tibbles[[i]] <- ssd_data_validate(data[[i]], name = nms[[i]], call = call)
-    }
-    return(structure(rlang::set_names(tibbles, nms), class = "ssdsims_data"))
-  }
-
-  chk::abort_chk(
-    "`data` must be an `ssd_data()` collection, a data frame, ",
-    "or a list of data frames.",
-    call = call
-  )
+  data
 }
 
 #' Derive a single dataset name from a captured argument expression.

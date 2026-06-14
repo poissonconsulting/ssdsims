@@ -44,7 +44,8 @@ this}:
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{library(targets)
 library(tarchetypes)
 library(ssdsims)
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
 }\if{html}{\out{</div>}}
 
@@ -142,7 +143,8 @@ modes; only the presence and behaviour of the \verb{upload_<step>} targets diffe
 library(targets)
 library(tarchetypes)
 library(ssdsims)
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
 
 # Pair each shard with a (no-op) upload target, exercised offline:
