@@ -113,7 +113,7 @@ artifacts yet is also queued, ready to propose.
 - 💡 \[dataset-provenance\] Stop transporting generated datasets inline;
   store only the name + generator reference + `.seed` and regenerate
   from that provenance. The escape hatch `scenario-input-types` defers —
-  not a near-term need while datasets are tiny. Off the DAG.
+  not a near-term need while datasets are tiny.
 - 💡 \[shard-granularity-benchmark\] An empirical harness that sweeps
   *shard granularity* (how task rows bundle into shards) × problem size
   and measures **realized parallel wall time, parallel efficiency, and
