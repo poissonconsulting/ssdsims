@@ -37,16 +37,196 @@ test_that("scenario-definition: minimal construction stores declarative fields",
     )
   )
   expect_identical(s$hc$ci, FALSE)
+  expect_identical(s$nrow_max, 1000L)
+})
+
+# ---- nrow_max (sample-level draw-size setting) -------------------------------
+
+test_that("scenario-definition: nrow_max defaults to 1000L and is a setting, not an axis", {
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 2L,
+    seed = 1L
+  )
+  expect_identical(s$nrow_max, 1000L)
+  expect_false("nrow_max" %in% task_axes("sample"))
+})
+
+test_that("scenario-definition: nrow_max must be a whole number", {
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 2L,
+      seed = 1L,
+      nrow_max = 10.5
+    )
+  })
+})
+
+test_that("scenario-definition: nrow exceeding nrow_max errors, citing nrow_max", {
+  # `nrow_max` is the fixed draw size and so the universal `nrow` ceiling: an
+  # `nrow` above it can sub-truncate no draw, regardless of `replace`. The
+  # error cites `nrow_max`'s value so a raised ceiling is discoverable.
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 2L,
+      seed = 1L,
+      nrow = 50L,
+      nrow_max = 20L
+    )
+  })
+  # The user's report: a high `nrow` is accepted once `nrow_max` admits it.
+  expect_s3_class(
+    ssd_define_scenario(
+      ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 1L,
+      seed = 42L,
+      nrow = c(10L, 10000L),
+      nrow_max = 10000L,
+      replace = c(TRUE, FALSE)
+    ),
+    "ssdsims_scenario"
+  )
+})
+
+test_that("scenario-definition: the default replace = TRUE frees nrow from the dataset size", {
+  # ccme_boron has 28 rows; with the default (replace = TRUE) the draw is
+  # nrow_max rows, so nrow may exceed the dataset size.
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 2L,
+    seed = 1L,
+    nrow = 50L
+  )
+  expect_identical(s$replace, TRUE)
+  expect_identical(unique(ssd_scenario_sample_tasks(s)$replace), TRUE)
+})
+
+test_that("scenario-definition: an infeasible replace = FALSE nrow is discarded, feasible ones kept", {
+  # ccme_boron has 28 rows; under replace = FALSE the permutation cap is 28, so
+  # nrow = 30 is silently discarded while nrow = 10 survives - construction
+  # succeeds and the fit grid carries only the feasible nrow.
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 1L,
+    nrow = c(10L, 30L),
+    replace = FALSE
+  )
+  fit <- ssd_scenario_fit_tasks(s)
+  expect_setequal(fit$nrow, 10L)
+  expect_identical(unique(fit$replace), FALSE)
+})
+
+test_that("scenario-definition: mixed replace discards an nrow infeasible for the FALSE draw", {
+  # boron has 28 rows; nrow = 50 > 28, so the replace = FALSE cell at nrow = 50
+  # is silently discarded (no abort, no warning) while the replace = TRUE cell
+  # (capped at nrow_max) survives.
+  expect_no_warning(
+    s <- ssd_define_scenario(
+      ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 1L,
+      seed = 1L,
+      nrow = 50L,
+      replace = c(FALSE, TRUE)
+    )
+  )
+  combos <- unique(ssd_scenario_fit_tasks(s)[c("replace", "nrow")])
+  expect_true(any(combos$replace & combos$nrow == 50L))
+  expect_false(any(!combos$replace & combos$nrow == 50L))
+})
+
+test_that("scenario-definition: the replace = FALSE discard is per dataset", {
+  # `big` (40 rows) keeps its replace = FALSE cell at nrow = 35; `small`
+  # (20 rows) drops it. Both keep their replace = TRUE cell.
+  s <- ssd_define_scenario(
+    ssd_scenario_data(
+      big = data.frame(Conc = exp(seq(-1, 2, length.out = 40))),
+      small = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))
+    ),
+    nsim = 1L,
+    seed = 1L,
+    nrow = 35L,
+    replace = c(FALSE, TRUE)
+  )
+  fit <- ssd_scenario_fit_tasks(s)
+  expect_setequal(fit$dataset[!fit$replace & fit$nrow == 35L], "big")
+  expect_setequal(fit$dataset[fit$replace & fit$nrow == 35L], c("big", "small"))
+})
+
+test_that("scenario-definition: the fit task table excludes the infeasible nrow+FALSE cell end to end", {
+  # ccme_boron has 28 rows. With nrow = c(10, 20, 30) and replace = c(TRUE,
+  # FALSE), every (nrow, replace) cell is feasible except (30, FALSE) - 30 > 28
+  # so the permutation draw cannot supply it. The fit task table must carry the
+  # full cross-join minus exactly that one cell.
+  stopifnot(nrow(ssddata::ccme_boron) == 28L)
+  s <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L,
+    nrow = c(10L, 20L, 30L),
+    replace = c(TRUE, FALSE)
+  )
+  combos <- unique(ssd_scenario_fit_tasks(s)[c("nrow", "replace")])
+  key <- paste(combos$nrow, combos$replace)
+  # Full 3x2 cross-join minus exactly (nrow = 30, replace = FALSE).
+  expect_setequal(
+    key,
+    c("10 TRUE", "20 TRUE", "30 TRUE", "10 FALSE", "20 FALSE")
+  )
+  expect_false("30 FALSE" %in% key)
+})
+
+test_that("scenario-definition: an all-infeasible replace = FALSE grid aborts", {
+  # replace = FALSE only, every nrow above every dataset's cap -> empty grid,
+  # so the constructor aborts rather than returning a scenario that produces
+  # nothing.
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(
+      ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 1L,
+      seed = 1L,
+      nrow = 50L,
+      replace = FALSE
+    )
+  })
+})
+
+test_that("scenario-definition: nrow at the effective draw size is accepted", {
+  expect_s3_class(
+    ssd_define_scenario(
+      ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 2L,
+      seed = 1L,
+      nrow = 20L,
+      replace = TRUE,
+      nrow_max = 20L
+    ),
+    "ssdsims_scenario"
+  )
+  expect_s3_class(
+    ssd_define_scenario(
+      ssd_scenario_data(ssddata::ccme_boron),
+      nsim = 2L,
+      seed = 1L,
+      nrow = nrow(ssddata::ccme_boron),
+      replace = FALSE
+    ),
+    "ssdsims_scenario"
+  )
 })
 
 test_that("scenario-definition: non-ci-gated settings precede ci, gated knobs follow", {
   fmls <- names(formals(ssd_define_scenario))
-  # The non-`ci`-gated settings (`dists`, `est_method`, `proportion` — all valid
-  # and meaningful when `ci = FALSE`) come first, then `ci`, then the knobs it
-  # gates: the bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when
-  # `ci = FALSE`) and `samples` (only retains bootstrap draws). Contiguous, after
-  # the last structural axis (`range_shape2`) and before the partitioning args.
+  # The non-`ci`-gated settings (`nrow_max`, `dists`, `est_method`, `proportion`
+  # — all valid and meaningful when `ci = FALSE`, led by the sample-level
+  # `nrow_max`) come first, then `ci`, then the knobs it gates: the bootstrap
+  # axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and
+  # `samples` (only retains bootstrap draws). Contiguous, after the last
+  # structural axis (`range_shape2`) and before the partitioning args.
   group <- c(
+    "nrow_max",
     "dists",
     "est_method",
     "proportion",

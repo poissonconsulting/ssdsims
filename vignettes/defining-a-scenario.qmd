@@ -218,11 +218,14 @@ tasks
 
 The counts show how each step fans out from its parent. The key design choice
 is that the single expensive **random draw** is its own `sample` task, keyed
-only by `(dataset, sim, replace)`. The draw is of `n_max = max(nrow)` rows;
-every `nrow` value is then a cheap, RNG-free `head()` *sub-truncation* of that
-one draw, done inline at the `fit` step. So `nrow` is an ordinary cross-join
-axis of the `fit` step and never multiplies the underlying draw --- one draw is
-shared across all sample sizes.
+only by `(dataset, sim, replace)`. The draw is sized by the scenario's fixed
+`nrow_max` setting (`nrow_max` resampled rows under the default
+`replace = TRUE`; capped at the dataset size --- the full permutation --- when
+`replace = FALSE`); every `nrow` value is then a cheap,
+RNG-free `head()` *sub-truncation* of that one draw, done inline at the `fit`
+step. So `nrow` is an ordinary cross-join axis of the `fit` step and never
+multiplies the underlying draw --- one draw is shared across all sample sizes,
+and adding an `nrow` value (within the effective draw size) never changes it.
 
 Each row carries a path-style `<step>_id` primary key (the Hive partition path)
 plus its parent step's id as a foreign key, so dependencies are explicit and
@@ -233,8 +236,9 @@ joinable:
 tasks$sample
 ```
 
-The scalar `ci` is carried uniformly on the `hc` table (it is not an axis), as
-is the `est_method` setting. With `ci = TRUE` the bootstrap knobs (`nboot`,
+The scalar `ci` is applied uniformly to every `hc` task (it is a setting read
+from the scenario, not an axis or a table column), as is `est_method`. With
+`ci = TRUE` the bootstrap knobs (`nboot`,
 `ci_method`, `parametric`) fan out fully; a `ci = FALSE` scenario would instead
 give exactly one `hc` row per fit task, carrying `NA` for those bootstrap-only
 knobs (every requested `est_method` is summarised within each task from a single
@@ -286,11 +290,11 @@ bootstrap), so every result already carries its own `proportion` and
 ```{r}
 #| label: unnest
 hcs <- tidyr::unnest(
-  out$hc[c("dataset", "sim", "nrow", "ci", "hc")],
+  out$hc[c("dataset", "sim", "nrow", "hc")],
   hc,
   names_sep = "_"
 )
-hcs[c("dataset", "sim", "nrow", "ci", "hc_est_method", "hc_proportion", "hc_est")]
+hcs[c("dataset", "sim", "nrow", "hc_est_method", "hc_proportion", "hc_est")]
 ```
 
 ## Next: shards and the targets pipeline

@@ -21,9 +21,11 @@ the cross-join of the scenario's axes minus these infeasible `replace = FALSE`
 cells, and SHALL remain a deterministic function of the scenario.
 
 An `nrow` exceeding `nrow_max` itself (the scenario's own draw ceiling,
-independent of any dataset) SHALL still abort construction in the user-facing
-frame where `replace` includes `TRUE`, and a scenario whose grid is left empty
-by the `replace = FALSE` discard SHALL likewise abort.
+independent of any dataset) is out of the `[5, nrow_max]` range every `nrow`
+must satisfy, so it SHALL abort construction in the user-facing frame
+regardless of `replace` — with a message citing `nrow_max`'s value — rather than
+being discarded (no draw of any `replace` can supply it). A scenario whose grid
+is left empty by the `replace = FALSE` discard SHALL likewise abort.
 
 #### Scenario: replace defaults to TRUE
 - **WHEN** `ssd_define_scenario()` is called without `replace`

@@ -30,6 +30,21 @@
 #' and composed into the same collection; the constructor itself performs **no**
 #' random-number generation.
 #'
+#' # `nrow_max`
+#'
+#' `nrow_max` is the *sample*-level **simulation setting**: the fixed size of
+#' the shared `sample` draw that every `nrow` value sub-truncates
+#' (`head(sample, nrow)`, `TARGETS-DESIGN.md` section 5). The effective
+#' per-dataset draw is `min(nrow_max, nrow(data))` for `replace = FALSE` (the
+#' high default thus draws the full permutation) and `nrow_max` rows for
+#' `replace = TRUE`. Because the draw size is fixed - not derived from
+#' `max(nrow)` - adding `nrow` values (within the effective draw size) never
+#' changes the draw, so cached `sample` shards stay valid. Each `nrow` is
+#' validated at construction against the effective draw size. It is not
+#' `ci`-gated (the draw happens regardless of `ci`) and, like `dists` and
+#' `est_method`, it is absent from `task_axes("sample")`, so it never
+#' multiplies tasks or enters the per-task RNG primer.
+#'
 #' # `ci`
 #'
 #' `ci` is a scalar flag (not a cross-join axis): the point estimate `est` is
@@ -63,6 +78,18 @@
 #'   [ssd_gen()] generator datasets.
 #' @param seed A scalar whole number; the scenario's RNG root. Required -
 #'   changing it fully re-roots the scenario's random-number draws.
+#' @param nrow A whole-number vector of sample sizes (the `fit`-step truncation
+#'   axis), each between 5 (the fit floor) and `nrow_max` (the shared draw size,
+#'   the universal ceiling). A value within `nrow_max` but above a dataset's row
+#'   count is still valid: its `replace = TRUE` cell draws with replacement,
+#'   while its `replace = FALSE` cell (which cannot exceed the dataset size) is
+#'   silently discarded for that dataset.
+#' @param replace A logical vector (a cross-join axis of one or two values)
+#'   specifying whether the shared `sample` draw resamples with replacement.
+#'   Defaults to `TRUE` (the standard resampling model, drawing `nrow_max`
+#'   rows, so `nrow` is not capped by the dataset size); `FALSE` draws a
+#'   permutation, capping the effective draw - and so each `nrow` - at the
+#'   dataset size.
 #' @param min_pmix The `min_pmix` function(s), referenced **by name**. Supply
 #'   either a character vector of names, or a function (or list of functions)
 #'   with a single argument that inputs the number of rows of data and returns
@@ -126,13 +153,14 @@ ssd_define_scenario <- function(
   seed,
   ...,
   nrow = 6L,
-  replace = FALSE,
+  replace = TRUE,
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
+  nrow_max = 1000L,
   dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
   proportion = 0.05,
@@ -168,11 +196,35 @@ ssd_define_scenario <- function(
   chk::chk_whole_number(nsim)
   chk::chk_gt(nsim)
 
+  # `nrow_max` is the sample-level simulation setting sizing the shared draw
+  # (not an axis): the fixed draw is `nrow_max` rows, so it is the universal
+  # ceiling for `nrow` (no `nrow` can sub-truncate a draw it exceeds). Validate
+  # it before `nrow` so the `nrow` range check can cite it. It must be at least
+  # the fit floor (5) for any `nrow` to be valid.
+  chk::chk_whole_number(nrow_max)
+  chk::chk_range(nrow_max, c(5, Inf))
+
   chk::chk_whole_numeric(nrow)
   chk::chk_not_any_na(nrow)
   chk::chk_unique(nrow)
-  chk::chk_range(nrow, c(5, 1000))
   chk::chk_length(nrow, upper = Inf)
+  # `nrow` is bounded below by the fit floor (5) and above by `nrow_max` (the
+  # fixed draw size). The message names `nrow_max` (and its value) so a raised
+  # ceiling is discoverable, and lists the offending value(s). (Per-dataset
+  # `replace = FALSE` infeasibility - `nrow` within `nrow_max` but above a
+  # dataset's row count - is handled later by a silent discard in task
+  # expansion, not here.)
+  bad_nrow <- nrow[nrow < 5L | nrow > nrow_max]
+  if (length(bad_nrow)) {
+    chk::abort_chk(
+      "`nrow` must be between 5 and `nrow_max` (",
+      nrow_max,
+      "), not ",
+      chk::cc(bad_nrow, conj = " or "),
+      ".",
+      call = call
+    )
+  }
 
   chk::chk_logical(replace)
   chk::chk_not_any_na(replace)
@@ -277,6 +329,38 @@ ssd_define_scenario <- function(
   # --- datasets: an already-validated ssd_scenario_data() collection -----
   datasets <- scenario_datasets(data, call = call)
 
+  # --- replace = FALSE empty-grid guard -----------------------------------
+  # `nrow` is already bounded by `[5, nrow_max]` above (the `nrow_max` draw is
+  # the universal ceiling, so `nrow > nrow_max` aborted there regardless of
+  # `replace`). The remaining per-dataset `replace = FALSE` infeasibility -
+  # `nrow` within `nrow_max` but above a dataset's row count, so its permutation
+  # draw caps at `min(nrow_max, nrow(data)) = nrow(data)` - is handled by a
+  # silent per-cell discard in task expansion (`sample_task_grid()` /
+  # `fit_task_table()`), so the stored scenario records the axes the user asked
+  # for. The one case that cannot be a silent discard is a `replace = FALSE`-only
+  # scenario whose every `(dataset, nrow)` cell is infeasible: that would
+  # discard to nothing, so it aborts rather than producing an empty pipeline.
+  # With `replace = TRUE` present the with-replacement cells are always feasible,
+  # so the grid can never be empty.
+  if (!any(replace)) {
+    any_feasible <- any(vapply(
+      names(datasets),
+      function(nm) {
+        any(nrow <= effective_draw_size(nrow_max, datasets[[nm]], FALSE))
+      },
+      logical(1)
+    ))
+    if (!any_feasible) {
+      chk::abort_chk(
+        "No feasible `sample` task: with `replace = FALSE`, every `nrow` (",
+        chk::cc(nrow, conj = " and "),
+        ") exceeds every dataset's effective draw size ",
+        "(`min(nrow_max, nrow(data))`), so the scenario would produce nothing.",
+        call = call
+      )
+    }
+  }
+
   # --- min_pmix: names for hashing + functions materialised for execution -
   min_pmix_spec <- scenario_min_pmix_materialise(
     min_pmix,
@@ -295,6 +379,7 @@ ssd_define_scenario <- function(
       data = datasets,
       nrow = as.integer(nrow),
       replace = replace,
+      nrow_max = as.integer(nrow_max),
       fit = list(
         rescale = rescale,
         computable = computable,
@@ -689,6 +774,7 @@ print.ssdsims_scenario <- function(x, ...) {
   cat("  datasets: ", paste(x$datasets, collapse = ", "), "\n", sep = "")
   cat("  nrow:     ", paste(x$nrow, collapse = ", "), "\n", sep = "")
   cat("  replace:  ", paste(x$replace, collapse = ", "), "\n", sep = "")
+  cat("  nrow_max: ", x$nrow_max, " (setting)\n", sep = "")
   cat("  fit grid:\n")
   print_grid(x$fit, "fit")
   cat("  hc grid:\n")
@@ -724,7 +810,8 @@ print.ssdsims_scenario <- function(x, ...) {
 #' settings (`dists`, `est_method`, `proportion`) come first, then `ci`, then the
 #' knobs it gates (`nboot`/`ci_method`/`parametric`, `samples`). So the hc grid
 #' renders `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`,
-#' `samples`, and the fit grid renders `dists` after its axes.
+#' `samples`, and the fit grid renders `dists` after its axes. (The sample-level
+#' `nrow_max` setting renders among the top-level sample knobs, not in a grid.)
 #' @noRd
 print_grid <- function(grid, step) {
   axes <- task_axes(step)

@@ -42,9 +42,10 @@ scenario <- ssd_define_scenario(
   data,
   nsim = 10L,
   seed = 42L,
+  replace = TRUE,
+  nrow = c(5L, 10L, 20L, 50L),
   ci = TRUE,
-  nboot = c(1000L, 5000L, 10000L, 50000L),
-  nrow = c(5L, 10L, 20L, 50L)
+  nboot = c(1000L, 5000L, 10000L, 50000L)
 )
 ssd_estimate_cost(scenario)
 }

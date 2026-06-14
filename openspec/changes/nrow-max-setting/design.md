@@ -81,9 +81,13 @@ is `nrow_max` rows. Crucially **`D` is computed in the runner** from `nrow_max`
 (scenario slice) and `nrow(data)` (dataset, already in the slice), so it need
 *not* be a row column — which is exactly what lets `n_max` leave the row.
 
-Construction-time validation accordingly checks each `nrow` against the
-effective draw size: `nrow <= nrow(data)` for `replace = FALSE` (as today) and
-`nrow <= nrow_max` for `replace = TRUE`.
+Construction-time validation accordingly bounds each `nrow` by the fixed draw
+size: `nrow` must lie in `[5, nrow_max]` (the `nrow_max` draw is the largest
+sample any `nrow` can sub-truncate, so it is the universal ceiling), and the
+out-of-range abort cites `nrow_max`'s value. Per-dataset `replace = FALSE`
+infeasibility *within* `[5, nrow_max]` (an `nrow` above a dataset's row count)
+is handled downstream as a silent discard by `replace-default-true`, not as a
+construction abort.
 
 *Alternative considered — abort when `nrow_max > nrow(data)` for
 `replace = FALSE`.* Rejected: that would force the user to pick a per-dataset

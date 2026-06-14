@@ -48,9 +48,11 @@ and is order-independent, the per-task results are byte-identical to
 \section{Functions}{
 \itemize{
 \item \code{ssd_run_sample_step()}: Run the \code{sample} tasks: read each task's dataset off
-the scenario via \code{\link[=scenario_dataset]{scenario_dataset()}}, draw \code{n_max} rows through
-\code{sample_data_task_primer()}, and tag each draw with its \code{sample_id} and a
-\code{.row} order index so a downstream \code{fit} shard can isolate and re-order it.
+the scenario via \code{\link[=scenario_dataset]{scenario_dataset()}}, draw the effective draw size - the
+scenario's \code{nrow_max} setting, capped at the dataset size for
+\code{replace = FALSE} - through \code{sample_data_task_primer()}, and tag each draw
+with its \code{sample_id} and a \code{.row} order index so a downstream \code{fit} shard
+can isolate and re-order it.
 
 \item \code{ssd_run_fit_step()}: Run the \code{fit} tasks: read the distinct set of
 parent \code{sample} shards the shard's tasks reference (each once - they may span

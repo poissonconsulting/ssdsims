@@ -1,3 +1,30 @@
+# scenario-definition: nrow_max must be a whole number
+
+    Code
+      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
+      nrow_max = 10.5)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow_max` must be a whole number (non-missing integer scalar or double equivalent).
+
+# scenario-definition: nrow exceeding nrow_max errors, citing nrow_max
+
+    Code
+      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
+      nrow = 50L, nrow_max = 20L)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `nrow` must be between 5 and `nrow_max` (20), not 50.
+
+# scenario-definition: an all-infeasible replace = FALSE grid aborts
+
+    Code
+      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 1L,
+      nrow = 50L, replace = FALSE)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! No feasible `sample` task: with `replace = FALSE`, every `nrow` (50) exceeds every dataset's effective draw size (`min(nrow_max, nrow(data))`), so the scenario would produce nothing.
+
 # scenario-definition: min_pmix rejects non-function list elements
 
     Code
@@ -221,7 +248,7 @@
       nrow = 4L)
     Condition
       Error in `ssd_define_scenario()`:
-      ! `nrow` must be between 5 and 1000, not 4.
+      ! `nrow` must be between 5 and `nrow_max` (1000), not 4.
 
 ---
 
@@ -230,7 +257,7 @@
       nrow = 1001L)
     Condition
       Error in `ssd_define_scenario()`:
-      ! `nrow` must be between 5 and 1000, not 1001.
+      ! `nrow` must be between 5 and `nrow_max` (1000), not 1001.
 
 # scenario-definition: print is stable for a single dataset
 
@@ -243,7 +270,8 @@
         nsim:     100
         datasets: ccme_boron
         nrow:     5, 10
-        replace:  FALSE
+        replace:  TRUE
+        nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE
           computable: FALSE
@@ -284,7 +312,8 @@
         nsim:     50
         datasets: boron, cadmium
         nrow:     5, 6, 10
-        replace:  FALSE
+        replace:  TRUE
+        nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE, TRUE
           computable: FALSE, TRUE
@@ -321,7 +350,8 @@
         nsim:     10
         datasets: synth
         nrow:     6
-        replace:  FALSE
+        replace:  TRUE
+        nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE
           computable: FALSE
@@ -358,7 +388,8 @@
         nsim:     10
         datasets: boron, synth
         nrow:     6
-        replace:  FALSE
+        replace:  TRUE
+        nrow_max: 1000 (setting)
         fit grid:
           rescale: FALSE
           computable: FALSE
