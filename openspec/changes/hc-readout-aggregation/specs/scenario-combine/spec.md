@@ -3,12 +3,12 @@
 ## REMOVED Requirements
 
 ### Requirement: Members in a seed group must agree on hc readout settings
-**Reason**: Replaced by per-overlap aggregation — members may now differ in the
-four non-axis hc settings (`proportion`, `est_method`, `ci`, `samples`) and are
-reconciled into shared shards rather than rejected.
+**Reason**: Replaced by aggregation — members may now differ in the four non-axis
+hc settings (`proportion`, `est_method`, `ci`, `samples`) **and in their fit
+`dists` union**, and are reconciled into shared shards rather than rejected.
 **Migration**: No caller action; designs that previously aborted with the
-"per-overlap aggregation not yet supported" error now run. The byte-shaping
-contract on `nrow_max`, the fit `dists` union, and `partition_by` is unchanged.
+"per-overlap aggregation not yet supported" error now run. Only `nrow_max` and
+`partition_by` remain uniform-required.
 
 ## ADDED Requirements
 
@@ -38,6 +38,24 @@ byte-identity: a member's per-task results SHALL equal its standalone-run result
   members differ only in `proportion`/`est_method`/`ci`/`samples`
 - **THEN** it SHALL return the target list (no abort), reconciling the readouts by
   aggregation
+
+### Requirement: Differing fit dists unions are reconciled by a design-wide union fit
+The design factory SHALL allow members of a seed group to differ in their fit
+`dists` union and SHALL reconcile them by fitting the **design-wide union** of the
+members' `dists` once per fit cell, each member subsetting via its `distset` hc
+axis. Members differing only in `distset` coverage SHALL therefore share every
+`sample` and `fit` shard, differing only in their `distset` hc cells. This SHALL
+preserve byte-identity — a member's subset hc SHALL equal its standalone fit's hc
+(distset-subset-invariance: per-dist fits are independent, so fitting extra dists
+does not change a member's subset). Only `nrow_max` and `partition_by` SHALL
+remain uniform-required across a seed group.
+
+#### Scenario: distset-coverage members share sample and fit
+- **WHEN** two members of a seed group differ only in their `distset` coverage
+  (hence in their fit `dists` union), under the same `seed`
+- **THEN** they SHALL share every `sample` and `fit` shard (one design-wide union
+  fit) and differ only in their `distset` hc cells, and each member's hc results
+  SHALL equal its standalone run
 
 ### Requirement: ci-mismatched members share via analytical-est routing
 The design factory SHALL, when a seed group mixes `ci = FALSE` and `ci = TRUE`

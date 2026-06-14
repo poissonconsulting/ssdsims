@@ -151,16 +151,27 @@ irregular-grid use this change delivers.
 - **THEN** `ssd_design_targets(design)` SHALL build the ragged union of their cells
   without aborting
 
-### Requirement: Single-scenario runs migrate to a design
+### Requirement: Single-scenario runs migrate to a design without recomputing
 The package SHALL support migrating a single-scenario `ssd_scenario_targets()` run
 to a design as a first-class, documented path: wrapping the scenario in
 `ssd_design()` and calling `ssd_design_targets()` SHALL run that scenario as a
-design of one, and its per-task `sample`/`fit`/`hc` results SHALL be byte-identical
-to the standalone run (migration changes addressing only). The migration SHALL be
-documented as **safe but recomputing** — the design tree gains the `seed=` level
-the standalone `layout=` tree lacks, so the first design run recomputes once — and
-SHALL be demonstrated by a dedicated vignette. `ssd_scenario_targets()` SHALL
-remain unchanged so existing one-off pipelines are unaffected until migration.
+design of one. The migration SHALL be **cache-preserving** — a single-scenario run
+and a design of one SHALL address their shards identically (the same
+`scenario_results_dir()` seed-/layout-keyed root and the same `seed`-woven target
+names), so re-running the design into the same root SHALL reuse every existing
+shard (only the per-member and combined `summary` targets are new). To make this
+hold, both `ssd_scenario_targets()` and `ssd_design_targets()` SHALL treat `root`
+as the **base** directory and write shards under `scenario_results_dir(scenario,
+root)`. Per-task `sample`/`fit`/`hc` results SHALL be byte-identical to the
+standalone run (migration changes addressing only). The migration SHALL be
+demonstrated by a dedicated vignette.
+
+#### Scenario: A scenario migrated to a design of one reuses its shards
+- **WHEN** a scenario is run via `ssd_scenario_targets(scenario, root = "results")`,
+  then a design of one (`ssd_design_targets(ssd_design(scenario), root = "results")`)
+  is sourced into the same store and root and `targets::tar_outdated()` is queried
+- **THEN** no `sample`/`fit`/`hc` shard target SHALL be outdated (only the summary
+  targets), so re-running recomputes no shard
 
 #### Scenario: A scenario migrated to a design of one gives identical results
 - **WHEN** a scenario is run via `ssd_scenario_targets()` and then via

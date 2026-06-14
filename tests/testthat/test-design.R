@@ -59,6 +59,40 @@ test_that("inconsistent dataset bindings abort", {
   expect_error(ssd_design(a, b), "dataset name .* binds different values")
 })
 
+test_that("inconsistent min_pmix bindings abort", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
+  a <- ssd_define_scenario(
+    data,
+    nsim = 2L,
+    seed = 42L,
+    min_pmix = ssd_pmix(p = function(n) 0)
+  )
+  b <- ssd_define_scenario(
+    data,
+    nsim = 2L,
+    seed = 42L,
+    min_pmix = ssd_pmix(p = function(n) 1)
+  )
+  expect_error(ssd_design(a, b), "min_pmix name .* binds different values")
+})
+
+test_that("inconsistent distset bindings abort", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
+  a <- ssd_define_scenario(
+    data,
+    nsim = 2L,
+    seed = 42L,
+    dists = ssd_distset(s = "lnorm")
+  )
+  b <- ssd_define_scenario(
+    data,
+    nsim = 2L,
+    seed = 42L,
+    dists = ssd_distset(s = "gamma")
+  )
+  expect_error(ssd_design(a, b), "distset name .* binds different values")
+})
+
 test_that("differing partition_by aborts", {
   a <- make_scenario()
   b <- make_scenario()
