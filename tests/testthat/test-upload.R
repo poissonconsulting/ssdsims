@@ -442,7 +442,7 @@ test_that("cloud-upload: a non-NULL upload pairs the summary with one upload_sum
   skip_if_not_installed("targets")
   skip_if_not_installed("tarchetypes")
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
