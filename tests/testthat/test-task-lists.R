@@ -164,34 +164,60 @@ test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
   expect_false("est_method" %in% attr(hc_tasks, "axes"))
 })
 
-test_that("scenario-definition: dists is a setting, not a fit axis or identity", {
+test_that("scenario-definition: dists feeds the fit union (not a fit axis); the distset name is an hc axis", {
+  # `dists` (the member vectors) is not a fit axis - it feeds the union fit but
+  # never enters fit identity; the set *name* (`distset`) IS an hc axis.
   expect_false("dists" %in% task_axes("fit"))
+  expect_true("distset" %in% task_axes("hc"))
+
   s1 <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
-    dists = c("lnorm", "gamma")
+    dists = ssd_distset(set = c("lnorm", "gamma"))
   )
   s2 <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
-  # `dists` is stored on the fit step but is not part of fit/hc identity, so
-  # scenarios differing only in `dists` produce identical ids and primers.
-  expect_identical(s1$fit$dists, c("lnorm", "gamma"))
+
+  # The fit step fits the union (sorted), but `dists` is absent from the fit
+  # axes, so scenarios differing only in their pools share fit ids and primers.
+  expect_identical(s1$fit$dists, c("gamma", "lnorm"))
   expect_identical(
     ssd_scenario_fit_tasks(s1)$fit_id,
     ssd_scenario_fit_tasks(s2)$fit_id
   )
   expect_identical(
-    ssd_scenario_hc_tasks(s1)$hc_id,
-    ssd_scenario_hc_tasks(s2)$hc_id
-  )
-  expect_identical(
     task_primers(ssd_scenario_fit_tasks(s1), "fit"),
     task_primers(ssd_scenario_fit_tasks(s2), "fit")
+  )
+
+  # But the hc id now carries the `distset` name, so different set names give
+  # different hc ids.
+  expect_false(identical(
+    ssd_scenario_hc_tasks(s1)$hc_id,
+    ssd_scenario_hc_tasks(s2)$hc_id
+  ))
+
+  # The set name - not its members - is what hashes: a set sharing s2's name but
+  # carrying different members yields identical hc ids and primers (members ride
+  # for execution only).
+  s3 <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 2L,
+    seed = 1L,
+    dists = ssd_distset(lnorm = c("lnorm", "gamma"))
+  )
+  expect_identical(
+    ssd_scenario_hc_tasks(s2)$hc_id,
+    ssd_scenario_hc_tasks(s3)$hc_id
+  )
+  expect_identical(
+    task_primers(ssd_scenario_hc_tasks(s2), "hc"),
+    task_primers(ssd_scenario_hc_tasks(s3), "hc")
   )
 })
 
@@ -251,7 +277,7 @@ test_that("hazard-concentrations: a vector est_method is summarised within one h
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     est_method = c("arithmetic", "geometric", "multi"),
     ci = TRUE,
     nboot = 10L
@@ -407,7 +433,7 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
     seed = 42L,
     nrow = c(5L, 6L),
     replace = FALSE,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   tmp <- withr::local_tempdir()
   withr::local_dir(tmp)
@@ -443,7 +469,7 @@ test_that("task-lists: task tables derive and the baseline runs for a generator 
     nsim = 1L,
     seed = 42L,
     nrow = c(5L, 6L),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   expect_identical(ssd_scenario_sample_tasks(scenario)$dataset, "synth")
   out <- ssd_run_scenario_baseline(scenario)
@@ -460,7 +486,7 @@ test_that("task-lists: sub-truncation property holds across nrow", {
     nsim = 1L,
     seed = 42L,
     nrow = c(5L, 10L),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   out <- ssd_run_scenario_baseline(scenario)
   draw <- out$sample$sample[[1L]]
@@ -480,14 +506,14 @@ test_that("parallel-safe-seeding: adding an nrow within the draw size never re-d
     ssd_scenario_data(boron = ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     nrow = c(5L, 6L)
   )
   wider <- ssd_define_scenario(
     ssd_scenario_data(boron = ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     nrow = c(5L, 6L, 10L)
   )
   out_base <- ssd_run_scenario_baseline(base)
@@ -501,7 +527,7 @@ test_that("parallel-safe-seeding: baseline runner is reproducible without an ext
     nsim = 2L,
     seed = 42L,
     nrow = c(5L, 6L),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   set.seed(1L)
   pre <- runif(3L)
@@ -528,7 +554,7 @@ test_that("parallel-safe-seeding: baseline runner results are order-independent"
     nsim = 3L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   out <- ssd_run_scenario_baseline(scenario)
 
@@ -669,7 +695,7 @@ test_that("scenario-definition: samples = TRUE retains hc draws but keeps estima
     nsim = 1L,
     nrow = 6L,
     seed = 42L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     ci = TRUE,
     nboot = 2L
   )
@@ -695,7 +721,7 @@ test_that("scenario-definition: samples = TRUE works with multiple dists and ci 
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = c("lnorm", "gamma"),
+    dists = ssd_distset(set = c("lnorm", "gamma")),
     ci = FALSE,
     samples = TRUE
   )

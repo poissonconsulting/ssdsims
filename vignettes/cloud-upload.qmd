@@ -118,8 +118,7 @@ scenario <- ssd_define_scenario(
   nsim = 2L,
   seed = 42L,
   nrow = 6L,
-  dists = "lnorm"
-)
+  dists = ssd_distset(lnorm = "lnorm"))
 root <- tempfile("results-")
 targets_dry <- ssd_scenario_targets(scenario, root = root, upload = dryrun)
 ```

@@ -11,7 +11,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = c(5L, 10L),
   rescale = c(FALSE, TRUE),
-  dists = c("lnorm", "gamma")
+  dists = ssd_distset(set = c("lnorm", "gamma"))
 )
 
 sample_targets <- tar_map(

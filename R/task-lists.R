@@ -119,16 +119,19 @@ ssd_scenario_fit_tasks <- function(scenario) {
 
 #' @describeIn ssd_scenario_tasks Derive just the `hc` task table: cross each
 #'   fit-task identity with each row of the scenario's `hc` argument grid
-#'   (`nboot`, `ci_method`, `parametric`). The scenario's scalar `ci` flag and the
-#'   `est_method` setting are applied uniformly to every hc row - neither is a
-#'   cross-join axis nor an emitted column; the runners read `ci` from the
-#'   scenario and every requested `est_method` is summarised within each task
-#'   from its single bootstrap sample set. When `ci = FALSE` the bootstrap-only
-#'   knobs (`nboot`, `ci_method`,
-#'   `parametric`) are canonically `NA` and there is no fan-out axis, so the grid
-#'   is exactly one hc row per fit task; when `ci = TRUE` the grid fans out across
-#'   `nboot x ci_method x parametric`. Each row carries an `hc_id` primary key and
-#'   a `fit_id` foreign key referencing its parent fit task.
+#'   (`nboot`, `ci_method`, `parametric`) **and with the scenario's declared
+#'   distribution sets** (`distset`, the set *names*). The scenario's scalar `ci`
+#'   flag and the `est_method` setting are applied uniformly to every hc row -
+#'   neither is a cross-join axis nor an emitted column; the runners read `ci`
+#'   from the scenario and every requested `est_method` is summarised within each
+#'   task from its single bootstrap sample set. When `ci = FALSE` the
+#'   bootstrap-only knobs (`nboot`, `ci_method`, `parametric`) are canonically
+#'   `NA`, leaving `distset` as the only fan-out, so the grid is exactly `D` hc
+#'   rows per fit task (one per set); when `ci = TRUE` the grid fans out across
+#'   `distset x nboot x ci_method x parametric`. A single-set collection yields
+#'   one `distset` value (one hc row per fit task when `ci = FALSE`). Each row
+#'   carries an `hc_id` primary key, its `distset` name, and a `fit_id` foreign
+#'   key referencing its parent (union) fit task.
 #' @export
 #' @examples
 #' data <- ssd_scenario_data(ssddata::ccme_boron)
@@ -142,8 +145,16 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #' ssd_scenario_hc_tasks(scenario)
 ssd_scenario_hc_tasks <- function(scenario) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
+  # Cross the fit identity x hc grid x the declared distribution sets (the
+  # `distset` axis, its *names*). `distset` is the last hc axis, so each hc row
+  # carries its set name (and its parent `fit_id`); a single-set collection has
+  # one `distset` value and so does not multiply the table.
+  hc_grid <- dplyr::cross_join(
+    hc_grid_tbl(scenario),
+    tibble::tibble(distset = names(scenario$hc$distsets))
+  )
   new_ssdsims_tasks(
-    dplyr::cross_join(fit_task_table(scenario), hc_grid_tbl(scenario)),
+    dplyr::cross_join(fit_task_table(scenario), hc_grid),
     step = "hc"
   )
 }
@@ -189,7 +200,7 @@ ssd_scenario_hc_tasks <- function(scenario) {
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
-#'   dists = "lnorm"
+#'   dists = ssd_distset(lnorm = "lnorm")
 #' )
 #' out <- ssd_run_scenario_baseline(scenario)
 #' out$hc
@@ -263,6 +274,13 @@ ssd_run_scenario_baseline <- function(scenario) {
   hc_tbl <- tasks$hc
   hc_args <- hc_tbl[c("nboot", "ci_method", "parametric")]
   hc_args$fits <- fit_out[hc_tbl$fit_id]
+  # Resolve each task's `distset` name to its set members, so the primer subsets
+  # the parent union fit to that pool before averaging (the subset-then-average
+  # contract; an empty subset yields zero rows for the cell).
+  hc_args$dists <- purrr::map(
+    hc_tbl$distset,
+    \(nm) scenario_distset(scenario, nm)
+  )
   hc_args$primer <- task_primers(hc_tbl, "hc")
   hc_tbl$hc <- purrr::pmap(
     hc_args,
@@ -408,7 +426,12 @@ task_axes <- function(step) {
   # est_method-invariant, the point `est` analytical), so neither carries
   # task-distinguishing information; both are excluded from the hc vocabulary
   # (and thus the primer/partition split) and ride as settings rather than axes.
-  hc <- c(fit, "nboot", "ci_method", "parametric")
+  #
+  # `distset` (the distribution-set *name*) IS an hc axis: per cell, the runner
+  # subsets the parent union fit to the named set's members and re-averages, so
+  # distinct sets are distinct hc tasks. It hashes by name only (the members ride
+  # on the scenario, isolated by `scenario_distset()`), mirroring `min_pmix`.
+  hc <- c(fit, "nboot", "ci_method", "parametric", "distset")
   switch(step, sample = sample, fit = fit, hc = hc)
 }
 
@@ -668,9 +691,25 @@ hc_data_task_primer <- function(
   parametric,
   seed,
   primer,
+  dists = NULL,
   samples = FALSE
 ) {
   local_dqrng_state(seed, primer = primer)
+  # The single chokepoint where a `distset` cell subsets its parent *union* fit
+  # down to the set's members and re-averages, rather than re-fitting. Done here
+  # (not per runner) so the baseline, shard, and targets paths stay byte-identical
+  # by construction. `strict = FALSE` tolerates a member that dropped out of the
+  # union fit (boundary/failed); the subset is RNG-free, so seeding before it
+  # leaves the bootstrap byte-identical to fitting the set alone (the same-seed
+  # subset-reuse oracle, `exploration/distset-subset-invariance.R`).
+  if (!is.null(dists)) {
+    fits <- subset(fits, select = dists, strict = FALSE)
+  }
+  # An all-dropped set yields a zero-length subset; emit zero hc rows for the
+  # cell (the survivor model) rather than asking `ssd_hc()` to average nothing.
+  if (!length(fits)) {
+    return(tibble::tibble())
+  }
   hc_data_task(
     fits,
     proportion = proportion,

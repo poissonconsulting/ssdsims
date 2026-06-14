@@ -68,7 +68,8 @@ Terminology used throughout `ssdsims`.
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
   `fit` adds the fit-grid axes (`rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`);
-  `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`).
+  `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`) and
+  `distset` (the **distribution-set** name, below).
   `est_method`, `proportion`, `ci`, and `samples` are **not** hc axes —
   they are *simulation settings* (below), consumed within each task rather
   than multiplying it. A task row carries **only** its identity — the axis
@@ -248,13 +249,25 @@ design-runs across infrastructure, time, and software versions.
 - **SSD**: Species sensitivity distribution: a distribution of species-level
   toxicity endpoints used in ecological risk assessment.
 - **`dists`**: The parametric distributions fit to the SSD data (e.g.
-  `lnorm`, `gamma`, `llogis`); see `ssdtools::ssd_fit_dists()`. A single
-  character vector defining *one* model-averaged fit, applied uniformly to
-  every fit task — a fit-level **simulation setting** (above), **not** a
-  cross-join **axis**: it is absent from `task_axes("fit")`, so it never
-  fans out, enters a **primer**, or becomes a **partition** level.
-  (Fanning out per-distribution would dissolve the model averaging that
-  defines a fit.)
+  `lnorm`, `gamma`, `llogis`); see `ssdtools::ssd_fit_dists()`. Supplied as an
+  `ssd_distset()` collection of **distribution sets** (below); the fit step
+  fits the **union** of every set's members (`scenario$fit$dists`) — *one*
+  model-averaged fit applied uniformly to every fit task, a fit-level
+  **simulation setting** (above), **not** a cross-join **axis**: it is absent
+  from `task_axes("fit")`, so it never fans out, enters a **primer**, or becomes
+  a **partition** level. (Fanning out per-distribution would dissolve the model
+  averaging that defines a fit.)
+- **distribution set** (`distset`): The pool of distributions model-averaged
+  together to form **one** SSD (one `est`) — supplied as a named member of an
+  [`ssd_distset()`] collection. The set **name** is an hc cross-join **axis**
+  (`distset` ∈ `task_axes("hc")`): per hc cell the parent **union** fit is
+  `subset()`-ed to the set's members (`strict = FALSE`) and re-averaged, so
+  several pools reuse *one* fit rather than re-fitting. The name (not its
+  members) hashes onto the `distset=<name>` Hive path segment and the per-task
+  primer (mirroring `min_pmix` and datasets); the members ride on the scenario
+  (`scenario$hc$distsets`, isolated by `scenario_distset()`) and never enter a
+  hash. Bundled (inner) by default — one hc shard serves every pool for a
+  `(dataset, sim)` cell — and promotable to a path axis via `partition_by$hc`.
 - **`fits`**: A `fitdists` object holding one or more fitted distributions.
 - **`hc`**: Hazard concentration: a quantile of the SSD at a given
   `proportion` (e.g. `hc5` is the 5% quantile); see `ssdtools::ssd_hc()`.
