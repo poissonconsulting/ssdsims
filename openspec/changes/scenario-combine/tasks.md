@@ -79,15 +79,10 @@
       (the per-overlap aggregation test moves to `hc-readout-aggregation`)
 - [x] 7.3 Distinct seeds: two members differing only in `seed` share nothing (each
       under its own `seed=` tree)
-- [~] 7.4 distset sharing — **deferred**: a cross-member `distset`-coverage
-      difference implies differing fit `dists` unions, which `require_uniform()`
-      aborts in this scope; it belongs with the deferred dists/readout aggregation
-      (`hc-readout-aggregation`). Within-scenario distset sharing is already
-      covered by the single-scenario suite.
-- [x] 7.5 Combined summary: `<root>/summary.parquet` unions the per-member filtered
+- [x] 7.4 Combined summary: `<root>/summary.parquet` unions the per-member filtered
       summaries with the `scenario` tag; with one summary missing, the survivor is
       unioned without aborting
-- [x] 7.6 Upload shape: `upload = ssd_upload_dryrun()` pairs each deduplicated
+- [x] 7.5 Upload shape: `upload = ssd_upload_dryrun()` pairs each deduplicated
       shard with one upload target under its `seed=`/`layout=`/`<cells>` path; an
       azure-destination unit test shows the path (no per-scenario level, no network)
 
