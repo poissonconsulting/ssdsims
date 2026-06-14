@@ -1,5 +1,18 @@
 # Proposal: content-addressed-shards
 
+> **ARCHIVED — moot, not implemented (specs not synced).** This change proposed
+> to make shard addressing content-pure by *adding* the scalar settings
+> (`est_method`/`ci`/`nrow_max`) to the path as per-step discriminators and
+> splitting `hc` into a `draw` + `summarise`. On review the addressing premise was
+> already satisfied: the `GLOSSARY` *simulation setting* contract forbids a setting
+> from becoming a partition level, and single-scenario addressing already carries
+> no scenario identity — so there was nothing to add. Scalar-setting divergence at
+> a shared cell is left to the computed result (recomputed/overwritten on change),
+> not engineered. `scenario-combine-v2` therefore composes the **existing**
+> content-pure targets directly, with no prerequisite. Retained as reference for
+> the decision trail (the rejected layout-hash and filename-encoding alternatives,
+> and the `nrow_max` prefix-superset analysis).
+
 ## Why
 
 Even a **single** scenario today bakes its scalar simulation settings —

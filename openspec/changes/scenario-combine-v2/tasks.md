@@ -1,8 +1,8 @@
 # Tasks: scenario-combine-v2
 
-> Prerequisite: `content-addressed-shards` (content-pure addressing + the `hc`
-> `draw`/`summarise` split this design layer composes) and, transitively,
-> `distset-hc-axis`.
+> Prerequisite: none new — the existing content-pure addressing of
+> `ssd_scenario_targets()` (target names/paths are a function of cells, never of a
+> scenario name or a scalar setting) and `distset-hc-axis` (landed).
 
 ## 1. `ssd_design()` collection constructor
 
@@ -19,19 +19,20 @@
       input order preserved, a design of one, empty-call and
       duplicate/empty/non-scenario errors, `.Random.seed` untouched.
 
-## 2. `ssd_design_targets()` composing content-addressed targets
+## 2. `ssd_design_targets()` composing the existing per-scenario targets
 
 - [ ] 2.1 Add exported
       `ssd_design_targets(design, ..., root = "results", upload = NULL, cue = NULL)`:
       `rlang::check_dots_empty()`, `chk_s3_class(design, "ssdsims_design")`, the
       single-scenario factory's `upload` validation.
-- [ ] 2.2 Per member, emit the **content-addressed** target set
-      `ssd_scenario_targets()` builds (no per-scenario root or prefix), so members
-      sharing content emit the identical target and `targets` collapses it to one
-      build; distinct content stays distinct. Rely on `targets`' duplicate-name
-      handling for shared targets and its abort as the collision backstop.
+- [ ] 2.2 Per member, emit the target set `ssd_scenario_targets()` already builds
+      (no per-scenario root or prefix), projecting each member to the per-shard
+      content so a shard's target identity (name *and* command) is a pure function
+      of content — members sharing content emit the identical target and `targets`
+      collapses it to one build; distinct content stays distinct. Rely on
+      `targets`' duplicate-name handling for shared targets.
 - [ ] 2.3 Confirm the factory performs no network I/O; `upload` pairing rides the
-      content-addressed `upload_<step>` targets unchanged (no per-scenario prefix).
+      existing `upload_<step>` targets unchanged (no per-scenario prefix).
 
 ## 3. Combined design summary, coordinate-keyed
 
@@ -48,7 +49,7 @@
 
 ## 4. Tests
 
-- [ ] 4.1 Dedup: a two-member design whose members share `sample`/`fit`/`draw`
+- [ ] 4.1 Dedup: a two-member design whose members share `sample`/`fit`/`hc`
       content builds each shared shard exactly once (one target, one file) in one
       `tar_make()`.
 - [ ] 4.2 Extend/grow without recompute: a completed standalone scenario re-run as
@@ -62,7 +63,7 @@
 ## 5. Documentation
 
 - [ ] 5.1 `GLOSSARY.md` *Design terms*: scenario/design as **selections** over one
-      shared content-addressed tree (refine the original wording inherited from
+      shared, content-pure results tree (refine the wording inherited from
       `scenario-combine`).
 - [ ] 5.2 Roxygen for `ssd_design()`, `ssd_design_targets()` (the
       common-random-numbers-as-shared-shard note, names-are-labels, the

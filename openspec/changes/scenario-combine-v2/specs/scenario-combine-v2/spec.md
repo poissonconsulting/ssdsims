@@ -8,8 +8,9 @@ named collection of `ssdsims_scenario` objects — the **design** (a named set o
 scenarios run as one pipeline). Names SHALL be taken from explicit argument names
 or derived from the argument expression (mirroring `ssd_scenario_data()`). Each
 name is a **selection label** for the combined results and the derived membership
-mapping and SHALL NOT enter any target name or storage path (which are content-
-pure, per `content-addressed-shards`). The constructor SHALL accept one or more
+mapping and SHALL NOT enter any target name or storage path (which are
+content-pure — the factory never puts a name in the address). The constructor
+SHALL accept one or more
 scenarios (a design of one is valid and uniformly shaped; an empty call aborts),
 SHALL validate that every element is an `ssdsims_scenario` and that names are
 unique, non-empty, and non-`NA`, and SHALL be RNG-free (`.Random.seed` unchanged).
@@ -33,18 +34,20 @@ unique, non-empty, and non-`NA`, and SHALL be RNG-free (`.Random.seed` unchanged
 - **THEN** it SHALL abort with an informative error identifying the offending
   element or name
 
-### Requirement: A design factory composes content-addressed targets into one deduplicated pipeline
+### Requirement: A design factory composes the existing per-scenario targets into one deduplicated pipeline
 The package SHALL provide
 `ssd_design_targets(design, ..., root = "results", upload = NULL, cue = NULL)`
 that accepts an `ssdsims_design` and returns the complete list of `targets`
 objects running every member in one static-branching pipeline, by composing the
-**content-addressed** target set `ssd_scenario_targets()` builds for each member
-(per `content-addressed-shards`). Members that share content SHALL emit the
-identical target (same name, same path), which the pipeline builds **once**;
-members with distinct content SHALL emit distinct targets. The factory SHALL place
-`...` immediately after `design` and call `rlang::check_dots_empty()` (so `root`,
-`upload`, `cue` are by name) and SHALL perform no network I/O. No per-scenario
-root or target-name prefix SHALL be introduced.
+target set `ssd_scenario_targets()` already builds for each member and projecting
+each member to the per-shard content so a shard's target identity — name *and*
+command — is a pure function of its content. Members that share content SHALL emit
+the identical target (same name, same path, same command), which the pipeline
+builds **once**; members with distinct content SHALL emit distinct targets. The
+factory SHALL place `...` immediately after `design` and call
+`rlang::check_dots_empty()` (so `root`, `upload`, `cue` are by name) and SHALL
+perform no network I/O. No per-scenario root or target-name prefix SHALL be
+introduced.
 
 #### Scenario: One tar_make runs the whole design, sharing common shards
 - **WHEN** a `_targets.R` calls `ssd_design_targets(ssd_design(a, b))` and
@@ -52,10 +55,11 @@ root or target-name prefix SHALL be introduced.
 - **THEN** every unique shard SHALL build once in the one pipeline, each shared
   shard appearing as a single target built a single time
 
-#### Scenario: Shared content is one target, distinct content two
-- **WHEN** two members differ only in `est_method`
-- **THEN** their `sample`, `fit`, and `draw` targets SHALL each be a single shared
-  target, and only their `summarise` targets SHALL be distinct
+#### Scenario: Shared ancestors are one target, distinct cells two
+- **WHEN** two members differ only in a `distset` axis value (an hc axis, so their
+  `sample` and `fit` cells are identical and only their `hc` cells differ)
+- **THEN** their `sample` and `fit` targets SHALL each be a single shared target,
+  and only their `hc` targets SHALL be distinct
 
 #### Scenario: root, upload, and cue must be passed by name
 - **WHEN** `ssd_design_targets()` is called with a positional argument after
@@ -67,10 +71,11 @@ Building a design SHALL compute each unique shard exactly once. Wrapping a
 completed standalone scenario in a design, or adding a member to a completed
 design, SHALL build only the genuinely-new shards and SHALL report every shared
 shard cached with its Parquet byte-identical to before; removing a member SHALL
-leave the remaining shards cached. This follows because the composed targets are
-content-addressed (`content-addressed-shards`), so a member's shards resolve to
-the identical names and paths regardless of the design they are part of — the
-`path-axis-growth` contract lifted one level. Only the combined summary SHALL
+leave the remaining shards cached. This follows because the composed targets'
+identity is a pure function of content (the existing addressing carries no
+scenario identity), so a member's shards resolve to the identical names and paths
+regardless of the design they are part of — the `path-axis-growth` contract lifted
+one level. Only the combined summary SHALL
 re-run, over the current members. Two members sharing `(seed, primer)` on an
 overlapping task SHALL resolve to the **same shard** (common random numbers,
 computed once); this SHALL be documented and SHALL NOT be warned about.
@@ -90,14 +95,14 @@ computed once); this SHALL be documented and SHALL NOT be warned about.
 ### Requirement: A combined design summary keyed by partition coordinates
 The design pipeline SHALL include one top-level `summary` target that writes a
 combined `<root>/summary.parquet` unioning the per-coordinate compact summaries,
-keyed by **partition coordinates** (e.g. `dataset`, axis values, the active
-setting discriminators), and SHALL NOT carry a `scenario` identity column. The
-union SHALL be performed at the DuckDB level (lazy reads written straight back
-out) with no per-shard summary collected into R, and SHALL skip coordinate
-summaries that did not land (survivors-union). Scenario membership — which
-scenarios' selections cover a coordinate — SHALL be a **derived** mapping (shared
-with `cost-analysis-targets`), never stored on or beside a shard. Retained-draws
-(`draw` artifacts) SHALL remain per coordinate and SHALL NOT be combined.
+keyed by **partition coordinates** (e.g. `dataset`, axis values including
+`distset`), and SHALL NOT carry a `scenario` identity column. The union SHALL be
+performed at the DuckDB level (lazy reads written straight back out) with no
+per-shard summary collected into R, and SHALL skip coordinate summaries that did
+not land (survivors-union). Scenario membership — which scenarios' selections
+cover a coordinate — SHALL be a **derived** mapping (shared with
+`cost-analysis-targets`), never stored on or beside a shard. Retained bootstrap
+samples SHALL remain per coordinate and SHALL NOT be combined.
 
 #### Scenario: Combined summary unions coordinates without a scenario column
 - **WHEN** a design of overlapping scenarios runs to completion
