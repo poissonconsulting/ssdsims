@@ -189,6 +189,44 @@ Terminology used throughout `ssdsims`.
   packed into jobs. Branches and shards exist with or without a
   scheduler; jobs only exist on a cluster.
 
+## Design terms
+
+These three nest, finest to coarsest: a **scenario** is one regular grid, a
+**design** unions scenarios into one pipeline run, and a **study** aggregates
+design-runs across infrastructure, time, and software versions.
+
+- **scenario**: A single, purely declarative `ssdsims_scenario`
+  (`ssd_define_scenario()`) — one **regular** cross-join of the **axes** at each
+  step (a rectangular sub-grid). It is the construction-time root of one
+  `targets` pipeline (`ssd_scenario_targets()`), carrying a `seed`, the knobs,
+  and the dataset *names*; it draws no random numbers and expands no tasks
+  (TARGETS-DESIGN.md §1). Vignette prose that calls a scenario "the study" is
+  the loose gloss this section tightens: a scenario is one **arm** of a study,
+  not the study.
+- **design**: A named set of scenarios run as **one pipeline** — one `targets`
+  store, one `tar_make()`, one provenance/execution context — built with
+  `ssd_design()` and turned into targets by `ssd_design_targets()`. Where a
+  single scenario is one regular grid, a design unions several into the full,
+  possibly **non-regular** (ragged) experimental design: the union of regular
+  sub-grids is exactly how an irregular design region is expressed. "Design" is
+  used here in the **design-of-experiments** sense (the set of conditions to
+  run); it is distinct from the *software*-design sense of `TARGETS-DESIGN.md`
+  and the openspec `design.md` artifact. Each scenario is a member of the
+  design, addressed by its collection **name** (the `scenario=<name>` results
+  level and the `<name>_` target-name prefix); names enter addressing only,
+  never task identity, the **primer**, or any result value. The design's
+  results table is the combined `summary.parquet`, with a `scenario` identity
+  column.
+- **study**: The whole investigation a design serves — the longitudinal
+  aggregate that may span **multiple design-runs** executed on different
+  infrastructure (laptop / cluster), at different times, or under different
+  software versions. Unlike a scenario or a design, a study is **not a
+  constructible object**: its members are realised in separate sessions, so it
+  is reconstructed on the **read side** by unioning result trees (a future
+  `study` column over several designs' summaries). Reserved for that umbrella
+  level; not built by the design machinery. Distinct from **experiment**, which
+  in this repo names the proof-of-work `scripts/experiment-*.R`.
+
 ## Simulation terms
 
 - **`sim`**: The index of a simulation replicate.
