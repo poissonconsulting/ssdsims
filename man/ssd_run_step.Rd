@@ -65,13 +65,17 @@ and fit with the per-task \verb{(seed, primer)} through \code{fit_data_task_prim
 
 \item \code{ssd_run_hc_step()}: Run the \code{hc} tasks: read the distinct set of
 parent \code{fit} shards the shard's tasks reference (each once - an hc shard
-typically spans several fit shards), isolate each task's fit by \code{fit_id},
-deserialise the \code{fitdists} object, and estimate the hazard concentration with
-the per-task \verb{(seed, primer)} through \code{hc_data_task_primer()}. Each task's hc
-tibble (one or more rows - the \code{proportion} fan-out, with the scalar \code{ci}
-applied uniformly and bootstrap-only knobs \code{NA} when \code{ci = FALSE}) is tagged
-with its \code{hc_id} and parent \code{fit_id}, stacked, and written as one Parquet at
-the shard's partition path.
+typically spans several fit shards), decode each parent \strong{union} fit once
+per \code{fit_id} (reused across every \code{distset} task that shares it), resolve each
+task's \code{distset} name to its members via \code{\link[=scenario_distset]{scenario_distset()}}, subset the
+union fit to that pool (\code{strict = FALSE}), and estimate the hazard
+concentration with the per-task \verb{(seed, primer)} through
+\code{hc_data_task_primer()} (the subset happens in that shared primitive). Each
+task's hc tibble (with the scalar \code{ci} applied uniformly and bootstrap-only
+knobs \code{NA} when \code{ci = FALSE}) is tagged with its \code{hc_id}, parent \code{fit_id}, and
+\code{distset} name, stacked, and written as one Parquet at the shard's partition
+path. A set whose members all dropped from the union fit emits no rows for
+that cell (the survivor model).
 
 }}
 \examples{
@@ -87,7 +91,7 @@ scenario <- ssd_define_scenario(
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 dir <- tempfile()
 ssd_run_sample_step(
@@ -109,7 +113,7 @@ scenario <- ssd_define_scenario(
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 dir <- tempfile()
 ssd_run_sample_step(

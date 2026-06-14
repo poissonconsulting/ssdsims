@@ -25,50 +25,37 @@
       Error in `ssd_define_scenario()`:
       ! No feasible `sample` task: with `replace = FALSE`, every `nrow` (50) exceeds every dataset's effective draw size (`min(nrow_max, nrow(data))`), so the scenario would produce nothing.
 
-# scenario-definition: min_pmix rejects non-function list elements
+# scenario-definition: min_pmix rejects a bare function
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = list(1))
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = ssdtools::ssd_min_pmix)
     Condition
       Error in `ssd_define_scenario()`:
-      ! Each `min_pmix` function must take a single argument (the number of rows).
+      ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
 
-# scenario-definition: min_pmix rejects multi-argument functions
+# scenario-definition: min_pmix rejects a plain list
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = function(a, b) 0.05)
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = list(ssdtools::ssd_min_pmix))
     Condition
       Error in `ssd_define_scenario()`:
-      ! Each `min_pmix` function must take a single argument (the number of rows).
+      ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
 
-# scenario-definition: min_pmix rejects duplicate names
+# scenario-definition: min_pmix rejects a character vector of names
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = list(a = ssdtools::ssd_min_pmix, a = ssdtools::ssd_min_pmix))
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = "ssd_min_pmix")
     Condition
       Error in `ssd_define_scenario()`:
-      ! `min_pmix` names must be unique.
+      ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
 
-# scenario-accessors: an unresolvable min_pmix name fails fast
+# scenario-definition: an indirectly-supplied list value still aborts cleanly
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = "no_such_fun")
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = fns)
     Condition
       Error in `ssd_define_scenario()`:
-      ! Unable to resolve `min_pmix` name "no_such_fun" to a single-argument function.
-
-# scenario-accessors: a name resolving to a multi-arg function fails fast
-
-    Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = "two_arg")
-    Condition
-      Error in `ssd_define_scenario()`:
-      ! Unable to resolve `min_pmix` name "two_arg" to a single-argument function.
+      ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
 
 # scenario-definition: partition_by rejects an unknown axis
 
@@ -87,7 +74,7 @@
       partition_by = list(hc = c("dataset", "sim", "ci")))
     Condition
       Error in `ssd_define_scenario()`:
-      ! `partition_by$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"parametric"'.
+      ! `partition_by$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"distset"'.
 
 # scenario-definition: bundle rejects ci as an hc axis
 
@@ -96,7 +83,7 @@
       bundle = list(hc = "ci"))
     Condition
       Error in `ssd_define_scenario()`:
-      ! `bundle$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"parametric"'.
+      ! `bundle$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"distset"'.
 
 # scenario-definition: partition_by rejects nrow under the sample step
 
@@ -288,6 +275,8 @@
           ci_method: weighted_samples
           parametric: TRUE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -295,7 +284,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -330,6 +319,8 @@
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -337,7 +328,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 # scenario-definition: print is stable for generator and mixed inputs
 
@@ -368,6 +359,8 @@
           ci_method: weighted_samples
           parametric: TRUE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -375,7 +368,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 ---
 
@@ -406,6 +399,8 @@
           ci_method: weighted_samples
           parametric: TRUE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -413,7 +408,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 # scenario-definition: samples must be a flag
 

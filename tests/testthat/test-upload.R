@@ -303,7 +303,7 @@ test_that("cloud-upload: upload = NULL emits no upload_<step> targets", {
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   names <- all_target_names(ssd_scenario_targets(scenario))
   expect_length(grep("^upload_", names), 0L)
@@ -317,7 +317,7 @@ test_that("cloud-upload: a dry-run upload pairs one upload target per shard", {
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   tg <- ssd_scenario_targets(scenario, upload = ssd_upload_dryrun())
   names <- all_target_names(tg)
@@ -341,7 +341,7 @@ test_that("cloud-upload: the factory never runs the ssd_test_upload() probe", {
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   # An Azure destination with no credentials present: if the factory probed, this
   # would abort. It must not - building the target list does no network I/O.
@@ -392,7 +392,7 @@ test_that("cloud-upload: the step shard commands are identical across upload mod
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   az <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
   # No probe to mock: the factory never runs `ssd_test_upload()`, so building the

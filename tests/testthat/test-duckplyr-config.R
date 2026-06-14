@@ -215,7 +215,7 @@ test_that("step runners pin threads to 1 while the body runs", {
     nsim = 1L,
     seed = 42L,
     nrow = 5L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   shards <- ssd_scenario_sample_shards(scenario)
   ssd_run_sample_step(
@@ -316,7 +316,7 @@ test_that("constrained configuration leaves results byte-identical", {
     nsim = 1L,
     seed = 42L,
     nrow = 5L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     ci = TRUE,
     nboot = 5,
     samples = TRUE

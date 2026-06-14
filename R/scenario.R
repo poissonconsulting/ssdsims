@@ -59,16 +59,25 @@
 #'
 #' # `dists` and `est_method`
 #'
-#' `dists` and `est_method` are **simulation settings**, not cross-join axes -
-#' they are absent from `task_axes("fit")`/`task_axes("hc")`, so they never
-#' multiply tasks or enter the per-task RNG primer. `dists` is the *fit*-level
-#' setting: the whole character vector is handed to one `ssd_fit_dists()` call
-#' per fit task (fanning out per distribution would dissolve the model averaging
-#' that defines a fit). `est_method` is an *hc*-level setting: every requested
-#' method is summarised from each hc task's **single** bootstrap sample set
-#' rather than re-bootstrapping per method (the CI is est_method-invariant and
-#' the point `est` is analytical), so a vector `est_method` yields one row per
-#' method within a task without fanning out into separate tasks.
+#' `dists` is an [ssd_distset()] collection: one or more **distribution sets**
+#' (pools of distributions model-averaged together to form one SSD), each named.
+#' The *fit* step fits the **union** of every set's members once - the single
+#' model-averaged superset every pool is a subset of - so `scenario$fit$dists` is
+#' that union and *individual* distributions still never fan out (an axis value
+#' is always a whole pool). The named sets ride on the hc grid
+#' (`scenario$hc$distsets`); the *hc* step subsets that one union fit down to each
+#' set's members (`subset(fit, set, strict = FALSE)`) and re-averages, so
+#' `"distset"` **is** an hc cross-join axis (`task_axes("hc")`) keyed by the set
+#' **name** - several pools reuse one fit rather than re-fitting. A bare character
+#' vector or plain list aborts loudly, pointing to `ssd_distset()`.
+#'
+#' `est_method` is a **simulation setting**, not a cross-join axis - it is absent
+#' from `task_axes("hc")`, so it never multiplies tasks or enters the per-task RNG
+#' primer. It is an *hc*-level setting: every requested method is summarised from
+#' each hc task's **single** bootstrap sample set rather than re-bootstrapping per
+#' method (the CI is est_method-invariant and the point `est` is analytical), so a
+#' vector `est_method` yields one row per method within a task without fanning out
+#' into separate tasks.
 #'
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
@@ -90,17 +99,20 @@
 #'   rows, so `nrow` is not capped by the dataset size); `FALSE` draws a
 #'   permutation, capping the effective draw - and so each `nrow` - at the
 #'   dataset size.
-#' @param min_pmix The `min_pmix` function(s), referenced **by name**. Supply
-#'   either a character vector of names, or a function (or list of functions)
-#'   with a single argument that inputs the number of rows of data and returns
-#'   a proportion between 0 and 0.5 - in which case the name is derived from the
-#'   argument expression (e.g. `ssdtools::ssd_min_pmix` gives `"ssd_min_pmix"`),
-#'   mirroring dataset name derivation. The name is what the task path hashes;
-#'   the resolved single-argument function is additionally materialised on the
-#'   scenario (keyed by name) for execution and isolated via
-#'   [scenario_min_pmix()]. A name-string is resolved to a function at
-#'   construction (from `ssdtools` or the caller's environment), failing fast if
-#'   it cannot be resolved to a single-argument function.
+#' @param min_pmix An [ssd_pmix()] collection of one or more single-argument
+#'   `min_pmix` functions, referenced **by name**. This is the only accepted
+#'   form; a bare function, a plain list, or a character vector of names is
+#'   rejected (no string-to-function resolution). The collection's name (not the
+#'   function value) is what the task path hashes; the function is materialised
+#'   on the scenario (keyed by name) for execution and isolated via
+#'   [scenario_min_pmix()]. Defaults to
+#'   `ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)`.
+#' @param dists An [ssd_distset()] collection of one or more named distribution
+#'   sets (pools model-averaged together to form one SSD). The fit step fits the
+#'   **union** of every set's members once; the hc step subsets that union fit
+#'   per set and re-averages, so the set **name** is an hc cross-join axis
+#'   (`"distset"`) while individual distributions never fan out. A bare character
+#'   vector or plain list aborts, pointing to `ssd_distset()`.
 #' @param range_shape1 A list of numeric vectors of length two of the lower and
 #'   upper bounds for the shape1 parameter.
 #' @param range_shape2 A list of numeric vectors of length two of the lower and
@@ -119,8 +131,10 @@
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
 #'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`,
-#'   `parametric` (`ci` and `est_method` are hc simulation settings, not axes;
-#'   `dists` is the fit-level simulation setting).
+#'   `parametric`, `distset` (`ci` and `est_method` are hc simulation settings,
+#'   not axes; `dists` is the fit-level simulation setting feeding the union, and
+#'   `distset` - the set *name* - is the hc axis over the union's post-fit
+#'   subsets).
 #'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
@@ -157,11 +171,11 @@ ssd_define_scenario <- function(
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
-  min_pmix = list(ssdtools::ssd_min_pmix),
+  min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   nrow_max = 1000L,
-  dists = ssdtools::ssd_dists_bcanz(),
+  dists = ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz()),
   est_method = "multi",
   proportion = 0.05,
   ci = FALSE,
@@ -172,8 +186,6 @@ ssd_define_scenario <- function(
   partition_by = NULL,
   bundle = NULL
 ) {
-  min_pmix_expr <- rlang::enexpr(min_pmix)
-  user_env <- rlang::caller_env()
   call <- environment()
   chk::chk_unused(...)
 
@@ -234,9 +246,19 @@ ssd_define_scenario <- function(
   # `partition_by`/`bundle` are validated and normalised below.
 
   # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
-  chk::chk_character(dists)
-  chk::chk_not_any_na(dists)
-  chk::chk_unique(dists)
+  # `dists` is an `ssd_distset()` collection (validated by value at
+  # construction): a bare character vector or plain list aborts loudly, pointing
+  # the caller to the constructor (no expression-archaeology for set names). The
+  # fit step fits the *union* of all sets once (derived below); the hc step
+  # subsets that one union fit per set.
+  if (!inherits(dists, "ssdsims_distset")) {
+    chk::abort_chk(
+      "`dists` must be an `ssd_distset()` collection; assemble distribution ",
+      "sets with `ssd_distset()` (e.g. ",
+      "`ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())`).",
+      call = call
+    )
+  }
 
   chk::chk_logical(rescale)
   chk::chk_not_any_na(rescale)
@@ -362,14 +384,17 @@ ssd_define_scenario <- function(
   }
 
   # --- min_pmix: names for hashing + functions materialised for execution -
-  min_pmix_spec <- scenario_min_pmix_materialise(
-    min_pmix,
-    min_pmix_expr,
-    env = user_env,
-    call = call
-  )
+  min_pmix_spec <- scenario_pmix_spec(min_pmix, call = call)
 
   partition_by <- validate_partition_by(partition_by, bundle, call = call)
+
+  # The fit step fits the union of every set's members once (the single
+  # model-averaged superset every pool is a subset of); the named sets ride on
+  # the hc grid (`hc$distsets`) for the hc step to subset by name. The set names
+  # are the `distset` axis values; the member vectors are carried for execution
+  # only and never enter a task hash.
+  distsets <- unclass(dists)
+  dists_union <- sort(unique(unlist(distsets, use.names = FALSE)))
 
   structure(
     list(
@@ -387,7 +412,7 @@ ssd_define_scenario <- function(
         min_pmix = min_pmix_spec$names,
         range_shape1 = range_shape1,
         range_shape2 = range_shape2,
-        dists = dists
+        dists = dists_union
       ),
       min_pmix_fns = min_pmix_spec$fns,
       hc = list(
@@ -397,7 +422,8 @@ ssd_define_scenario <- function(
         nboot = nboot,
         ci_method = ci_method,
         parametric = parametric,
-        samples = samples
+        samples = samples,
+        distsets = distsets
       ),
       partition_by = partition_by
     ),
@@ -618,151 +644,28 @@ expr_to_name <- function(expr) {
   NULL
 }
 
-#' Derive per-element names from a captured `list(...)` expression.
-#' @noRd
-list_expr_names <- function(
-  list_expr,
-  label = "dataset",
-  call = rlang::caller_env()
-) {
-  if (!rlang::is_call(list_expr, "list")) {
-    chk::abort_chk(
-      "Unable to derive ",
-      label,
-      " names from the list argument; ",
-      "supply a named list (e.g. `list(boron = ...)`).",
-      call = call
-    )
-  }
-  elems <- rlang::call_args(list_expr)
-  nms <- vapply(
-    elems,
-    function(e) expr_to_name(e) %||% NA_character_,
-    character(1),
-    USE.NAMES = FALSE
-  )
-  if (anyNA(nms)) {
-    chk::abort_chk(
-      "Unable to derive a name for every ",
-      label,
-      " in the list; ",
-      "supply a named list (e.g. `list(boron = ...)`).",
-      call = call
-    )
-  }
-  nms
-}
-
-#' Materialise `min_pmix` names *and* functions from the value and captured
-#' argument expression.
+#' Extract `min_pmix` names and functions from an `ssd_pmix()` collection.
 #'
 #' Returns `list(names = <character>, fns = <named list of functions>)`. The
-#' names are what the task path hashes (mirroring dataset name derivation); the
-#' functions ride on the scenario for execution, isolated later by name via
-#' [scenario_min_pmix()]. Accepts:
-#'
-#' * a character vector of names - each resolved to a single-argument function
-#'   at construction (from `ssdtools` or `env`), failing fast if unresolvable;
-#' * a function - validated, its name derived by symbol capture, kept under
-#'   that name;
-#' * a list of functions - each validated, names taken from the list or derived
-#'   per element, kept under those names.
-#'
-#' The names never carry function values into a hash (`task_axes("fit")` keys on
-#' the name only).
+#' input SHALL be an `ssdsims_pmix` collection (from [ssd_pmix()]), which already
+#' carries validated single-argument functions keyed by name - there is **no**
+#' string-to-function resolution and **no** expression capture. The names are
+#' what the task path hashes; the functions ride on the scenario for execution,
+#' isolated later by name via [scenario_min_pmix()]. Any other input form (a bare
+#' function, a plain list, or a character vector of names) aborts in the context
+#' of `call` (the user-facing function) with a message naming `ssd_pmix()`.
 #' @noRd
-scenario_min_pmix_materialise <- function(
-  min_pmix,
-  min_pmix_expr,
-  env = rlang::caller_env(),
-  call = rlang::caller_env()
-) {
-  if (is.character(min_pmix)) {
-    if (anyNA(min_pmix)) {
-      chk::abort_chk("`min_pmix` names must not be missing.", call = call)
-    }
-    if (anyDuplicated(min_pmix)) {
-      chk::abort_chk("`min_pmix` names must be unique.", call = call)
-    }
-    # Plain loop (not `lapply`/`purrr::map`) so an unresolvable-name abort
-    # surfaces from `ssd_define_scenario()`, not an internal map frame
-    # (error-call-origin rule).
-    fns <- vector("list", length(min_pmix))
-    for (i in seq_along(min_pmix)) {
-      fns[[i]] <- resolve_min_pmix_name(min_pmix[[i]], env = env, call = call)
-    }
-    return(list(names = min_pmix, fns = rlang::set_names(fns, min_pmix)))
-  }
-
-  if (is.function(min_pmix)) {
-    check_min_pmix_function(min_pmix, call = call)
-    nm <- expr_to_name(min_pmix_expr)
-    if (is.null(nm)) {
-      chk::abort_chk(
-        "Unable to derive a name for `min_pmix`; ",
-        "supply it by name (a character vector).",
-        call = call
-      )
-    }
-    return(list(names = nm, fns = rlang::set_names(list(min_pmix), nm)))
-  }
-
-  if (is.list(min_pmix)) {
-    for (entry in min_pmix) {
-      check_min_pmix_function(entry, call = call)
-    }
-    list_names <- names(min_pmix)
-    if (!is.null(list_names) && all(nzchar(list_names))) {
-      nms <- list_names
-    } else {
-      nms <- list_expr_names(min_pmix_expr, label = "min_pmix", call = call)
-    }
-    if (anyDuplicated(nms)) {
-      chk::abort_chk("`min_pmix` names must be unique.", call = call)
-    }
-    return(list(names = nms, fns = rlang::set_names(min_pmix, nms)))
-  }
-
-  chk::abort_chk(
-    "`min_pmix` must be a character vector of names, ",
-    "or a function or list of functions.",
-    call = call
-  )
-}
-
-#' Resolve a `min_pmix` name to a single-argument function at construction.
-#'
-#' Looks the name up in `ssdtools` first, then `env` (the caller's environment,
-#' searched inheritably). Aborts in the context of `call` when the name cannot
-#' be resolved to a single-argument function.
-#' @noRd
-resolve_min_pmix_name <- function(name, env, call = rlang::caller_env()) {
-  out <- rlang::env_get(rlang::ns_env("ssdtools"), name, default = NULL)
-  if (!rlang::is_function(out)) {
-    out <- rlang::env_get(env, name, default = NULL, inherit = TRUE)
-  }
-  if (!rlang::is_function(out) || length(formals(out)) != 1L) {
+scenario_pmix_spec <- function(min_pmix, call = rlang::caller_env()) {
+  if (!inherits(min_pmix, "ssdsims_pmix")) {
     chk::abort_chk(
-      "Unable to resolve `min_pmix` name ",
-      encodeString(name, quote = "\""),
-      " to a single-argument function.",
+      "`min_pmix` must be an `ssd_pmix()` collection; ",
+      "wrap the function(s) with `ssd_pmix()` ",
+      "(a bare function, a plain list, or a character vector is not accepted).",
       call = call
     )
   }
-  out
-}
-
-#' Assert a `min_pmix` entry is a single-argument function (in the context of
-#' `call`).
-#' @noRd
-check_min_pmix_function <- function(f, call = rlang::caller_env()) {
-  if (!is.function(f) || length(formals(f)) != 1L) {
-    chk::abort_chk(
-      "Each `min_pmix` function must take a single argument ",
-      "(the number of rows).",
-      call = call
-    )
-  }
+  fns <- unclass(min_pmix)
+  list(names = names(fns), fns = fns)
 }
 
 #' @export
@@ -779,6 +682,10 @@ print.ssdsims_scenario <- function(x, ...) {
   print_grid(x$fit, "fit")
   cat("  hc grid:\n")
   print_grid(x$hc, "hc")
+  cat("  distsets:\n")
+  for (nm in names(x$hc$distsets)) {
+    cat("    ", nm, ": ", fmt_grid_value(x$hc$distsets[[nm]]), "\n", sep = "")
+  }
   cat("  partition_by:\n")
   for (step in c("sample", "fit", "hc")) {
     cat(
@@ -816,6 +723,11 @@ print.ssdsims_scenario <- function(x, ...) {
 print_grid <- function(grid, step) {
   axes <- task_axes(step)
   for (nm in names(grid)) {
+    # The hc `distsets` map (set name -> members) is rendered in its own block
+    # by `print.ssdsims_scenario()`, not as a scalar grid line here.
+    if (nm == "distsets") {
+      next
+    }
     marker <- if (nm %in% axes) "" else " (setting)"
     cat("    ", nm, ": ", fmt_grid_value(grid[[nm]]), marker, "\n", sep = "")
   }

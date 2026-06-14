@@ -137,7 +137,7 @@ test_that("task-shards: step runners write one Parquet and read upstream by path
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   ss <- ssd_scenario_sample_shards(scenario)
   fs <- ssd_scenario_fit_shards(scenario)
@@ -181,7 +181,7 @@ test_that("task-shards: ssd_summarise unions landed hc shards without recomputat
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   ss <- ssd_scenario_sample_shards(scenario)
   fs <- ssd_scenario_fit_shards(scenario)
@@ -254,7 +254,7 @@ test_that("dual-summary-outputs: path_with_samples writes a full summary retaini
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     ci = TRUE,
     nboot = 10L,
     samples = TRUE
@@ -295,7 +295,7 @@ test_that("dual-summary-outputs: path_with_samples = NULL writes only the compac
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   materialise_shards(scenario, dir)
   out <- ssd_summarise(
@@ -317,7 +317,7 @@ test_that("dual-summary-outputs: the pipeline gates the full summary on samples"
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     ci = TRUE,
     nboot = 10L,
     samples = TRUE
@@ -327,7 +327,7 @@ test_that("dual-summary-outputs: the pipeline gates the full summary on samples"
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   # the summary target is the last element of the factory's list
   summary_cmd <- function(scenario) {
@@ -404,7 +404,7 @@ test_that("task-shards: pipeline per-task results equal the baseline runner", {
     seed = 42L,
     nrow = c(5L, 10L),
     rescale = c(FALSE, TRUE),
-    dists = c("lnorm", "gamma")
+    dists = ssd_distset(set = c("lnorm", "gamma"))
   )
   base <- ssd_run_scenario_baseline(scenario)
 
@@ -534,7 +534,7 @@ test_that("hive: each child shard names exactly the parent shards it reads (m:n)
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     partition_by = list(
       sample = c("dataset", "sim"),
       fit = c("dataset", "sim"),
@@ -637,14 +637,14 @@ test_that("hive: extending nrow caches the sample shard; changing nrow_max rebui
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   wide <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
     nrow = c(6L, 12L),
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   resized <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
@@ -652,7 +652,7 @@ test_that("hive: extending nrow caches the sample shard; changing nrow_max rebui
     seed = 42L,
     nrow = 6L,
     nrow_max = 500L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   s1 <- ssd_scenario_targets(base)[[1L]][["sample_step"]][[1L]]$command$expr
   s2 <- ssd_scenario_targets(wide)[[1L]][["sample_step"]][[1L]]$command$expr
@@ -765,13 +765,19 @@ test_that("task-shards: changing an hc-only knob rebuilds only hc and summary", 
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
-  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  saveRDS(
+    list(dists = ssd_distset(lnorm = "lnorm"), samples = FALSE),
+    "knobs.rds"
+  )
   tar_make_local()
   expect_length(tar_outdated_local(), 0L)
 
   # Flip the hc-only `samples` knob: only the hc slice changes, so only the hc
   # shard's command moves; the sample/fit slices (and commands) are untouched.
-  saveRDS(list(dists = "lnorm", samples = TRUE), "knobs.rds")
+  saveRDS(
+    list(dists = ssd_distset(lnorm = "lnorm"), samples = TRUE),
+    "knobs.rds"
+  )
   outdated <- tar_outdated_local()
   expect_true(all(c("hc_step_d_1", "summary") %in% outdated))
   expect_false(any(c("sample_step_d_1", "fit_step_d_1") %in% outdated))
@@ -782,14 +788,20 @@ test_that("task-shards: changing a fit-only knob leaves sample cached", {
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
-  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  saveRDS(
+    list(dists = ssd_distset(lnorm = "lnorm"), samples = FALSE),
+    "knobs.rds"
+  )
   tar_make_local()
   expect_length(tar_outdated_local(), 0L)
 
   # Flip the fit-only `dists` knob: the fit slice changes (and cascades into the
   # hc shard that reads the fit shard, and summary), but the sample slice does
   # not, so the sample shard stays cached.
-  saveRDS(list(dists = c("lnorm", "gamma"), samples = FALSE), "knobs.rds")
+  saveRDS(
+    list(dists = ssd_distset(set = c("lnorm", "gamma")), samples = FALSE),
+    "knobs.rds"
+  )
   outdated <- tar_outdated_local()
   expect_true(all(c("fit_step_d_1", "hc_step_d_1", "summary") %in% outdated))
   expect_false("sample_step_d_1" %in% outdated)
@@ -826,7 +838,10 @@ test_that("task-shards: factory per-task results equal the baseline (slice drops
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
-  saveRDS(list(dists = "lnorm", samples = FALSE), "knobs.rds")
+  saveRDS(
+    list(dists = ssd_distset(lnorm = "lnorm"), samples = FALSE),
+    "knobs.rds"
+  )
   tar_make_local()
 
   scenario <- ssd_define_scenario(
@@ -834,7 +849,7 @@ test_that("task-shards: factory per-task results equal the baseline (slice drops
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     partition_by = list(
       sample = c("dataset", "sim"),
       fit = c("dataset", "sim"),

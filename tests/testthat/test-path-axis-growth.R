@@ -39,7 +39,7 @@ test_that("path-axis-growth: appending a dataset builds only the new dataset's s
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     partition_by = growth_partition_by
   )
   expect_length(
@@ -94,7 +94,7 @@ test_that("path-axis-growth: growing nsim builds only the new sim cells' shards 
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm",
+    dists = ssd_distset(lnorm = "lnorm"),
     partition_by = growth_partition_by
   )
   expect_length(
@@ -126,5 +126,61 @@ test_that("path-axis-growth: growing nsim builds only the new sim cells' shards 
   expect_true("summary" %in% completed)
 
   expect_identical(unname(tools::md5sum(names(orig$md5))), unname(orig$md5))
+  expect_gt(growth_state()$summary_rows, orig$summary_rows)
+})
+
+test_that("path-axis-growth: adding a distribution set mints only the new hc shard and caches sample/fit/hc", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  file.copy(
+    test_path("fixtures", "distset-growth-targets.R"),
+    file.path(dir, "_targets.R")
+  )
+  withr::local_dir(dir)
+  saveRDS(numeric_dataset(), "data.rds")
+  # The initial union is {gamma, lnorm}; the set added below is a SUBSET of it,
+  # so the fit union is unchanged and no fit shard is touched (`distset` is an hc
+  # path axis only).
+  saveRDS(list(full = c("lnorm", "gamma")), "distsets.rds")
+  tar_make_local()
+  orig <- growth_state()
+
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(d = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = ssd_distset(full = c("lnorm", "gamma")),
+    partition_by = list(
+      sample = c("dataset", "sim"),
+      fit = c("dataset", "sim"),
+      hc = c("dataset", "sim", "distset")
+    )
+  )
+  expect_length(
+    grep("^hc_step_", orig$shards),
+    nrow(ssd_scenario_hc_shards(scenario))
+  )
+
+  # append a second set whose members ride on the unchanged union; re-source and
+  # `tar_make()` again into the same store/root
+  saveRDS(list(full = c("lnorm", "gamma"), lnorm = "lnorm"), "distsets.rds")
+  tar_make_local()
+  progress <- targets::tar_progress()
+  completed <- progress$name[progress$progress == "completed"]
+  skipped <- progress$name[progress$progress == "skipped"]
+  new_shards <- setdiff(completed, "summary")
+
+  # every sample/fit shard and the pre-existing hc shard (distset=full) skipped;
+  # only the new hc shard (distset=lnorm) built; summary re-ran over the union.
+  expect_setequal(skipped, orig$shards)
+  expect_true(all(grepl("^hc_step_.*_lnorm$", new_shards)))
+  expect_length(intersect(new_shards, orig$shards), 0L)
+  expect_false(any(grepl("^sample_step_|^fit_step_", new_shards)))
+  expect_true("summary" %in% completed)
+
+  # the cached shards' Parquets are byte-identical (no in-place rewrite)
+  expect_identical(unname(tools::md5sum(names(orig$md5))), unname(orig$md5))
+  # the summary grew over the enlarged set (the new pool's rows)
   expect_gt(growth_state()$summary_rows, orig$summary_rows)
 })

@@ -16,9 +16,9 @@ strict <- function(n) 0.1
 # task's axes (and so its `(seed, primer)` and `fit_id`) are identical in both
 # runs, so its row must re-emit byte-identical after the grow.
 min_pmix <- if (isTRUE(readRDS("grow.rds"))) {
-  list(loose = loose, strict = strict)
+  ssd_pmix(loose = loose, strict = strict)
 } else {
-  list(loose = loose)
+  ssd_pmix(loose = loose)
 }
 
 scenario <- ssd_define_scenario(
@@ -27,7 +27,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = 6L,
   min_pmix = min_pmix,
-  dists = "lnorm",
+  dists = ssd_distset(lnorm = "lnorm"),
   partition_by = list(
     sample = c("dataset", "sim"),
     fit = c("dataset", "sim"),

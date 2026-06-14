@@ -33,11 +33,16 @@ test_that("scenario-definition: minimal construction stores declarative fields",
       "nboot",
       "ci_method",
       "parametric",
-      "samples"
+      "samples",
+      "distsets"
     )
   )
   expect_identical(s$hc$ci, FALSE)
   expect_identical(s$nrow_max, 1000L)
+  # The default `dists` is a single-set `ssd_distset()`; the fit stores the
+  # union and the hc stores the named sets.
+  expect_identical(names(s$hc$distsets), "BCANZ")
+  expect_identical(s$fit$dists, sort(ssdtools::ssd_dists_bcanz()))
 })
 
 # ---- nrow_max (sample-level draw-size setting) -------------------------------
@@ -266,129 +271,69 @@ test_that("scenario-definition: stores min_pmix by name, not as a function", {
   expect_false(any(vapply(s$fit, is.function, logical(1))))
 })
 
-test_that("scenario-definition: min_pmix accepts names, functions, and lists", {
-  # character names -> stored verbatim, resolved from the caller's environment
+test_that("scenario-definition: min_pmix accepts an ssd_pmix() collection", {
   default <- function(n) 0.05
   strict <- function(n) 0.1
-  s_names <- ssd_define_scenario(
+  s <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
-    min_pmix = c("default", "strict")
+    min_pmix = ssd_pmix(default = default, strict = strict)
   )
-  expect_identical(s_names$fit$min_pmix, c("default", "strict"))
-  expect_identical(
-    s_names$min_pmix_fns,
-    list(default = default, strict = strict)
-  )
-  # bare function -> derived name
-  expect_identical(
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = ssdtools::ssd_min_pmix
-    )$fit$min_pmix,
-    "ssd_min_pmix"
-  )
-  # named list of functions -> list names
-  expect_identical(
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(strict = ssdtools::ssd_min_pmix)
-    )$fit$min_pmix,
-    "strict"
-  )
-  # unnamed list of functions -> derived names
-  expect_identical(
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(ssdtools::ssd_min_pmix)
-    )$fit$min_pmix,
-    "ssd_min_pmix"
-  )
+  expect_identical(s$fit$min_pmix, c("default", "strict"))
+  expect_identical(s$min_pmix_fns, list(default = default, strict = strict))
 })
 
-test_that("scenario-definition: min_pmix rejects non-function list elements", {
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(1)
-    )
-  })
-})
-
-test_that("scenario-definition: min_pmix rejects multi-argument functions", {
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = function(a, b) 0.05
-    )
-  })
-})
-
-test_that("scenario-definition: min_pmix rejects duplicate names", {
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(a = ssdtools::ssd_min_pmix, a = ssdtools::ssd_min_pmix)
-    )
-  })
-})
-
-test_that("scenario-accessors: a supplied min_pmix function is materialised under its name", {
+test_that("scenario-definition: a supplied ssd_pmix() function is materialised under its name", {
   my_fun <- function(n) 0.05
   s <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
-    min_pmix = my_fun
+    min_pmix = ssd_pmix(my_fun = my_fun)
   )
   expect_identical(s$fit$min_pmix, "my_fun")
   expect_identical(s$min_pmix_fns, list(my_fun = my_fun))
 })
 
-test_that("scenario-accessors: a min_pmix name-string resolves at construction", {
-  s <- ssd_define_scenario(
-    ssd_scenario_data(ssddata::ccme_boron),
-    nsim = 2L,
-    seed = 1L,
-    min_pmix = "ssd_min_pmix"
-  )
-  expect_identical(s$fit$min_pmix, "ssd_min_pmix")
-  expect_identical(s$min_pmix_fns[["ssd_min_pmix"]], ssdtools::ssd_min_pmix)
-})
-
-test_that("scenario-accessors: an unresolvable min_pmix name fails fast", {
+test_that("scenario-definition: min_pmix rejects a bare function", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
-      min_pmix = "no_such_fun"
+      min_pmix = ssdtools::ssd_min_pmix
     )
   })
 })
 
-test_that("scenario-accessors: a name resolving to a multi-arg function fails fast", {
-  two_arg <- function(a, b) 0.05
+test_that("scenario-definition: min_pmix rejects a plain list", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
-      min_pmix = "two_arg"
+      min_pmix = list(ssdtools::ssd_min_pmix)
     )
+  })
+})
+
+test_that("scenario-definition: min_pmix rejects a character vector of names", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = "ssd_min_pmix")
+  })
+})
+
+test_that("scenario-definition: an indirectly-supplied list value still aborts cleanly", {
+  # The form the old expression-inference path mishandled; it now aborts with the
+  # same actionable `ssd_pmix()` message, not an obscure internal frame.
+  data <- ssd_scenario_data(ssddata::ccme_boron)
+  fns <- list(ssdtools::ssd_min_pmix)
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = fns)
   })
 })
 
@@ -401,14 +346,14 @@ test_that("scenario-accessors: materialisation does not change fit-task primers"
     nsim = 1L,
     seed = 1L,
     nrow = 6L,
-    min_pmix = list(shared = f_a)
+    min_pmix = ssd_pmix(shared = f_a)
   )
   s_b <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 1L,
     nrow = 6L,
-    min_pmix = list(shared = f_b)
+    min_pmix = ssd_pmix(shared = f_b)
   )
   # The stored functions differ, but the name (the identity surface) does not.
   expect_false(identical(s_a$min_pmix_fns, s_b$min_pmix_fns))
