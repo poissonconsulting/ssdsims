@@ -20,19 +20,19 @@
 
 ## 2. Ragged task-set union + cell de-duplication
 
-- [ ] 2.1 Add an internal helper that unions the members' per-step task tables
+- [x] 2.1 Add an internal helper that unions the members' per-step task tables
       and de-duplicates by `<step>_id` (the cell key), tagging each task with the
       members that claim it (for later readout aggregation and summary filtering)
-- [ ] 2.2 Confirm a shared cell yields one shard target (plain `<step>_<cells>`
+- [x] 2.2 Confirm a shared cell yields one shard target (plain `<step>_<cells>`
       name, no prefix) whose command closes over the per-step slice, so two
       members' shared cells produce byte-identical target definitions
 
 ## 3. Naked addressing under `seed=` / `layout=`
 
-- [ ] 3.1 Add a results-dir helper extending `scenario_results_dir()` with a
+- [x] 3.1 Add a results-dir helper extending `scenario_results_dir()` with a
       `seed=<value>` level: `<root>/seed=<value>/layout=<hash(partition_by)>`;
       `ssd_scenario_targets()` keeps its `seed=`-free layout addressing unchanged
-- [ ] 3.2 Tests: distinct-seed members land under distinct `seed=` trees and share
+- [x] 3.2 Tests: distinct-seed members land under distinct `seed=` trees and share
       nothing; same-seed members share coincident cells
 
 ## 4. Per-overlap hc readout aggregation
@@ -53,43 +53,43 @@
 
 ## 5. `ssd_design_targets()` factory
 
-- [ ] 5.1 Add exported
+- [x] 5.1 Add exported
       `ssd_design_targets(design, ..., root = "results", upload = NULL, cue = NULL)`:
       `rlang::check_dots_empty()`, `chk_s3_class(design, "ssdsims_design")`, same
       `upload` validation as the single-scenario factory
-- [ ] 5.2 Assemble the de-duplicated union of sample/fit/hc shard targets under the
+- [x] 5.2 Assemble the de-duplicated union of sample/fit/hc shard targets under the
       `seed=`/`layout=` roots, with the per-overlap hc demand from §4
-- [ ] 5.3 With non-`NULL` `upload`, pair each (deduplicated) shard with one
+- [x] 5.3 With non-`NULL` `upload`, pair each (deduplicated) shard with one
       `upload_<step>` target addressed by the same `seed=`/`layout=`/`<cells>`
       path (no per-scenario prefix), keeping the factory free of network I/O
 
 ## 6. Per-scenario and combined summaries
 
-- [ ] 6.1 Per member, mint a `summary_<name>` target reading the shared shards its
+- [x] 6.1 Per member, mint a `summary_<name>` target reading the shared shards its
       tasks reference and filtering to that member's cells and `(proportion,
       est_method, ci, samples)` readout slice, writing its compact summary
-- [ ] 6.2 Add `ssd_summarise_design(summaries, path)` (exported, next to
+- [x] 6.2 Add `ssd_summarise_design(summaries, path)` (exported, next to
       `ssd_summarise()`): named character vector of per-member compact summary
       paths; lazily read each landed file via `duckplyr`, tag a literal `scenario`
       column, `union_all`, write `path` inside DuckDB (no R materialisation); skip
       missing paths (survivors union)
-- [ ] 6.3 Mint the single top-level `summary` target: an `edge_block()` over every
+- [x] 6.3 Mint the single top-level `summary` target: an `edge_block()` over every
       `summary_<name>` target, then `ssd_summarise_design()` to
       `<root>/summary.parquet`, `format = "file"`
 
 ## 7. Integration tests
 
-- [ ] 7.1 Ragged grid: a coarse + refinement design shares the overlapping cells
+- [x] 7.1 Ragged grid: a coarse + refinement design shares the overlapping cells
       (one target, byte-identical per-task results vs standalone) and builds the
       refinement's extra cells once; no duplicate target names
 - [ ] 7.2 Per-overlap aggregation: the `ci = FALSE, nsim = 1000` vs
       `ci = TRUE, nsim = 10` design bootstraps only the 10 overlapping sims; the
       `ci = FALSE` member's `est` for those sims equals its standalone value
-- [ ] 7.3 Distinct seeds: two members differing only in `seed` share nothing (each
+- [x] 7.3 Distinct seeds: two members differing only in `seed` share nothing (each
       under its own `seed=` tree)
 - [ ] 7.4 distset sharing: two members differing only in `distset` share all
       `sample`/`fit` shards, differing only in their `distset` hc cells
-- [ ] 7.5 Combined summary: `<root>/summary.parquet` unions the per-member filtered
+- [x] 7.5 Combined summary: `<root>/summary.parquet` unions the per-member filtered
       summaries with the `scenario` tag; with one summary missing, the survivor is
       unioned without aborting
 - [ ] 7.6 Upload shape: `upload = ssd_upload_dryrun()` pairs each deduplicated

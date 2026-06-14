@@ -41,6 +41,20 @@ reference:
   - ssd_summarise
   - scenario_results_dir
 
+- title: Designs (combining scenarios)
+  desc: >
+    Run several scenarios as one pipeline: a design is the de-duplicated union
+    of its members' grids (the irregular/ragged grid - finer detail over a
+    subset of the axes without the full cross-product), addressed by cell under
+    a `seed=`/`layout=` tree. Build a `ssd_design()`, turn it into one targets
+    pipeline with `ssd_design_targets()`, and fan in per-scenario and combined
+    summaries.
+  contents:
+  - ssd_design
+  - ssd_design_targets
+  - ssd_summarise_member
+  - ssd_summarise_design
+
 - title: Cloud upload
   desc: >
     Typed, self-validating upload destinations (`ssd_upload_azure()`,
