@@ -74,7 +74,7 @@
       partition_by = list(hc = c("dataset", "sim", "ci")))
     Condition
       Error in `ssd_define_scenario()`:
-      ! `partition_by$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"parametric"'.
+      ! `partition_by$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"distset"'.
 
 # scenario-definition: bundle rejects ci as an hc axis
 
@@ -83,7 +83,7 @@
       bundle = list(hc = "ci"))
     Condition
       Error in `ssd_define_scenario()`:
-      ! `bundle$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"parametric"'.
+      ! `bundle$hc` names unknown axis '"ci"'; valid axes for the `hc` step are '"dataset"', '"sim"', '"replace"', '"nrow"', '"rescale"', '"computable"', '"at_boundary_ok"', '"min_pmix"', ... and '"distset"'.
 
 # scenario-definition: partition_by rejects nrow under the sample step
 
@@ -275,6 +275,8 @@
           ci_method: weighted_samples
           parametric: TRUE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -282,7 +284,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 # scenario-definition: print is stable for multiple datasets and vector knobs
 
@@ -317,6 +319,8 @@
           ci_method: weighted_samples, MACL
           parametric: TRUE, FALSE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -324,7 +328,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 # scenario-definition: print is stable for generator and mixed inputs
 
@@ -355,6 +359,8 @@
           ci_method: weighted_samples
           parametric: TRUE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -362,7 +368,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 ---
 
@@ -393,6 +399,8 @@
           ci_method: weighted_samples
           parametric: TRUE
           samples: FALSE (setting)
+        distsets:
+          BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
         partition_by:
           sample: dataset, sim, replace
           fit: dataset, sim, nrow, rescale
@@ -400,7 +408,7 @@
         bundle:
           sample: 
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+          hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
 # scenario-definition: samples must be a flag
 

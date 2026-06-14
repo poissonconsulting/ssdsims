@@ -70,16 +70,19 @@ primary key and a \code{sample_id} foreign key referencing its parent sample tas
 
 \item \code{ssd_scenario_hc_tasks()}: Derive just the \code{hc} task table: cross each
 fit-task identity with each row of the scenario's \code{hc} argument grid
-(\code{nboot}, \code{ci_method}, \code{parametric}). The scenario's scalar \code{ci} flag and the
-\code{est_method} setting are applied uniformly to every hc row - neither is a
-cross-join axis nor an emitted column; the runners read \code{ci} from the
-scenario and every requested \code{est_method} is summarised within each task
-from its single bootstrap sample set. When \code{ci = FALSE} the bootstrap-only
-knobs (\code{nboot}, \code{ci_method},
-\code{parametric}) are canonically \code{NA} and there is no fan-out axis, so the grid
-is exactly one hc row per fit task; when \code{ci = TRUE} the grid fans out across
-\verb{nboot x ci_method x parametric}. Each row carries an \code{hc_id} primary key and
-a \code{fit_id} foreign key referencing its parent fit task.
+(\code{nboot}, \code{ci_method}, \code{parametric}) \strong{and with the scenario's declared
+distribution sets} (\code{distset}, the set \emph{names}). The scenario's scalar \code{ci}
+flag and the \code{est_method} setting are applied uniformly to every hc row -
+neither is a cross-join axis nor an emitted column; the runners read \code{ci}
+from the scenario and every requested \code{est_method} is summarised within each
+task from its single bootstrap sample set. When \code{ci = FALSE} the
+bootstrap-only knobs (\code{nboot}, \code{ci_method}, \code{parametric}) are canonically
+\code{NA}, leaving \code{distset} as the only fan-out, so the grid is exactly \code{D} hc
+rows per fit task (one per set); when \code{ci = TRUE} the grid fans out across
+\verb{distset x nboot x ci_method x parametric}. A single-set collection yields
+one \code{distset} value (one hc row per fit task when \code{ci = FALSE}). Each row
+carries an \code{hc_id} primary key, its \code{distset} name, and a \code{fit_id} foreign
+key referencing its parent (union) fit task.
 
 }}
 \examples{

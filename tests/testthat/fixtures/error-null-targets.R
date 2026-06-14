@@ -14,7 +14,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = 6L,
   min_pmix = ssd_pmix(boom = boom),
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 
 sample_targets <- tar_map(

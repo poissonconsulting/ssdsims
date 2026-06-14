@@ -18,7 +18,7 @@ ssd_define_scenario(
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   nrow_max = 1000L,
-  dists = ssdtools::ssd_dists_bcanz(),
+  dists = ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz()),
   est_method = "multi",
   proportion = 0.05,
   ci = FALSE,
@@ -85,7 +85,12 @@ simulation setting, not a cross-join axis. The effective per-dataset draw is
 the full permutation) and \code{nrow_max} rows when \code{replace = TRUE}; each \code{nrow}
 must not exceed the effective draw size.}
 
-\item{dists}{A character vector of the distribution names.}
+\item{dists}{An \code{\link[=ssd_distset]{ssd_distset()}} collection of one or more named distribution
+sets (pools model-averaged together to form one SSD). The fit step fits the
+\strong{union} of every set's members once; the hc step subsets that union fit
+per set and re-averages, so the set \strong{name} is an hc cross-join axis
+(\code{"distset"}) while individual distributions never fan out. A bare character
+vector or plain list aborts, pointing to \code{ssd_distset()}.}
 
 \item{est_method}{A string specifying whether to estimate directly from
 the model-averaged cumulative distribution function (\code{est_method = 'multi'}) or
@@ -136,8 +141,10 @@ columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: \code{sample} = \code{dataset}, \code{sim}, \code{replace}; \code{fit} adds
 \code{nrow}, \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix},
 \code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{nboot}, \code{ci_method},
-\code{parametric} (\code{ci} and \code{est_method} are hc simulation settings, not axes;
-\code{dists} is the fit-level simulation setting).
+\code{parametric}, \code{distset} (\code{ci} and \code{est_method} are hc simulation settings,
+not axes; \code{dists} is the fit-level simulation setting feeding the union, and
+\code{distset} - the set \emph{name} - is the hc axis over the union's post-fit
+subsets).
 \code{"nrow"} is rejected only for \code{sample} (the
 shared draw carries no \code{nrow} axis; the \code{fit} step truncates it inline), and
 is a valid path axis for \code{fit}/\code{hc}. Steps partition \strong{independently} -
@@ -219,16 +226,25 @@ are meaningless; passing any of them in that case is an error, so set
 }
 
 \section{\code{dists} and \code{est_method}}{
-\code{dists} and \code{est_method} are \strong{simulation settings}, not cross-join axes -
-they are absent from \code{task_axes("fit")}/\code{task_axes("hc")}, so they never
-multiply tasks or enter the per-task RNG primer. \code{dists} is the \emph{fit}-level
-setting: the whole character vector is handed to one \code{ssd_fit_dists()} call
-per fit task (fanning out per distribution would dissolve the model averaging
-that defines a fit). \code{est_method} is an \emph{hc}-level setting: every requested
-method is summarised from each hc task's \strong{single} bootstrap sample set
-rather than re-bootstrapping per method (the CI is est_method-invariant and
-the point \code{est} is analytical), so a vector \code{est_method} yields one row per
-method within a task without fanning out into separate tasks.
+\code{dists} is an \code{\link[=ssd_distset]{ssd_distset()}} collection: one or more \strong{distribution sets}
+(pools of distributions model-averaged together to form one SSD), each named.
+The \emph{fit} step fits the \strong{union} of every set's members once - the single
+model-averaged superset every pool is a subset of - so \code{scenario$fit$dists} is
+that union and \emph{individual} distributions still never fan out (an axis value
+is always a whole pool). The named sets ride on the hc grid
+(\code{scenario$hc$distsets}); the \emph{hc} step subsets that one union fit down to each
+set's members (\code{subset(fit, set, strict = FALSE)}) and re-averages, so
+\code{"distset"} \strong{is} an hc cross-join axis (\code{task_axes("hc")}) keyed by the set
+\strong{name} - several pools reuse one fit rather than re-fitting. A bare character
+vector or plain list aborts loudly, pointing to \code{ssd_distset()}.
+
+\code{est_method} is a \strong{simulation setting}, not a cross-join axis - it is absent
+from \code{task_axes("hc")}, so it never multiplies tasks or enters the per-task RNG
+primer. It is an \emph{hc}-level setting: every requested method is summarised from
+each hc task's \strong{single} bootstrap sample set rather than re-bootstrapping per
+method (the CI is est_method-invariant and the point \code{est} is analytical), so a
+vector \code{est_method} yields one row per method within a task without fanning out
+into separate tasks.
 }
 
 \examples{

@@ -74,7 +74,7 @@ test_that("scenario-accessors: baseline runner's default min_pmix is unchanged",
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   out1 <- ssd_run_scenario_baseline(scenario)
   out2 <- ssd_run_scenario_baseline(scenario)
@@ -94,7 +94,7 @@ test_that("scenario-accessors: each step's slice carries its runner's inputs", {
     ),
     nsim = 1L,
     seed = 1L,
-    dists = c("lnorm", "gamma")
+    dists = ssd_distset(set = c("lnorm", "gamma"))
   )
 
   sample_slice <- scenario_step_slice(scenario, "sample")
@@ -162,7 +162,7 @@ test_that("scenario-accessors: scenario_step_slice is deterministic and hashable
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   for (step in c("sample", "fit", "hc")) {
     a <- scenario_step_slice(scenario, step)

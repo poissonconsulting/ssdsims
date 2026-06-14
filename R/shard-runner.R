@@ -59,7 +59,7 @@
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
-#'   dists = "lnorm"
+#'   dists = ssd_distset(lnorm = "lnorm")
 #' )
 #' run <- ssd_run_scenario_shards(scenario)
 #' run$hc
