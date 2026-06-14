@@ -116,5 +116,6 @@ articles:
   - defining-a-scenario
   - cost-estimation
   - sharded-pipeline
+  - scenario-to-design
   - cluster-pipeline
   - cloud-upload

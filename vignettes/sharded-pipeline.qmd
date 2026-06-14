@@ -274,8 +274,21 @@ and asserting the per-task estimates are byte-identical. Whatever the driver ---
 single-core shards, or `targets` --- the results are the same; choose the one
 that fits the run.
 
+## Combining scenarios into a design
+
+A single scenario is one **regular** grid. To explore finer detail over a
+*subset* of the axes --- a coarse grid everywhere plus a dense refinement in one
+region --- without computing the full cross-product, union several scenarios into
+a **design** and run them as one pipeline with `ssd_design_targets()`. Members
+sharing a `seed` share their coincident shards (computed once), and the design
+fans in one combined `summary.parquet` with a `scenario` identity column. Growing
+a one-off run into a design is a one-line switch; see
+["From a Single Scenario to a Design"](scenario-to-design.html).
+
 ## See also
 
+- ["From a Single Scenario to a Design"](scenario-to-design.html) --- union
+  scenarios into one ragged pipeline that shares overlapping shards.
 - ["Defining a Scenario"](defining-a-scenario.html) --- the scenario object and
   the baseline runner.
 - ["Running on a SLURM Cluster"](cluster-pipeline.html) --- the same pipeline on

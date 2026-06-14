@@ -98,23 +98,23 @@
 
 ## 8. Documentation
 
-- [ ] 8.1 Roxygen for `ssd_design()` (the consistency contract), `ssd_design_targets()`
+- [x] 8.1 Roxygen for `ssd_design()` (the consistency contract), `ssd_design_targets()`
       (ragged union, naked `seed=`/`layout=` addressing, varying-seed support, the
       per-overlap readout aggregation and `ci`-routing, the `nrow_max` undefined-
       behaviour note, and the safe-but-recomputing flat→design note), and
       `ssd_summarise_design()`; regenerate `NAMESPACE`/`man/`
-- [ ] 8.2 Add a design section to `vignettes/sharded-pipeline.qmd` led by the
+- [x] 8.2 Add a design section to `vignettes/sharded-pipeline.qmd` led by the
       **irregular-grid** use case (finer detail in a subregion without the full
       cross-product), with setting-comparison secondary; pointer in `README.Rmd`;
       extend the `inst/targets-templates/` comments (or add a template — resolve the
       open question); update `_pkgdown.yml`
-- [ ] 8.3 Add a new `vignettes/scenario-to-design.qmd` walking the
+- [x] 8.3 Add a new `vignettes/scenario-to-design.qmd` walking the
       **single-scenario → design migration** end to end: a standalone
       `ssd_scenario_targets()` run, the one-line switch to
       `ssd_design_targets(ssd_design(scenario))` (byte-identical results, the
       safe-but-recomputing `seed=` note), then adding a refining member that reuses
       the cached cells; register it in `_pkgdown.yml`
-- [ ] 8.4 `GLOSSARY.md` *Design terms* entries (`scenario`/`design`/`study`);
+- [x] 8.4 `GLOSSARY.md` *Design terms* entries (`scenario`/`design`/`study`);
       `ROADMAP.md`: mark the entry in-flight and move to `## Done` on archive
 - [ ] 8.5 Format with `air`, run `devtools::check()`, and confirm the `task-shards`
       / `shard-runner` capabilities needed no delta (single-scenario factory and
