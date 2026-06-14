@@ -38,8 +38,9 @@ is also queued, ready to propose.
 <!-- What is actively being worked on this cycle. -->
 
 - ‼️⏳ [distset-hc-axis] Iwasaki.
-- ‼️⏳ [scenario-combine] **Blocked by distset-hc-axis**. Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline.
-- ‼️⏳ [cost-analysis-targets] **Blocked by scenario-combine**. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.
+- ‼️⏳ [content-addressed-shards] **Blocked by distset-hc-axis**. Make shard target names and storage paths a pure function of content (cells + per-step scalar discriminators `est_method`/`ci`/`nrow_max`; no scenario identity), and split `hc` into a content-addressed `draw` + RNG-free `summarise`. The foundation a design layer composes on; ships first. Supersedes `scenario-combine` (archived as reference).
+- ‼️⏳ [scenario-combine-v2] **Blocked by content-addressed-shards**. Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline — `ssd_design()` / `ssd_design_targets()` composing the content-addressed targets, so members share shards (exactly-once) and a scenario extends into a design without recomputation; combined summary keyed by partition coordinates (no `scenario` column). Replaces the archived `scenario-combine`.
+- ‼️⏳ [cost-analysis-targets] **Blocked by scenario-combine-v2**. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices (the derived scenario→selection mapping shared with `scenario-combine-v2`). Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.
 
 ## Next
 
@@ -117,6 +118,21 @@ is also queued, ready to propose.
 <!-- Durable decisions that shape the roadmap. The ground-truth design rationale
      still lives in TARGETS-DESIGN.md; this records only what redirects the plan. -->
 
+- **2026-06-14 — The design is split into addressing + a design layer;
+  `scenario-combine` is superseded, archived as reference.** The original
+  `scenario-combine` would have given each design member its own
+  `scenario=<name>` results tree and `<name>_` target prefix, recomputing every
+  shared shard once per member. Instead, shard addressing is made **content-pure**
+  first (`content-addressed-shards`: target names and storage paths are a pure
+  function of content — partition cells plus per-step scalar discriminators
+  `est_method`/`ci`/`nrow_max` — with no scenario identity, and `hc` split into a
+  content-addressed `draw` + RNG-free `summarise`), and the design layer
+  (`scenario-combine-v2`) then **composes** those targets so members share shards
+  by construction (exactly-once, extend-into-a-design without recomputation,
+  combined summary keyed by coordinates with membership derived). New chain:
+  `distset-hc-axis → content-addressed-shards → scenario-combine-v2`. The
+  archived `scenario-combine` (specs **not** synced) is kept for its
+  naming/validation design and decision trail.
 - **2026-06-07 — The `manifest` concept is parked, not removed.** The
   per-scenario manifest landed (`R/manifest.R`, #114) but has **no live
   consumer**: the shard runner deliberately does not depend on it, and its

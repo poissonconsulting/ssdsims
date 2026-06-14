@@ -212,11 +212,13 @@ design-runs across infrastructure, time, and software versions.
   used here in the **design-of-experiments** sense (the set of conditions to
   run); it is distinct from the *software*-design sense of `TARGETS-DESIGN.md`
   and the openspec `design.md` artifact. Each scenario is a member of the
-  design, addressed by its collection **name** (the `scenario=<name>` results
-  level and the `<name>_` target-name prefix); names enter addressing only,
-  never task identity, the **primer**, or any result value. The design's
-  results table is the combined `summary.parquet`, with a `scenario` identity
-  column.
+  design, **labelled** by its collection **name** — a selection label, **not**
+  addressing: shards are *content-addressed* (target names and storage paths are
+  a pure function of content, carrying no scenario identity), so members sharing
+  content share one shard. A name never enters a target name, a storage path,
+  task identity, the **primer**, or any result value. The design's results table
+  is the combined `summary.parquet`, keyed by partition coordinates; scenario
+  membership is a derived selection over those coordinates, not a stored column.
 - **study**: The whole investigation a design serves — the longitudinal
   aggregate that may span **multiple design-runs** executed on different
   infrastructure (laptop / cluster), at different times, or under different

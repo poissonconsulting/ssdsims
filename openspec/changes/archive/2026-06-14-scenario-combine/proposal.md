@@ -1,5 +1,13 @@
 # Proposal: scenario-combine
 
+> **ARCHIVED — superseded, not implemented (specs not synced).** This change's
+> design layer is rebuilt on content-pure addressing as `scenario-combine-v2`,
+> which composes the content-addressed targets from `content-addressed-shards`
+> instead of giving each member its own `scenario=<name>` tree and `<name>_`
+> prefix. The `ssd_design()` collection and the design *concept* here carry over
+> to v2; the per-scenario decoupling and the `scenario`-column summary do not.
+> Retained as reference for the naming/validation design and the decision trail.
+
 ## Why
 
 A simulation study routinely compares **simulation settings** — `dists`,
