@@ -40,6 +40,7 @@ is also queued, ready to propose.
 - ‼️🛠️ [distset-hc-axis] Iwasaki.
 - ‼️⏳ [scenario-combine] **Blocked by distset-hc-axis**. Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline.
 - ‼️⏳ [cost-analysis-targets] **Blocked by scenario-combine**. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.
+- ❗️🛠️ [cost-analysis-design] Roll design-level cost analysis up across an `ssd_design()`'s per-scenario result trees. **Phase A landed** (the collection-agnostic rollup seam — depends only on already-landed code); **Phase B blocked by scenario-combine + cost-analysis-targets** (the thin `ssdsims_design` adapter on the analyse/compare/recalibrate functions).
 
 ## Next
 

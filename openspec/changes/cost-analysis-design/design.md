@@ -51,6 +51,31 @@ proposal records this explicitly.
 
 ## Decisions
 
+### A collection-agnostic rollup seam lets the core land now (Phase A / Phase B)
+The design behaviour splits into a **seam** and an **adapter**. The seam is the
+load-bearing logic — combining per-member breakdowns into one with a `scenario`
+column, reducing to design totals, pooling measured frames into a host-aware
+recalibration, deriving per-member `scenario=<name>` addressing, and formatting
+the design breakdown — expressed over a *normalised* representation (a named set
+of members, each a `(scenario, results-root, scenario-analysis)` triple). The
+seam touches **no** unlanded symbol: it reuses `calibrate_coefficients()`,
+`calibrate_nrow_factor()`, `new_ssdsims_cost_calibration()`, `cost_cpu_info()`,
+`format_duration()`, and `scenario_results_dir()`, all already in the package.
+So the seam (Phase A) is implemented and unit-tested **now**, against fixtures and
+real `ssdsims_scenario` objects. The adapter (Phase B) is the thin
+`ssdsims_design` method that unpacks an `ssd_design()` into that representation —
+filling each member's `scenario`-level analysis via `ssd_analyse_cost(scenario)`
+and each prefix from `ssd_design_targets()`'s naming — and calls the seam.
+
+This is what makes "start now, complete on `scenario-combine`" real rather than
+cosmetic: the dependency gate sits entirely on the adapter, and the seam's tests
+pin the aggregation contract the adapter will satisfy. *Alternative considered:*
+one monolithic `ssdsims_design` method — rejected; it would couple every line to
+the unlanded `ssd_design()`/`ssd_analyse_cost()` and leave nothing buildable
+today. The Phase A formatter is a pure string helper, **not** an S3 method on the
+sibling-owned `ssdsims_cost_analysis` class, so Phase A cannot collide with
+`cost-analysis-targets` at merge.
+
 ### Dispatch on `ssdsims_design`, reuse the scenario method per member
 The three functions gain an `ssdsims_design` branch (S3 method or a class check
 at the top) that loops the design's named members, calls the existing
@@ -114,11 +139,14 @@ existing print scaffolding rather than adding a parallel object.
 
 ## Risks / Trade-offs
 
-- **[Hard dependency on two unlanded changes]** → This change cannot be
-  implemented or merged before `cost-analysis-targets` and `scenario-combine`
-  both land; the proposal and tasks state this, and the verify step will find the
-  tasks unimplementable until then. The ordering is the cost; there is no code
-  workaround.
+- **[Hard dependency on two unlanded changes — confined to Phase B]** → The
+  `ssdsims_design` adapter (Phase B) cannot merge before `cost-analysis-targets`
+  and `scenario-combine` land. The **seam (Phase A) has no such gate** and lands
+  now; the phasing is exactly the mitigation. The residual risk is that the
+  siblings' final object shapes drift from what the seam assumes (e.g. the
+  breakdown columns or the `ssd_design()` accessor) — the seam's inputs are
+  documented and narrow, and Phase B is a thin adapter, so a drift is a localised
+  adapter edit, not a seam rewrite.
 - **[The combined-summary fast path couples to two siblings' choices]** (either
   could stop carrying hc timings on the compact/combined summary) → treated as a
   fast path with a tested per-member-glob fallback of identical totals, so a
@@ -137,13 +165,21 @@ existing print scaffolding rather than adding a parallel object.
 
 ## Migration Plan
 
-Additive: the three exported functions gain an `ssdsims_design` method; no
-signature or behaviour change to the scenario-level path, no on-disk change.
-Lands strictly after `cost-analysis-targets` and `scenario-combine`. Order inside
-the change: (1) the analyse design method (rollup + combined-summary fast path +
-design-aware resolver); (2) compare and recalibrate design methods; (3)
-design-aware printing; (4) the vignette design section and docs. Rollback is
-reverting the added methods; nothing else is touched.
+Additive and **phased**.
+
+**Phase A (now):** the rollup seam as internal helpers in
+`R/cost-analysis-design.R` with fixture/real-scenario tests. No exports, no
+`man/`, no `_pkgdown.yml`, no S3 on a sibling-owned class — so it merges cleanly
+ahead of the siblings and changes no public behaviour. This is what this PR ships.
+
+**Phase B (on `scenario-combine` + `cost-analysis-targets`):** the
+`ssdsims_design` methods on `ssd_analyse_cost()`/`ssd_compare_cost()`/
+`ssd_calibrate_cost_from_run()` (each unpacking the design and delegating to the
+seam), the combined-summary fast path, the prefixed-name store resolver join,
+design-aware `format`/`print`, the vignette design section, and doc regeneration.
+
+Rollback is reverting the added file (Phase A) or the added methods (Phase B);
+the scenario-level path and on-disk layout are untouched throughout.
 
 ## Open Questions
 

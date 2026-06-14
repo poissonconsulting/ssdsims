@@ -1,5 +1,27 @@
 ## ADDED Requirements
 
+### Requirement: The design rollup is collection-agnostic
+The design-level aggregation SHALL be defined over a normalised representation —
+a named set of members, each a `(scenario, results-root)` pair plus that member's
+scenario-level cost analysis — independent of how the collection was constructed.
+The aggregation SHALL therefore be expressible and testable without an
+`ssd_design()` object: combining per-member breakdowns into one breakdown with a
+leading `scenario` column, reducing to design totals (sum of member totals; max
+of member longest tasks), pooling per-member measured sweep frames into a
+host-aware recalibration, and deriving each member's `scenario=<name>` results
+root and `<name>_` target-name prefix SHALL all be functions of the normalised
+members alone. The `ssdsims_design` methods SHALL be a thin adapter that unpacks
+an `ssd_design()` into this representation and delegates to the aggregation; they
+SHALL NOT re-implement it.
+
+#### Scenario: Aggregation works on the normalised representation
+- **WHEN** a named set of per-member scenario analyses and roots is supplied directly (no `ssd_design()` object)
+- **THEN** the combined breakdown SHALL carry one `scenario` value per member, the design totals SHALL equal the sum/maximum over members, and the derived per-member addressing SHALL be `scenario=<name>` roots with `<name>_` prefixes
+
+#### Scenario: Pooled recalibration needs no design object
+- **WHEN** per-member measured sweep frames sharing one `.host` are pooled directly
+- **THEN** the result SHALL be an `ssdsims_cost_calibration` usable by `ssd_estimate_cost()`, and a set of frames spanning more than one `.host` SHALL abort listing the hosts unless one is selected
+
 ### Requirement: Observed cost analysis accepts a design
 `ssd_analyse_cost()` SHALL accept an `ssdsims_design` (the `ssd_design()`
 collection from the `scenario-combine` capability) and return an
