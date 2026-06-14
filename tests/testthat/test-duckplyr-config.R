@@ -321,6 +321,22 @@ test_that("constrained configuration leaves results byte-identical", {
     nboot = 5,
     samples = TRUE
   )
+  # The fit/hc shards and the summaries carry run-specific `.start`/`.end`/`.host`
+  # timing columns (cost-analysis), so they are no longer file-identical across
+  # two runs; the byte-identity contract is over the *result* columns. The
+  # `sample` layer carries no timing and stays file-level deterministic.
+  drop_timing <- function(df) {
+    df[, setdiff(names(df), c(".start", ".end", ".host")), drop = FALSE]
+  }
+  read_step <- function(dir, step, key) {
+    df <- drop_timing(ssd_read_parquet(file.path(
+      dir,
+      step,
+      "**",
+      "part.parquet"
+    )))
+    df[do.call(order, df[key]), , drop = FALSE] |> `rownames<-`(NULL)
+  }
   run_once <- function(dir) {
     run <- ssd_run_scenario_shards(scenario, dir = dir)
     ssd_summarise(
@@ -330,15 +346,23 @@ test_that("constrained configuration leaves results byte-identical", {
       file.path(dir, "summary.parquet"),
       path_with_samples = file.path(dir, "summary-samples.parquet")
     )
-    shards <- sort(list.files(
-      dir,
+    sample_files <- sort(list.files(
+      file.path(dir, "sample"),
       pattern = "part[.]parquet$",
       recursive = TRUE
     ))
+    compact <- drop_timing(ssd_read_parquet(file.path(dir, "summary.parquet")))
     list(
-      shards = shards,
-      hashes = unname(tools::md5sum(file.path(dir, shards))),
-      compact = unname(tools::md5sum(file.path(dir, "summary.parquet"))),
+      sample_files = sample_files,
+      sample_md5 = unname(tools::md5sum(file.path(
+        dir,
+        "sample",
+        sample_files
+      ))),
+      fit = read_step(dir, "fit", "fit_id"),
+      hc = read_step(dir, "hc", c("hc_id", "dist")),
+      compact = compact[do.call(order, compact[c("hc_id", "dist")]), ] |>
+        `rownames<-`(NULL),
       full = ssd_read_parquet(file.path(dir, "summary-samples.parquet"))
     )
   }
@@ -354,11 +378,15 @@ test_that("constrained configuration leaves results byte-identical", {
     run_once(dir2)
   )
 
-  expect_identical(constrained$shards, default_knobs$shards)
-  expect_identical(constrained$hashes, default_knobs$hashes)
+  # sample layer: timing-free, so still byte-identical at the file level
+  expect_identical(constrained$sample_files, default_knobs$sample_files)
+  expect_identical(constrained$sample_md5, default_knobs$sample_md5)
+  # fit/hc/summary: result columns (timing excluded) identical across configs
+  expect_identical(constrained$fit, default_knobs$fit)
+  expect_identical(constrained$hc, default_knobs$hc)
   expect_identical(constrained$compact, default_knobs$compact)
-  full1 <- default_knobs$full[order(default_knobs$full$hc_id), ]
-  full2 <- constrained$full[order(constrained$full$hc_id), ]
+  full1 <- drop_timing(default_knobs$full)[order(default_knobs$full$hc_id), ]
+  full2 <- drop_timing(constrained$full)[order(constrained$full$hc_id), ]
   rownames(full1) <- rownames(full2) <- NULL
   expect_identical(full2, full1)
 })

@@ -80,6 +80,17 @@ reference:
   - ssd_cost_calibration
   - ssd_cost_calibration_default
 
+- title: Cost analysis
+  desc: >
+    Read a completed run's observed compute back from the per-task timings its
+    fit/hc shards carry: attribute it to the scenario axes, compare it against
+    the prediction, and recalibrate the cost model from the measured durations.
+    All read-only - no pipeline, fit, bootstrap, or RNG.
+  contents:
+  - ssd_analyse_cost
+  - ssd_compare_cost
+  - ssd_calibrate_cost_from_run
+
 - title: Scenario accessors
   desc: >
     A technical detail of the pipelines: isolate an already-materialised value
@@ -115,6 +126,7 @@ articles:
   contents:
   - defining-a-scenario
   - cost-estimation
+  - cost-analysis
   - sharded-pipeline
   - scenario-to-design
   - cluster-pipeline
