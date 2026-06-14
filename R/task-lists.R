@@ -216,6 +216,11 @@ ssd_run_scenario_baseline <- function(scenario) {
   # are reproducible and order-independent for a fixed `scenario$seed`.
   local_dqrng_backend()
 
+  # Per-task timing on the fit/hc result tibbles (cost-analysis): the host is
+  # constant for the run; `.start`/`.end` bracket each task body so the baseline
+  # carries the same observed-cost columns as the sharded runners.
+  host <- cost_cpu_info()
+
   # --- sample step: one seeded draw per (dataset, sim, replace), sized by the
   # scenario's fixed `nrow_max` setting resolved against the dataset (the
   # effective draw size). The primer is keyed by the sample identity only (no
@@ -258,13 +263,20 @@ ssd_run_scenario_baseline <- function(scenario) {
     \(sample_id, nrow) utils::head(sample_out[[sample_id]], nrow)
   )
   fit_args$primer <- task_primers(fit_tbl, "fit")
-  fit_tbl$fits <- purrr::pmap(
-    fit_args,
-    fit_data_task_primer,
-    scenario = scenario,
-    dists = scenario$fit$dists,
-    seed = seed
-  )
+  fit_timed <- purrr::pmap(fit_args, function(...) {
+    t_start <- utc_now()
+    fit <- fit_data_task_primer(
+      ...,
+      scenario = scenario,
+      dists = scenario$fit$dists,
+      seed = seed
+    )
+    list(fit = fit, .start = t_start, .end = utc_now())
+  })
+  fit_tbl$fits <- purrr::map(fit_timed, "fit")
+  fit_tbl$.start <- do.call(c, purrr::map(fit_timed, ".start"))
+  fit_tbl$.end <- do.call(c, purrr::map(fit_timed, ".end"))
+  fit_tbl$.host <- host
   fit_out <- rlang::set_names(fit_tbl$fits, fit_tbl$fit_id)
 
   # --- hc step: seed then estimate hc for each fit against its hc-grid row ---
@@ -282,15 +294,22 @@ ssd_run_scenario_baseline <- function(scenario) {
     \(nm) scenario_distset(scenario, nm)
   )
   hc_args$primer <- task_primers(hc_tbl, "hc")
-  hc_tbl$hc <- purrr::pmap(
-    hc_args,
-    hc_data_task_primer,
-    ci = scenario$hc$ci,
-    proportion = scenario$hc$proportion,
-    est_method = scenario$hc$est_method,
-    samples = scenario$hc$samples,
-    seed = seed
-  )
+  hc_timed <- purrr::pmap(hc_args, function(...) {
+    t_start <- utc_now()
+    hc <- hc_data_task_primer(
+      ...,
+      ci = scenario$hc$ci,
+      proportion = scenario$hc$proportion,
+      est_method = scenario$hc$est_method,
+      samples = scenario$hc$samples,
+      seed = seed
+    )
+    list(hc = hc, .start = t_start, .end = utc_now())
+  })
+  hc_tbl$hc <- purrr::map(hc_timed, "hc")
+  hc_tbl$.start <- do.call(c, purrr::map(hc_timed, ".start"))
+  hc_tbl$.end <- do.call(c, purrr::map(hc_timed, ".end"))
+  hc_tbl$.host <- host
 
   list(sample = sample_tbl, fit = fit_tbl, hc = hc_tbl)
 }

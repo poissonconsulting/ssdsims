@@ -126,6 +126,24 @@ run-derived source and date.
 `ssdsims_cost_estimate` shape (difftime totals, `breakdown` tibble, provenance)
 with `format`/`print` methods reusing `format_duration()`.
 
+### Design-level rollup folds in here, gated on `scenario-combine`
+The design-level forms of the three functions (accepting an `ssdsims_design` and
+aggregating across its per-scenario result trees) were drafted as a standalone
+`cost-analysis-design` change and are **folded into this change** rather than
+shipped separately: they belong to the same `cost-analysis` capability and reuse
+this change's scenario-level functions, resolver, and objects. They depend on
+`scenario-combine`'s `ssd_design()` / `<name>_` prefix / `scenario=<name>` roots /
+combined summary, so they are the last tasks (group 9) and land after
+`scenario-combine`. The aggregation is defined as a **collection-agnostic seam**
+(combine breakdowns, reduce to design totals, pool measured frames host-aware,
+derive per-member addressing) that the thin `ssdsims_design` methods delegate to;
+a working, unit-tested prototype of that seam — written against already-landed
+code, so independent of `ssd_design()` — is kept as proof of work under
+`exploration/design-rollup-seam/` (excluded from the package build) to be promoted
+into `R/` when the dependencies land, rather than re-derived. *Rejected
+alternative:* keep `cost-analysis-design` standalone — it forked one capability
+across two changes and shipped a seam ahead of its only consumer.
+
 ## Risks / Trade-offs
 
 - [Forced recompute of a fit/hc shard with identical results now cascades:

@@ -104,6 +104,22 @@ growth still apply under the pin), or if it previously errored. Force a
 refresh of chosen shards with \code{targets::tar_invalidate()} (or by deleting
 their Parquet), overriding the pin (section 8.4). The default (\code{NULL}) is
 \code{targets}' standard cue.
+}
+
+\section{Volatile fit/hc file hashes (cost-analysis timings)}{
+
+The \code{fit}/\code{hc} shards carry per-task \code{.start}/\code{.end}/\code{.host} timing columns
+(the \code{cost-analysis} instrumentation), so a \code{fit}/\code{hc} shard's \strong{file hash is
+no longer deterministic across recomputes}: a forced recompute that yields
+identical \emph{results} still writes different bytes (a fresh wall-clock), so its
+dependent \code{hc}/\code{summary} targets re-run and any paired \verb{upload_<step>}
+re-ships. This is scoped to \code{fit}/\code{hc}; \code{sample} shards carry no timing columns
+and stay byte-deterministic. Routine caching is unaffected (a cache hit is not
+a recompute, so a cached shard's bytes are unchanged); the cost lands only on a
+\emph{forced} refresh (\code{tar_invalidate()}, a deleted Parquet) or a code-edit
+recompute - and the §8.3 \code{cue = tar_cue(depend = FALSE)} pin covers the latter.
+Per-task \emph{results} remain byte-identical to the baseline oracle (the
+shard-runner contract narrows to the result columns, timing excluded).
 
 The \code{head(sample, nrow)} truncation stays folded into the \code{fit} step (no
 materialised \code{data} shard): a \code{fit} shard is keyed by \code{fit_id}, which includes
