@@ -58,11 +58,11 @@ breakdown by `ci_method` × `nboot` keyed exactly like the estimate’s:
 analysis <- ssd_analyse_cost(scenario, root = run$dir)
 analysis
 #> <ssdsims_cost_analysis>  (observed, serial-equivalent; measured)
-#>   total compute:  16.4 s
-#>   longest task:   3.7 s
+#>   total compute:  17.0 s
+#>   longest task:   4.0 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples       nboot   1000     4 tasks  14.1 s
-#>     weighted_samples       nboot    100     4 tasks  2.3 s
+#>     weighted_samples       nboot   1000     4 tasks  14.6 s
+#>     weighted_samples       nboot    100     4 tasks  2.4 s
 #>   host(s):        AMD EPYC 7763 64-Core Processor
 ```
 
@@ -102,8 +102,8 @@ reality:
 
 ssd_compare_cost(scenario, root = run$dir)
 #> <ssdsims_cost_comparison>  (predicted vs observed)
-#>   total compute:  predicted 22.4 s | observed 16.4 s | obs/pred 0.73x
-#>   longest task:   predicted 6.7 s | observed 3.7 s | obs/pred 0.55x
+#>   total compute:  predicted 22.4 s | observed 17.0 s | obs/pred 0.76x
+#>   longest task:   predicted 6.7 s | observed 4.0 s | obs/pred 0.61x
 ```
 
 A ratio far from `1` means the shipped default calibration does not
@@ -128,11 +128,11 @@ from_run <- ssd_calibrate_cost_from_run(scenario, root = run$dir)
 # The run-derived calibration drives the estimator like any other.
 ssd_estimate_cost(scenario, calibration = from_run)
 #> <ssdsims_cost_estimate>  (ballpark, serial)
-#>   total compute:  16.4 s
-#>   longest task:   2.1 s
+#>   total compute:  17.0 s
+#>   longest task:   2.2 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples   nboot   1000     4 tasks  8.2 s
-#>     weighted_samples   nboot    100     4 tasks  8.2 s
+#>     weighted_samples   nboot   1000     4 tasks  8.6 s
+#>     weighted_samples   nboot    100     4 tasks  8.5 s
 #>   calibration:    AMD EPYC 7763 64-Core Processor | R 4.6.0 | ssdtools 2.6.0.9002 | 2026-06-14
 #>   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.
 ```
@@ -143,6 +143,45 @@ never silently pools timings from different CPUs: a run whose shards
 span more than one `.host` (a cluster of mixed node types) requires an
 explicit `host =`, or the function aborts listing the hosts it found.
 The result’s provenance records that it was derived from a run.
+
+## Across a design
+
+A
+[design](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md)
+([`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md))
+runs several scenarios as one pipeline. The same three functions accept
+a design and **roll the observed cost up across its members**:
+`ssd_analyse_cost(design, root = ...)` returns a breakdown with a
+leading `scenario` column and design totals, `ssd_compare_cost(design)`
+places the design’s summed prediction beside it, and
+`ssd_calibrate_cost_from_run(design)` pools every member’s measured
+durations into one host-aware calibration.
+
+``` r
+
+design <- ssd_design(coarse = scenario, dense = other_scenario)
+
+# Per-scenario observed breakdown + design totals (read from the run's results
+# root; the combined <root>/summary.parquet is used as a one-read fast path when
+# present, else each member is read from its seed group's shared shards).
+ssd_analyse_cost(design, root = "results")
+
+# Predicted (Σ members) vs observed, with ratios.
+ssd_compare_cost(design, root = "results")
+
+# One calibration pooled across all members (host-aware).
+ssd_calibrate_cost_from_run(design, root = "results")
+```
+
+Because
+[`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md)
+writes one **shared** `seed=/layout=` tree per seed group — a cell
+shared by several members is computed once — the design total is
+**per-member accounting**: a shared cell counts toward each member that
+includes it (it answers “what does each scenario cost”), so the design
+total can exceed the design’s once-built shared compute. As at the
+scenario level, recalibration never silently pools timings across CPUs:
+a design spanning more than one `.host` requires an explicit `host =`.
 
 ## The loop
 
