@@ -127,41 +127,26 @@ requesting different distribution sets share the union fit and differ only by th
 `distset` cell — `dists` never forks a fit shard. (Members must name shared
 distsets consistently, per the contract.)
 
-### Decision: per-overlap hc readout aggregation (`union` / `any`), not global
+### Decision: defer hc readout aggregation to a follow-up; require agreement here
 
-The four **non-axis** hc settings are aggregated **per shared hc cell, over only
-the members whose task set contains that cell**: `proportion` and `est_method`
-are **unioned**, `ci` and `samples` reduced with **`any()`**. A cell only one
-member reaches keeps that member's smaller demand, so the expensive bootstrap is
-done only where a `ci = TRUE` member actually has tasks — e.g. `ci = FALSE,
-nsim = 1000` beside `ci = TRUE, nsim = 10` bootstraps the 10 overlapping sims and
-leaves the other 990 as cheap `ci = FALSE`. Mechanically: union the members' hc
-tasks (each tagged with its source scenario and demand), group by the hc cell
-axes, reduce the demand columns.
+This change ships the **irregular-grid primary driver**. The per-overlap hc
+readout aggregation — reconciling members that differ in the four non-axis hc
+settings (`proportion`, `est_method`, `ci`, `samples`) by `union`/`any` over a
+shared cell — is the *secondary* setting-comparison use, and it is split into the
+follow-up `hc-readout-aggregation` change (its design works through the per-cell
+reduction and the `ci` NA-collapse routing).
 
-The draw-shaping axes `nboot`/`ci_method`/`parametric` (and `distset`) **stay cell
-axes** — they are in the primer, so folding them into the demand would move the
-RNG stream and break byte-identity. The aggregated set is therefore exactly the
-four settings that are *not* axes.
+Here, `design_reference_scenario()` instead **requires agreement** on those four
+settings within a seed group (alongside `nrow_max` and the fit `dists` union) via
+`require_uniform()`, **aborting** with a message that points to the follow-up when
+they differ. This is the safe conservative posture for naked cell addressing: a
+loud abort beats silently writing divergent bytes to a shared cell. Members may
+still differ freely in the **axes** (`nrow`, `dataset`, `sim`, `distset`, the fit
+grid) — exactly the ragged coverage this change exists to deliver.
 
-**`ci`'s NA-collapse** is the one wrinkle: a `ci = FALSE` task collapses
-`nboot`/`ci_method`/`parametric` to `NA`, so its cell differs from a `ci = TRUE`
-task at the same sim. The point `est` is analytical and bootstrap-config-invariant
-(`hc_collapse_est_methods()`'s `analytical_est`), so a `ci = FALSE` task's `est`
-is served by a coincident `ci = TRUE` shard at the same `(fit-id, distset)` when
-one exists, and only mints its own `ci = FALSE` shard where no `ci = TRUE` member
-overlaps. The set of computed hc shards is thus: every `ci = TRUE` member's cells,
-plus `ci = FALSE` cells with no overlapping `ci = TRUE` shard — each carrying the
-unioned `est_method`/`proportion` and `any` `samples` over the members it serves.
-
-Byte-identity holds: a served `ci = FALSE` `est` equals the standalone `ci = FALSE`
-value (same analytical computation), and a `ci = TRUE` member's CI uses its own
-cell's `(nboot, ci_method, parametric)` primer. The per-shard `ssd_run_hc_step()`
-is unchanged — it already consumes vector `est_method`/`proportion` and scalar
-`ci`/`samples` off its slice; the factory hands it the per-cell aggregated demand.
-
-*Alternative considered:* global `any(ci)` / `union` across the whole design —
-rejected; it bootstraps cells no `ci = TRUE` member reaches (the 990 wasted sims).
+*Alternative considered:* implement the aggregation in this change — deferred to
+keep `scenario-combine` focused on the primary driver and shippable, with the
+intricate `ci`-routing landed separately and tested in isolation.
 
 ### Decision: single-scenario → design migration is a supported, documented path
 

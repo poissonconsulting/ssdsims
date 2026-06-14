@@ -59,18 +59,16 @@ same machinery also serves.
   union fit and differ only by `distset` cell — no `dists` fork.
 - **`nrow_max` is a uniform draw-size guard; differing/changing it across members
   is documented as undefined behaviour** (no aggregation). Keep it uniform.
-- **Per-overlap hc readout aggregation (not global).** The four non-axis hc
-  settings are reduced **per shared hc cell, over only the members that touch that
-  cell**: **`union()` over `proportion` and `est_method`**, **`any()` over `ci`
-  and `samples`**. A cell only one member reaches keeps that member's (smaller)
-  demand — so e.g. `ci = FALSE, nsim = 1000` beside `ci = TRUE, nsim = 10`
-  bootstraps only the 10 overlapping sims, leaving 990 cheap. `nboot`/`ci_method`/
-  `parametric`/`distset` stay **cell axes** (they are in the primer; aggregating
-  them would move the RNG stream and break byte-identity). A `ci = FALSE` task's
-  analytical `est` is served by a coincident `ci = TRUE` shard at the same
-  `(fit-id, distset)` when one exists, else by its own `ci = FALSE` shard. This
-  reuses `ssdtools::ssd_hc()`'s vectorized `proportion`/`est_method` and the
-  package's `hc_collapse_est_methods()` — **no ssdtools refactor**.
+- **hc readout aggregation is deferred to a follow-up change.** This change ships
+  the **irregular-grid primary driver** (ragged axis coverage). The *secondary*
+  setting-comparison use — reconciling members that differ in the four non-axis hc
+  settings (`proportion`, `est_method`, `ci`, `samples`) by per-overlap
+  aggregation — is split into the follow-up `hc-readout-aggregation` change. Here,
+  seed-group members must **agree** on those four settings (and on `nrow_max` and
+  the fit `dists` union); the factory **aborts** with a pointer to the follow-up
+  when they differ, rather than silently writing divergent bytes to a shared cell.
+  Members may differ freely in the **axes** (`nrow`, `dataset`, `sim`, `distset`,
+  the fit grid) — the ragged grid this change delivers.
 - **New `ssd_design_targets(design, ..., root, upload, cue)` target factory** —
   emits the de-duplicated union of shard targets plus the combined summary; one
   `tar_make()` runs the whole design under one scheduler/controller.

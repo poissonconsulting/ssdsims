@@ -35,21 +35,13 @@
 - [x] 3.2 Tests: distinct-seed members land under distinct `seed=` trees and share
       nothing; same-seed members share coincident cells
 
-## 4. Per-overlap hc readout aggregation
+## 4. hc readout agreement (aggregation deferred to `hc-readout-aggregation`)
 
-- [ ] 4.1 Group the unioned hc tasks by the hc cell axes
-      (`nboot`/`ci_method`/`parametric`/`distset` + fit identity) and reduce the
-      four non-axis settings over the claiming members: `union` `proportion`/
-      `est_method`, `any` `ci`/`samples`
-- [ ] 4.2 Implement the `ci` NA-collapse routing: the computed hc shards are every
-      `ci = TRUE` member's cells plus the `ci = FALSE` cells with no overlapping
-      `ci = TRUE` shard at the same `(fit-id, distset)`; a `ci = FALSE` task's
-      analytical `est` reads from the coincident `ci = TRUE` shard when present
-- [ ] 4.3 Verify `ssd_run_hc_step()` consumes the per-cell aggregated demand
-      unchanged (vector `est_method`/`proportion`, scalar `ci`/`samples`), reusing
-      `hc_collapse_est_methods()` and `ssdtools::ssd_hc()` — no ssdtools edit
-- [ ] 4.4 Confirm byte-identity: a served `ci = FALSE` `est` equals the standalone
-      `ci = FALSE` value; a `ci = TRUE` member's CI uses its own cell primer
+- [x] 4.1 `require_uniform()` the four non-axis hc settings (`proportion`,
+      `est_method`, `ci`, `samples`) — plus `nrow_max` and the fit `dists` union —
+      across a seed group, aborting with a message pointing to the follow-up
+      `hc-readout-aggregation` change when members differ (the per-overlap
+      aggregation is out of scope here; members may still differ in the axes)
 
 ## 5. `ssd_design_targets()` factory
 
@@ -82,9 +74,9 @@
 - [x] 7.1 Ragged grid: a coarse + refinement design shares the overlapping cells
       (one target, byte-identical per-task results vs standalone) and builds the
       refinement's extra cells once; no duplicate target names
-- [ ] 7.2 Per-overlap aggregation: the `ci = FALSE, nsim = 1000` vs
-      `ci = TRUE, nsim = 10` design bootstraps only the 10 overlapping sims; the
-      `ci = FALSE` member's `est` for those sims equals its standalone value
+- [x] 7.2 Readout disagreement aborts: a seed group whose members differ in a
+      non-axis hc setting (e.g. `ci`) aborts with the pointer to the follow-up
+      (the per-overlap aggregation test moves to `hc-readout-aggregation`)
 - [x] 7.3 Distinct seeds: two members differing only in `seed` share nothing (each
       under its own `seed=` tree)
 - [ ] 7.4 distset sharing: two members differing only in `distset` share all

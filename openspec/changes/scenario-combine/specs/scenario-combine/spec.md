@@ -128,38 +128,28 @@ to coincide).
 - **THEN** the documentation SHALL state that shard coincidence is not guaranteed
   and `nrow_max` SHOULD be held uniform
 
-### Requirement: hc readout settings are aggregated per overlapping cell
-The design factory SHALL aggregate the four **non-axis** hc settings **per shared
-hc cell, over only the members whose task set contains that cell**: `proportion`
-and `est_method` SHALL be **unioned** and `ci` and `samples` reduced with
-**`any()`**. A cell reached by only one member SHALL keep that member's demand, so
-the bootstrap SHALL run only where a `ci = TRUE` member has tasks. The draw-shaping
-axes `nboot`/`ci_method`/`parametric` and `distset` SHALL remain cell axes (in the
-primer) and SHALL NOT be aggregated. A `ci = FALSE` task's analytical `est` SHALL
-be served by a coincident `ci = TRUE` shard at the same `(fit-id, distset)` when
-one exists, and only otherwise mint a standalone `ci = FALSE` shard. The set of
-computed hc shards SHALL be every `ci = TRUE` member's cells plus the `ci = FALSE`
-cells with no overlapping `ci = TRUE` shard, each carrying the unioned
-`est_method`/`proportion` and `any` `samples` over the members it serves. This
-SHALL reuse `ssdtools::ssd_hc()`'s vectorized `proportion`/`est_method` and
-`hc_collapse_est_methods()` with no change to ssdtools or the per-shard hc runner,
-and SHALL preserve byte-identity (the served `est` equals the standalone
-`ci = FALSE` value; a `ci = TRUE` member's CI uses its own cell primer).
+### Requirement: Members in a seed group must agree on hc readout settings
+Members of a design that share a `seed` SHALL agree on the four non-axis hc
+settings (`proportion`, `est_method`, `ci`, `samples`) — as well as on `nrow_max`
+and the fit `dists` union — and the factory SHALL **abort** with an informative
+error when they differ, rather than silently writing divergent bytes to a shared
+cell. This change ships the ragged-grid (irregular-grid) primary driver and defers
+the per-overlap hc readout aggregation to the follow-up `hc-readout-aggregation`
+change, to which the abort message SHALL point. Members MAY still differ freely in
+the **axes** (`nrow`, `dataset`, `sim`, `distset`, the fit grid), which is the
+irregular-grid use this change delivers.
 
-#### Scenario: Bootstrap only the overlapping cells
-- **WHEN** a design unions `ci = FALSE, nsim = 1000` and `ci = TRUE, nsim = 10`
-  (otherwise shareable, same `seed`)
-- **THEN** the hc shards for the 10 overlapping sims SHALL be computed with
-  `ci = TRUE`, the remaining 990 SHALL be computed `ci = FALSE`, and the
-  `ci = FALSE` member SHALL read its (analytical, ci-invariant) `est` for the
-  overlapping sims from the `ci = TRUE` shards
+#### Scenario: Differing hc readouts abort with a pointer to the follow-up
+- **WHEN** `ssd_design_targets(design)` is called for a design whose seed-group
+  members differ in `proportion`, `est_method`, `ci`, or `samples`
+- **THEN** it SHALL abort with an informative error stating the per-overlap
+  aggregation is not yet supported
 
-#### Scenario: Readout-only differences share the hc cell
-- **WHEN** two same-`seed`, same-`dists` members at a coincident hc cell differ
-  only in `proportion`/`est_method`/`ci`/`samples`
-- **THEN** that cell SHALL be one shard carrying the union of their `proportion`/
-  `est_method` and `any` of `ci`/`samples`, and each member's summary SHALL contain
-  exactly its requested readout rows
+#### Scenario: Differing axis coverage is accepted
+- **WHEN** seed-group members agree on the hc readout settings but differ in axis
+  coverage (e.g. different `nrow` or `distset` values)
+- **THEN** `ssd_design_targets(design)` SHALL build the ragged union of their cells
+  without aborting
 
 ### Requirement: Single-scenario runs migrate to a design
 The package SHALL support migrating a single-scenario `ssd_scenario_targets()` run
