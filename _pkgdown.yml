@@ -126,6 +126,7 @@ articles:
   contents:
   - defining-a-scenario
   - cost-estimation
+  - cost-analysis
   - sharded-pipeline
   - scenario-to-design
   - cluster-pipeline
