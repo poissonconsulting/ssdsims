@@ -133,6 +133,26 @@ template).
 - [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md)
   : Layout-keyed Results Root for a Scenario
 
+## Designs (combining scenarios)
+
+Run several scenarios as one pipeline: a design is the de-duplicated
+union of its members’ grids (the irregular/ragged grid - finer detail
+over a subset of the axes without the full cross-product), addressed by
+cell under a `seed=`/`layout=` tree. Build a
+[`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md),
+turn it into one targets pipeline with
+[`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md),
+and fan in per-scenario and combined summaries.
+
+- [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md)
+  : Assemble and Validate a Design of Scenarios
+- [`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md)
+  : Build the Targets Pipeline for a Design
+- [`ssd_summarise_member()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise_member.md)
+  : Summarise One Design Member from the Shared hc Shards
+- [`ssd_summarise_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise_design.md)
+  : Combine Per-scenario Summaries into One Design Summary
+
 ## Cloud upload
 
 Typed, self-validating upload destinations
@@ -231,6 +251,8 @@ backend (targets path) and L’Ecuyer-CMRG sub-streams (legacy path).
   Cost](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.md):
 - [Running a Sharded
   Pipeline](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md):
+- [From a Single Scenario to a
+  Design](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md):
 - [Running on a SLURM
   Cluster](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md):
 - [Uploading Shards to Cloud

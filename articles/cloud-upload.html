@@ -38,6 +38,7 @@
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
+    <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
   </ul>
@@ -184,7 +185,7 @@
 <span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/ssd_upload_shard.html">ssd_upload_shard</a></span><span class="op">(</span><span class="va">shard</span>, <span class="va">dryrun</span><span class="op">)</span>, <span class="va">shard</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dry-run upload: skipped</span></span>
-<span><span class="co">#&gt; "/tmp/RtmpMfzE5D/ssdsims-shards-3bcf4f8f1188/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
+<span><span class="co">#&gt; "/tmp/RtmpeQ5mBO/ssdsims-shards-3ecc75400d4b/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
 <p>That is the whole upload DAG — the probe, the paired <code>upload_&lt;step&gt;</code> targets, and the per-shard ship — exercised end to end with no network and no credentials.</p>

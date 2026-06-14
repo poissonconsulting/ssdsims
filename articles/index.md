@@ -8,6 +8,8 @@
   Cost](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.md):
 - [Running a Sharded
   Pipeline](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md):
+- [From a Single Scenario to a
+  Design](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md):
 - [Running on a SLURM
   Cluster](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md):
 - [Uploading Shards to Cloud

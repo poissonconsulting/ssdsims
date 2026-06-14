@@ -38,6 +38,7 @@
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
+    <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
   </ul>
@@ -188,7 +189,7 @@
 <code class="sourceCode R"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">run</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_shard_run&gt;</span></span>
-<span><span class="co">#&gt;   dir: /tmp/RtmpWAH4bz/ssdsims-shards-3c63284385cf</span></span>
+<span><span class="co">#&gt;   dir: /tmp/RtmprfRxXA/ssdsims-shards-3f6f4f12ee30</span></span>
 <span><span class="co">#&gt;   sample shards: 2</span></span>
 <span><span class="co">#&gt;   fit    shards: 8</span></span>
 <span><span class="co">#&gt;   hc     shards: 2</span></span></code></pre></div>
@@ -266,9 +267,14 @@
 <p><code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code> mints one <code>format = "file"</code> target per shard (targets passes the shard <em>path</em>, not its value, between steps) with <code>error = "null"</code> (a failing whole shard records its error and goes <code>NULL</code> without aborting the run — the rest still build and the summary unions the survivors), and wires step ordering with <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_combine.html" class="external-link">tar_combine()</a></code> barriers (a directory read carries no automatic dependency edge).</p>
 <p>Because a shard’s Hive-path depth depends on <code>partition_by</code>/<code>bundle</code>, replaying with a <em>changed</em> split must not leave stale-granularity shards beside the new ones (a <code>**</code> glob would union both). The two drivers handle this differently: <code>run.R</code> (targets) writes each layout under its own root, <code>scenario_results_dir(scenario)</code> = <code>results/layout=&lt;hash&gt;/</code>, so a split change is a fresh tree; <code>run-serial.R</code> (single core) instead <strong>owns</strong> its <code>dir</code> and clears each step subtree on every run.</p>
 <p>Because both drivers <code>source("scenario.R")</code> — the same study — and <code>partition_by</code> is a free re-layout, <code>run-serial.R</code> finishes by reading back its own <code>summary.parquet</code> and the targets <code>scenario_results_dir(scenario)</code> summary and asserting the per-task estimates are byte-identical. Whatever the driver — baseline, single-core shards, or <code>targets</code> — the results are the same; choose the one that fits the run.</p>
+</section><section class="level2"><h2 id="combining-scenarios-into-a-design">Combining scenarios into a design<a class="anchor" aria-label="anchor" href="#combining-scenarios-into-a-design"></a>
+</h2>
+<p>A single scenario is one <strong>regular</strong> grid. To explore finer detail over a <em>subset</em> of the axes — a coarse grid everywhere plus a dense refinement in one region — without computing the full cross-product, union several scenarios into a <strong>design</strong> and run them as one pipeline with <code><a href="../reference/ssd_design_targets.html">ssd_design_targets()</a></code>. Members sharing a <code>seed</code> share their coincident shards (computed once), and the design fans in one combined <code>summary.parquet</code> with a <code>scenario</code> identity column. Growing a one-off run into a design is a one-line switch; see <a href="scenario-to-design.html">“From a Single Scenario to a Design”</a>.</p>
 </section><section class="level2"><h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
 </h2>
 <ul>
+<li>
+<a href="scenario-to-design.html">“From a Single Scenario to a Design”</a> — union scenarios into one ragged pipeline that shares overlapping shards.</li>
 <li>
 <a href="defining-a-scenario.html">“Defining a Scenario”</a> — the scenario object and the baseline runner.</li>
 <li>

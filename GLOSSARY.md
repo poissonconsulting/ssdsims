@@ -216,11 +216,14 @@ software versions.
   section tightens: a scenario is one **arm** of a study, not the study.
 - **design**: A named set of scenarios run as **one pipeline** — one
   `targets` store, one `tar_make()`, one provenance/execution context —
-  built with `ssd_design()` and turned into targets by
-  `ssd_design_targets()`. Where a single scenario is one regular grid, a
-  design unions several into the full, possibly **non-regular** (ragged)
-  experimental design: the union of regular sub-grids is exactly how an
-  irregular design region is expressed. “Design” is used here in the
+  built with
+  [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md)
+  and turned into targets by
+  [`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md).
+  Where a single scenario is one regular grid, a design unions several
+  into the full, possibly **non-regular** (ragged) experimental design:
+  the union of regular sub-grids is exactly how an irregular design
+  region is expressed. “Design” is used here in the
   **design-of-experiments** sense (the set of conditions to run); it is
   distinct from the *software*-design sense of `TARGETS-DESIGN.md` and
   the openspec `design.md` artifact. Each scenario is a member of the

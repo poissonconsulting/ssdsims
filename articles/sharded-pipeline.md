@@ -169,7 +169,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmpWAH4bz/ssdsims-shards-3c63284385cf
+#>   dir: /tmp/RtmprfRxXA/ssdsims-shards-3f6f4f12ee30
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -330,8 +330,26 @@ estimates are byte-identical. Whatever the driver — baseline,
 single-core shards, or `targets` — the results are the same; choose the
 one that fits the run.
 
+## Combining scenarios into a design
+
+A single scenario is one **regular** grid. To explore finer detail over
+a *subset* of the axes — a coarse grid everywhere plus a dense
+refinement in one region — without computing the full cross-product,
+union several scenarios into a **design** and run them as one pipeline
+with
+[`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md).
+Members sharing a `seed` share their coincident shards (computed once),
+and the design fans in one combined `summary.parquet` with a `scenario`
+identity column. Growing a one-off run into a design is a one-line
+switch; see [“From a Single Scenario to a
+Design”](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md).
+
 ## See also
 
+- [“From a Single Scenario to a
+  Design”](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md)
+  — union scenarios into one ragged pipeline that shares overlapping
+  shards.
 - [“Defining a
   Scenario”](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
   — the scenario object and the baseline runner.

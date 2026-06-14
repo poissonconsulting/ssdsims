@@ -39,6 +39,7 @@ network I/O, records a skip, and returns the local path."></head><body>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
+    <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
   </ul></li>
@@ -125,8 +126,8 @@ backends are added.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.create</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
 <span class="r-in"><span><span class="fu">ssd_upload_shard</span><span class="op">(</span><span class="va">path</span>, <span class="fu"><a href="ssd_upload_azure.html">ssd_upload_dryrun</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Dry-run upload: skipped "/tmp/Rtmpy9KWNI/file37095cf5a829.parquet".</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmpy9KWNI/file37095cf5a829.parquet"</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Dry-run upload: skipped "/tmp/RtmplKv2AU/file39a5646dcc6e.parquet".</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmplKv2AU/file39a5646dcc6e.parquet"</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

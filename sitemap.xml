@@ -14,6 +14,7 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/articles/index.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/authors.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/index.html</loc></url>
@@ -33,6 +34,8 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration_default.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_design.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.html</loc></url>
@@ -52,6 +55,8 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise_design.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise_member.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise_uploaded.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.html</loc></url>
