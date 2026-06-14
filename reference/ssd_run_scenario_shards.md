@@ -78,5 +78,5 @@ scenario <- ssd_define_scenario(
 )
 run <- ssd_run_scenario_shards(scenario)
 run$hc
-#> [1] "/tmp/RtmpMluuv4/ssdsims-shards-36e83f3ff63f/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/RtmpwNMlII/ssdsims-shards-36d5b2d6441/hc/dataset=ccme_boron/sim=1/part.parquet"
 ```

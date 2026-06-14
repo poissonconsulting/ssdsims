@@ -43,22 +43,6 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- ❗️🚀 \[scenario-input-types\] Accept the generator inputs
-  [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-  handles (`fitdists`, `tmbfit`, a generator function, a function-name
-  string) in the declarative path via a new `ssd_gen(..., .n, .seed)`
-  that materialises each once to a reproducible `Conc` tibble (name as
-  the dqrng stream, required `.seed`/`.n`); `ssd_data()` is renamed
-  [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
-  (escaping the `ssdtools::ssd_data(x)` clash) and
-  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
-  accepts only that collection, so the constructor stays RNG-free. Deps
-  `task-primer` / `local-dqrng-state` **and** `task-rng-postcheck`
-  ([`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
-  reuses its `dqrng_usable()` gate + `chk_dqrng_backend_intact()`
-  witness — postcheck’s helpers and the dqrng-as-`Suggests` move landed
-  physically alongside this change); gates `migrate-public-api`.
-  Name-only regeneration is the deferred `dataset-provenance`.
 - ‼️⏳ \[cost-analysis-targets\] Improve the cost estimation by
   analyzing an existing targets run. Includes tools to query the targets
   store for run times of the various targets and mapping this back to
@@ -113,7 +97,7 @@ artifacts yet is also queued, ready to propose.
 - 🐢 \[cleanup-lecuyer\] Remove the L’Ecuyer-CMRG helpers and `_seed`
   shims once the public step functions are off the L’Ecuyer path.
   Blocked on `migrate-public-api` + `mixed-code-lockin`.
-- 😀 \[error-call-origin\] Audit user-facing functions so validation
+- 😀⏳ \[error-call-origin\] Audit user-facing functions so validation
   errors report the calling function as the origin, never an internal
   frame. Proposed; independent.
 - 😀 \[tidyverse-rlang-alignment\] Sweep the rest of `R/` to prefer
@@ -126,7 +110,7 @@ artifacts yet is also queued, ready to propose.
   are passed in signature order, as the
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   pass already did. Independent.
-- 😀 \[cleanup-as-ssd-data\] Add a public `as_ssd_data()` coercing the
+- 😀⏳ \[cleanup-as-ssd-data\] Add a public `as_ssd_data()` coercing the
   already-named input forms into a validated `ssd_data()` collection.
   Proposed.
 
@@ -162,31 +146,114 @@ artifacts yet is also queued, ready to propose.
 
 ## Done
 
-- ✅ 2026-06-02 \[ssd-define-scenario\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-ssd-define-scenario/)
-  — Public S3 scenario constructor (data-frame input only).
-- ✅ 2026-06-02 \[task-list-loop-baseline\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-task-list-loop-baseline/)
-  — Three per-step task lists + a three-`pmap()`-loop runner baseline.
-- ✅ 2026-06-02 \[task-list-loop-baseline-fold\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-task-list-loop-baseline-fold/)
-  — Fold the `data` step into `fit` (`head(sample, nrow)` inline); steps
-  become `sample` / `fit` / `hc`.
-- ✅ 2026-06-02 \[dqrng-init\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-dqrng-init/)
-  — Add `dqrng`; `dqRNGkind("pcg64")` + method (un)registration on
-  load/unload.
-- ✅ 2026-06-02 \[dqrng-primer-arg\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-dqrng-primer-arg/)
-  — Rename the
-  [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
+- ✅ 2026-06-14 \[scenario-input-types\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-scenario-input-types/)
+  — Accept the generator inputs
+  [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
+  handles (`fitdists`, `tmbfit`, a generator function, a function-name
+  string) in the declarative path via a new `ssd_gen(..., .n, .seed)`
+  that materialises each once to a reproducible `Conc` tibble (name as
+  the dqrng stream, required `.seed`/`.n`); `ssd_data()` is renamed
+  [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+  (escaping the `ssdtools::ssd_data(x)` clash) and
+  [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
+  accepts only that collection, so the constructor stays RNG-free. Deps
+  `task-primer` / `local-dqrng-state` **and** `task-rng-postcheck`
+  ([`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+  reuses its `dqrng_usable()` gate + `chk_dqrng_backend_intact()`
+  witness — postcheck’s helpers and the dqrng-as-`Suggests` move landed
+  physically alongside this change); gates `migrate-public-api`.
+  Name-only regeneration is the deferred `dataset-provenance`.
+- ✅ 2026-06-10 \[duckplyr-config\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-duckplyr-config/)
+  — Pipeline-scoped duckplyr/DuckDB configuration: a
+  `local_duckplyr_config()` scope on the step runners,
+  [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md),
+  and
+  [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
+  pins a single thread and a 1GB default `memory_limit` (env knobs
+  `SSDSIMS_DUCKDB_THREADS`/`SSDSIMS_DUCKDB_MEMORY_LIMIT`), relaxes
+  `preserve_insertion_order` (scope-wide; per-write COPY options cannot
+  carry it), and the full summary writes byte-budgeted row groups
+  (`samples_row_group_bytes`). Folds in \[duckplyr-message\]: the scope
+  silences duckplyr’s fallback telemetry
+  (`DUCKPLYR_FALLBACK_COLLECT=0`/`DUCKPLYR_FALLBACK_AUTOUPLOAD=0`)
+  (#151).
+- ✅ 2026-06-07 \[blob-storage-format\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-blob-storage-format/)
+  — Benchmark the `fit`-object Parquet encoding; keep the interim
+  ASCII-`VARCHAR` `encode_obj()` and tighten the `shard-runner` spec (no
+  code change).
+- ✅ 2026-06-07 \[dists-simulation-setting\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-dists-simulation-setting/)
+  — Reconcile `dists` as a fit-level simulation setting (not a
+  cross-join axis) across spec, signature, and docs.
+- ✅ 2026-06-07 \[est-method-setting\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-est-method-setting/)
+  — Reclassify `est_method` from an hc axis to an hc-level simulation
+  setting (~3× hc cost reduction; CIs re-baseline).
+- ✅ 2026-06-07 \[cost-estimation\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cost-estimation/)
+  —
+  [`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md)
   /
-  [`with_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
-  `state` argument to `primer`, fixing the GLOSSARY misnomer.
-- ✅ 2026-06-02 \[local-dqrng-state\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-local-dqrng-state/)
-  — `local_dqrng_state(seed, primer)` scoped seed/stream wrapper with
-  `withr`-style restore.
+  [`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md):
+  a per-task cost model that predicts a scenario’s ballpark total and
+  longest single task read-only.
+- ✅ 2026-06-07 \[manifest\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-manifest/)
+  — Per-scenario JSON manifest writer/reader/recorder/assembler (#114).
+  *Subsequently un-exported — see Decisions / `manifest-revival`.*
+- ✅ 2026-06-07 \[task-rng-postcheck\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-task-rng-postcheck/)
+  — Per-task RNG-backend postcondition: each `*_data_task_primer()`
+  verifies dqrng still held the `user_unif_rand` slot for the whole
+  body, aborting on a foreign-RNG hijack. dqrng moved `Imports` →
+  `Suggests` with a `dqrng_usable()` gate and a
+  `chk_dqrng_backend_intact()` witness. *Helpers landed physically
+  alongside `scenario-input-types` (which depends on them).*
+- ✅ 2026-06-07 \[cluster-pipeline\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cluster-pipeline/)
+  — Editable SLURM `crew.cluster` targets template
+  (`inst/targets-templates/cluster/`) with a standalone
+  connectivity/worker preflight and a zero-to-running-job guide (#115).
+  *Real-SLURM end-to-end run (tasks 4.1/4.2) remains a documented
+  manual/lab step.*
+- ✅ 2026-06-07 \[cloud-upload\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cloud-upload/)
+  — Typed, self-validating upload destinations on the runner
+  ([`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
+  /
+  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md) +
+  class-dispatched generics); BREAKING removal of `scenario$upload`
+  (#114/#129).
+- ✅ 2026-06-07 \[dual-summary-outputs\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-dual-summary-outputs/)
+  — Optional `path_with_samples` full summary retaining the
+  `dists`/`samples` list-columns, emitted iff `scenario$hc$samples` is
+  `TRUE` (#140).
+- ✅ 2026-06-05 \[hive-partitioning\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-hive-partitioning/)
+  — Wire the Hive write/read into the `targets` branches and pin the
+  content-hash invalidation model (per-child Option-3 edges over the m:n
+  fan-in).
+- ✅ 2026-06-05 \[step-scenario-slice\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-step-scenario-slice/)
+  — Project each step’s command onto its minimal scenario slice (and the
+  `sample` slice per dataset), so a step-irrelevant edit leaves the
+  other steps’ shards cached.
+- ✅ 2026-06-05 \[path-axis-growth\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-path-axis-growth/)
+  — Assert end-to-end that appending a dataset / growing `nsim` mints
+  only new shards and caches the rest.
+- ✅ 2026-06-05 \[shard-atomic-rewrite\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-shard-atomic-rewrite/)
+  — Inner-axis growth (a new `min_pmix`) atomically rewrites the
+  affected shards byte-stably, leaving prior rows byte-identical.
+- ✅ 2026-06-05 \[scalar-ci-flag\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-scalar-ci-flag/)
+  — Demote `ci` from a grid axis to a scalar flag and retire the §1.2
+  `ci = FALSE` collapse.
 - ✅ 2026-06-04 \[task-primer\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-04-task-primer/)
   — `task_primer(params)` 64-bit hash with NA-as-`INT_MIN` encoding.
@@ -214,97 +281,31 @@ artifacts yet is also queued, ready to propose.
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-04-hc-samples/)
   — Opt-in scalar `samples` knob retaining `ssd_hc()`’s per-row
   bootstrap draws (output retention only, RNG-neutral).
-- ✅ 2026-06-05 \[hive-partitioning\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-hive-partitioning/)
-  — Wire the Hive write/read into the `targets` branches and pin the
-  content-hash invalidation model (per-child Option-3 edges over the m:n
-  fan-in).
-- ✅ 2026-06-05 \[step-scenario-slice\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-step-scenario-slice/)
-  — Project each step’s command onto its minimal scenario slice (and the
-  `sample` slice per dataset), so a step-irrelevant edit leaves the
-  other steps’ shards cached.
-- ✅ 2026-06-05 \[path-axis-growth\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-path-axis-growth/)
-  — Assert end-to-end that appending a dataset / growing `nsim` mints
-  only new shards and caches the rest.
-- ✅ 2026-06-05 \[shard-atomic-rewrite\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-shard-atomic-rewrite/)
-  — Inner-axis growth (a new `min_pmix`) atomically rewrites the
-  affected shards byte-stably, leaving prior rows byte-identical.
-- ✅ 2026-06-05 \[scalar-ci-flag\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-05-scalar-ci-flag/)
-  — Demote `ci` from a grid axis to a scalar flag and retire the §1.2
-  `ci = FALSE` collapse.
-- ✅ 2026-06-07 \[blob-storage-format\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-blob-storage-format/)
-  — Benchmark the `fit`-object Parquet encoding; keep the interim
-  ASCII-`VARCHAR` `encode_obj()` and tighten the `shard-runner` spec (no
-  code change).
-- ✅ 2026-06-07 \[dists-simulation-setting\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-dists-simulation-setting/)
-  — Reconcile `dists` as a fit-level simulation setting (not a
-  cross-join axis) across spec, signature, and docs.
-- ✅ 2026-06-07 \[est-method-setting\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-est-method-setting/)
-  — Reclassify `est_method` from an hc axis to an hc-level simulation
-  setting (~3× hc cost reduction; CIs re-baseline).
-- ✅ 2026-06-07 \[cost-estimation\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cost-estimation/)
-  —
-  [`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md)
+- ✅ 2026-06-02 \[ssd-define-scenario\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-ssd-define-scenario/)
+  — Public S3 scenario constructor (data-frame input only).
+- ✅ 2026-06-02 \[task-list-loop-baseline\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-task-list-loop-baseline/)
+  — Three per-step task lists + a three-`pmap()`-loop runner baseline.
+- ✅ 2026-06-02 \[task-list-loop-baseline-fold\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-task-list-loop-baseline-fold/)
+  — Fold the `data` step into `fit` (`head(sample, nrow)` inline); steps
+  become `sample` / `fit` / `hc`.
+- ✅ 2026-06-02 \[dqrng-init\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-dqrng-init/)
+  — Add `dqrng`; `dqRNGkind("pcg64")` + method (un)registration on
+  load/unload.
+- ✅ 2026-06-02 \[dqrng-primer-arg\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-dqrng-primer-arg/)
+  — Rename the
+  [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
   /
-  [`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md):
-  a per-task cost model that predicts a scenario’s ballpark total and
-  longest single task read-only.
-- ✅ 2026-06-07 \[manifest\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-manifest/)
-  — Per-scenario JSON manifest writer/reader/recorder/assembler (#114).
-  *Subsequently un-exported — see Decisions / `manifest-revival`.*
-- ✅ 2026-06-07 \[task-rng-postcheck\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/task-rng-postcheck/)
-  — Per-task RNG-backend postcondition: each `*_data_task_primer()`
-  verifies dqrng still held the `user_unif_rand` slot for the whole
-  body, aborting on a foreign-RNG hijack. dqrng moved `Imports` →
-  `Suggests` with a `dqrng_usable()` gate and a
-  `chk_dqrng_backend_intact()` witness. *Helpers landed physically
-  alongside `scenario-input-types` (which depends on them); the change
-  directory is not yet archived.*
-- ✅ 2026-06-07 \[cluster-pipeline\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cluster-pipeline/)
-  — Editable SLURM `crew.cluster` targets template
-  (`inst/targets-templates/cluster/`) with a standalone
-  connectivity/worker preflight and a zero-to-running-job guide (#115).
-  *Real-SLURM end-to-end run (tasks 4.1/4.2) remains a documented
-  manual/lab step.*
-- ✅ 2026-06-07 \[cloud-upload\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cloud-upload/)
-  — Typed, self-validating upload destinations on the runner
-  ([`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
-  /
-  [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md) +
-  class-dispatched generics); BREAKING removal of `scenario$upload`
-  (#114/#129).
-- ✅ 2026-06-07 \[dual-summary-outputs\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-dual-summary-outputs/)
-  — Optional `path_with_samples` full summary retaining the
-  `dists`/`samples` list-columns, emitted iff `scenario$hc$samples` is
-  `TRUE` (#140).
-- ✅ 2026-06-10 \[duckplyr-config\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/duckplyr-config/)
-  — Pipeline-scoped duckplyr/DuckDB configuration: a
-  `local_duckplyr_config()` scope on the step runners,
-  [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md),
-  and
-  [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
-  pins a single thread and a 1GB default `memory_limit` (env knobs
-  `SSDSIMS_DUCKDB_THREADS`/`SSDSIMS_DUCKDB_MEMORY_LIMIT`), relaxes
-  `preserve_insertion_order` (scope-wide; per-write COPY options cannot
-  carry it), and the full summary writes byte-budgeted row groups
-  (`samples_row_group_bytes`). Folds in \[duckplyr-message\]: the scope
-  silences duckplyr’s fallback telemetry
-  (`DUCKPLYR_FALLBACK_COLLECT=0`/`DUCKPLYR_FALLBACK_AUTOUPLOAD=0`)
-  (#151). *The change directory is not yet physically archived.*
+  [`with_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
+  `state` argument to `primer`, fixing the GLOSSARY misnomer.
+- ✅ 2026-06-02 \[local-dqrng-state\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-local-dqrng-state/)
+  — `local_dqrng_state(seed, primer)` scoped seed/stream wrapper with
+  `withr`-style restore.
 
 ## Decisions
 
