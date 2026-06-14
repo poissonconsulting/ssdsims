@@ -99,8 +99,7 @@
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
 <span>  rescale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">FALSE</span>, <span class="cn">TRUE</span><span class="op">)</span>,</span>
-<span>  dists <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lnorm"</span>, <span class="st">"gamma"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
+<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span>set <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lnorm"</span>, <span class="st">"gamma"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">scenario</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_scenario&gt;</span></span>
 <span><span class="co">#&gt;   seed:     42</span></span>
@@ -116,7 +115,7 @@
 <span><span class="co">#&gt;     min_pmix: ssd_min_pmix</span></span>
 <span><span class="co">#&gt;     range_shape1: {0.05, 20}</span></span>
 <span><span class="co">#&gt;     range_shape2: {0.05, 20}</span></span>
-<span><span class="co">#&gt;     dists: lnorm, gamma (setting)</span></span>
+<span><span class="co">#&gt;     dists: gamma, lnorm (setting)</span></span>
 <span><span class="co">#&gt;   hc grid:</span></span>
 <span><span class="co">#&gt;     est_method: multi (setting)</span></span>
 <span><span class="co">#&gt;     proportion: 0.05 (setting)</span></span>
@@ -125,6 +124,8 @@
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
 <span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
+<span><span class="co">#&gt;   distsets:</span></span>
+<span><span class="co">#&gt;     set: lnorm, gamma</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
 <span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
 <span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
@@ -132,7 +133,7 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span></code></pre></div>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span></span></code></pre></div>
 </div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows, per step, the <code>partition_by</code> (across-shards) path axes and the <code>bundle</code> (within-shard) inner axes. The default coarsens downstream: <code>fit</code> shards on <code>(dataset, sim, nrow, rescale)</code>, while <code>hc</code> shards only on <code>(dataset, sim)</code>. Steps partition <strong>independently</strong> — there is no cross-step constraint — so an <code>hc</code> shard reads <em>several</em> <code>fit</code> shards and a <code>fit</code> shard can read <em>several</em> <code>sample</code> shards. That <strong>m:n</strong> relationship is resolved when the parent shards are read back, not by restricting <code>partition_by</code>.</p>
 <p>The stored <code>partition_by</code> is the per-step path list (the <code>bundle</code>/inner axes shown in <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> are its complement):</p>
@@ -141,22 +142,60 @@
 <code class="sourceCode R"><span><span class="va">scenario</span><span class="op">$</span><span class="va">partition_by</span><span class="op">$</span><span class="va">fit</span></span>
 <span><span class="co">#&gt; [1] "dataset" "sim"     "nrow"    "rescale"</span></span></code></pre></div>
 </div>
-</section><section class="level2"><h2 id="run-it-single-core-over-shards">Run it single core, over shards<a class="anchor" aria-label="anchor" href="#run-it-single-core-over-shards"></a>
+<section class="level3"><h3 id="distset-bundled-by-default-promotable-to-the-path">
+<code>distset</code>: bundled by default, promotable to the path<a class="anchor" aria-label="anchor" href="#distset-bundled-by-default-promotable-to-the-path"></a>
+</h3>
+<p>When a scenario declares several distribution sets (pools carved from one union fit, see the <em>defining-a-scenario</em> vignette), <code>distset</code> — the set <em>name</em> — is an <code>hc</code> axis. By default it is an <strong>inner</strong> (bundled) axis: the <code>hc</code> path stays <code>c("dataset", "sim")</code>, so <strong>one</strong> hc shard holds every pool for a <code>(dataset, sim)</code> cell, the runner decodes the union fit <em>once</em>, and subsets it N ways in memory. This keeps shard counts sane (35 datasets × 1000 sims × 7 pools would otherwise be 245k tiny Parquets):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">multi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
+<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span></span>
+<span>    BCANZ <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    Iwasaki <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"burrIII3"</span>, <span class="st">"gamma"</span>, <span class="st">"llogis"</span>, <span class="st">"lnorm"</span>, <span class="st">"weibull"</span><span class="op">)</span>,</span>
+<span>    lnorm <span class="op">=</span> <span class="st">"lnorm"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># distset is an inner (bundled) hc axis by default</span></span>
+<span><span class="va">multi</span><span class="op">$</span><span class="va">partition_by</span><span class="op">$</span><span class="va">hc</span></span>
+<span><span class="co">#&gt; [1] "dataset" "sim"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu"><a href="../reference/ssd_scenario_shards.html">ssd_scenario_hc_shards</a></span><span class="op">(</span><span class="va">multi</span><span class="op">)</span><span class="op">)</span> <span class="co"># one hc shard per (dataset, sim) cell</span></span>
+<span><span class="co">#&gt; [1] 2</span></span></code></pre></div>
+</div>
+<p>Promote <code>distset</code> to a path axis (one shard per pool per cell) when you want per-pool shards — e.g. to cache and re-upload pools independently, or because a later-added pool should mint only its own new hc shards while every existing shard stays cached (the fit layer carries no <code>distset</code>, so its shards are never touched):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">per_pool</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
+<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span></span>
+<span>    BCANZ <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    lnorm <span class="op">=</span> <span class="st">"lnorm"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  partition_by <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>hc <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"distset"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="fu"><a href="../reference/ssd_scenario_shards.html">ssd_scenario_hc_shards</a></span><span class="op">(</span><span class="va">per_pool</span><span class="op">)</span><span class="op">)</span> <span class="co"># one hc shard per (dataset, sim, distset)</span></span>
+<span><span class="co">#&gt; [1] 4</span></span></code></pre></div>
+</div>
+</section></section><section class="level2"><h2 id="run-it-single-core-over-shards">Run it single core, over shards<a class="anchor" aria-label="anchor" href="#run-it-single-core-over-shards"></a>
 </h2>
 <p><code><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code> runs the three steps and writes one Parquet per shard under a Hive-partitioned tree, with <strong>no</strong> <code>targets</code> dependency. It returns the shard paths per step.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">run</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_shard_run&gt;</span></span>
-<span><span class="co">#&gt;   dir: /tmp/RtmpyK8coD/ssdsims-shards-3c1a547aeb38</span></span>
+<span><span class="co">#&gt;   dir: /tmp/RtmpWAH4bz/ssdsims-shards-3c63284385cf</span></span>
 <span><span class="co">#&gt;   sample shards: 2</span></span>
 <span><span class="co">#&gt;   fit    shards: 8</span></span>
 <span><span class="co">#&gt;   hc     shards: 2</span></span></code></pre></div>
 </div>
 <p>The written tree is Hive-partitioned (<code>&lt;step&gt;/&lt;axis=value&gt;/.../part.parquet</code>), so the path itself identifies the shard:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span>,</span>
 <span>  pattern <span class="op">=</span> <span class="st">"part.parquet"</span>,</span>
@@ -177,7 +216,7 @@
 </h3>
 <p><code>partition_by</code> is a free re-layout, so the sharded run’s per-task results equal the in-memory baseline’s. The <code>hc</code> estimates, read back from the shards, line up with <code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> joined on the task identity:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">base</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">base_est</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">rbind</span>, <span class="va">base</span><span class="op">$</span><span class="va">hc</span><span class="op">$</span><span class="va">hc</span><span class="op">)</span><span class="op">$</span><span class="va">est</span><span class="op">)</span></span>
 <span></span>
@@ -198,13 +237,13 @@
 </h2>
 <p>The sharded runner is single core. To run shards <strong>in parallel</strong> (or on a cluster), the same building blocks plug into a static-branching <code>targets</code> pipeline: <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_map.html" class="external-link">tarchetypes::tar_map()</a></code> mints one named target per shard, so <code>targets</code> caches, invalidates, and reruns each shard independently. Three ready example projects ship with the package — a minimal <code>small</code> one, a fuller <code>large</code> one (adapted from <code>scripts/example.R</code>, sweeping <code>nrow</code>, <code>proportion</code>, and the estimation / CI methods), and a <code>cluster</code> one for SLURM. The <code>large</code> project parallelises its shards across local workers with a mirai-backed <code>crew</code> controller (<code>tar_option_set(controller = crew::crew_controller_local())</code>); the <code>cluster</code> project is the same pipeline under a <code><a href="https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html" class="external-link">crew.cluster::crew_controller_slurm()</a></code> controller, with a connectivity + worker-prerequisite preflight — see the <a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a> vignette, a “zero to a running cluster job” guide that maps your site’s own SLURM instructions onto the controller:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"targets-templates"</span>, <span class="st">"small"</span>, package <span class="op">=</span> <span class="st">"ssdsims"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "_targets.R"   "run-serial.R" "run.R"        "scenario.R"</span></span></code></pre></div>
 </div>
 <p>The <code>small</code> and <code>large</code> directories each hold <code>scenario.R</code> (the study, shared by both drivers), <code>_targets.R</code> (the pipeline), <code>run.R</code> (the <strong>targets</strong> driver), and <code>run-serial.R</code> (the <strong>single-core</strong> driver); the <code>cluster</code> directory is a minimal four-file variant (the scenario is inline in <code>_targets.R</code>, and a separate <code>controller.R</code> holds the SLURM controller). The whole <code>_targets.R</code> is just <em>build a scenario and call the <code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code> factory</em> —</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://docs.ropensci.org/targets/" class="external-link">targets</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://docs.ropensci.org/tarchetypes/" class="external-link">tarchetypes</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://poissonconsulting.github.io/ssdsims/">ssdsims</a></span><span class="op">)</span></span>
@@ -213,7 +252,7 @@
 </div>
 <p>— so editing the study means editing <code>scenario.R</code> only. Copy a directory’s files to your project root, edit <code>scenario.R</code>, then run either driver (the targets path needs the <code>targets</code>/<code>tarchetypes</code> Suggests):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages(c("targets", "tarchetypes"))</span></span>
 <span><span class="va">dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"targets-templates"</span>, <span class="st">"small"</span>, package <span class="op">=</span> <span class="st">"ssdsims"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.copy</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">dir</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, <span class="st">"."</span><span class="op">)</span></span>

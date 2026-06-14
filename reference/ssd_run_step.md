@@ -82,14 +82,19 @@ The shard's Parquet path (the `format = "file"` contract).
 
 - `ssd_run_hc_step()`: Run the `hc` tasks: read the distinct set of
   parent `fit` shards the shard's tasks reference (each once - an hc
-  shard typically spans several fit shards), isolate each task's fit by
-  `fit_id`, deserialise the `fitdists` object, and estimate the hazard
-  concentration with the per-task `(seed, primer)` through
-  `hc_data_task_primer()`. Each task's hc tibble (one or more rows - the
-  `proportion` fan-out, with the scalar `ci` applied uniformly and
+  shard typically spans several fit shards), decode each parent
+  **union** fit once per `fit_id` (reused across every `distset` task
+  that shares it), resolve each task's `distset` name to its members via
+  [`scenario_distset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_distset.md),
+  subset the union fit to that pool (`strict = FALSE`), and estimate the
+  hazard concentration with the per-task `(seed, primer)` through
+  `hc_data_task_primer()` (the subset happens in that shared primitive).
+  Each task's hc tibble (with the scalar `ci` applied uniformly and
   bootstrap-only knobs `NA` when `ci = FALSE`) is tagged with its
-  `hc_id` and parent `fit_id`, stacked, and written as one Parquet at
-  the shard's partition path.
+  `hc_id`, parent `fit_id`, and `distset` name, stacked, and written as
+  one Parquet at the shard's partition path. A set whose members all
+  dropped from the union fit emits no rows for that cell (the survivor
+  model).
 
 ## See also
 
@@ -106,7 +111,7 @@ scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()
 ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
-#> [1] "/tmp/Rtmp10XO1l/file36f8768548fa/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
+#> [1] "/tmp/Rtmpy9KWNI/file3709751e9b3d/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 # \donttest{
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
@@ -114,7 +119,7 @@ scenario <- ssd_define_scenario(
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 dir <- tempfile()
 ssd_run_sample_step(
@@ -122,14 +127,14 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/Rtmp10XO1l/file36f87553e463/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
+#> [1] "/tmp/Rtmpy9KWNI/file37092ec5dfed/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/Rtmp10XO1l/file36f87553e463/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/Rtmpy9KWNI/file37092ec5dfed/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 # }
 # \donttest{
 data <- ssd_scenario_data(ssddata::ccme_boron)
@@ -138,7 +143,7 @@ scenario <- ssd_define_scenario(
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 dir <- tempfile()
 ssd_run_sample_step(
@@ -146,20 +151,20 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/Rtmp10XO1l/file36f849bfdd0c/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
+#> [1] "/tmp/Rtmpy9KWNI/file37093779a78a/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/Rtmp10XO1l/file36f849bfdd0c/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/Rtmpy9KWNI/file37093779a78a/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 ssd_run_hc_step(
   ssd_scenario_hc_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "fit"),
   file.path(dir, "hc")
 )
-#> [1] "/tmp/Rtmp10XO1l/file36f849bfdd0c/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/Rtmpy9KWNI/file37093779a78a/hc/dataset=ccme_boron/sim=1/part.parquet"
 # }
 ```

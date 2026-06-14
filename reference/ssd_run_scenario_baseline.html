@@ -108,19 +108,20 @@ search.</p>
 <span class="r-in"><span>  nsim <span class="op">=</span> <span class="fl">1L</span>,</span></span>
 <span class="r-in"><span>  nrow <span class="op">=</span> <span class="fl">6L</span>,</span></span>
 <span class="r-in"><span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span></span>
-<span class="r-in"><span>  dists <span class="op">=</span> <span class="st">"lnorm"</span></span></span>
+<span class="r-in"><span>  dists <span class="op">=</span> <span class="fu"><a href="ssd_distset.html">ssd_distset</a></span><span class="op">(</span>lnorm <span class="op">=</span> <span class="st">"lnorm"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu">ssd_run_scenario_baseline</span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;ssdsims_tasks: hc&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   tasks: 1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 1 × 16</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 1 × 17</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>       </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 8 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, nboot &lt;int&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;, hc &lt;list&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 9 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, nboot &lt;int&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, distset &lt;chr&gt;, hc_id &lt;chr&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   fit_id &lt;chr&gt;, hc &lt;list&gt;</span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

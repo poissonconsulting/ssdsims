@@ -200,7 +200,10 @@
 <span>  nsim <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
-<span>  dists <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"lnorm"</span>, <span class="st">"gamma"</span><span class="op">)</span>,</span>
+<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span></span>
+<span>    BCANZ <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>    lnorm <span class="op">=</span> <span class="st">"lnorm"</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  est_method <span class="op">=</span> <span class="st">"multi"</span>,</span>
 <span>  proportion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -222,7 +225,7 @@
 <span><span class="co">#&gt;     min_pmix: ssd_min_pmix</span></span>
 <span><span class="co">#&gt;     range_shape1: {0.05, 20}</span></span>
 <span><span class="co">#&gt;     range_shape2: {0.05, 20}</span></span>
-<span><span class="co">#&gt;     dists: lnorm, gamma (setting)</span></span>
+<span><span class="co">#&gt;     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)</span></span>
 <span><span class="co">#&gt;   hc grid:</span></span>
 <span><span class="co">#&gt;     est_method: multi (setting)</span></span>
 <span><span class="co">#&gt;     proportion: 0.05, 0.2 (setting)</span></span>
@@ -231,6 +234,9 @@
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
 <span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
+<span><span class="co">#&gt;   distsets:</span></span>
+<span><span class="co">#&gt;     BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull</span></span>
+<span><span class="co">#&gt;     lnorm: lnorm</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
 <span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
 <span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
@@ -238,7 +244,7 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span></code></pre></div>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span></span></code></pre></div>
 </div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method shows the declarative fields: the scalar <code>seed</code> and <code>nsim</code>, the <code>nrow</code> sample sizes, the dataset names, and the two argument grids (<code>fit</code> and <code>hc</code>). Note what is <em>not</em> shown — the data frames themselves are retained for the local runner but are not part of the declarative identity; the cluster path carries only the names.</p>
 <section class="level3"><h3 id="dataset-input-is-the-collection">Dataset input is the collection<a class="anchor" aria-label="anchor" href="#dataset-input-is-the-collection"></a>
@@ -271,6 +277,8 @@
 <span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
 <span><span class="co">#&gt;     parametric: TRUE</span></span>
 <span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
+<span><span class="co">#&gt;   distsets:</span></span>
+<span><span class="co">#&gt;     BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
 <span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
 <span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
@@ -278,18 +286,18 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span></code></pre></div>
+<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span></span></code></pre></div>
 </div>
 </section><section class="level3"><h3 id="min_pmix-is-referenced-by-name">
 <code>min_pmix</code> is referenced by name<a class="anchor" aria-label="anchor" href="#min_pmix-is-referenced-by-name"></a>
 </h3>
-<p>The <code>min_pmix</code> knob is referenced <strong>by name</strong>: the name — not the function body — is what enters the task identity and hashes, so the scenario’s identity stays stable under a recompile or a cosmetic edit. You can pass a character vector of names directly, or a function (or list of functions) whose name is derived by symbol capture (mirroring dataset naming). The default <code><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssdtools::ssd_min_pmix</a></code> is stored as <code>"ssd_min_pmix"</code>:</p>
+<p>The <code>min_pmix</code> knob is referenced <strong>by name</strong>: the name — not the function body — is what enters the task identity and hashes, so the scenario’s identity stays stable under a recompile or a cosmetic edit. It is supplied as an <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> collection (the only accepted form — a bare function, a plain list, or a character vector of names is rejected, and no name-string is resolved to a function). Names come from the <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> argument names, or by symbol capture for a bare <code>pkg::name</code> (mirroring <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code>). The default <code>ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)</code> is stored as <code>"ssd_min_pmix"</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scenario</span><span class="op">$</span><span class="va">fit</span><span class="op">$</span><span class="va">min_pmix</span></span>
 <span><span class="co">#&gt; [1] "ssd_min_pmix"</span></span></code></pre></div>
 </div>
-<p>The resolved single-argument <em>function</em> is additionally <strong>materialised on the scenario</strong> at construction (a name-string is resolved then, from <code>ssdtools</code> or the caller’s environment, failing fast if it cannot be resolved). It rides along for execution and is retrieved by name with the <code><a href="../reference/scenario_min_pmix.html">scenario_min_pmix()</a></code> accessor; datasets are reached the same way with <code><a href="../reference/scenario_dataset.html">scenario_dataset()</a></code>:</p>
+<p>The single-argument <em>function</em> from the collection is additionally <strong>materialised on the scenario</strong> at construction. It rides along for execution and is retrieved by name with the <code><a href="../reference/scenario_min_pmix.html">scenario_min_pmix()</a></code> accessor; datasets are reached the same way with <code><a href="../reference/scenario_dataset.html">scenario_dataset()</a></code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/scenario_min_pmix.html">scenario_min_pmix</a></span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"ssd_min_pmix"</span><span class="op">)</span>, <span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span></span>
@@ -303,12 +311,53 @@
 <span><span class="co">#&gt; 3 Boron    Micropterus salmoides   4.1 Fish  mg/L</span></span></code></pre></div>
 </div>
 <p>Because the <em>name</em> drives hashing while the <em>value</em> only rides along for execution, two scenarios with the same <code>min_pmix</code> name but different function bodies produce byte-identical task identities — the split that lets a cluster worker resolve <code>min_pmix</code> off the transported scenario with no shared interactive environment.</p>
+</section><section class="level3"><h3 id="dists-is-a-collection-of-distribution-sets">
+<code>dists</code> is a collection of distribution sets<a class="anchor" aria-label="anchor" href="#dists-is-a-collection-of-distribution-sets"></a>
+</h3>
+<p><code>dists</code> is supplied as an <code><a href="../reference/ssd_distset.html">ssd_distset()</a></code> collection: one or more named <strong>distribution sets</strong>, each a pool of distributions model-averaged together to form one SSD. The constructor validates members (a subset of <code><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_all.html" class="external-link">ssdtools::ssd_dists_all()</a></code>) and names (unique, filesystem-safe) up front:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ds</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span></span>
+<span>  BCANZ <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  Iwasaki <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"burrIII3"</span>, <span class="st">"gamma"</span>, <span class="st">"llogis"</span>, <span class="st">"lnorm"</span>, <span class="st">"weibull"</span><span class="op">)</span>,</span>
+<span>  lnorm <span class="op">=</span> <span class="st">"lnorm"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">ds</span></span>
+<span><span class="co">#&gt; &lt;ssdsims_distset&gt;</span></span>
+<span><span class="co">#&gt;   BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull</span></span>
+<span><span class="co">#&gt;   Iwasaki: burrIII3, gamma, llogis, lnorm, weibull</span></span>
+<span><span class="co">#&gt;   lnorm: lnorm</span></span></code></pre></div>
+</div>
+<p>The fit step fits the <strong>union</strong> of every set’s members <em>once</em> — the single model-averaged superset every pool is a subset of — and the hc step then <code><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset()</a></code>s that one fit down to each pool’s members and re-averages. So declaring several pools costs <strong>one</strong> fit, not one per pool (the motivating <code>ssdaveragerr</code> “iwasaki” pattern: fit a superset, then compare BCANZ, the Iwasaki set, and single distributions carved from it):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">scenario_iwasaki</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">3L</span>,</span>
+<span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
+<span>  dists <span class="op">=</span> <span class="va">ds</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># one union fit per fit task ...</span></span>
+<span><span class="va">scenario_iwasaki</span><span class="op">$</span><span class="va">fit</span><span class="op">$</span><span class="va">dists</span></span>
+<span><span class="co">#&gt; [1] "burrIII3"    "gamma"       "lgumbel"     "llogis"      "lnorm"      </span></span>
+<span><span class="co">#&gt; [6] "lnorm_lnorm" "weibull"</span></span>
+<span><span class="co"># ... and the named pools carried for the hc step to subset by name</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">scenario_iwasaki</span><span class="op">$</span><span class="va">hc</span><span class="op">$</span><span class="va">distsets</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "BCANZ"   "Iwasaki" "lnorm"</span></span></code></pre></div>
+</div>
+<p>The set <strong>name</strong> — not its members — is what enters the task identity (the <code>distset=&lt;name&gt;</code> path segment and the per-task primer), mirroring <code>min_pmix</code> and datasets; the members ride on the scenario and are reached by name with the <code><a href="../reference/scenario_distset.html">scenario_distset()</a></code> accessor:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/scenario_distset.html">scenario_distset</a></span><span class="op">(</span><span class="va">scenario_iwasaki</span>, <span class="st">"Iwasaki"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "burrIII3" "gamma"    "llogis"   "lnorm"    "weibull"</span></span></code></pre></div>
+</div>
+<p><code>distset</code> is an <strong>hc</strong> cross-join axis, so the hc task table fans out over the declared sets (the fit table is unchanged — it fits the union). A single-set collection (<code>ssd_distset(BCANZ = ...)</code>) has one <code>distset</code> value and so does not multiply the table. Individual distributions still never fan out: an axis value is always a whole averaging pool. A bare character vector or plain list is rejected, pointing you to <code><a href="../reference/ssd_distset.html">ssd_distset()</a></code>.</p>
 </section><section class="level3"><h3 id="the-ci-flag">The <code>ci</code> flag<a class="anchor" aria-label="anchor" href="#the-ci-flag"></a>
 </h3>
 <p><code>ci</code> is a scalar flag, not a cross-join axis. The point estimate is computed analytically from the fit and is identical whether <code>ci</code> is <code>TRUE</code> or <code>FALSE</code>, so a <code>ci = TRUE</code> run is a strict superset of <code>ci = FALSE</code> (the same estimate, plus the <code>se</code>/<code>lcl</code>/<code>ucl</code> columns). The choice is a scenario-wide either/or: <code>ci = TRUE</code> for estimates plus bootstrap intervals (as in the scenario above), or <code>ci = FALSE</code> for cheap, bootstrap-free point estimates only.</p>
 <p>When <code>ci = FALSE</code>, the bootstrap-only knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are meaningless, so passing any of them is an error — set <code>ci = TRUE</code> to enable the bootstrap, or omit the knob:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span>, ci <span class="op">=</span> <span class="cn">FALSE</span>, nboot <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error in `ssd_define_scenario()`:</span></span>
@@ -318,18 +367,18 @@
 </h2>
 <p><code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks()</a></code> expands the scenario into the three per-step task tables — <code>sample</code>, <code>fit</code>, and <code>hc</code> — bundled into a task set. This is still RNG-free: no draws happen here.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">tasks</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_task_set&gt;</span></span>
 <span><span class="co">#&gt;   sample tasks: 6</span></span>
 <span><span class="co">#&gt;   fit    tasks: 12</span></span>
-<span><span class="co">#&gt;   hc     tasks: 24</span></span></code></pre></div>
+<span><span class="co">#&gt;   hc     tasks: 48</span></span></code></pre></div>
 </div>
 <p>The counts show how each step fans out from its parent. The key design choice is that the single expensive <strong>random draw</strong> is its own <code>sample</code> task, keyed only by <code>(dataset, sim, replace)</code>. The draw is sized by the scenario’s fixed <code>nrow_max</code> setting (<code>nrow_max</code> resampled rows under the default <code>replace = TRUE</code>; capped at the dataset size — the full permutation — when <code>replace = FALSE</code>); every <code>nrow</code> value is then a cheap, RNG-free <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> <em>sub-truncation</em> of that one draw, done inline at the <code>fit</code> step. So <code>nrow</code> is an ordinary cross-join axis of the <code>fit</code> step and never multiplies the underlying draw — one draw is shared across all sample sizes, and adding an <code>nrow</code> value (within the effective draw size) never changes it.</p>
 <p>Each row carries a path-style <code>&lt;step&gt;_id</code> primary key (the Hive partition path) plus its parent step’s id as a foreign key, so dependencies are explicit and joinable:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">sample</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: sample&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace</span></span>
@@ -346,27 +395,27 @@
 </div>
 <p>The scalar <code>ci</code> is applied uniformly to every <code>hc</code> task (it is a setting read from the scenario, not an axis or a table column), as is <code>est_method</code>. With <code>ci = TRUE</code> the bootstrap knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) fan out fully; a <code>ci = FALSE</code> scenario would instead give exactly one <code>hc</code> row per fit task, carrying <code>NA</code> for those bootstrap-only knobs (every requested <code>est_method</code> is summarised within each task from a single bootstrap, so it never fans out into separate tasks).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
-<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
-<span><span class="co">#&gt;   tasks: 24</span></span>
-<span><span class="co">#&gt; # A tibble: 24 × 15</span></span>
+<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span></span>
+<span><span class="co">#&gt;   tasks: 48</span></span>
+<span><span class="co">#&gt; # A tibble: 48 × 16</span></span>
 <span><span class="co">#&gt;    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    </span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;lgl&gt;      &lt;lgl&gt;          &lt;chr&gt;       </span></span>
 <span><span class="co">#&gt;  1 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  2 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  3 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  4 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  5 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  6 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  7 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  8 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  9 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; 10 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; # ℹ 14 more rows</span></span>
-<span><span class="co">#&gt; # ℹ 7 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, nboot &lt;int&gt;,</span></span>
-<span><span class="co">#&gt; #   ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt;  3 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  4 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  5 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  6 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  7 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  8 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  9 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; 10 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; # ℹ 38 more rows</span></span>
+<span><span class="co">#&gt; # ℹ 8 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, nboot &lt;int&gt;,</span></span>
+<span><span class="co">#&gt; #   ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, distset &lt;chr&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;</span></span></code></pre></div>
 </div>
 <p>The per-step derivations are also available individually (<code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_sample_tasks()</a></code>, <code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_fit_tasks()</a></code>, <code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_hc_tasks()</a></code>) when you only need one table.</p>
 </section><section class="level2"><h2 id="stage-4-run-the-baseline-loop">Stage 4: run the baseline loop<a class="anchor" aria-label="anchor" href="#stage-4-run-the-baseline-loop"></a>
@@ -374,58 +423,59 @@
 <p><code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> is the no-frills runner. It executes the three task tables in dependency order, threading each task’s result forward to its children by the foreign-key id. It runs <strong>in-process</strong>, with no <code>targets</code>, no shard grouping, and no Parquet I/O.</p>
 <p>It <strong>is reproducible without an external seed</strong>: the runner opens one <code><a href="../reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> scope and seeds each task exactly once from <code>scenario$seed</code> plus a per-task primer (<code><a href="../reference/task_primer.html">task_primer()</a></code> over the task’s identity), so two runs of a scenario with a fixed <code>seed</code> yield identical results, regardless of the order in which tasks run:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "sample" "fit"    "hc"</span></span></code></pre></div>
 </div>
 <p>Each element is the corresponding task table augmented with a list column of per-task results — <code>sample</code> draws, <code>fits</code> objects, and <code>hc</code> tibbles (the <code>fit</code> step truncates its sample inline before fitting):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
-<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
-<span><span class="co">#&gt;   tasks: 24</span></span>
-<span><span class="co">#&gt; # A tibble: 24 × 16</span></span>
+<span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span></span>
+<span><span class="co">#&gt;   tasks: 48</span></span>
+<span><span class="co">#&gt; # A tibble: 48 × 17</span></span>
 <span><span class="co">#&gt;    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    </span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;int&gt; &lt;lgl&gt;   &lt;lgl&gt;      &lt;lgl&gt;          &lt;chr&gt;       </span></span>
 <span><span class="co">#&gt;  1 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
 <span><span class="co">#&gt;  2 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  3 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  4 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  5 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  6 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  7 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  8 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt;  9 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; 10 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
-<span><span class="co">#&gt; # ℹ 14 more rows</span></span>
-<span><span class="co">#&gt; # ℹ 8 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, nboot &lt;int&gt;,</span></span>
-<span><span class="co">#&gt; #   ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, hc_id &lt;chr&gt;, fit_id &lt;chr&gt;, hc &lt;list&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt;  3 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  4 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  5 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  6 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  7 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  8 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt;  9 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; 10 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix</span></span>
+<span><span class="co">#&gt; # ℹ 38 more rows</span></span>
+<span><span class="co">#&gt; # ℹ 9 more variables: range_shape1 &lt;list&gt;, range_shape2 &lt;list&gt;, nboot &lt;int&gt;,</span></span>
+<span><span class="co">#&gt; #   ci_method &lt;chr&gt;, parametric &lt;lgl&gt;, distset &lt;chr&gt;, hc_id &lt;chr&gt;,</span></span>
+<span><span class="co">#&gt; #   fit_id &lt;chr&gt;, hc &lt;list&gt;</span></span></code></pre></div>
 </div>
 <p>Unnest the hazard-concentration estimates back onto their task identities to get a tidy results table. <code>proportion</code> and <code>est_method</code> are not task axes — they are passed whole to each <code>hc</code> call (one row per value, from a single bootstrap), so every result already carries its own <code>proportion</code> and <code>est_method</code> columns:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hcs</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/unnest.html" class="external-link">unnest</a></span><span class="op">(</span></span>
 <span>  <span class="va">out</span><span class="op">$</span><span class="va">hc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"hc"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  <span class="va">hc</span>,</span>
 <span>  names_sep <span class="op">=</span> <span class="st">"_"</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">hcs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"hc_est_method"</span>, <span class="st">"hc_proportion"</span>, <span class="st">"hc_est"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt; # A tibble: 48 × 6</span></span>
+<span><span class="co">#&gt; # A tibble: 96 × 6</span></span>
 <span><span class="co">#&gt;    dataset   sim  nrow hc_est_method hc_proportion hc_est</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;chr&gt;                 &lt;dbl&gt;  &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 boron       1     5 multi                  0.05  0.922</span></span>
-<span><span class="co">#&gt;  2 boron       1     5 multi                  0.2   3.22 </span></span>
-<span><span class="co">#&gt;  3 boron       1     5 multi                  0.05  0.922</span></span>
-<span><span class="co">#&gt;  4 boron       1     5 multi                  0.2   3.22 </span></span>
-<span><span class="co">#&gt;  5 boron       1    10 multi                  0.05  0.620</span></span>
-<span><span class="co">#&gt;  6 boron       1    10 multi                  0.2   2.35 </span></span>
-<span><span class="co">#&gt;  7 boron       1    10 multi                  0.05  0.620</span></span>
-<span><span class="co">#&gt;  8 boron       1    10 multi                  0.2   2.35 </span></span>
-<span><span class="co">#&gt;  9 boron       2     5 multi                  0.05  2.72 </span></span>
-<span><span class="co">#&gt; 10 boron       2     5 multi                  0.2   9.63 </span></span>
-<span><span class="co">#&gt; # ℹ 38 more rows</span></span></code></pre></div>
+<span><span class="co">#&gt;  1 boron       1     5 multi                  0.05  2.11 </span></span>
+<span><span class="co">#&gt;  2 boron       1     5 multi                  0.2   3.29 </span></span>
+<span><span class="co">#&gt;  3 boron       1     5 multi                  0.05  1.19 </span></span>
+<span><span class="co">#&gt;  4 boron       1     5 multi                  0.2   3.26 </span></span>
+<span><span class="co">#&gt;  5 boron       1     5 multi                  0.05  2.11 </span></span>
+<span><span class="co">#&gt;  6 boron       1     5 multi                  0.2   3.29 </span></span>
+<span><span class="co">#&gt;  7 boron       1     5 multi                  0.05  1.19 </span></span>
+<span><span class="co">#&gt;  8 boron       1     5 multi                  0.2   3.26 </span></span>
+<span><span class="co">#&gt;  9 boron       1    10 multi                  0.05  0.734</span></span>
+<span><span class="co">#&gt; 10 boron       1    10 multi                  0.2   2.26 </span></span>
+<span><span class="co">#&gt; # ℹ 86 more rows</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="next-shards-and-the-targets-pipeline">Next: shards and the targets pipeline<a class="anchor" aria-label="anchor" href="#next-shards-and-the-targets-pipeline"></a>
 </h2>

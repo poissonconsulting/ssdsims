@@ -8,17 +8,30 @@ builds on, with a baseline loop runner.
 
 - [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
   : Assemble and Validate Datasets for a Simulation Scenario
+
 - [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
   : Materialise Generator Datasets for a Simulation Scenario
+
+- [`ssd_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_pmix.md)
+  :
+
+  Assemble and Validate `min_pmix` Functions for a Simulation Scenario
+
+- [`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md)
+  : Assemble One or More Distribution Sets
+
 - [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   : Define a Simulation Scenario
+
 - [`ssd_scenario_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
   [`ssd_scenario_sample_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
   [`ssd_scenario_fit_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
   [`ssd_scenario_hc_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)
   : Expand a Scenario into Task Tables
+
 - [`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
   : Run a Scenario with the Baseline Loop Runner
+
 - [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
   : Run a Scenario over Hive-partitioned Parquet Shards (single core)
 
@@ -119,6 +132,9 @@ resolve a name back to the value carried on the scenario for execution.
   :
 
   Isolate a Materialised `min_pmix` Function from a Scenario by Name
+
+- [`scenario_distset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_distset.md)
+  : Isolate a Distribution Set from a Scenario by Name
 
 ## Reproducible RNG
 

@@ -168,7 +168,7 @@ order and byte-identical across runs regardless. Evidence: the
 <span class="r-in"><span>  nsim <span class="op">=</span> <span class="fl">1L</span>,</span></span>
 <span class="r-in"><span>  nrow <span class="op">=</span> <span class="fl">6L</span>,</span></span>
 <span class="r-in"><span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span></span>
-<span class="r-in"><span>  dists <span class="op">=</span> <span class="st">"lnorm"</span></span></span>
+<span class="r-in"><span>  dists <span class="op">=</span> <span class="fu"><a href="ssd_distset.html">ssd_distset</a></span><span class="op">(</span>lnorm <span class="op">=</span> <span class="st">"lnorm"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Materialise the shards single-core, then fan in the hc layer.</span></span></span>
 <span class="r-in"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
@@ -178,7 +178,7 @@ order and byte-identical across runs regardless. Evidence: the
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"summary.parquet"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmp10XO1l/ssdsims-shards-36f84323c89/summary.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmpy9KWNI/ssdsims-shards-37096e580bcf/summary.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

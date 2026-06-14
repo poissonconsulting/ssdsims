@@ -48,8 +48,7 @@ scenario <- ssd_define_scenario(
   seed = 42L,
   nrow = c(5L, 10L),
   rescale = c(FALSE, TRUE),
-  dists = c("lnorm", "gamma")
-)
+  dists = ssd_distset(set = c("lnorm", "gamma")))
 scenario
 #> <ssdsims_scenario>
 #>   seed:     42
@@ -65,7 +64,7 @@ scenario
 #>     min_pmix: ssd_min_pmix
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
-#>     dists: lnorm, gamma (setting)
+#>     dists: gamma, lnorm (setting)
 #>   hc grid:
 #>     est_method: multi (setting)
 #>     proportion: 0.05 (setting)
@@ -74,6 +73,8 @@ scenario
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
 #>     samples: FALSE (setting)
+#>   distsets:
+#>     set: lnorm, gamma
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -81,7 +82,7 @@ scenario
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 ```
 
 The [`print()`](https://rdrr.io/r/base/print.html) shows, per step, the
@@ -104,6 +105,58 @@ scenario$partition_by$fit
 #> [1] "dataset" "sim"     "nrow"    "rescale"
 ```
 
+### `distset`: bundled by default, promotable to the path
+
+When a scenario declares several distribution sets (pools carved from
+one union fit, see the *defining-a-scenario* vignette), `distset` — the
+set *name* — is an `hc` axis. By default it is an **inner** (bundled)
+axis: the `hc` path stays `c("dataset", "sim")`, so **one** hc shard
+holds every pool for a `(dataset, sim)` cell, the runner decodes the
+union fit *once*, and subsets it N ways in memory. This keeps shard
+counts sane (35 datasets × 1000 sims × 7 pools would otherwise be 245k
+tiny Parquets):
+
+``` r
+
+multi <- ssd_define_scenario(
+  data,
+  nsim = 2L,
+  seed = 42L,
+  dists = ssd_distset(
+    BCANZ = ssdtools::ssd_dists_bcanz(),
+    Iwasaki = c("burrIII3", "gamma", "llogis", "lnorm", "weibull"),
+    lnorm = "lnorm"
+  )
+)
+# distset is an inner (bundled) hc axis by default
+multi$partition_by$hc
+#> [1] "dataset" "sim"
+nrow(ssd_scenario_hc_shards(multi)) # one hc shard per (dataset, sim) cell
+#> [1] 2
+```
+
+Promote `distset` to a path axis (one shard per pool per cell) when you
+want per-pool shards — e.g. to cache and re-upload pools independently,
+or because a later-added pool should mint only its own new hc shards
+while every existing shard stays cached (the fit layer carries no
+`distset`, so its shards are never touched):
+
+``` r
+
+per_pool <- ssd_define_scenario(
+  data,
+  nsim = 2L,
+  seed = 42L,
+  dists = ssd_distset(
+    BCANZ = ssdtools::ssd_dists_bcanz(),
+    lnorm = "lnorm"
+  ),
+  partition_by = list(hc = c("dataset", "sim", "distset"))
+)
+nrow(ssd_scenario_hc_shards(per_pool)) # one hc shard per (dataset, sim, distset)
+#> [1] 4
+```
+
 ## Run it single core, over shards
 
 [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
@@ -116,7 +169,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmpyK8coD/ssdsims-shards-3c1a547aeb38
+#>   dir: /tmp/RtmpWAH4bz/ssdsims-shards-3c63284385cf
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2

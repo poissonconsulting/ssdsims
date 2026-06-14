@@ -43,7 +43,7 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- ‼️⏳ \[distset-hc-axis\] Iwasaki.
+- ‼️🛠️ \[distset-hc-axis\] Iwasaki.
 - ‼️⏳ \[scenario-combine\] **Blocked by distset-hc-axis**. Provide a
   convenient way to run multiple `ssd_scenario` objects as a single
   targets pipeline.

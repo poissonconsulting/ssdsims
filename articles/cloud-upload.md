@@ -120,8 +120,7 @@ scenario <- ssd_define_scenario(
   nsim = 2L,
   seed = 42L,
   nrow = 6L,
-  dists = "lnorm"
-)
+  dists = ssd_distset(lnorm = "lnorm"))
 root <- tempfile("results-")
 targets_dry <- ssd_scenario_targets(scenario, root = root, upload = dryrun)
 ```
@@ -171,7 +170,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/Rtmpj0K1KP/ssdsims-shards-3b9b7bd68c01/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/RtmpMfzE5D/ssdsims-shards-3bcf4f8f1188/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 

@@ -21,11 +21,11 @@ ssd_define_scenario(
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
-  min_pmix = list(ssdtools::ssd_min_pmix),
+  min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   nrow_max = 1000L,
-  dists = ssdtools::ssd_dists_bcanz(),
+  dists = ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz()),
   est_method = "multi",
   proportion = 0.05,
   ci = FALSE,
@@ -102,20 +102,17 @@ ssd_define_scenario(
 
 - min_pmix:
 
-  The `min_pmix` function(s), referenced **by name**. Supply either a
-  character vector of names, or a function (or list of functions) with a
-  single argument that inputs the number of rows of data and returns a
-  proportion between 0 and 0.5 - in which case the name is derived from
-  the argument expression (e.g.
-  [`ssdtools::ssd_min_pmix`](https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html)
-  gives `"ssd_min_pmix"`), mirroring dataset name derivation. The name
-  is what the task path hashes; the resolved single-argument function is
-  additionally materialised on the scenario (keyed by name) for
-  execution and isolated via
+  An
+  [`ssd_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_pmix.md)
+  collection of one or more single-argument `min_pmix` functions,
+  referenced **by name**. This is the only accepted form; a bare
+  function, a plain list, or a character vector of names is rejected (no
+  string-to-function resolution). The collection's name (not the
+  function value) is what the task path hashes; the function is
+  materialised on the scenario (keyed by name) for execution and
+  isolated via
   [`scenario_min_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_min_pmix.md).
-  A name-string is resolved to a function at construction (from
-  `ssdtools` or the caller's environment), failing fast if it cannot be
-  resolved to a single-argument function.
+  Defaults to `ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)`.
 
 - range_shape1:
 
@@ -138,7 +135,15 @@ ssd_define_scenario(
 
 - dists:
 
-  A character vector of the distribution names.
+  An
+  [`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md)
+  collection of one or more named distribution sets (pools
+  model-averaged together to form one SSD). The fit step fits the
+  **union** of every set's members once; the hc step subsets that union
+  fit per set and re-averages, so the set **name** is an hc cross-join
+  axis (`"distset"`) while individual distributions never fan out. A
+  bare character vector or plain list aborts, pointing to
+  [`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md).
 
 - est_method:
 
@@ -215,13 +220,15 @@ ssd_define_scenario(
   a subset of that step's axis vocabulary: `sample` = `dataset`, `sim`,
   `replace`; `fit` adds `nrow`, `rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc`
-  adds `nboot`, `ci_method`, `parametric` (`ci` and `est_method` are hc
-  simulation settings, not axes; `dists` is the fit-level simulation
-  setting). `"nrow"` is rejected only for `sample` (the shared draw
-  carries no `nrow` axis; the `fit` step truncates it inline), and is a
-  valid path axis for `fit`/`hc`. Steps partition **independently** -
-  there is no cross-step constraint; a step may be finer or coarser than
-  its neighbour on a shared axis (the m:n parent-shard relationship is
+  adds `nboot`, `ci_method`, `parametric`, `distset` (`ci` and
+  `est_method` are hc simulation settings, not axes; `dists` is the
+  fit-level simulation setting feeding the union, and `distset` - the
+  set *name* - is the hc axis over the union's post-fit subsets).
+  `"nrow"` is rejected only for `sample` (the shared draw carries no
+  `nrow` axis; the `fit` step truncates it inline), and is a valid path
+  axis for `fit`/`hc`. Steps partition **independently** - there is no
+  cross-step constraint; a step may be finer or coarser than its
+  neighbour on a shared axis (the m:n parent-shard relationship is
   resolved at the read layer). Steps left unnamed take their documented
   defaults (`sample = c("dataset", "sim", "replace")`,
   `fit = c("dataset", "sim", "nrow", "rescale")`,
@@ -305,17 +312,29 @@ or omit the knobs.
 
 ## `dists` and `est_method`
 
-`dists` and `est_method` are **simulation settings**, not cross-join
-axes - they are absent from `task_axes("fit")`/`task_axes("hc")`, so
-they never multiply tasks or enter the per-task RNG primer. `dists` is
-the *fit*-level setting: the whole character vector is handed to one
-`ssd_fit_dists()` call per fit task (fanning out per distribution would
-dissolve the model averaging that defines a fit). `est_method` is an
-*hc*-level setting: every requested method is summarised from each hc
-task's **single** bootstrap sample set rather than re-bootstrapping per
-method (the CI is est_method-invariant and the point `est` is
-analytical), so a vector `est_method` yields one row per method within a
-task without fanning out into separate tasks.
+`dists` is an
+[`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md)
+collection: one or more **distribution sets** (pools of distributions
+model-averaged together to form one SSD), each named. The *fit* step
+fits the **union** of every set's members once - the single
+model-averaged superset every pool is a subset of - so
+`scenario$fit$dists` is that union and *individual* distributions still
+never fan out (an axis value is always a whole pool). The named sets
+ride on the hc grid (`scenario$hc$distsets`); the *hc* step subsets that
+one union fit down to each set's members
+(`subset(fit, set, strict = FALSE)`) and re-averages, so `"distset"`
+**is** an hc cross-join axis (`task_axes("hc")`) keyed by the set
+**name** - several pools reuse one fit rather than re-fitting. A bare
+character vector or plain list aborts loudly, pointing to
+[`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md).
+
+`est_method` is a **simulation setting**, not a cross-join axis - it is
+absent from `task_axes("hc")`, so it never multiplies tasks or enters
+the per-task RNG primer. It is an *hc*-level setting: every requested
+method is summarised from each hc task's **single** bootstrap sample set
+rather than re-bootstrapping per method (the CI is est_method-invariant
+and the point `est` is analytical), so a vector `est_method` yields one
+row per method within a task without fanning out into separate tasks.
 
 ## Examples
 
@@ -346,6 +365,8 @@ scenario
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
 #>     samples: FALSE (setting)
+#>   distsets:
+#>     BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -353,5 +374,5 @@ scenario
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 ```

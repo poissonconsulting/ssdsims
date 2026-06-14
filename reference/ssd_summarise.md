@@ -112,7 +112,7 @@ scenario <- ssd_define_scenario(
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
-  dists = "lnorm"
+  dists = ssd_distset(lnorm = "lnorm")
 )
 # Materialise the shards single-core, then fan in the hc layer.
 run <- ssd_run_scenario_shards(scenario)
@@ -122,6 +122,6 @@ ssd_summarise(
   file.path(run$dir, "hc"),
   file.path(run$dir, "summary.parquet")
 )
-#> [1] "/tmp/Rtmp10XO1l/ssdsims-shards-36f84323c89/summary.parquet"
+#> [1] "/tmp/Rtmpy9KWNI/ssdsims-shards-37096e580bcf/summary.parquet"
 # }
 ```

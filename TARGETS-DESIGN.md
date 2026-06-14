@@ -288,12 +288,14 @@ transport, storing a generator + seed to rebuild from instead.
 
 #### `min_pmix`
 
-`min_pmix` is materialised the same way: the scenario stores the
-**name** (in `fit$min_pmix`, which feeds the per-task primer and the
-task path) *and* the resolved single-argument **function**, keyed by
-name. A supplied function is kept under its derived name; a name-string
-(`"ssd_min_pmix"`, or a user function) is resolved at construction. A
-consumer reads it by name:
+`min_pmix` is materialised the same way: supplied as an
+[`ssd_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_pmix.md)
+collection, the scenario stores the **name** (in `fit$min_pmix`, which
+feeds the per-task primer and the task path) *and* the single-argument
+**function**, keyed by name. Names come from the
+[`ssd_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_pmix.md)
+argument names or symbol capture; there is no string-to-function
+resolution. A consumer reads it by name:
 
 ``` r
 
@@ -2020,16 +2022,35 @@ The two knobs sit on **opposite** sides of the axis/setting split
 (GLOSSARY.md), and their cache behaviour differs accordingly — the
 heading is *not* “neither is an axis”:
 
-- **`dists` is a fit-level *simulation setting*, not an axis.** It is a
-  single character vector applied uniformly to every fit task (one
-  model-averaged `ssd_fit_dists()` call per task); it is absent from
+- **`dists` is a fit-level *simulation setting*, not an axis.** It is
+  the **union** of the declared distribution sets — a single character
+  vector applied uniformly to every fit task (one model-averaged
+  `ssd_fit_dists()` call per task); it is absent from
   `task_axes("fit")`, so it never enters a **primer** or a
   **partition**. Because a `dists` vector defines *one* model-averaged
   fit, fanning out per-distribution would change the science, so it is
-  deliberately not an axis. Editing it (e.g. adding `llogis`) changes
-  the content fed to every fit task and re-fits the whole slice — the
-  “rewrite all fit shards” row of §8 — with no way to fit only the added
-  distribution and merge.
+  deliberately not an axis. Editing it (e.g. adding a distribution to
+  the union) changes the content fed to every fit task and re-fits the
+  whole slice — the “rewrite all fit shards” row of §8 — with no way to
+  fit only the added distribution and merge.
+
+  > **Addendum (`distset-hc-axis`).** *Individual distributions still
+  > never fan out* — every axis value is a complete averaging pool, so
+  > the model-averaging science this decision protects is intact. What
+  > changed is that a **named set of pools**
+  > ([`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md))
+  > is now an **hc-level** axis (`distset` ∈ `task_axes("hc")`) over
+  > *post-fit subsets of one union fit*: the fit step fits the union
+  > once, and each hc cell
+  > [`subset()`](https://rdrr.io/r/base/subset.html)s that fit to its
+  > pool’s members (`strict = FALSE`) and re-averages. Reuse therefore
+  > now holds **within** one union — several pools share one fit instead
+  > of re-fitting (the iwasaki “fit superset, subset” pattern) — while
+  > the cross-*union* non-reuse above still stands (a wider union
+  > re-fits). Because the fit layer carries no `distset`, adding a pool
+  > whose members are already in the union mints only new hc shards and
+  > caches every fit shard.
+
 - **`nboot` *is* an hc grid axis** (`task_axes("hc")`): distinct values
   fan out into separate tasks, identities, and shards, so they are
   cached independently and `partition_by[["hc"]]` may list `nboot` to
@@ -2444,6 +2465,36 @@ implemented; the Mermaid graph below colours these nodes green inside
   the axis **re-seeds** every hc task, so bootstrap CIs change
   numerically (point estimates unchanged). ~3× cost reduction on the
   `est_method` axis. Independent tidy-up; not on the dependency DAG.
+
+- **`distset-hc-axis`** — Refine `dists-simulation-setting`: `dists`
+  becomes an
+  [`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md)
+  collection of named **distribution sets** (pools), and the set *name*
+  becomes an **hc** cross-join axis (`distset` ∈ `task_axes("hc")`). The
+  fit step fits the **union** `sort(unique(unlist(dists)))` once
+  (`scenario$fit$dists`); the hc step
+  [`subset()`](https://rdrr.io/r/base/subset.html)s that union fit to
+  each cell’s pool (`strict = FALSE`) and re-averages — so several pools
+  share one fit (the iwasaki “fit superset, subset” pattern) rather than
+  re-fitting (~7× → one fit). *Individual distributions still never fan
+  out* — an axis value is a whole pool, so the model-averaging science
+  `dists-simulation-setting` protects is intact; what is new is reuse
+  **within** one union (a wider union still re-fits). The subset happens
+  in the shared `hc_data_task_primer()` chokepoint, so baseline, shard,
+  and targets paths stay byte-identical by construction; an all-dropped
+  set yields zero rows (the survivor model). `distset` is bundled
+  (inner) by default — one hc shard serves every pool for a
+  `(dataset, sim)` cell, decoding the union fit once — and may be
+  promoted to `partition_by$hc`. **BREAKING** (pre-release): a
+  bare-vector / plain-list `dists` aborts, pointing to
+  [`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md).
+  Not byte-preserving: `distset` joins the hc primer, so it re-seeds
+  every hc task (point `est` analytical/unchanged, bootstrap CIs
+  re-seeded). `scenario-definition` + `task-lists` +
+  `hazard-concentrations` + `task-shards` + `scenario-accessors` deltas;
+  correctness oracle in the change’s
+  `exploration/distset-subset-invariance.R`. Independent of
+  `pmix-constructor` (disjoint inputs); not on the dependency DAG.
 
 - **`cost-estimation`** — New `cost-estimation` capability: a
   calibration harness

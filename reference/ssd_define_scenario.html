@@ -72,11 +72,11 @@ and has <strong>no</strong> dependency on <code>targets</code>.</p>
 <span>  rescale <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  computable <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  at_boundary_ok <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  min_pmix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span>,</span>
+<span>  min_pmix <span class="op">=</span> <span class="fu"><a href="ssd_pmix.html">ssd_pmix</a></span><span class="op">(</span>ssd_min_pmix <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span>,</span>
 <span>  range_shape1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  range_shape2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  nrow_max <span class="op">=</span> <span class="fl">1000L</span>,</span>
-<span>  dists <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  dists <span class="op">=</span> <span class="fu"><a href="ssd_distset.html">ssd_distset</a></span><span class="op">(</span>BCANZ <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  est_method <span class="op">=</span> <span class="st">"multi"</span>,</span>
 <span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -144,17 +144,14 @@ parameters at the boundary should be considered to have converged (default = TRU
 
 
 <dt id="arg-min-pmix">min_pmix<a class="anchor" aria-label="anchor" href="#arg-min-pmix"></a></dt>
-<dd><p>The <code>min_pmix</code> function(s), referenced <strong>by name</strong>. Supply
-either a character vector of names, or a function (or list of functions)
-with a single argument that inputs the number of rows of data and returns
-a proportion between 0 and 0.5 - in which case the name is derived from the
-argument expression (e.g. <code><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssdtools::ssd_min_pmix</a></code> gives <code>"ssd_min_pmix"</code>),
-mirroring dataset name derivation. The name is what the task path hashes;
-the resolved single-argument function is additionally materialised on the
-scenario (keyed by name) for execution and isolated via
-<code><a href="scenario_min_pmix.html">scenario_min_pmix()</a></code>. A name-string is resolved to a function at
-construction (from <code>ssdtools</code> or the caller's environment), failing fast if
-it cannot be resolved to a single-argument function.</p></dd>
+<dd><p>An <code><a href="ssd_pmix.html">ssd_pmix()</a></code> collection of one or more single-argument
+<code>min_pmix</code> functions, referenced <strong>by name</strong>. This is the only accepted
+form; a bare function, a plain list, or a character vector of names is
+rejected (no string-to-function resolution). The collection's name (not the
+function value) is what the task path hashes; the function is materialised
+on the scenario (keyed by name) for execution and isolated via
+<code><a href="scenario_min_pmix.html">scenario_min_pmix()</a></code>. Defaults to
+<code>ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)</code>.</p></dd>
 
 
 <dt id="arg-range-shape-">range_shape1<a class="anchor" aria-label="anchor" href="#arg-range-shape-"></a></dt>
@@ -177,7 +174,12 @@ must not exceed the effective draw size.</p></dd>
 
 
 <dt id="arg-dists">dists<a class="anchor" aria-label="anchor" href="#arg-dists"></a></dt>
-<dd><p>A character vector of the distribution names.</p></dd>
+<dd><p>An <code><a href="ssd_distset.html">ssd_distset()</a></code> collection of one or more named distribution
+sets (pools model-averaged together to form one SSD). The fit step fits the
+<strong>union</strong> of every set's members once; the hc step subsets that union fit
+per set and re-averages, so the set <strong>name</strong> is an hc cross-join axis
+(<code>"distset"</code>) while individual distributions never fan out. A bare character
+vector or plain list aborts, pointing to <code><a href="ssd_distset.html">ssd_distset()</a></code>.</p></dd>
 
 
 <dt id="arg-est-method">est_method<a class="anchor" aria-label="anchor" href="#arg-est-method"></a></dt>
@@ -244,8 +246,10 @@ columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: <code>sample</code> = <code>dataset</code>, <code>sim</code>, <code>replace</code>; <code>fit</code> adds
 <code>nrow</code>, <code>rescale</code>, <code>computable</code>, <code>at_boundary_ok</code>, <code>min_pmix</code>,
 <code>range_shape1</code>, <code>range_shape2</code>; <code>hc</code> adds <code>nboot</code>, <code>ci_method</code>,
-<code>parametric</code> (<code>ci</code> and <code>est_method</code> are hc simulation settings, not axes;
-<code>dists</code> is the fit-level simulation setting).
+<code>parametric</code>, <code>distset</code> (<code>ci</code> and <code>est_method</code> are hc simulation settings,
+not axes; <code>dists</code> is the fit-level simulation setting feeding the union, and
+<code>distset</code> - the set <em>name</em> - is the hc axis over the union's post-fit
+subsets).
 <code>"nrow"</code> is rejected only for <code>sample</code> (the
 shared draw carries no <code>nrow</code> axis; the <code>fit</code> step truncates it inline), and
 is a valid path axis for <code>fit</code>/<code>hc</code>. Steps partition <strong>independently</strong> -
@@ -322,16 +326,24 @@ are meaningless; passing any of them in that case is an error, so set
     </div>
     <div class="section level2">
     <h2 id="dists-and-est-method"><code>dists</code> and <code>est_method</code><a class="anchor" aria-label="anchor" href="#dists-and-est-method"></a></h2>
-    <p><code>dists</code> and <code>est_method</code> are <strong>simulation settings</strong>, not cross-join axes -
-they are absent from <code>task_axes("fit")</code>/<code>task_axes("hc")</code>, so they never
-multiply tasks or enter the per-task RNG primer. <code>dists</code> is the <em>fit</em>-level
-setting: the whole character vector is handed to one <code>ssd_fit_dists()</code> call
-per fit task (fanning out per distribution would dissolve the model averaging
-that defines a fit). <code>est_method</code> is an <em>hc</em>-level setting: every requested
-method is summarised from each hc task's <strong>single</strong> bootstrap sample set
-rather than re-bootstrapping per method (the CI is est_method-invariant and
-the point <code>est</code> is analytical), so a vector <code>est_method</code> yields one row per
-method within a task without fanning out into separate tasks.</p>
+    <p><code>dists</code> is an <code><a href="ssd_distset.html">ssd_distset()</a></code> collection: one or more <strong>distribution sets</strong>
+(pools of distributions model-averaged together to form one SSD), each named.
+The <em>fit</em> step fits the <strong>union</strong> of every set's members once - the single
+model-averaged superset every pool is a subset of - so <code>scenario$fit$dists</code> is
+that union and <em>individual</em> distributions still never fan out (an axis value
+is always a whole pool). The named sets ride on the hc grid
+(<code>scenario$hc$distsets</code>); the <em>hc</em> step subsets that one union fit down to each
+set's members (<code>subset(fit, set, strict = FALSE)</code>) and re-averages, so
+<code>"distset"</code> <strong>is</strong> an hc cross-join axis (<code>task_axes("hc")</code>) keyed by the set
+<strong>name</strong> - several pools reuse one fit rather than re-fitting. A bare character
+vector or plain list aborts loudly, pointing to <code><a href="ssd_distset.html">ssd_distset()</a></code>.</p>
+<p><code>est_method</code> is a <strong>simulation setting</strong>, not a cross-join axis - it is absent
+from <code>task_axes("hc")</code>, so it never multiplies tasks or enters the per-task RNG
+primer. It is an <em>hc</em>-level setting: every requested method is summarised from
+each hc task's <strong>single</strong> bootstrap sample set rather than re-bootstrapping per
+method (the CI is est_method-invariant and the point <code>est</code> is analytical), so a
+vector <code>est_method</code> yields one row per method within a task without fanning out
+into separate tasks.</p>
     </div>
 
     <div class="section level2">
@@ -362,6 +374,8 @@ method within a task without fanning out into separate tasks.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     ci_method: weighted_samples</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     parametric: TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     samples: FALSE (setting)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   distsets:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   partition_by:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sample: dataset, sim, replace</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     fit: dataset, sim, nrow, rescale</span>
@@ -369,7 +383,7 @@ method within a task without fanning out into separate tasks.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   bundle:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     sample: </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

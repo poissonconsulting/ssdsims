@@ -190,7 +190,10 @@ scenario <- ssd_define_scenario(
   nsim = 3L,
   seed = 42L,
   nrow = c(5L, 10L),
-  dists = c("lnorm", "gamma"),
+  dists = ssd_distset(
+    BCANZ = ssdtools::ssd_dists_bcanz(),
+    lnorm = "lnorm"
+  ),
   est_method = "multi",
   proportion = c(0.05, 0.2),
   ci = TRUE,
@@ -212,7 +215,7 @@ scenario
 #>     min_pmix: ssd_min_pmix
 #>     range_shape1: {0.05, 20}
 #>     range_shape2: {0.05, 20}
-#>     dists: lnorm, gamma (setting)
+#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
 #>   hc grid:
 #>     est_method: multi (setting)
 #>     proportion: 0.05, 0.2 (setting)
@@ -221,6 +224,9 @@ scenario
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
 #>     samples: FALSE (setting)
+#>   distsets:
+#>     BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
+#>     lnorm: lnorm
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -228,7 +234,7 @@ scenario
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 ```
 
 The [`print()`](https://rdrr.io/r/base/print.html) method shows the
@@ -274,6 +280,8 @@ ssd_define_scenario(data, nsim = 2L, seed = 1L)
 #>     ci_method: weighted_samples
 #>     parametric: TRUE
 #>     samples: FALSE (setting)
+#>   distsets:
+#>     BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
 #>   partition_by:
 #>     sample: dataset, sim, replace
 #>     fit: dataset, sim, nrow, rescale
@@ -281,7 +289,7 @@ ssd_define_scenario(data, nsim = 2L, seed = 1L)
 #>   bundle:
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
+#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 ```
 
 ### `min_pmix` is referenced by name
@@ -289,11 +297,16 @@ ssd_define_scenario(data, nsim = 2L, seed = 1L)
 The `min_pmix` knob is referenced **by name**: the name — not the
 function body — is what enters the task identity and hashes, so the
 scenario’s identity stays stable under a recompile or a cosmetic edit.
-You can pass a character vector of names directly, or a function (or
-list of functions) whose name is derived by symbol capture (mirroring
-dataset naming). The default
-[`ssdtools::ssd_min_pmix`](https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html)
-is stored as `"ssd_min_pmix"`:
+It is supplied as an
+[`ssd_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_pmix.md)
+collection (the only accepted form — a bare function, a plain list, or a
+character vector of names is rejected, and no name-string is resolved to
+a function). Names come from the
+[`ssd_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_pmix.md)
+argument names, or by symbol capture for a bare `pkg::name` (mirroring
+[`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)).
+The default `ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)` is stored
+as `"ssd_min_pmix"`:
 
 ``` r
 
@@ -301,11 +314,9 @@ scenario$fit$min_pmix
 #> [1] "ssd_min_pmix"
 ```
 
-The resolved single-argument *function* is additionally **materialised
-on the scenario** at construction (a name-string is resolved then, from
-`ssdtools` or the caller’s environment, failing fast if it cannot be
-resolved). It rides along for execution and is retrieved by name with
-the
+The single-argument *function* from the collection is additionally
+**materialised on the scenario** at construction. It rides along for
+execution and is retrieved by name with the
 [`scenario_min_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_min_pmix.md)
 accessor; datasets are reached the same way with
 [`scenario_dataset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_dataset.md):
@@ -328,6 +339,76 @@ execution, two scenarios with the same `min_pmix` name but different
 function bodies produce byte-identical task identities — the split that
 lets a cluster worker resolve `min_pmix` off the transported scenario
 with no shared interactive environment.
+
+### `dists` is a collection of distribution sets
+
+`dists` is supplied as an
+[`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md)
+collection: one or more named **distribution sets**, each a pool of
+distributions model-averaged together to form one SSD. The constructor
+validates members (a subset of
+[`ssdtools::ssd_dists_all()`](https://bcgov.github.io/ssdtools/reference/ssd_dists_all.html))
+and names (unique, filesystem-safe) up front:
+
+``` r
+
+ds <- ssd_distset(
+  BCANZ = ssdtools::ssd_dists_bcanz(),
+  Iwasaki = c("burrIII3", "gamma", "llogis", "lnorm", "weibull"),
+  lnorm = "lnorm"
+)
+ds
+#> <ssdsims_distset>
+#>   BCANZ: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull
+#>   Iwasaki: burrIII3, gamma, llogis, lnorm, weibull
+#>   lnorm: lnorm
+```
+
+The fit step fits the **union** of every set’s members *once* — the
+single model-averaged superset every pool is a subset of — and the hc
+step then [`subset()`](https://rdrr.io/r/base/subset.html)s that one fit
+down to each pool’s members and re-averages. So declaring several pools
+costs **one** fit, not one per pool (the motivating `ssdaveragerr`
+“iwasaki” pattern: fit a superset, then compare BCANZ, the Iwasaki set,
+and single distributions carved from it):
+
+``` r
+
+scenario_iwasaki <- ssd_define_scenario(
+  data,
+  nsim = 3L,
+  seed = 42L,
+  dists = ds
+)
+# one union fit per fit task ...
+scenario_iwasaki$fit$dists
+#> [1] "burrIII3"    "gamma"       "lgumbel"     "llogis"      "lnorm"      
+#> [6] "lnorm_lnorm" "weibull"
+# ... and the named pools carried for the hc step to subset by name
+names(scenario_iwasaki$hc$distsets)
+#> [1] "BCANZ"   "Iwasaki" "lnorm"
+```
+
+The set **name** — not its members — is what enters the task identity
+(the `distset=<name>` path segment and the per-task primer), mirroring
+`min_pmix` and datasets; the members ride on the scenario and are
+reached by name with the
+[`scenario_distset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_distset.md)
+accessor:
+
+``` r
+
+scenario_distset(scenario_iwasaki, "Iwasaki")
+#> [1] "burrIII3" "gamma"    "llogis"   "lnorm"    "weibull"
+```
+
+`distset` is an **hc** cross-join axis, so the hc task table fans out
+over the declared sets (the fit table is unchanged — it fits the union).
+A single-set collection (`ssd_distset(BCANZ = ...)`) has one `distset`
+value and so does not multiply the table. Individual distributions still
+never fan out: an axis value is always a whole averaging pool. A bare
+character vector or plain list is rejected, pointing you to
+[`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md).
 
 ### The `ci` flag
 
@@ -365,7 +446,7 @@ tasks
 #> <ssdsims_task_set>
 #>   sample tasks: 6
 #>   fit    tasks: 12
-#>   hc     tasks: 24
+#>   hc     tasks: 48
 ```
 
 The counts show how each step fans out from its parent. The key design
@@ -415,24 +496,24 @@ tasks).
 
 tasks$hc
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
-#>   tasks: 24
-#> # A tibble: 24 × 15
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
+#>   tasks: 48
+#> # A tibble: 48 × 16
 #>    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>    <chr>   <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #>  1 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
 #>  2 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  3 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  4 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  5 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  6 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  7 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  8 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  9 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 10 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 14 more rows
-#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
-#> #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
+#>  3 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  4 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  5 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  6 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  7 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  8 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  9 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 10 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#> # ℹ 38 more rows
+#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> #   ci_method <chr>, parametric <lgl>, distset <chr>, hc_id <chr>, fit_id <chr>
 ```
 
 The per-step derivations are also available individually
@@ -472,24 +553,25 @@ tibbles (the `fit` step truncates its sample inline before fitting):
 
 out$hc
 #> <ssdsims_tasks: hc>
-#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
-#>   tasks: 24
-#> # A tibble: 24 × 16
+#>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
+#>   tasks: 48
+#> # A tibble: 48 × 17
 #>    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>    <chr>   <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #>  1 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
 #>  2 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  3 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  4 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  5 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  6 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  7 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  8 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  9 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 10 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 14 more rows
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
-#> #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>, hc <list>
+#>  3 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  4 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  5 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  6 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  7 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  8 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  9 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 10 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#> # ℹ 38 more rows
+#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> #   ci_method <chr>, parametric <lgl>, distset <chr>, hc_id <chr>,
+#> #   fit_id <chr>, hc <list>
 ```
 
 Unnest the hazard-concentration estimates back onto their task
@@ -506,20 +588,20 @@ hcs <- tidyr::unnest(
   names_sep = "_"
 )
 hcs[c("dataset", "sim", "nrow", "hc_est_method", "hc_proportion", "hc_est")]
-#> # A tibble: 48 × 6
+#> # A tibble: 96 × 6
 #>    dataset   sim  nrow hc_est_method hc_proportion hc_est
 #>    <chr>   <int> <int> <chr>                 <dbl>  <dbl>
-#>  1 boron       1     5 multi                  0.05  0.922
-#>  2 boron       1     5 multi                  0.2   3.22 
-#>  3 boron       1     5 multi                  0.05  0.922
-#>  4 boron       1     5 multi                  0.2   3.22 
-#>  5 boron       1    10 multi                  0.05  0.620
-#>  6 boron       1    10 multi                  0.2   2.35 
-#>  7 boron       1    10 multi                  0.05  0.620
-#>  8 boron       1    10 multi                  0.2   2.35 
-#>  9 boron       2     5 multi                  0.05  2.72 
-#> 10 boron       2     5 multi                  0.2   9.63 
-#> # ℹ 38 more rows
+#>  1 boron       1     5 multi                  0.05  2.11 
+#>  2 boron       1     5 multi                  0.2   3.29 
+#>  3 boron       1     5 multi                  0.05  1.19 
+#>  4 boron       1     5 multi                  0.2   3.26 
+#>  5 boron       1     5 multi                  0.05  2.11 
+#>  6 boron       1     5 multi                  0.2   3.29 
+#>  7 boron       1     5 multi                  0.05  1.19 
+#>  8 boron       1     5 multi                  0.2   3.26 
+#>  9 boron       1    10 multi                  0.05  0.734
+#> 10 boron       1    10 multi                  0.2   2.26 
+#> # ℹ 86 more rows
 ```
 
 ## Next: shards and the targets pipeline
