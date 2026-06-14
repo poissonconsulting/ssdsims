@@ -16,18 +16,6 @@
 # only addressing (the `seed=` root, the seed name component) and the fan-in
 # (per-member filtered summaries unioned into one combined summary).
 
-# The `seed=`/`layout=` results root for a design member's seed group: the
-# single-scenario `scenario_results_dir()` (`<root>/layout=<hash>`) with a
-# leading `seed=<value>` level, so members with different seeds (which share no
-# draws) never collide while members sharing a seed share their coincident cells.
-design_results_dir <- function(scenario, root) {
-  file.path(
-    root,
-    paste0("seed=", scenario$seed),
-    paste0("layout=", substr(rlang::hash(scenario$partition_by), 1L, 12L))
-  )
-}
-
 # Union the members' per-step shard tables and de-duplicate by `<step>_id` (the
 # full task identity): one row per shard cell, its `tasks` the union of the
 # members' tasks at that cell. Within a seed group the seed is shared and the
@@ -210,11 +198,12 @@ ssd_summarise_member <- function(dir_hc, hc_ids, path) {
 #' @section Migration from a single scenario:
 #' Growing a one-off [ssd_scenario_targets()] run into a study is a one-line
 #' switch: wrap the scenario with [ssd_design()] and call `ssd_design_targets()`.
-#' The per-task results are byte-identical to the standalone run; the only cost is
-#' a one-time recompute into the design's `seed=`-levelled tree (the addressing
-#' gains the `seed=` level the standalone `layout=` tree lacks) - **safe but
-#' recomputing**. Later members are added by extending the `ssd_design(...)` call;
-#' the cells they share (within a seed) stay cached.
+#' It is **cache-preserving** - a design of one addresses its shards identically
+#' to the standalone run (same `seed=`/`layout=` root via [scenario_results_dir()]
+#' and the same `seed`-woven target names), so re-running into the same root
+#' **reuses every existing shard** (no recompute); only the per-member and combined
+#' `summary` targets are new. Later members are added by extending the
+#' `ssd_design(...)` call; the cells they share (within a seed) stay cached.
 #'
 #' @section Varying the seed:
 #' Members may use different `seed`s (e.g. repeating the exploration under several
@@ -271,7 +260,10 @@ ssd_design_targets <- function(
   for (sd in uniq_seeds) {
     members <- design[seeds == sd]
     ref <- design_reference_scenario(members, call = call)
-    sroot <- design_results_dir(ref, root)
+    # The same seed-/layout-keyed root the single-scenario factory uses, so a
+    # design-of-one addresses shards identically to a standalone run (cache-free
+    # upgrade); members with different seeds land under distinct `seed=` trees.
+    sroot <- scenario_results_dir(ref, root)
     group <- design_group_targets(members, ref, sroot, upload, cue)
     shard_targets <- c(shard_targets, group$targets)
     for (nm in names(members)) {

@@ -79,9 +79,15 @@ cost_shard_target_names <- function(scenario) {
       fit = ssd_scenario_fit_shards(scenario),
       hc = ssd_scenario_hc_shards(scenario)
     )
+    # Mirror the factory's naming: the `seed` is woven into every shard target
+    # name (`scenario_results_dir()` keys the tree on `seed=` too), so the
+    # resolver must carry the `seed` column and lead the `names` with it.
+    shards$seed <- scenario$seed
     mapped <- tarchetypes::tar_map(
       values = shards,
-      names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
+      names = tidyselect::all_of(
+        c("seed", scenario_partition_axes(scenario, step)$path)
+      ),
       targets::tar_target_raw(paste0(step, "_step"), quote(NULL))
     )
     nm <- shard_cell_names(mapped, shards, scenario, step)
@@ -894,7 +900,7 @@ ssd_analyse_cost.ssdsims_design <- function(
   hosts <- character()
   for (name in names(design)) {
     member <- design[[name]]
-    sroot <- design_results_dir(member, root)
+    sroot <- scenario_results_dir(member, root)
     hc_ids <- ssd_scenario_hc_tasks(member)$hc_id
     fit_ids <- ssd_scenario_fit_tasks(member)$fit_id
     hc <- member_hc_timings(fast, name, sroot, hc_ids)
@@ -986,7 +992,7 @@ design_timed_cell_seconds <- function(design, root) {
   for (sd in unique(seeds)) {
     members <- design[seeds == sd]
     ref <- design_reference_scenario(members)
-    sroot <- design_results_dir(ref, root)
+    sroot <- scenario_results_dir(ref, root)
     for (step in c("fit", "hc")) {
       id <- paste0(step, "_id")
       shards <- union_shards(members, step)
@@ -1090,7 +1096,7 @@ ssd_calibrate_cost_from_run.ssdsims_design <- function(
   fit_addends <- numeric()
   for (name in names(design)) {
     member <- design[[name]]
-    sroot <- design_results_dir(member, root)
+    sroot <- scenario_results_dir(member, root)
     hc_ids <- ssd_scenario_hc_tasks(member)$hc_id
     fit_ids <- ssd_scenario_fit_tasks(member)$fit_id
     hc <- read_step_timings(sroot, "hc", "hc_id", keep_ids = hc_ids)

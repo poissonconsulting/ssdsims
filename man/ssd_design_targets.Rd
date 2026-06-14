@@ -43,11 +43,12 @@ identities, and the top-level \code{summary} target unions those into
 
 Growing a one-off \code{\link[=ssd_scenario_targets]{ssd_scenario_targets()}} run into a study is a one-line
 switch: wrap the scenario with \code{\link[=ssd_design]{ssd_design()}} and call \code{ssd_design_targets()}.
-The per-task results are byte-identical to the standalone run; the only cost is
-a one-time recompute into the design's \verb{seed=}-levelled tree (the addressing
-gains the \verb{seed=} level the standalone \verb{layout=} tree lacks) - \strong{safe but
-recomputing}. Later members are added by extending the \code{ssd_design(...)} call;
-the cells they share (within a seed) stay cached.
+It is \strong{cache-preserving} - a design of one addresses its shards identically
+to the standalone run (same \verb{seed=}/\verb{layout=} root via \code{\link[=scenario_results_dir]{scenario_results_dir()}}
+and the same \code{seed}-woven target names), so re-running into the same root
+\strong{reuses every existing shard} (no recompute); only the per-member and combined
+\code{summary} targets are new. Later members are added by extending the
+\code{ssd_design(...)} call; the cells they share (within a seed) stay cached.
 }
 
 \section{Varying the seed}{

@@ -78,17 +78,21 @@ same machinery also serves.
   `<root>/summary.parquet` with a `scenario` identity column, at the DuckDB level.
 - **Byte identity is preserved** — a member's per-task results are byte-identical
   to running it alone; combining changes addressing only, never `(seed, primer)`.
-- **Single-scenario → design migration is a first-class, supported path.** Wrap an
-  existing scenario in `ssd_design()` and switch `ssd_scenario_targets()` →
+- **Single-scenario → design migration is first-class and cache-preserving.** Wrap
+  an existing scenario in `ssd_design()` and switch `ssd_scenario_targets()` →
   `ssd_design_targets()` — a one-line change that grows a one-off run into a
-  growable study (add members later; the shared cells stay cached across members
-  within a seed). A dedicated vignette demonstrates the migration end to end. The
-  per-task results are byte-identical to the standalone run; the only cost is a
-  one-time recompute into the design's `seed=`-levelled tree (the addressing gains
-  the `seed=` level), documented as **safe but recomputing**.
-- `ssd_scenario_targets()`'s public contract is **unchanged** (it keeps
-  `layout=` addressing without the `seed=` level), so existing one-off pipelines
-  are untouched until a user opts into a design.
+  growable study. A design of one addresses its shards **identically** to the
+  standalone run (the same `scenario_results_dir()` seed-/layout-keyed root and the
+  same `seed`-woven target names), so re-running into the same root **reuses every
+  existing shard** (no recompute); only the per-member and combined `summary`
+  targets are new. Later members add their extra cells; the shared cells stay
+  cached. A dedicated vignette demonstrates the migration end to end.
+- **Both factories now root shards under `scenario_results_dir(scenario, root)`**
+  (`<root>/seed=<value>/layout=<hash>`), treating `root` as the **base**. The
+  `seed=` level is added to the single-scenario tree (a one-time re-path of an
+  existing `layout=`-only store) precisely so the single-scenario and design
+  addressing coincide and the upgrade above is free. `ssd_scenario_targets()`'s
+  signature and per-task results are otherwise unchanged.
 
 ## Capabilities
 

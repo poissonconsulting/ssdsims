@@ -79,12 +79,10 @@
       (the per-overlap aggregation test moves to `hc-readout-aggregation`)
 - [x] 7.3 Distinct seeds: two members differing only in `seed` share nothing (each
       under its own `seed=` tree)
-- [ ] 7.4 distset sharing: two members differing only in `distset` share all
-      `sample`/`fit` shards, differing only in their `distset` hc cells
-- [x] 7.5 Combined summary: `<root>/summary.parquet` unions the per-member filtered
+- [x] 7.4 Combined summary: `<root>/summary.parquet` unions the per-member filtered
       summaries with the `scenario` tag; with one summary missing, the survivor is
       unioned without aborting
-- [ ] 7.6 Upload shape: `upload = ssd_upload_dryrun()` pairs each deduplicated
+- [x] 7.5 Upload shape: `upload = ssd_upload_dryrun()` pairs each deduplicated
       shard with one upload target under its `seed=`/`layout=`/`<cells>` path; an
       azure-destination unit test shows the path (no per-scenario level, no network)
 
@@ -92,9 +90,8 @@
 
 - [x] 8.1 Roxygen for `ssd_design()` (the consistency contract), `ssd_design_targets()`
       (ragged union, naked `seed=`/`layout=` addressing, varying-seed support, the
-      per-overlap readout aggregation and `ci`-routing, the `nrow_max` undefined-
-      behaviour note, and the safe-but-recomputing flat→design note), and
-      `ssd_summarise_design()`; regenerate `NAMESPACE`/`man/`
+      `nrow_max` undefined-behaviour note, and the cache-preserving flat→design
+      migration note), and `ssd_summarise_design()`; regenerate `NAMESPACE`/`man/`
 - [x] 8.2 Add a design section to `vignettes/sharded-pipeline.qmd` led by the
       **irregular-grid** use case (finer detail in a subregion without the full
       cross-product), with setting-comparison secondary; pointer in `README.Rmd`;
@@ -104,8 +101,8 @@
       **single-scenario → design migration** end to end: a standalone
       `ssd_scenario_targets()` run, the one-line switch to
       `ssd_design_targets(ssd_design(scenario))` (byte-identical results, the
-      safe-but-recomputing `seed=` note), then adding a refining member that reuses
-      the cached cells; register it in `_pkgdown.yml`
+      cache-preserving `seed=`/`layout=` addressing), then adding a refining member
+      that reuses the cached cells; register it in `_pkgdown.yml`
 - [x] 8.4 `GLOSSARY.md` *Design terms* entries (`scenario`/`design`/`study`);
       `ROADMAP.md`: mark the entry in-flight and move to `## Done` on archive
 - [ ] 8.5 Format with `air`, run `devtools::check()`, and confirm the `task-shards`

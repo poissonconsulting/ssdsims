@@ -148,25 +148,25 @@ grid) — exactly the ragged coverage this change exists to deliver.
 keep `scenario-combine` focused on the primary driver and shippable, with the
 intricate `ci`-routing landed separately and tested in isolation.
 
-### Decision: single-scenario → design migration is a supported, documented path
+### Decision: single-scenario → design migration is cache-preserving
 
 Growing a one-off `ssd_scenario_targets(scenario)` run into a study is a first-class
 workflow: wrap the scenario with `ssd_design(scenario)` (or
 `ssd_design(name = scenario)`) and switch the factory to `ssd_design_targets()`.
-Because a design of one is uniformly shaped, later members are added by extending
-the `ssd_design(...)` call — the shared cells (within a seed) stay cached as the
-design grows. The per-task results are byte-identical to the standalone run (the
-oracle), so migration never re-baselines; the one cost is a single recompute into
-the design's `seed=`-levelled tree, because the design addressing gains the `seed=`
-level that the standalone `layout=` tree lacks (**safe but recomputing**). A
-dedicated `vignettes/scenario-to-design.qmd` walks this end to end: a standalone
-run, the one-line switch, the (recomputed but identical) design run, then adding a
-refining member that reuses the cached cells.
+This is **cache-free**: both factories root shards under
+`scenario_results_dir(scenario, root)` (`<root>/seed=<value>/layout=<hash>`) and
+both weave the `seed` into the per-step target names, so a design of one mints
+**byte-identical target names, paths, and commands** to the standalone run.
+Re-running the design into the same store/root reuses every existing shard (a full
+cache hit); only the per-member and combined `summary` targets are new. Later
+members add their extra cells; the shared cells (within a seed) stay cached. The
+per-task results are byte-identical to the standalone run, so migration never
+re-baselines. A dedicated `vignettes/scenario-to-design.qmd` walks this end to end.
 
-*Alternative considered:* fold the `seed=` level into `ssd_scenario_targets()` too
-so migration is cache-free — rejected here; it re-paths every existing standalone
-store (a breaking change) to save a one-time recompute, and the standalone
-contract is explicitly held stable.
+This required adding the `seed=` level to the **single-scenario** tree too
+(previously `layout=` only) and treating `root` as the base in both factories — a
+one-time re-path of an existing `layout=`-only store, accepted as the price of a
+free, reliable upgrade path (rather than recomputing on every migration).
 
 ### Decision: per-scenario summaries filter the shared shards; one combined summary
 
@@ -206,10 +206,13 @@ The factory performs no network I/O.
 
 ## Migration Plan
 
-Additive only: two new exports, no signature or behaviour change to existing
-functions, no re-baselining (per-task results unchanged). Promotion of a flat
-`ssd_scenario_targets()` run into a design recomputes (it gains the `seed=` level),
-as documented. Nothing to roll back beyond reverting the commit.
+Two new exports, and the single-scenario tree gains a `seed=` level
+(`scenario_results_dir()` now keys on `seed=`/`layout=`, and `root` is the base in
+both factories) — a one-time re-path of an existing `layout=`-only store, with no
+re-baselining (per-task results unchanged). With both factories rooting and naming
+shards identically, promoting a flat `ssd_scenario_targets()` run into a design is
+**cache-preserving** (the design reuses every existing shard; only the summary
+targets are new). Nothing to roll back beyond reverting the commit.
 
 ## Open Questions
 

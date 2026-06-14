@@ -111,7 +111,7 @@ materialise_design <- function(design, root) {
   for (sd in unique(seeds)) {
     members <- design[seeds == sd]
     ref <- design_reference_scenario(members)
-    sroot <- design_results_dir(ref, root)
+    sroot <- scenario_results_dir(ref, root)
     sample_shards <- union_shards(members, "sample")
     for (i in seq_len(nrow(sample_shards))) {
       tasks <- sample_shards$tasks[[i]]
@@ -195,7 +195,7 @@ test_that("design-cost: analysis aggregates members with a per-scenario breakdow
   # The design total equals the sum of the per-member observed totals, computed
   # independently here by filtering the shared tree to each member's ids.
   member_total <- function(member) {
-    sroot <- design_results_dir(member, root)
+    sroot <- scenario_results_dir(member, root)
     hc <- read_step_timings(
       sroot,
       "hc",
