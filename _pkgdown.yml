@@ -11,6 +11,7 @@ reference:
   contents:
   - ssd_scenario_data
   - ssd_gen
+  - ssd_pmix
   - ssd_define_scenario
   - ssd_scenario_tasks
   - ssd_run_scenario_baseline

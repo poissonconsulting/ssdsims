@@ -292,9 +292,10 @@ test_that("scenario-definition: a supplied ssd_pmix() function is materialised u
 })
 
 test_that("scenario-definition: min_pmix rejects a bare function", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
       min_pmix = ssdtools::ssd_min_pmix
@@ -303,9 +304,10 @@ test_that("scenario-definition: min_pmix rejects a bare function", {
 })
 
 test_that("scenario-definition: min_pmix rejects a plain list", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
       min_pmix = list(ssdtools::ssd_min_pmix)
@@ -314,27 +316,19 @@ test_that("scenario-definition: min_pmix rejects a plain list", {
 })
 
 test_that("scenario-definition: min_pmix rejects a character vector of names", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = "ssd_min_pmix"
-    )
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = "ssd_min_pmix")
   })
 })
 
 test_that("scenario-definition: an indirectly-supplied list value still aborts cleanly", {
   # The form the old expression-inference path mishandled; it now aborts with the
   # same actionable `ssd_pmix()` message, not an obscure internal frame.
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   fns <- list(ssdtools::ssd_min_pmix)
   expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = fns
-    )
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = fns)
   })
 })
 

@@ -7,6 +7,12 @@ test_that("ssd_pmix: names taken from argument names", {
   expect_identical(unclass(p), list(default = default, strict = strict))
 })
 
+test_that("ssd_pmix: prints a successful collection", {
+  expect_snapshot(
+    ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix, strict = function(n) 0.1)
+  )
+})
+
 test_that("ssd_pmix: derives a name from a bare pkg::name reference", {
   p <- ssd_pmix(ssdtools::ssd_min_pmix)
   expect_identical(names(p), "ssd_min_pmix")

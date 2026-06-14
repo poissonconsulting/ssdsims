@@ -1,3 +1,12 @@
+# ssd_pmix: prints a successful collection
+
+    Code
+      ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix, strict = function(n) 0.1)
+    Output
+      <ssdsims_pmix>
+        ssd_min_pmix: <fn>
+        strict: <fn>
+
 # ssd_pmix: rejects a non-function entry
 
     Code

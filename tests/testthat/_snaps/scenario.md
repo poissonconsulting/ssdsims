@@ -28,8 +28,7 @@
 # scenario-definition: min_pmix rejects a bare function
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = ssdtools::ssd_min_pmix)
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = ssdtools::ssd_min_pmix)
     Condition
       Error in `ssd_define_scenario()`:
       ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
@@ -37,8 +36,7 @@
 # scenario-definition: min_pmix rejects a plain list
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = list(ssdtools::ssd_min_pmix))
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = list(ssdtools::ssd_min_pmix))
     Condition
       Error in `ssd_define_scenario()`:
       ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
@@ -46,8 +44,7 @@
 # scenario-definition: min_pmix rejects a character vector of names
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = "ssd_min_pmix")
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = "ssd_min_pmix")
     Condition
       Error in `ssd_define_scenario()`:
       ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
@@ -55,8 +52,7 @@
 # scenario-definition: an indirectly-supplied list value still aborts cleanly
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      min_pmix = fns)
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = fns)
     Condition
       Error in `ssd_define_scenario()`:
       ! `min_pmix` must be an `ssd_pmix()` collection; wrap the function(s) with `ssd_pmix()` (a bare function, a plain list, or a character vector is not accepted).
