@@ -446,7 +446,7 @@ test_that("cloud-upload: a non-NULL upload pairs the summary with one upload_sum
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
-    dists = "lnorm"
+    dists = ssd_distset(lnorm = "lnorm")
   )
   # upload = NULL: no summary upload node
   expect_false(

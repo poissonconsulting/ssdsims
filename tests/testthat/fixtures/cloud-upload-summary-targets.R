@@ -13,7 +13,7 @@ scenario <- ssd_define_scenario(
   nsim = readRDS("nsim.rds"),
   seed = 42L,
   nrow = 6L,
-  dists = "lnorm",
+  dists = ssd_distset(lnorm = "lnorm"),
   samples = readRDS("samples.rds"),
   partition_by = list(
     sample = c("dataset", "sim"),
