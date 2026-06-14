@@ -164,10 +164,15 @@ the data frames.
 }
 \section{Dataset input}{
 Dataset input is accepted \strong{only} as an \code{\link[=ssd_scenario_data]{ssd_scenario_data()}} collection,
-which owns validation and naming: \code{ssd_define_scenario(ssd_scenario_data( boron = ccme_boron, cadmium = ccme_cadmium), ...)}. Generator inputs (a
-\code{fitdists}/\code{tmbfit} object, a generator function, or a function-name
-string) are materialised - once, reproducibly - by \code{\link[=ssd_gen]{ssd_gen()}} and composed
-into the same collection; the constructor itself performs \strong{no}
+which owns validation and naming. Assemble it first, then pass it in:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{data <- ssd_scenario_data(boron = ccme_boron, cadmium = ccme_cadmium)
+scenario <- ssd_define_scenario(data, ...)
+}\if{html}{\out{</div>}}
+
+Generator inputs (a \code{fitdists}/\code{tmbfit} object, a generator function, or a
+function-name string) are materialised - once, reproducibly - by \code{\link[=ssd_gen]{ssd_gen()}}
+and composed into the same collection; the constructor itself performs \strong{no}
 random-number generation.
 }
 
@@ -197,10 +202,7 @@ method within a task without fanning out into separate tasks.
 }
 
 \examples{
-ssd_define_scenario(
-  ssd_scenario_data(ssddata::ccme_boron),
-  nsim = 100L,
-  seed = 42L,
-  nrow = c(5L, 10L)
-)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+scenario
 }

@@ -26,7 +26,8 @@
 #' @seealso [scenario_min_pmix()] for the `min_pmix` counterpart.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 42L)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 #' scenario_dataset(scenario, "ccme_boron")
 scenario_dataset <- function(scenario, name) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
@@ -65,7 +66,8 @@ scenario_dataset <- function(scenario, name) {
 #' @seealso [scenario_dataset()] for the dataset counterpart.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 42L)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 #' scenario_min_pmix(scenario, "ssd_min_pmix")
 scenario_min_pmix <- function(scenario, name) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")

@@ -48,7 +48,8 @@
 #'   cross-join.
 #' @export
 #' @examples
-#' scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 3L, seed = 42L)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 3L, seed = 42L)
 #' tasks <- ssd_scenario_tasks(scenario)
 #' tasks
 #' tasks$hc
@@ -102,8 +103,9 @@ ssd_scenario_sample_tasks <- function(scenario) {
 #'   primary key and a `sample_id` foreign key referencing its parent sample task.
 #' @export
 #' @examples
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssd_scenario_data(ssddata::ccme_boron),
+#'   data,
 #'   nsim = 3L,
 #'   seed = 42L,
 #'   rescale = c(FALSE, TRUE)
@@ -127,8 +129,9 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #'   a `fit_id` foreign key referencing its parent fit task.
 #' @export
 #' @examples
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssd_scenario_data(ssddata::ccme_boron),
+#'   data,
 #'   nsim = 2L,
 #'   seed = 42L,
 #'   ci = TRUE,
@@ -179,8 +182,9 @@ ssd_scenario_hc_tasks <- function(scenario) {
 #' @export
 #' @examples
 #' library(dqrng)
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssd_scenario_data(ssddata::ccme_boron),
+#'   data,
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,

@@ -17,11 +17,11 @@
 
 library(ssdsims)
 
-# --- 1. Assemble and validate the datasets --------------------------
-# `ssd_scenario_data()` is the single input entry point: it checks each frame for a
-# numeric `Conc` column and names the collection (here from the argument
-# names). A scenario can also take a bare data frame directly.
-datasets <- ssd_scenario_data(
+# --- 1. Assemble and validate the data ------------------------------
+# `ssd_scenario_data()` is the single input entry point: it checks each frame
+# for a numeric `Conc` column and names the collection (here from the argument
+# names). It is the only form `ssd_define_scenario()` accepts for `data`.
+data <- ssd_scenario_data(
   boron = ssddata::ccme_boron,
   cadmium = ssddata::ccme_cadmium
 )
@@ -34,7 +34,7 @@ datasets <- ssd_scenario_data(
 # only (which forbids the bootstrap-only knobs `nboot`, `ci_method`,
 # `parametric`). A `ci = TRUE` run is a superset of `ci = FALSE`.
 scenario <- ssd_define_scenario(
-  datasets,
+  data,
   nsim = 3L,
   seed = 42L,
   nrow = c(5L, 10L, 20L),

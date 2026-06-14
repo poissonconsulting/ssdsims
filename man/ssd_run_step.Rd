@@ -74,14 +74,16 @@ the shard's partition path.
 }}
 \examples{
 library(dqrng)
-scenario <- ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 1L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()
 ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
 \donttest{
 library(dqrng)
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssd_scenario_data(ssddata::ccme_boron),
+  data,
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
@@ -102,8 +104,9 @@ ssd_run_fit_step(
 }
 \donttest{
 library(dqrng)
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssd_scenario_data(ssddata::ccme_boron),
+  data,
   nsim = 1L,
   nrow = 6L,
   seed = 42L,

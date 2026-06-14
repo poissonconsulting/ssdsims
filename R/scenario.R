@@ -18,11 +18,16 @@
 #' # Dataset input
 #'
 #' Dataset input is accepted **only** as an [ssd_scenario_data()] collection,
-#' which owns validation and naming: `ssd_define_scenario(ssd_scenario_data(
-#' boron = ccme_boron, cadmium = ccme_cadmium), ...)`. Generator inputs (a
-#' `fitdists`/`tmbfit` object, a generator function, or a function-name
-#' string) are materialised - once, reproducibly - by [ssd_gen()] and composed
-#' into the same collection; the constructor itself performs **no**
+#' which owns validation and naming. Assemble it first, then pass it in:
+#'
+#' ```r
+#' data <- ssd_scenario_data(boron = ccme_boron, cadmium = ccme_cadmium)
+#' scenario <- ssd_define_scenario(data, ...)
+#' ```
+#'
+#' Generator inputs (a `fitdists`/`tmbfit` object, a generator function, or a
+#' function-name string) are materialised - once, reproducibly - by [ssd_gen()]
+#' and composed into the same collection; the constructor itself performs **no**
 #' random-number generation.
 #'
 #' # `ci`
@@ -112,12 +117,9 @@
 #' @return An S3 object of class `ssdsims_scenario`.
 #' @export
 #' @examples
-#' ssd_define_scenario(
-#'   ssd_scenario_data(ssddata::ccme_boron),
-#'   nsim = 100L,
-#'   seed = 42L,
-#'   nrow = c(5L, 10L)
-#' )
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
+#' scenario <- ssd_define_scenario(data, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+#' scenario
 ssd_define_scenario <- function(
   data,
   nsim,

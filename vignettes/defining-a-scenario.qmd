@@ -71,11 +71,11 @@ collection.
 
 ```{r}
 #| label: ssd-data
-datasets <- ssd_scenario_data(
+data <- ssd_scenario_data(
   boron = ssddata::ccme_boron,
   cadmium = ssddata::ccme_cadmium
 )
-datasets
+data
 ```
 
 Names come from the argument names where you supply them; otherwise they are
@@ -123,7 +123,7 @@ knob with a sensible default.
 ```{r}
 #| label: define-scenario
 scenario <- ssd_define_scenario(
-  datasets,
+  data,
   nsim = 3L,
   seed = 42L,
   nrow = c(5L, 10L),
@@ -151,7 +151,8 @@ constructor itself stays inert and draws no random numbers:
 
 ```{r}
 #| label: input-form
-ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+ssd_define_scenario(data, nsim = 2L, seed = 1L)
 ```
 
 ### `min_pmix` is referenced by name
@@ -202,13 +203,8 @@ When `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`,
 ```{r}
 #| label: ci-false-error
 #| error: true
-ssd_define_scenario(
-  ssd_scenario_data(ssddata::ccme_boron),
-  nsim = 2L,
-  seed = 1L,
-  ci = FALSE,
-  nboot = 1000
-)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+ssd_define_scenario(data, nsim = 2L, seed = 1L, ci = FALSE, nboot = 1000)
 ```
 
 ## Stage 3: expand into task tables

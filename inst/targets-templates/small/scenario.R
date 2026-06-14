@@ -5,8 +5,10 @@
 library(ssdsims)
 library(dqrng)
 
+data <- ssd_scenario_data(ssddata::ccme_boron)
+
 scenario <- ssd_define_scenario(
-  ssd_scenario_data(ssddata::ccme_boron),
+  data,
   nsim = 2L,
   seed = 42L,
   nrow = c(5L, 10L),
