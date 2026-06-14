@@ -2,124 +2,120 @@
 
 ## Why
 
-A simulation study routinely compares **simulation settings** — `dists`,
-`est_method`, `proportion`, `nrow_max`, `ci` — which are scenario-wide by design
-(not cross-join axes), so the comparison *cannot* be expressed inside one
-`ssd_scenario`: a single scenario is one **regular** grid. The comparison is a
-**non-regular** design — a union of regular sub-grids. Today each scenario needs
-its own `_targets.R`, its own store, and its own `tar_make()`: no shared
-scheduling across a cluster controller, no single summary, and N pipelines to
-babysit. The ROADMAP books this as ❗️ [scenario-combine]: *provide a convenient
-way to run multiple `ssd_scenario` objects as a single targets pipeline.*
+The point of running several scenarios as one pipeline is the **irregular
+(ragged) design**: exploring **finer detail over a subset of the axes without
+exploding the full cross-product**. A single `ssd_scenario` is one **regular**
+grid — a rectangular cross-join. But a study usually wants a coarse grid
+everywhere *and* a dense refinement in one region (more `nrow` values, only for
+one dataset and one distribution set, say). Expressing that as one regular
+scenario forces the dense axis onto every cell — computing a cross-product you
+never wanted. Expressing it as N separate `_targets.R` stores recomputes the
+overlap (the coarse cells the refinement shares) and gives no shared scheduling
+and no single summary. The ROADMAP books this as ❗️ [scenario-combine]: *provide
+a convenient way to run multiple `ssd_scenario` objects as a single targets
+pipeline.*
 
-This change introduces the **design** as that unit (DoE sense: the set of
-conditions to run): a named set of scenarios run as one pipeline, in the
-hierarchy **scenario ⊂ design ⊂ study** the `GLOSSARY.md` *Design terms* section
-defines. Crucially — and this is the substantive shift from the first cut of
-this proposal — the design **shares shards across scenarios** instead of
-isolating them: two scenarios that compare a downstream setting (e.g. `dists` or
-`est_method`) reuse their common upstream shards (the same `sample` draws, often
-the same `fit`s) rather than recomputing them under a private tree. Combining is
-a variance-reduction and compute-saving operation, not just a scheduling
-convenience.
+This change introduces the **design** as that unit: a named set of scenarios
+**unioned into one ragged task set** and run as one pipeline. It sits in the
+`GLOSSARY.md` hierarchy **scenario ⊂ design ⊂ study** — a scenario is one regular
+grid, a design unions scenarios into the full (possibly non-regular) experimental
+region, and a study is a future read-side aggregate. Because the members of a
+ragged design share most of their cells, the design **computes each shared cell
+once**: the refinement reuses the coarse run's shards rather than recomputing
+them. Comparing simulation settings across members is a **secondary** use the
+same machinery also serves.
 
 ## What Changes
 
 - **New `ssd_design(...)` collection constructor** — a validated, named
-  collection of `ssdsims_scenario` objects (class `ssdsims_design`), mirroring
-  the `ssd_data()` naming convention. Each name is a **scenario name** within the
-  design; names must be unique, non-empty, and safe (they are the `scenario`
-  identity-column value and the per-scenario summary target-name suffix). Names
-  enter addressing **only** at the summary layer — never task identity, the
-  primer, or a shard path. A design of **one** scenario is valid and uniformly
-  shaped.
-- **Content-keyed shard addressing replaces scenario-keyed addressing.** Shards
-  are no longer written under a `scenario=<name>` prefix, and target names no
-  longer carry a `<name>_` prefix. Instead each step's shards are addressed by a
-  **per-step cumulative content key** `sig=<hash>` — a digest of the `seed` plus
-  exactly the scenario fields that step's runner consumes (the existing
-  `scenario_step_slice()` projection), cumulated down the DAG
-  (`sample_sig → fit_sig → hc_sig`). Two scenarios whose step content is
-  byte-identical mint **one** target at **one** path and the shard is computed
-  **once**; scenarios that differ in a step's content get distinct sigs and never
-  mix shards.
-- **Cross-scenario shard dedup becomes a goal (was a non-goal).** Because
-  `nrow_max` is a uniform draw-size guard (not a comparison axis) and the per-task
-  primer is seed-anchored, every same-seed scenario in a design shares **all
-  `sample` shards**; scenarios that agree on `dists` additionally share their
-  `fit` (and `hc`) shards. `dists` is the only setting that forks an upstream
-  shard.
-- **hc readout settings are aggregated so they do not fork the hc shard.** The
-  seed-free hc readouts are computed as a maximal set in one shared `hc` shard and
-  each scenario's summary filters its slice: **`union()` over `proportion` and
-  `est_method`**, **`any()` over `ci` and `samples`**. So `hc_sig` keys only the
-  seed-dependent **draw-shapers** (the parent `fit` lineage, i.e. `dists`, plus
-  the `nboot`/`ci_method`/`parametric`/`distset` cells). This reuses
-  `ssdtools::ssd_hc()`'s existing vectorized `proportion`/`est_method` and the
-  package's own `hc_collapse_est_methods()` (one bootstrap, analytical `est` per
-  method) — **no ssdtools refactor**.
+  collection of `ssdsims_scenario` objects (class `ssdsims_design`), mirroring the
+  `ssd_data()` naming convention. Each name is a **scenario name** within the
+  design, used **only** as the `scenario` identity-column value and the
+  per-scenario summary target-name suffix — never in a shard path, shard target
+  name, the per-task primer, or any result value. A design of **one** is valid and
+  uniformly shaped.
+- **A design is the ragged union of its members' task sets.** The factory unions
+  every member's regular per-step task tables and **de-duplicates by task
+  identity (cell)**: a cell several members share is one target, computed once;
+  cells only one member reaches are computed once for it. This is the irregular
+  grid — finer detail in a subregion without the full cross-product, and without
+  recomputing the shared coarse cells.
+- **Naked cell addressing — no per-scenario prefix, no opaque content hash.**
+  Shards are written under the existing per-layout root
+  `<root>/layout=<hash(partition_by)>` with a **legible `seed=<value>`** level
+  (`<root>/seed=<value>/layout=<hash>/<step>/<cells>`), and target names are the
+  plain `<step>_<cells>` (no `<name>_` prefix). Members may **vary the `seed`**;
+  the `seed=` level keeps different-seed members from colliding while sharing
+  everything within a seed. There is **no `sig=`**: with the consistency contract
+  below, the same cell at the same seed and layout *is* the same bytes.
+- **A name→value consistency contract.** `ssd_design()` validates that across
+  members the same name means the same thing — same `dataset` name ⟹ identical
+  data, same `min_pmix` name ⟹ identical function, same `distset` name ⟹ identical
+  members — and that `partition_by` is uniform (so cells coincide). This is what
+  makes naked cell addressing safe in place of a content hash.
+- **`dists` is resolved design-wide as the union fit + `distset` subset.** Each
+  scenario already fits the union `scenario$fit$dists` once and `hc` subsets it by
+  the `distset` axis; members requesting different distribution sets share the
+  union fit and differ only by `distset` cell — no `dists` fork.
+- **`nrow_max` is a uniform draw-size guard; differing/changing it across members
+  is documented as undefined behaviour** (no aggregation). Keep it uniform.
+- **Per-overlap hc readout aggregation (not global).** The four non-axis hc
+  settings are reduced **per shared hc cell, over only the members that touch that
+  cell**: **`union()` over `proportion` and `est_method`**, **`any()` over `ci`
+  and `samples`**. A cell only one member reaches keeps that member's (smaller)
+  demand — so e.g. `ci = FALSE, nsim = 1000` beside `ci = TRUE, nsim = 10`
+  bootstraps only the 10 overlapping sims, leaving 990 cheap. `nboot`/`ci_method`/
+  `parametric`/`distset` stay **cell axes** (they are in the primer; aggregating
+  them would move the RNG stream and break byte-identity). A `ci = FALSE` task's
+  analytical `est` is served by a coincident `ci = TRUE` shard at the same
+  `(fit-id, distset)` when one exists, else by its own `ci = FALSE` shard. This
+  reuses `ssdtools::ssd_hc()`'s vectorized `proportion`/`est_method` and the
+  package's `hc_collapse_est_methods()` — **no ssdtools refactor**.
 - **New `ssd_design_targets(design, ..., root, upload, cue)` target factory** —
-  emits the **content-keyed union** of every scenario's shard targets
-  (de-duplicated by name) under a per-step, sig-addressed root
-  `<root>/<step>/sig=<hash>/<cells>`, plus one combined summary. A single
+  emits the de-duplicated union of shard targets plus the combined summary; one
   `tar_make()` runs the whole design under one scheduler/controller.
-- **Per-scenario summaries that filter shared shards, unioned into one table.**
-  Each scenario's `summary_<name>` target reads the shared shards and filters to
-  that scenario's readout/cell slice; the top-level `summary` target unions them
-  into `<root>/summary.parquet` with a `scenario` identity column, at the DuckDB
-  level (the no-R-materialise guarantee of `ssd_summarise()`).
-- **Upload mirrors the content-keyed tree.** With a non-`NULL` `upload`, shards
-  ship under the same sig-addressed paths (so a shared shard uploads **once**);
-  read-back resolves a scenario's sigs. The per-scenario `scenario=<name>` upload
-  prefix is removed.
-- **Byte identity is preserved.** A scenario's per-task results are byte-identical
-  to running it alone — combining changes addressing (names, roots) only, never
-  `(seed, primer)`. Shard sharing is *licensed* by that byte-identity: a shared
-  shard is the result both scenarios would have computed.
-- `ssd_scenario_targets()`'s public contract is **unchanged** — it keeps its
-  `layout=<hash(partition_by)>` addressing; the design factory's sig addressing is
-  new code. Promoting a flat run into a design is documented as safe but
-  recomputing (addressing changes; `(seed, primer)` does not).
+- **Per-scenario summaries filtering shared shards, unioned into one table.** Each
+  `summary_<name>` target reads the shared shards and filters to that scenario's
+  cells and readout slice; the top-level `summary` target unions them into
+  `<root>/summary.parquet` with a `scenario` identity column, at the DuckDB level.
+- **Byte identity is preserved** — a member's per-task results are byte-identical
+  to running it alone; combining changes addressing only, never `(seed, primer)`.
+- `ssd_scenario_targets()`'s public contract is **unchanged** (it keeps
+  `layout=` addressing without the `seed=` level); promoting a flat run into a
+  design is documented as safe but recomputing.
 
 ## Capabilities
 
 ### New Capabilities
-- `scenario-combine`: the **design** — `ssd_design()`; per-step cumulative
-  content-key (`sig=`) shard addressing with cross-scenario dedup;
-  `ssd_design_targets()` emitting the content-keyed target union; the hc readout
-  aggregation (`union` over `proportion`/`est_method`, `any` over `ci`/`samples`)
-  feeding shared `hc` shards; per-scenario summary filtering and the combined
-  design summary with its `scenario` identity column; sig-mirrored upload.
+- `scenario-combine`: the **design** — `ssd_design()` with its name→value
+  consistency contract; the ragged task-set union with naked cell addressing under
+  `seed=`/`layout=`; `ssd_design_targets()`; the design-wide `dists` union; the
+  per-overlap hc readout aggregation (`union` `proportion`/`est_method`, `any`
+  `ci`/`samples`) with `ci`-routing; per-scenario summary filtering and the
+  combined design summary with its `scenario` identity column.
 
 ### Modified Capabilities
-<!-- None: `ssd_scenario_targets()`'s requirements (and the `task-shards` /
-     `shard-runner` per-task contracts) are untouched. The design factory
-     composes the existing single-scenario machinery, supplying aggregated
-     step slices and sig-addressed roots; the per-shard runners and `ssd_hc()`
-     usage are unchanged. -->
+<!-- None: `ssd_scenario_targets()`'s requirements, the `task-shards` /
+     `shard-runner` per-task contracts, and `ssdtools` are untouched. The design
+     factory unions and addresses the existing single-scenario machinery. -->
 
 ## Impact
 
-- **New code**: `ssd_design()` (collection constructor + validation,
-  `R/design.R`); `ssd_design_targets()`, the content-keyed sig helpers, the
-  aggregated hc step-slice, the per-scenario summary filter, and the combined
-  summary fan-in (`R/targets-runner.R` or a sibling file).
-- **Internal refactor**: a sig-addressed results-dir helper (the design sibling
-  of `scenario_results_dir()`); a `sig` parameter threaded through the design
-  factory's target-name and root construction (the empty/standalone path keeps
-  `ssd_scenario_targets()` byte-for-byte).
+- **New code**: `ssd_design()` (constructor + consistency validation,
+  `R/design.R`); `ssd_design_targets()`, the ragged task-union + cell-dedup, the
+  `seed=`-extended results-dir helper, the per-overlap hc demand aggregation +
+  `ci`-routing, the per-scenario summary filter, and the combined-summary fan-in
+  (`R/targets-runner.R` or a sibling file).
 - **APIs**: two new exports (`ssd_design()`, `ssd_design_targets()`); no breaking
-  change to existing exports. **No ssdtools change.**
-- **Docs**: README / `vignettes/sharded-pipeline.qmd` (a design section covering
-  shard sharing, the readout aggregation, and the growth contract), `_pkgdown.yml`,
+  change. **No ssdtools change.**
+- **Docs**: README / `vignettes/sharded-pipeline.qmd` (a design section led by the
+  irregular-grid use case, with setting-comparison secondary), `_pkgdown.yml`,
   `GLOSSARY.md` (*Design terms*), `ROADMAP.md`, regenerated `man/`.
-- **Tests**: a two-scenario design sharing `sample`/`fit` shards (one target,
-  one Parquet, byte-identical to the standalone per-task results); a `dists`
-  comparison forking `fit` while sharing `sample`; an `est_method`/`proportion`/
-  `ci`/`samples` comparison sharing **all** shards and filtering per scenario;
-  combined-summary content + `scenario` tag; design growth (adding a member adds
-  only its non-shared targets; widening the hc readout union re-sigs only the
-  `hc` shards); upload-shape under `ssd_upload_dryrun()`; sig-completeness
-  (each off-axis setting that *does* change bytes forks the sig).
-- **Dependencies**: none — independent of in-flight changes (only GLOSSARY/
-  vignette prose could brush against `scenario-input-types`).
+- **Tests**: a ragged two-member design (coarse + refinement) sharing the
+  overlapping cells (one target, byte-identical to standalone) and building the
+  refinement's extra cells once; distinct-seed members landing under separate
+  `seed=` trees sharing nothing; the consistency contract rejecting inconsistent
+  name bindings; the per-overlap readout aggregation (the `ci`/`nsim` example);
+  combined-summary content + `scenario` tag; upload shape.
+- **Dependencies**: none (only GLOSSARY/vignette prose could brush against
+  `scenario-input-types`).
