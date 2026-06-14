@@ -59,16 +59,25 @@
 #'
 #' # `dists` and `est_method`
 #'
-#' `dists` and `est_method` are **simulation settings**, not cross-join axes -
-#' they are absent from `task_axes("fit")`/`task_axes("hc")`, so they never
-#' multiply tasks or enter the per-task RNG primer. `dists` is the *fit*-level
-#' setting: the whole character vector is handed to one `ssd_fit_dists()` call
-#' per fit task (fanning out per distribution would dissolve the model averaging
-#' that defines a fit). `est_method` is an *hc*-level setting: every requested
-#' method is summarised from each hc task's **single** bootstrap sample set
-#' rather than re-bootstrapping per method (the CI is est_method-invariant and
-#' the point `est` is analytical), so a vector `est_method` yields one row per
-#' method within a task without fanning out into separate tasks.
+#' `dists` is an [ssd_distset()] collection: one or more **distribution sets**
+#' (pools of distributions model-averaged together to form one SSD), each named.
+#' The *fit* step fits the **union** of every set's members once - the single
+#' model-averaged superset every pool is a subset of - so `scenario$fit$dists` is
+#' that union and *individual* distributions still never fan out (an axis value
+#' is always a whole pool). The named sets ride on the hc grid
+#' (`scenario$hc$distsets`); the *hc* step subsets that one union fit down to each
+#' set's members (`subset(fit, set, strict = FALSE)`) and re-averages, so
+#' `"distset"` **is** an hc cross-join axis (`task_axes("hc")`) keyed by the set
+#' **name** - several pools reuse one fit rather than re-fitting. A bare character
+#' vector or plain list aborts loudly, pointing to `ssd_distset()`.
+#'
+#' `est_method` is a **simulation setting**, not a cross-join axis - it is absent
+#' from `task_axes("hc")`, so it never multiplies tasks or enters the per-task RNG
+#' primer. It is an *hc*-level setting: every requested method is summarised from
+#' each hc task's **single** bootstrap sample set rather than re-bootstrapping per
+#' method (the CI is est_method-invariant and the point `est` is analytical), so a
+#' vector `est_method` yields one row per method within a task without fanning out
+#' into separate tasks.
 #'
 #' @inheritParams ssdtools::ssd_fit_dists
 #' @inheritParams ssdtools::ssd_hc
@@ -101,6 +110,12 @@
 #'   [scenario_min_pmix()]. A name-string is resolved to a function at
 #'   construction (from `ssdtools` or the caller's environment), failing fast if
 #'   it cannot be resolved to a single-argument function.
+#' @param dists An [ssd_distset()] collection of one or more named distribution
+#'   sets (pools model-averaged together to form one SSD). The fit step fits the
+#'   **union** of every set's members once; the hc step subsets that union fit
+#'   per set and re-averages, so the set **name** is an hc cross-join axis
+#'   (`"distset"`) while individual distributions never fan out. A bare character
+#'   vector or plain list aborts, pointing to `ssd_distset()`.
 #' @param range_shape1 A list of numeric vectors of length two of the lower and
 #'   upper bounds for the shape1 parameter.
 #' @param range_shape2 A list of numeric vectors of length two of the lower and
@@ -119,8 +134,10 @@
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
 #'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`,
-#'   `parametric` (`ci` and `est_method` are hc simulation settings, not axes;
-#'   `dists` is the fit-level simulation setting).
+#'   `parametric`, `distset` (`ci` and `est_method` are hc simulation settings,
+#'   not axes; `dists` is the fit-level simulation setting feeding the union, and
+#'   `distset` - the set *name* - is the hc axis over the union's post-fit
+#'   subsets).
 #'   `"nrow"` is rejected only for `sample` (the
 #'   shared draw carries no `nrow` axis; the `fit` step truncates it inline), and
 #'   is a valid path axis for `fit`/`hc`. Steps partition **independently** -
@@ -161,7 +178,7 @@ ssd_define_scenario <- function(
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   nrow_max = 1000L,
-  dists = ssdtools::ssd_dists_bcanz(),
+  dists = ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz()),
   est_method = "multi",
   proportion = 0.05,
   ci = FALSE,
@@ -234,9 +251,19 @@ ssd_define_scenario <- function(
   # `partition_by`/`bundle` are validated and normalised below.
 
   # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
-  chk::chk_character(dists)
-  chk::chk_not_any_na(dists)
-  chk::chk_unique(dists)
+  # `dists` is an `ssd_distset()` collection (validated by value at
+  # construction): a bare character vector or plain list aborts loudly, pointing
+  # the caller to the constructor (no expression-archaeology for set names). The
+  # fit step fits the *union* of all sets once (derived below); the hc step
+  # subsets that one union fit per set.
+  if (!inherits(dists, "ssdsims_distset")) {
+    chk::abort_chk(
+      "`dists` must be an `ssd_distset()` collection; assemble distribution ",
+      "sets with `ssd_distset()` (e.g. ",
+      "`ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())`).",
+      call = call
+    )
+  }
 
   chk::chk_logical(rescale)
   chk::chk_not_any_na(rescale)
@@ -371,6 +398,14 @@ ssd_define_scenario <- function(
 
   partition_by <- validate_partition_by(partition_by, bundle, call = call)
 
+  # The fit step fits the union of every set's members once (the single
+  # model-averaged superset every pool is a subset of); the named sets ride on
+  # the hc grid (`hc$distsets`) for the hc step to subset by name. The set names
+  # are the `distset` axis values; the member vectors are carried for execution
+  # only and never enter a task hash.
+  distsets <- unclass(dists)
+  dists_union <- sort(unique(unlist(distsets, use.names = FALSE)))
+
   structure(
     list(
       seed = as.integer(seed),
@@ -387,7 +422,7 @@ ssd_define_scenario <- function(
         min_pmix = min_pmix_spec$names,
         range_shape1 = range_shape1,
         range_shape2 = range_shape2,
-        dists = dists
+        dists = dists_union
       ),
       min_pmix_fns = min_pmix_spec$fns,
       hc = list(
@@ -397,7 +432,8 @@ ssd_define_scenario <- function(
         nboot = nboot,
         ci_method = ci_method,
         parametric = parametric,
-        samples = samples
+        samples = samples,
+        distsets = distsets
       ),
       partition_by = partition_by
     ),
@@ -779,6 +815,10 @@ print.ssdsims_scenario <- function(x, ...) {
   print_grid(x$fit, "fit")
   cat("  hc grid:\n")
   print_grid(x$hc, "hc")
+  cat("  distsets:\n")
+  for (nm in names(x$hc$distsets)) {
+    cat("    ", nm, ": ", fmt_grid_value(x$hc$distsets[[nm]]), "\n", sep = "")
+  }
   cat("  partition_by:\n")
   for (step in c("sample", "fit", "hc")) {
     cat(
@@ -816,6 +856,11 @@ print.ssdsims_scenario <- function(x, ...) {
 print_grid <- function(grid, step) {
   axes <- task_axes(step)
   for (nm in names(grid)) {
+    # The hc `distsets` map (set name -> members) is rendered in its own block
+    # by `print.ssdsims_scenario()`, not as a scalar grid line here.
+    if (nm == "distsets") {
+      next
+    }
     marker <- if (nm %in% axes) "" else " (setting)"
     cat("    ", nm, ": ", fmt_grid_value(grid[[nm]]), marker, "\n", sep = "")
   }

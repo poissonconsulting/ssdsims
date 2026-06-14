@@ -33,11 +33,16 @@ test_that("scenario-definition: minimal construction stores declarative fields",
       "nboot",
       "ci_method",
       "parametric",
-      "samples"
+      "samples",
+      "distsets"
     )
   )
   expect_identical(s$hc$ci, FALSE)
   expect_identical(s$nrow_max, 1000L)
+  # The default `dists` is a single-set `ssd_distset()`; the fit stores the
+  # union and the hc stores the named sets.
+  expect_identical(names(s$hc$distsets), "BCANZ")
+  expect_identical(s$fit$dists, sort(ssdtools::ssd_dists_bcanz()))
 })
 
 # ---- nrow_max (sample-level draw-size setting) -------------------------------

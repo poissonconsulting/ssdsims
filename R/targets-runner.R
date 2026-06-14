@@ -147,7 +147,10 @@ read_parent_shards <- function(tasks, scenario, parent, parent_dir) {
 #             (fit reads its parent `sample` shards off disk), so it is already
 #             independent of the dataset set.
 #   hc     -> the hc settings its runner reads (`hc$est_method`,
-#             `hc$proportion`, `hc$ci`, `hc$samples`) + `partition_by` for
+#             `hc$proportion`, `hc$ci`, `hc$samples`) + the `hc$distsets` member
+#             vectors (resolved via `scenario_distset()` to subset the union fit
+#             per `distset` task; they hash by set name, so carrying them does
+#             not couple an hc shard to a membership edit) + `partition_by` for
 #             `fit` (parent read) and `hc` (own path).
 #
 # `seed`/`primer` are not sliced - they ride in each shard's `tasks` list-column.
@@ -161,7 +164,8 @@ read_parent_shards <- function(tasks, scenario, parent, parent_dir) {
 scenario_step_slice <- function(
   scenario,
   step,
-  datasets = names(scenario$data)
+  datasets = names(scenario$data),
+  distsets = names(scenario$hc$distsets)
 ) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   step <- rlang::arg_match0(step, c("sample", "fit", "hc"))
@@ -178,12 +182,20 @@ scenario_step_slice <- function(
       min_pmix_fns = scenario$min_pmix_fns,
       partition_by = partition_by[c("sample", "fit")]
     ),
+    # `distsets` restricts the carried sets to those a *shard* reads (its
+    # `unique(tasks$distset)`), defaulting to all. When `distset` is on the hc
+    # path each shard reads one set, so its slice carries only that set's
+    # members - appending a set then mints a new hc shard and leaves the existing
+    # shards' slices (and cached Parquets) byte-identical (the fit layer carries
+    # no `distset`, so its shards are untouched too). When `distset` is bundled
+    # the shard reads every set, so the slice carries them all.
     hc = list(
       hc = list(
         ci = scenario$hc$ci,
         proportion = scenario$hc$proportion,
         est_method = scenario$hc$est_method,
-        samples = scenario$hc$samples
+        samples = scenario$hc$samples,
+        distsets = scenario$hc$distsets[distsets]
       ),
       partition_by = partition_by[c("fit", "hc")]
     )
@@ -279,7 +291,7 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
-#'   dists = "lnorm"
+#'   dists = ssd_distset(lnorm = "lnorm")
 #' )
 #' dir <- tempfile()
 #' ssd_run_sample_step(
@@ -337,13 +349,17 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 
 #' @describeIn ssd_run_step Run the `hc` tasks: read the distinct set of
 #'   parent `fit` shards the shard's tasks reference (each once - an hc shard
-#'   typically spans several fit shards), isolate each task's fit by `fit_id`,
-#'   deserialise the `fitdists` object, and estimate the hazard concentration with
-#'   the per-task `(seed, primer)` through `hc_data_task_primer()`. Each task's hc
-#'   tibble (one or more rows - the `proportion` fan-out, with the scalar `ci`
-#'   applied uniformly and bootstrap-only knobs `NA` when `ci = FALSE`) is tagged
-#'   with its `hc_id` and parent `fit_id`, stacked, and written as one Parquet at
-#'   the shard's partition path.
+#'   typically spans several fit shards), decode each parent **union** fit once
+#'   per `fit_id` (reused across every `distset` task that shares it), resolve each
+#'   task's `distset` name to its members via [scenario_distset()], subset the
+#'   union fit to that pool (`strict = FALSE`), and estimate the hazard
+#'   concentration with the per-task `(seed, primer)` through
+#'   `hc_data_task_primer()` (the subset happens in that shared primitive). Each
+#'   task's hc tibble (with the scalar `ci` applied uniformly and bootstrap-only
+#'   knobs `NA` when `ci = FALSE`) is tagged with its `hc_id`, parent `fit_id`, and
+#'   `distset` name, stacked, and written as one Parquet at the shard's partition
+#'   path. A set whose members all dropped from the union fit emits no rows for
+#'   that cell (the survivor model).
 #' @export
 #' @examples
 #' \donttest{
@@ -353,7 +369,7 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
-#'   dists = "lnorm"
+#'   dists = ssd_distset(lnorm = "lnorm")
 #' )
 #' dir <- tempfile()
 #' ssd_run_sample_step(
@@ -381,20 +397,32 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   # Read each distinct parent `fit` shard once, then isolate each task's fit in
   # memory by `fit_id` (an hc shard typically spans several fit shards).
   fit_tbl <- read_parent_shards(tasks, scenario, "fit", fit_dir)
-  rows <- vector("list", nrow(tasks))
-  for (i in seq_len(nrow(tasks))) {
-    t <- tasks[i, ]
-    blob <- fit_tbl$fit_blob[fit_tbl$fit_id == t$fit_id]
+  # Decode each parent *union* fit once per `fit_id` and reuse it across every
+  # `distset` task that shares the `fit_id` (with `distset` bundled, one shard
+  # holds every pool for a `(dataset, sim)` cell), so a union fit is deserialised
+  # once and subset N ways - the second layer of reuse on top of the one fit.
+  fit_cache <- new.env(parent = emptyenv())
+  decode_fit <- function(fit_id) {
+    if (!is.null(fit_cache[[fit_id]])) {
+      return(fit_cache[[fit_id]])
+    }
+    blob <- fit_tbl$fit_blob[fit_tbl$fit_id == fit_id]
     if (length(blob) != 1L) {
       chk::abort_chk(
         "Expected exactly one `fit` result for fit_id ",
-        encodeString(t$fit_id, quote = "\""),
+        encodeString(fit_id, quote = "\""),
         ", found ",
         length(blob),
         " in the parent `fit` shard(s) (missing or duplicate result)."
       )
     }
-    fits <- decode_obj(blob)
+    fit_cache[[fit_id]] <- decode_obj(blob)
+    fit_cache[[fit_id]]
+  }
+  rows <- vector("list", nrow(tasks))
+  for (i in seq_len(nrow(tasks))) {
+    t <- tasks[i, ]
+    fits <- decode_fit(t$fit_id)
     hc <- hc_data_task_primer(
       fits = fits,
       proportion = scenario$hc$proportion,
@@ -403,13 +431,25 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
       est_method = scenario$hc$est_method,
       ci_method = t$ci_method,
       parametric = t$parametric,
+      # Resolve this task's `distset` name to its members and subset the union
+      # fit to that pool (the subset happens in the shared primer chokepoint).
+      dists = scenario_distset(scenario, t$distset),
       samples = scenario$hc$samples,
       seed = t$seed,
       primer = t$primer[[1L]]
     )
     hc <- tibble::as_tibble(hc)
+    # An empty subset (all members dropped from the union fit) emits no rows for
+    # this `(cell, distset)` - the survivor model - so this task contributes
+    # nothing to the shard.
+    if (!nrow(hc)) {
+      next
+    }
     hc$hc_id <- t$hc_id
     hc$fit_id <- t$fit_id
+    # The `distset` column disambiguates rows within a bundled shard, mirroring
+    # the `distset=<name>` path segment when it is promoted to a path axis.
+    hc$distset <- t$distset
     rows[[i]] <- hc
   }
   out <- file.path(out_dir, shard_path(tasks, scenario, "hc"), "part.parquet")
@@ -490,7 +530,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
-#'   dists = "lnorm"
+#'   dists = ssd_distset(lnorm = "lnorm")
 #' )
 #' # Materialise the shards single-core, then fan in the hc layer.
 #' run <- ssd_run_scenario_shards(scenario)
@@ -841,10 +881,9 @@ ssd_scenario_targets <- function(
 
   # Each step's command depends only on its minimal scenario slice (not the bare
   # `scenario` global), so editing a field outside a step's slice no longer
-  # invalidates that step's shards. The `fit`/`hc` slices carry no datasets and
-  # are step-global, so they are spliced (`!!`) once into the step's command.
+  # invalidates that step's shards. The `fit` slice carries no datasets/distsets
+  # and is step-global, so it is spliced (`!!`) once into the step's command.
   fit_slice <- scenario_step_slice(scenario, "fit")
-  hc_slice <- scenario_step_slice(scenario, "hc")
 
   # sample: a leaf step, no upstream shards. The slice carries the datasets, so
   # it is built *per shard* (carrying only the dataset(s) that shard reads) and
@@ -885,19 +924,30 @@ ssd_scenario_targets <- function(
   )
   fit_names <- shard_cell_names(fit_targets, fit_shards, scenario, "fit")
 
-  # hc: each shard names only the fit shard(s) its tasks read.
+  # hc: each shard names only the fit shard(s) its tasks read. The hc slice is
+  # built *per shard*, carrying only the distribution set(s) that shard reads
+  # (its `unique(tasks$distset)`) - so with `distset` on the hc path, appending a
+  # set mints a new hc shard and leaves the existing shards' commands (and cached
+  # Parquets) intact; the fit layer carries no `distset`, so its shards stay
+  # cached too.
   hc_shards$.parents <- child_parent_edges(
     hc_shards,
     scenario,
     "fit",
     fit_names
   )
+  hc_shards$.slice <- purrr::map(
+    hc_shards$tasks,
+    function(tasks) {
+      scenario_step_slice(scenario, "hc", distsets = unique(tasks$distset))
+    }
+  )
   hc_targets <- step_map(
     "hc",
     hc_shards,
     rlang::expr({
       .parents # per-child edges to the fit shards this hc shard reads
-      ssd_run_hc_step(tasks, !!hc_slice, !!fit_dir, !!hc_dir)
+      ssd_run_hc_step(tasks, .slice, !!fit_dir, !!hc_dir)
     })
   )
   hc_names <- shard_cell_names(hc_targets, hc_shards, scenario, "hc")

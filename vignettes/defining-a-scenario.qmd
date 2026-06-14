@@ -124,7 +124,10 @@ scenario <- ssd_define_scenario(
   nsim = 3L,
   seed = 42L,
   nrow = c(5L, 10L),
-  dists = c("lnorm", "gamma"),
+  dists = ssd_distset(
+    BCANZ = ssdtools::ssd_dists_bcanz(),
+    lnorm = "lnorm"
+  ),
   est_method = "multi",
   proportion = c(0.05, 0.2),
   ci = TRUE,
@@ -183,6 +186,61 @@ execution, two scenarios with the same `min_pmix` name but different function
 bodies produce byte-identical task identities --- the split that lets a cluster
 worker resolve `min_pmix` off the transported scenario with no shared
 interactive environment.
+
+### `dists` is a collection of distribution sets
+
+`dists` is supplied as an `ssd_distset()` collection: one or more named
+**distribution sets**, each a pool of distributions model-averaged together to
+form one SSD. The constructor validates members (a subset of
+`ssdtools::ssd_dists_all()`) and names (unique, filesystem-safe) up front:
+
+```{r}
+#| label: distset
+ds <- ssd_distset(
+  BCANZ = ssdtools::ssd_dists_bcanz(),
+  Iwasaki = c("burrIII3", "gamma", "llogis", "lnorm", "weibull"),
+  lnorm = "lnorm"
+)
+ds
+```
+
+The fit step fits the **union** of every set's members *once* --- the single
+model-averaged superset every pool is a subset of --- and the hc step then
+`subset()`s that one fit down to each pool's members and re-averages. So
+declaring several pools costs **one** fit, not one per pool (the motivating
+`ssdaveragerr` "iwasaki" pattern: fit a superset, then compare BCANZ, the
+Iwasaki set, and single distributions carved from it):
+
+```{r}
+#| label: distset-union
+scenario_iwasaki <- ssd_define_scenario(
+  data,
+  nsim = 3L,
+  seed = 42L,
+  dists = ds
+)
+# one union fit per fit task ...
+scenario_iwasaki$fit$dists
+# ... and the named pools carried for the hc step to subset by name
+names(scenario_iwasaki$hc$distsets)
+```
+
+The set **name** --- not its members --- is what enters the task identity (the
+`distset=<name>` path segment and the per-task primer), mirroring `min_pmix` and
+datasets; the members ride on the scenario and are reached by name with the
+`scenario_distset()` accessor:
+
+```{r}
+#| label: distset-accessor
+scenario_distset(scenario_iwasaki, "Iwasaki")
+```
+
+`distset` is an **hc** cross-join axis, so the hc task table fans out over the
+declared sets (the fit table is unchanged --- it fits the union). A single-set
+collection (`ssd_distset(BCANZ = ...)`) has one `distset` value and so does not
+multiply the table. Individual distributions still never fan out: an axis value
+is always a whole averaging pool. A bare character vector or plain list is
+rejected, pointing you to `ssd_distset()`.
 
 ### The `ci` flag
 
