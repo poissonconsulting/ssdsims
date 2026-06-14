@@ -172,13 +172,6 @@ test_that("scenario-definition: one .seed fans out on independent name-keyed str
 
 # ---- dqrng contract --------------------------------------------------------
 
-test_that("scenario-definition: ssd_gen aborts when dqrng is not loaded", {
-  local_mocked_bindings(dqrng_usable = function() FALSE)
-  expect_snapshot(error = TRUE, {
-    ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)
-  })
-})
-
 test_that("scenario-definition: a generator escaping dqrng aborts", {
   escape <- function(n) {
     RNGkind("Mersenne-Twister")

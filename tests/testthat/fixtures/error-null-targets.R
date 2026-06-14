@@ -5,7 +5,6 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
-library(dqrng)
 
 boom <- function(n) stop("boom")
 

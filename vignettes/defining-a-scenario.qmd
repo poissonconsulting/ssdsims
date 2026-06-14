@@ -17,15 +17,13 @@ knitr:
 # dependencies. Skip evaluation gracefully if they are unavailable (e.g. on a
 # minimal CI runner) rather than failing the build.
 evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
-  requireNamespace("ssdtools", quietly = TRUE) &&
-  requireNamespace("dqrng", quietly = TRUE)
+  requireNamespace("ssdtools", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```
 
 ```{r}
 #| label: library
 library(ssdsims)
-library(dqrng)
 ```
 
 ## Why a declarative scenario?
@@ -103,11 +101,10 @@ ssd_scenario_data(
 ```
 
 Both `.n` (the generated population size) and `.seed` are **required**, so
-unsized or irreproducible generation is impossible. Each generator draws on an
-independent dqrng stream keyed by its dataset *name* (with `.seed` as the base
-seed), so one `.seed` reproducibly fans out across all generators in a call;
-the global RNG state is untouched. Generation requires the suggested `dqrng`
-package to be loaded (`library(dqrng)`) --- ssdsims never loads it implicitly.
+unsized or irreproducible generation is impossible. Each generator draws under
+the dqrng `pcg64` backend on an independent stream keyed by its dataset *name*
+(with `.seed` as the base seed), so one `.seed` reproducibly fans out across all
+generators in a call; the global RNG state is untouched.
 
 A materialised generator dataset is a *fixture the scenario resamples*: once
 inside the collection it is an ordinary tibble, indistinguishable from a
@@ -260,12 +257,10 @@ children by the foreign-key id. It runs **in-process**, with no `targets`, no
 shard grouping, and no Parquet I/O.
 
 It **is reproducible without an external seed**: the runner opens one
-`local_dqrng_backend()` scope (which requires the suggested `dqrng` package to
-be loaded --- hence the `library(dqrng)` at the top of this vignette) and seeds
-each task exactly once from `scenario$seed` plus a per-task primer
-(`task_primer()` over the task's identity), so two runs of a scenario with a
-fixed `seed` yield identical results, regardless of the order in which tasks
-run:
+`local_dqrng_backend()` scope and seeds each task exactly once from
+`scenario$seed` plus a per-task primer (`task_primer()` over the task's
+identity), so two runs of a scenario with a fixed `seed` yield identical
+results, regardless of the order in which tasks run:
 
 ```{r}
 #| label: run-baseline

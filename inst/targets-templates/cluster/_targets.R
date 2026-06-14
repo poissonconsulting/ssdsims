@@ -23,7 +23,6 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
-library(dqrng)
 
 # Ingredient B — the SLURM controller (the one editable block; see controller.R).
 # `error = "continue"` is the cluster-independent keep-going (`make -k`) default:

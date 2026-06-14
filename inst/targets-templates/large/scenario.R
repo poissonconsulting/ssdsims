@@ -5,7 +5,6 @@
 # `run-serial.R` (the single-core shard runner) so both run the same study and
 # their results can be compared. Edit to taste.
 library(ssdsims)
-library(dqrng)
 
 data <- ssd_scenario_data(ssddata::ccme_boron)
 

@@ -70,19 +70,16 @@ input with no derivable name (e.g. an anonymous function literal) must be
 given an explicit name. Names must be unique across the call.
 }
 
-\section{dqrng only}{
-Generation draws under the dqrng \code{pcg64} backend
-(\code{\link[=local_dqrng_backend]{local_dqrng_backend()}}), which requires the Suggested \code{dqrng} package
-(>= 0.4.1) to be \strong{already loaded} - run \code{library(dqrng)} first; ssdsims
-never loads it implicitly. After each generator runs, \code{ssd_gen()} verifies
-the draw actually came from dqrng and aborts if the generator escaped the
-backend (e.g. switched \code{RNGkind()} and drew from base R), since such draws
-are not reproducible under \code{.seed}. A generator that consumes no
+\section{dqrng-backed generation}{
+Generation draws under the dqrng \code{pcg64} backend (\code{\link[=local_dqrng_backend]{local_dqrng_backend()}}),
+with each generator seeded through \code{\link[=local_dqrng_state]{local_dqrng_state()}}, which brackets the
+draw with the per-task dqrng-integrity witness: it aborts if a generator
+escapes the backend (e.g. switches \code{RNGkind()} and draws from base R), since
+such draws are not reproducible under \code{.seed}. A generator that consumes no
 randomness passes.
 }
 
 \examples{
-library(dqrng)
 ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 42)
 
 # one .seed fans out across generators on independent name-keyed streams

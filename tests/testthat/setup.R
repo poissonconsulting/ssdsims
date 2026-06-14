@@ -6,8 +6,3 @@ rlang::local_options(
 )
 
 RNGkind("L'Ecuyer-CMRG")
-
-# dqrng is a Suggested, conditionally-used dependency: ssdsims never loads it,
-# so the suite (which exercises the dqrng backend throughout) opts in here.
-# Loading the namespace is enough for `dqrng_usable()`.
-requireNamespace("dqrng", quietly = TRUE)

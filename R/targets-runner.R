@@ -223,7 +223,6 @@ NULL
 #'   `.row` order index so a downstream `fit` shard can isolate and re-order it.
 #' @export
 #' @examples
-#' library(dqrng)
 #' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 #' shards <- ssd_scenario_sample_shards(scenario)
@@ -268,7 +267,6 @@ ssd_run_sample_step <- function(tasks, scenario, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
-#' library(dqrng)
 #' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
 #'   data,
@@ -343,7 +341,6 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
-#' library(dqrng)
 #' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
 #'   data,
@@ -481,7 +478,6 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' @export
 #' @examples
 #' \donttest{
-#' library(dqrng)
 #' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
 #'   data,

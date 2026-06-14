@@ -6,43 +6,6 @@
 # the caller's session RNG behaviour is left untouched outside of scenario
 # execution. See `openspec/changes/dqrng-init/design.md`.
 
-# Is dqrng usable without loading it? `TRUE` iff the caller has already loaded
-# dqrng at the version `DESCRIPTION` suggests (>= 0.4.1).
-#
-# Deliberately tests *already-loaded*: the usual Suggests idiom --
-# `requireNamespace("dqrng")` or a bare `dqrng::` touch -- would itself LOAD
-# dqrng, which is the act this gate exists to avoid. Loading a package that
-# registers a user-supplied RNG is a process-global, potentially destructive
-# act: base R keeps a single `user_unif_rand` slot resolved across all loaded
-# DLLs, so a second user-RNG package in the session can silently hijack
-# `runif()` (see `openspec/changes/task-rng-postcheck/exploration/
-# user-rng-conflict/`). ssdsims therefore uses dqrng only when the user has
-# opted in by loading it; every `dqrng::` reference in package code is reached
-# only behind this gate (directly, or transitively inside an already-activated
-# backend scope).
-dqrng_usable <- function() {
-  isNamespaceLoaded("dqrng") && getNamespaceVersion("dqrng") >= "0.4.1"
-}
-
-# Assert dqrng is usable (already loaded at >= 0.4.1), aborting with actionable
-# guidance otherwise. ssdsims never loads dqrng itself, and never silently
-# falls back to base R's ambient RNG (that would quietly drop the per-task
-# reproducibility the dqrng path exists for). `call` defaults to the calling
-# frame so the error is reported in the context of the user-facing function
-# (AGENTS.md error-call-origin rule).
-chk_dqrng_usable <- function(call = rlang::caller_call()) {
-  if (!dqrng_usable()) {
-    chk::abort_chk(
-      "The dqrng RNG backend requires the `dqrng` package (>= 0.4.1) to be ",
-      "loaded. ssdsims never loads it implicitly (registering a user-supplied ",
-      "RNG provider is a process-global side effect); run `library(dqrng)` ",
-      "first.",
-      call = call
-    )
-  }
-  invisible(NULL)
-}
-
 # Activate the dqrng pcg64 backend for the current process.
 #
 # Sets `dqRNGkind("pcg64")` -- overriding dqrng's own default generator
@@ -57,7 +20,6 @@ chk_dqrng_usable <- function(call = rlang::caller_call()) {
 # is reset on scope exit; call `set_dqrng_backend()` directly only when paired
 # with `on.exit(reset_dqrng_backend())`.
 set_dqrng_backend <- function() {
-  chk_dqrng_usable()
   dqrng::dqRNGkind("pcg64")
   dqrng::register_methods()
   invisible(NULL)
@@ -96,109 +58,97 @@ dqrng_backend_active <- function() {
   identical(RNGkind()[1L], "user-supplied")
 }
 
-# Assert the dqrng backend is active, aborting otherwise. A `chk`-style guard
-# (returns invisibly on success) for dqrng-path helpers such as
-# `local_dqrng_state()` that are only meaningful while a `local_dqrng_backend()`
-# scope is open. `call` defaults to the calling frame so the error is reported
-# in the context of the user-facing function (AGENTS.md error-call-origin rule).
-chk_dqrng_backend_active <- function(call = rlang::caller_call()) {
-  if (!dqrng_backend_active()) {
-    chk::abort_chk(
-      "The dqrng backend is not active. ",
-      "Open a `local_dqrng_backend()` scope first.",
-      call = call
-    )
-  }
-  invisible(NULL)
-}
-
-# Diagnostic: name the package whose `user_unif_rand` C symbol base R currently
-# resolves -- the owner of the single process-global user-supplied RNG slot
-# (the same all-DLL `R_FindSymbol` search `RNG_Init` uses). Gotcha: a `DLLInfo`
-# overloads `$` to look up a *native symbol* by name, so the DLL's name must be
-# read with `[["name"]]`, never `$name`. Validated in
-# `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/
-# case7-who-owns-rng.R`.
+# Diagnostic: name the package that currently owns base R's `user_unif_rand`
+# slot. `getNativeSymbolInfo()` runs the same all-DLL `R_FindSymbol` search R's
+# `RNG_Init` uses, so the resolved DLL is the owner R would route `runif()`
+# through. Read the DLL name with `[["name"]]` -- a `DLLInfo`'s `$` is
+# overloaded to look up a *native symbol* of that name, so `$name` would try to
+# resolve a symbol called `name` and error. Returns `NA_character_` if the
+# symbol resolves nowhere (no user-supplied RNG provider is loaded). Lifted from
+# `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/case7-who-owns-rng.R`.
 rng_slot_owner <- function() {
-  si <- tryCatch(
+  info <- tryCatch(
     getNativeSymbolInfo("user_unif_rand"),
     error = function(e) NULL
   )
-  if (is.null(si)) {
-    return(NA_character_)
-  }
-  si$dll[["name"]]
+  if (is.null(info)) NA_character_ else info$dll[["name"]]
 }
 
-# Diagnostic: every loaded DLL that exports `user_unif_rand` -- i.e. every
-# loaded package that could take the single global user-supplied RNG slot
-# (e.g. dqrng, randtoolbox). Listing them points at the offending co-load even
-# when more than one is present.
+# Diagnostic: every loaded package that exports `user_unif_rand`, i.e. that
+# could take base R's single global user-supplied RNG slot (e.g. `dqrng`,
+# `randtoolbox`). Lists the offending co-load even when more than one is present.
 user_rng_providers <- function() {
-  out <- character(0)
+  providers <- character(0)
   for (dll in getLoadedDLLs()) {
-    ok <- tryCatch(
+    has_symbol <- tryCatch(
       {
         getNativeSymbolInfo("user_unif_rand", PACKAGE = dll)
         TRUE
       },
       error = function(e) FALSE
     )
-    if (ok) {
-      out <- c(out, dll[["name"]])
+    if (isTRUE(has_symbol)) {
+      providers <- c(providers, dll[["name"]])
     }
   }
-  out
+  providers
 }
 
-# Assert dqrng is still the generator actually serving base R's draws, aborting
-# otherwise. The per-task integrity witness (peer to `chk_dqrng_backend_active()`),
-# run as the exit bookend of each `*_data_task_primer()` wrapper.
+# Assert that *dqrng specifically* holds base R's user-supplied RNG slot,
+# aborting otherwise. Stronger than the `dqrng_backend_active()` probe: that
+# cheap `RNGkind()` probe answers "is *a* user-supplied RNG active" and so is
+# fooled by a foreign user-supplied RNG that has taken the single process-global
+# `user_unif_rand` slot; this answers "is *dqrng* the active one".
+# `dqrng_backend_active()` stays the cheap reentrancy gate for
+# `local_dqrng_backend()`; this is the per-task integrity assertion.
 #
-# Distinction from `dqrng_backend_active()`: the `RNGkind()` probe answers "is
-# *a* user-supplied RNG active" (and stays the cheap, side-effect-free
-# reentrancy gate for `local_dqrng_backend()`), but it is fooled by a *foreign*
-# user-RNG package holding the `user_unif_rand` slot (see
-# `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/`). This
-# witness answers "is **dqrng** the active one", using dqrng's own state: a
-# base-R `runif(1)` draw must advance dqrng's internal state iff dqrng is the
-# bound generator. The recorded state is restored afterwards, so the check
-# consumes no net randomness (the next draw is byte-identical with or without
-# it).
+# The witness is dqrng's own state: a base-R `runif(1)` draw routes through the
+# `user_unif_rand` slot, so it advances dqrng's internal state iff dqrng is the
+# bound generator. The draw is rolled back via `dqrng_set_state()`, so the check
+# is non-destructive (consumes no net randomness). On failure it branches on
+# `RNGkind()[1]`: a torn-down backend reports the current `RNGkind()` and names
+# no owner (the symbol still resolves to a loaded DLL that is not serving RNG);
+# a foreign hijack names `rng_slot_owner()` and lists `user_rng_providers()`.
+#
+# See `openspec/changes/task-rng-postcheck/exploration/user-rng-conflict/`
+# (case5: the witness; case6: it catches a hijack the cheap probe misses; case7:
+# naming the owner; case8: the per-task entry/exit brackets). `call` defaults to
+# the calling frame so the error is reported in the context of the user-facing
+# function (AGENTS.md error-call-origin rule).
 chk_dqrng_backend_intact <- function(call = rlang::caller_call()) {
-  s0 <- dqrng::dqrng_get_state()
-  # A base-R draw routes through the `user_unif_rand` slot, advancing dqrng's
-  # own state iff dqrng holds it (the witness).
-  invisible(stats::runif(1L))
-  s1 <- dqrng::dqrng_get_state()
-  dqrng::dqrng_set_state(s0)
-  if (!identical(s0, s1)) {
-    return(invisible(NULL))
+  state_before <- dqrng::dqrng_get_state()
+  invisible(stats::runif(1L)) # base RNG -> whatever holds the user_unif_rand slot
+  state_after <- dqrng::dqrng_get_state()
+  dqrng::dqrng_set_state(state_before) # roll the witness draw back: non-destructive
+  if (!identical(state_before, state_after)) {
+    return(invisible(NULL)) # dqrng advanced -> dqrng is the bound generator
   }
-  rng_kind <- RNGkind()[1L]
-  if (!identical(rng_kind, "user-supplied")) {
-    # Torn down: the backend was reset mid-task and base R is serving its own
-    # generator. The symbol owner is not meaningful here (the symbol still
-    # resolves to some loaded DLL that is not serving RNG), so do not name one.
+  if (!identical(RNGkind()[1L], "user-supplied")) {
     chk::abort_chk(
-      "The dqrng backend is no longer intact: it was reset during the task ",
-      "(base R RNG is now ",
-      encodeString(rng_kind, quote = "\""),
-      "), so the task's draws did not all come from dqrng and are not ",
-      "reproducible.",
+      "The dqrng backend is not intact: it was reset mid-task. ",
+      "Base R's RNG is now `",
+      RNGkind()[1L],
+      "`, not dqrng's pcg64, so the task's draws did not come from dqrng.",
       call = call
     )
   }
-  # Foreign hijack: a user-supplied RNG is active but the draw did not advance
-  # dqrng, so another user-RNG package holds the `user_unif_rand` slot.
+  providers <- user_rng_providers()
+  providers_msg <- if (length(providers) > 0L) {
+    paste0(
+      " Loaded user-RNG providers: ",
+      paste0("`", providers, "`", collapse = ", "),
+      "."
+    )
+  } else {
+    ""
+  }
   chk::abort_chk(
-    "The dqrng backend is no longer intact: a user-supplied RNG other than ",
-    "dqrng is serving base R's draws (the `user_unif_rand` slot is owned by ",
-    encodeString(rng_slot_owner(), quote = "\""),
-    "; loaded user-RNG providers: ",
-    chk::cc(user_rng_providers(), conj = " and "),
-    "), so the task's draws are not reproducible. Do not load a second ",
-    "user-RNG package while the dqrng backend is active.",
+    "The dqrng backend is not intact: a foreign user-supplied RNG holds base ",
+    "R's RNG slot, so the task's draws did not come from dqrng. The ",
+    "`user_unif_rand` slot is owned by `",
+    rng_slot_owner(),
+    "`.",
+    providers_msg,
     call = call
   )
 }
@@ -227,12 +177,6 @@ chk_dqrng_backend_intact <- function(call = rlang::caller_call()) {
 #' further reset. Only the outermost call activates the backend on entry and
 #' resets it on exit, so the RNG stream is identical whether or not a nested
 #' call occurs.
-#'
-#' dqrng is a Suggested dependency that ssdsims never loads itself (loading a
-#' user-supplied RNG provider is a process-global side effect): activating the
-#' backend requires dqrng (>= 0.4.1) to be **already loaded** -- run
-#' `library(dqrng)` first -- and aborts with that guidance otherwise rather
-#' than silently falling back to base R's ambient RNG.
 #' @inheritParams withr::local_seed
 #' @return Invisibly returns `TRUE` if this call activated the backend (the
 #'   outermost scope) or `FALSE` if the backend was already active and the call
@@ -241,20 +185,17 @@ chk_dqrng_backend_intact <- function(call = rlang::caller_call()) {
 #' @export
 #' @examples
 #'
-#' library(dqrng)
 #' local_dqrng_backend()
 #' dqrng::dqset.seed(42, stream = c(1L, 2L))
 #' runif(3)
 local_dqrng_backend <- function(.local_envir = parent.frame()) {
   chk::chk_environment(.local_envir)
-  call <- environment()
   # Reentrant: if a backend scope is already open, do nothing -- neither
   # re-activate nor schedule a reset -- so nesting leaves the RNG stream
   # untouched and only the outermost scope owns the backend lifetime.
   if (dqrng_backend_active()) {
     return(invisible(FALSE))
   }
-  chk_dqrng_usable(call = call)
   set_dqrng_backend()
   withr::defer(reset_dqrng_backend(), envir = .local_envir)
   invisible(TRUE)

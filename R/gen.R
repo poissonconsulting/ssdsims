@@ -58,15 +58,13 @@
 #' input with no derivable name (e.g. an anonymous function literal) must be
 #' given an explicit name. Names must be unique across the call.
 #'
-#' # dqrng only
+#' # dqrng-backed generation
 #'
-#' Generation draws under the dqrng `pcg64` backend
-#' ([local_dqrng_backend()]), which requires the Suggested `dqrng` package
-#' (>= 0.4.1) to be **already loaded** - run `library(dqrng)` first; ssdsims
-#' never loads it implicitly. After each generator runs, `ssd_gen()` verifies
-#' the draw actually came from dqrng and aborts if the generator escaped the
-#' backend (e.g. switched `RNGkind()` and drew from base R), since such draws
-#' are not reproducible under `.seed`. A generator that consumes no
+#' Generation draws under the dqrng `pcg64` backend ([local_dqrng_backend()]),
+#' with each generator seeded through [local_dqrng_state()], which brackets the
+#' draw with the per-task dqrng-integrity witness: it aborts if a generator
+#' escapes the backend (e.g. switches `RNGkind()` and draws from base R), since
+#' such draws are not reproducible under `.seed`. A generator that consumes no
 #' randomness passes.
 #'
 #' @param ... One or more generator inputs (a function, a function-name
@@ -82,7 +80,6 @@
 #'   [local_dqrng_backend()], [task_primer()].
 #' @export
 #' @examples
-#' library(dqrng)
 #' ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 42)
 #'
 #' # one .seed fans out across generators on independent name-keyed streams
@@ -153,9 +150,6 @@ ssd_gen <- function(..., .n, .seed) {
     chk::abort_chk("Generator names must be unique.", call = call)
   }
 
-  # All dqrng touches sit behind the usable gate: dqrng (>= 0.4.1) must be
-  # already loaded; ssdsims never loads a user-RNG provider itself.
-  chk_dqrng_usable(call = call)
   # Restore the global `.Random.seed` on return (backend registration advances
   # it); registered before the backend so it is reinstated after the reset.
   withr::local_preserve_seed()

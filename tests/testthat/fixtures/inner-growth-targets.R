@@ -8,7 +8,6 @@
 library(targets)
 library(tarchetypes)
 library(ssdsims)
-library(dqrng)
 
 loose <- function(n) 0.05
 strict <- function(n) 0.1

@@ -86,7 +86,6 @@ order and byte-identical across runs regardless. Evidence: the
 
 \examples{
 \donttest{
-library(dqrng)
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
   data,

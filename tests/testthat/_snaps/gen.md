@@ -86,19 +86,11 @@
       Error in `ssd_gen()`:
       ! `.seed` must be supplied (a scalar whole number): `ssd_gen()` generates data, so generation must be seeded.
 
-# scenario-definition: ssd_gen aborts when dqrng is not loaded
-
-    Code
-      ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)
-    Condition
-      Error in `ssd_gen()`:
-      ! The dqrng RNG backend requires the `dqrng` package (>= 0.4.1) to be loaded. ssdsims never loads it implicitly (registering a user-supplied RNG provider is a process-global side effect); run `library(dqrng)` first.
-
 # scenario-definition: a generator escaping dqrng aborts
 
     Code
       ssd_gen(escape = escape, .n = 5, .seed = 1L)
     Condition
       Error in `ssd_gen()`:
-      ! The dqrng backend is no longer intact: it was reset during the task (base R RNG is now "Mersenne-Twister"), so the task's draws did not all come from dqrng and are not reproducible.
+      ! The dqrng backend is not intact: it was reset mid-task. Base R's RNG is now `Mersenne-Twister`, not dqrng's pcg64, so the task's draws did not come from dqrng.
 
