@@ -90,3 +90,46 @@
 - [ ] 8.3 Update `ROADMAP.md` (in-flight marker) and `TARGETS-DESIGN.md` /
   `GLOSSARY.md` if the timing columns warrant a mention in the shard contract
   prose.
+
+## 9. Design-level rollup (depends on `scenario-combine`; gated)
+
+These tasks require `scenario-combine`'s `ssd_design()` / `ssdsims_design`,
+`ssd_design_targets()`'s `<name>_` target-name prefix, the
+`scenario=<name>/layout=<hash>` roots, and the combined `<root>/summary.parquet`
+with its `scenario` column. They build on the scenario-level functions from
+groups 2–5 above. A working prototype of the collection-agnostic aggregation
+seam these methods delegate to lives, **as proof of work only**, under
+`exploration/design-rollup-seam/` — promote it into `R/` here rather than
+rewriting it.
+
+- [ ] 9.1 Add `ssd_analyse_cost.ssdsims_design()`: unpack the design into its
+  named `(scenario, results-root)` members, call the scenario-level
+  `ssd_analyse_cost()` per member under its `scenario=<name>` root, and aggregate
+  into an `ssdsims_cost_analysis` whose breakdown carries a leading `scenario`
+  column and design totals (observed total = Σ members, longest = max members);
+  skip members with no readable run and report the contributing-member count.
+- [ ] 9.2 Combined-summary fast path: read every member's hc timings from
+  `<root>/summary.parquet` (grouped by its `scenario` column) in one DuckDB read
+  when present, falling back to the per-member shard globs with identical totals;
+  the `fit` addend always from the per-member `fit` globs.
+- [ ] 9.3 Design-aware store resolver: one `tar_meta()`; regenerate names per
+  member with the `<name>_` prefix (reusing `scenario-combine`'s helper) and the
+  group-2 scenario resolver, join on `name`; per-member envelope overhead and the
+  pre-timing fallback summed to the design total; exclude the combined `summary`
+  and `<name>_upload_<step>` targets; report unmatched/`NA` targets, never fatal.
+- [ ] 9.4 Add `ssd_compare_cost.ssdsims_design()` (design predicted = Σ members'
+  `ssd_estimate_cost()`, beside the design observed analysis; design totals,
+  ratios, and per-`scenario` rows) and
+  `ssd_calibrate_cost_from_run.ssdsims_design()` (pool the members' measured
+  hc/fit durations into one host-aware recalibration).
+- [ ] 9.5 Design-aware `format`/`print` for `ssdsims_cost_analysis` /
+  `ssdsims_cost_comparison`: render the per-`scenario` breakdown and design totals
+  when a `scenario` column is present; scenario-level output byte-unchanged.
+- [ ] 9.6 Tests: end-to-end two-scenario design (design totals = sum of per-member
+  analyses; per-`scenario` breakdown; a member with no run excluded with the count
+  reported); fast-path vs per-member-glob fallback identical totals; prefixed-name
+  store resolver across `scenario=<name>` roots; mixed-host design aborts;
+  design-vs-scenario print snapshots; read-only assertions.
+- [ ] 9.7 Extend the `cost-analysis` vignette with a design section (analyse →
+  compare → recalibrate over a small two-scenario design); roxygen + `man/` for
+  the design methods; `_pkgdown.yml` entries.

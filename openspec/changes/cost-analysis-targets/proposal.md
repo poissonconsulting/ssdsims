@@ -55,6 +55,15 @@ than a synthetic micro-benchmark.
   analysis in one object, with predicted/observed ratios for total and longest.
 - Add a cost-analysis vignette demonstrating the analyse → compare → recalibrate
   loop on a small worked run.
+- **Design-level rollup (gated on `scenario-combine`).** Folded in from the
+  former standalone `cost-analysis-design` change: `ssd_analyse_cost()`,
+  `ssd_compare_cost()`, and `ssd_calibrate_cost_from_run()` additionally accept an
+  `ssdsims_design`, rolling observed cost up across the design's per-scenario
+  result trees (a leading `scenario` breakdown column, design totals, the combined
+  `<root>/summary.parquet` hc read surface, and a design-aware store resolver). The
+  design forms depend on `scenario-combine`'s `ssd_design()` and so land last; a
+  working prototype of their collection-agnostic aggregation seam is kept as proof
+  of work under `exploration/design-rollup-seam/` (not built into the package).
 
 ## Capabilities
 
