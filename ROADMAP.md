@@ -54,17 +54,9 @@ artifacts yet is also queued, ready to propose.
   folded: Record start and end of computation time for each task, and
   the start time of the simulation run, in the Parquet. Supports a
   project deliverable.
-- ‼️⏳ \[replace-default-true\] Set the default as `replace = TRUE`,
-  silently discard infeasible tasks with `replace = FALSE` and too many
-  rows. Interacts with `nrow-max-setting`.
 
 ## Next
 
-- ‼️⏳ \[nrow-max-setting\] Add an explicit `nrow_max` draw-size setting
-  (default `1000L`), decoupling the draw from the `nrow` axis to retire
-  the §5 re-draw churn, and move the last carried columns (`n_max`,
-  `ci`) off the task tables into the scenario slice. Proposed; breaking
-  pre-release.
 - ❗️⏳ \[migrate-public-api\] Migrate `ssd_sim_data.data.frame` /
   `ssd_fit_dists_sims` / `ssd_hc_sims` to the new per-task contract,
   keeping the `_seed` wrappers as a one-release shim. Depends on
@@ -166,6 +158,17 @@ artifacts yet is also queued, ready to propose.
   witness — postcheck’s helpers and the dqrng-as-`Suggests` move landed
   physically alongside this change); gates `migrate-public-api`.
   Name-only regeneration is the deferred `dataset-provenance`.
+- ✅ 2026-06-14 \[replace-default-true\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-replace-default-true/)
+  — Set the default as `replace = TRUE`, silently discard infeasible
+  tasks with `replace = FALSE` and too many rows. Interacts with
+  `nrow-max-setting`.
+- ✅ 2026-06-14 \[nrow-max-setting\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-nrow-max-setting/)
+  — Add an explicit `nrow_max` draw-size setting (default `1000L`),
+  decoupling the draw from the `nrow` axis to retire the §5 re-draw
+  churn, and move the last carried columns (`n_max`, `ci`) off the task
+  tables into the scenario slice. Proposed; breaking pre-release.
 - ✅ 2026-06-10 \[duckplyr-config\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-duckplyr-config/)
   — Pipeline-scoped duckplyr/DuckDB configuration: a
