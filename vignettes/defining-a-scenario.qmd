@@ -156,21 +156,22 @@ ssd_define_scenario(data, nsim = 2L, seed = 1L)
 
 The `min_pmix` knob is referenced **by name**: the name --- not the function
 body --- is what enters the task identity and hashes, so the scenario's identity
-stays stable under a recompile or a cosmetic edit. You can pass a character
-vector of names directly, or a function (or list of functions) whose name is
-derived by symbol capture (mirroring dataset naming). The default
-`ssdtools::ssd_min_pmix` is stored as `"ssd_min_pmix"`:
+stays stable under a recompile or a cosmetic edit. It is supplied as an
+`ssd_pmix()` collection (the only accepted form --- a bare function, a plain
+list, or a character vector of names is rejected, and no name-string is resolved
+to a function). Names come from the `ssd_pmix()` argument names, or by symbol
+capture for a bare `pkg::name` (mirroring `ssd_scenario_data()`). The default
+`ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)` is stored as `"ssd_min_pmix"`:
 
 ```{r}
 #| label: min-pmix
 scenario$fit$min_pmix
 ```
 
-The resolved single-argument *function* is additionally **materialised on the
-scenario** at construction (a name-string is resolved then, from `ssdtools` or
-the caller's environment, failing fast if it cannot be resolved). It rides along
-for execution and is retrieved by name with the `scenario_min_pmix()` accessor;
-datasets are reached the same way with `scenario_dataset()`:
+The single-argument *function* from the collection is additionally
+**materialised on the scenario** at construction. It rides along for execution
+and is retrieved by name with the `scenario_min_pmix()` accessor; datasets are
+reached the same way with `scenario_dataset()`:
 
 ```{r}
 #| label: accessors

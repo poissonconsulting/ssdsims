@@ -14,7 +14,7 @@ ssd_define_scenario(
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
-  min_pmix = list(ssdtools::ssd_min_pmix),
+  min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
   nrow_max = 1000L,
@@ -63,17 +63,14 @@ dataset size.}
 \item{at_boundary_ok}{A flag specifying whether a model with one or more
 parameters at the boundary should be considered to have converged (default = TRUE).}
 
-\item{min_pmix}{The \code{min_pmix} function(s), referenced \strong{by name}. Supply
-either a character vector of names, or a function (or list of functions)
-with a single argument that inputs the number of rows of data and returns
-a proportion between 0 and 0.5 - in which case the name is derived from the
-argument expression (e.g. \code{ssdtools::ssd_min_pmix} gives \code{"ssd_min_pmix"}),
-mirroring dataset name derivation. The name is what the task path hashes;
-the resolved single-argument function is additionally materialised on the
-scenario (keyed by name) for execution and isolated via
-\code{\link[=scenario_min_pmix]{scenario_min_pmix()}}. A name-string is resolved to a function at
-construction (from \code{ssdtools} or the caller's environment), failing fast if
-it cannot be resolved to a single-argument function.}
+\item{min_pmix}{An \code{\link[=ssd_pmix]{ssd_pmix()}} collection of one or more single-argument
+\code{min_pmix} functions, referenced \strong{by name}. This is the only accepted
+form; a bare function, a plain list, or a character vector of names is
+rejected (no string-to-function resolution). The collection's name (not the
+function value) is what the task path hashes; the function is materialised
+on the scenario (keyed by name) for execution and isolated via
+\code{\link[=scenario_min_pmix]{scenario_min_pmix()}}. Defaults to
+\code{ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)}.}
 
 \item{range_shape1}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape1 parameter.}

@@ -278,11 +278,11 @@ transport, storing a generator + seed to rebuild from instead.
 
 #### `min_pmix`
 
-`min_pmix` is materialised the same way: the scenario stores the
-**name** (in `fit$min_pmix`, which feeds the per-task primer and the
-task path) *and* the resolved single-argument **function**, keyed by
-name. A supplied function is kept under its derived name; a name-string
-(`"ssd_min_pmix"`, or a user function) is resolved at construction. A
+`min_pmix` is materialised the same way: supplied as an `ssd_pmix()`
+collection, the scenario stores the **name** (in `fit$min_pmix`, which
+feeds the per-task primer and the task path) *and* the single-argument
+**function**, keyed by name. Names come from the `ssd_pmix()` argument
+names or symbol capture; there is no string-to-function resolution. A
 consumer reads it by name:
 
 ```r

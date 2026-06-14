@@ -484,9 +484,9 @@ effective_draw_size <- function(nrow_max, data, replace) {
 }
 
 # Resolve a `min_pmix` name to its function off the scenario (the materialised
-# store), not via a runtime `ssdtools`/global-env search. Resolution happened
-# once, at construction (`scenario_min_pmix_materialise()`), so a cluster worker
-# reads the function straight off the transported scenario.
+# store), not via a runtime `ssdtools`/global-env search. The functions were
+# supplied as an `ssd_pmix()` collection at construction (`scenario_pmix_spec()`),
+# so a cluster worker reads the function straight off the transported scenario.
 resolve_min_pmix <- function(scenario, name) {
   scenario_min_pmix(scenario, name)
 }
