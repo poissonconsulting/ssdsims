@@ -107,13 +107,15 @@ the motivating ~430-hour scenario:
 
 ```{r}
 #| label: scenario
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 10L,
   seed = 42L,
+  replace = TRUE,
+  nrow = c(5L, 10L, 20L, 50L),
   ci = TRUE,
   nboot = c(1000L, 5000L, 10000L, 50000L),
-  nrow = c(5L, 10L, 20L, 50L),
   ci_method = ssdtools::ssd_ci_methods()
 )
 
@@ -132,16 +134,18 @@ unchanged:
 
 ```{r}
 #| label: free-axes
+data <- ssd_scenario_data(ssddata::ccme_boron)
 wider <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 10L,
   seed = 42L,
+  replace = TRUE,
+  nrow = c(5L, 10L, 20L, 50L),
+  est_method = ssdtools::ssd_est_methods(),
+  proportion = c(0.01, 0.05, 0.1, 0.2),
   ci = TRUE,
   nboot = c(1000L, 5000L, 10000L, 50000L),
-  nrow = c(5L, 10L, 20L, 50L),
-  ci_method = ssdtools::ssd_ci_methods(),
-  est_method = ssdtools::ssd_est_methods(),
-  proportion = c(0.01, 0.05, 0.1, 0.2)
+  ci_method = ssdtools::ssd_ci_methods()
 )
 
 identical(

@@ -116,8 +116,9 @@ For your first job, make the scenario tiny and cheap so you are testing the
 near the top of `_targets.R` to a single cheap cell, e.g.:
 
 ```r
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   nrow = 5L,
   seed = 42L

@@ -12,6 +12,13 @@
 library(targets)
 library(tarchetypes)
 
+# DuckDB resources: the step runners cap duckplyr/DuckDB at a single thread
+# and 1GB per process while they run (so local workers share the machine
+# fairly). The same env knobs as the cluster template apply here - e.g.
+# `Sys.setenv(SSDSIMS_DUCKDB_MEMORY_LIMIT = "3GB")` before `tar_make()` for
+# shards with a large nested `samples` payload; see ?ssd_summarise and the
+# cluster template's controller.R for the sizing rule.
+
 # Two pipeline-wide options:
 #   * controller — parallelise the (independent) shard targets across local
 #     workers with a mirai-backed `crew` controller. `targets` dispatches each

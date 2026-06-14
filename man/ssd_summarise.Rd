@@ -4,7 +4,14 @@
 \alias{ssd_summarise}
 \title{Summarise a Run's hc Estimates Across Shards}
 \usage{
-ssd_summarise(dir_sample, dir_fit, dir_hc, path, path_with_samples = NULL)
+ssd_summarise(
+  dir_sample,
+  dir_fit,
+  dir_hc,
+  path,
+  path_with_samples = NULL,
+  samples_row_group_bytes = "100MB"
+)
 }
 \arguments{
 \item{dir_sample}{The \code{sample} results root.}
@@ -19,6 +26,11 @@ projected out).}
 \item{path_with_samples}{Optional output Parquet path for a full summary that
 retains the \code{dists}/\code{samples} list-columns. \code{NULL} (the default) writes only
 the compact summary.}
+
+\item{samples_row_group_bytes}{The Parquet row-group byte budget for the
+\code{path_with_samples} write (a string DuckDB's \code{ROW_GROUP_SIZE_BYTES}
+accepts, default \code{"100MB"}); see the \emph{Memory and the full summary's row
+groups} section. Ignored when \code{path_with_samples} is \code{NULL}.}
 }
 \value{
 The summary Parquet path(s) (the \code{format = "file"} contract): \code{path}
@@ -51,10 +63,32 @@ change). Reading the directory - rather than the shard target values - is what
 lets it union whatever shards landed (the survivors of a partially-failed run,
 section 6.2).
 }
+\section{Memory and the full summary's row groups}{
+
+The full summary is written in \strong{byte-budgeted Parquet row groups}
+(\code{samples_row_group_bytes}, default \code{"100MB"}), so its memory requirement
+follows the per-group budget - about five times the budget - rather than
+the union's total row count, and the row-group row count adapts to the
+\code{samples} cell size (large groups for small draws, small groups for large
+ones). The engine accepts the byte budget because the pipeline
+configuration scope holds \code{preserve_insertion_order = false} (restored
+when \code{ssd_summarise()} returns); it is refused while preserving order, and
+only the global setting counts - the per-copy \code{PRESERVE_ORDER} option
+cannot substitute. The trade: the full summary's \strong{row order is not
+contractual} - re-summarising the same shards yields the same rows
+(address them by \code{hc_id}/\code{fit_id}), but their order and the file's bytes
+may differ. Under the default single thread, writes were observed in input
+order and byte-identical across runs regardless. Evidence: the
+\code{duckplyr-config} change's \code{exploration/experiment-summary-union.R},
+\code{exploration/experiment-rgbytes.R}, and
+\code{exploration/experiment-preserve-order-copy-option.R}.
+}
+
 \examples{
 \donttest{
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 1L,
   nrow = 6L,
   seed = 42L,

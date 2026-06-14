@@ -3,9 +3,7 @@
 ## Purpose
 
 Provide the purely declarative `ssdsims_scenario` object that roots the targets-based pipeline (`TARGETS-DESIGN.md` §1): its constructor `ssd_define_scenario()`, the `ssd_data()` input normaliser, dataset and `min_pmix` name references, field validation, the scalar `ci` flag (with its bootstrap-knob rejection when `ci = FALSE`), and the `print()` method. The object stores only declarative fields — never data frames, RNG state, or function bodies — so a scenario serialises to a compact manifest and the shard set a pipeline expands to is a pure function of the scenario.
-
 ## Requirements
-
 ### Requirement: Declarative scenario constructor
 The package SHALL expose `ssd_define_scenario()` returning an S3 object of class `ssdsims_scenario` that stores only declarative fields and performs no random-number generation, no task expansion, and no `targets` interaction.
 
@@ -120,45 +118,28 @@ The package SHALL define, for each step, the inner (Parquet-column) axes as that
 - **WHEN** an `ssdsims_scenario` is printed
 - **THEN** the output SHALL show, for the `sample`, `fit`, and `hc` steps, both the path axes (`partition_by`) and the inner axes (`bundle`)
 
-### Requirement: Dataset input (single or list)
-`ssd_define_scenario()` SHALL accept datasets as either a single data frame or a list of data frames, and SHALL derive or accept dataset names for each.
-
-#### Scenario: Single data frame, implicit name
-- **WHEN** `ssd_define_scenario(ssddata::ccme_boron, ...)` is called with a single data frame as the first argument
-- **THEN** the scenario SHALL derive the dataset name from the argument name (e.g., `"ccme_boron"` from the symbol or the variable name) and store it as the sole dataset name
-
-#### Scenario: Single data frame, explicit name
-- **WHEN** `ssd_define_scenario(ssddata::ccme_boron, name = "boron_data", ...)` is called
-- **THEN** the scenario SHALL use the explicit `name` parameter as the dataset name, overriding automatic derivation
-
-#### Scenario: List of data frames with implicit names
-- **WHEN** `ssd_define_scenario(list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium), ...)` is called with a named list
-- **THEN** the scenario SHALL use the list names as the dataset names and store them all (e.g., `c("boron", "cadmium")`)
-
-#### Scenario: List of data frames with derived names
-- **WHEN** `ssd_define_scenario(list(ssddata::ccme_boron, ssddata::ccme_cadmium), ...)` is called with an unnamed list
-- **THEN** the scenario SHALL derive names from the data frame arguments (e.g., `c("ccme_boron", "ccme_cadmium")`)
-
-#### Scenario: Named list overrides explicit name parameter
-- **WHEN** both a named list and an explicit `name=` are supplied
-- **THEN** the scenario SHALL use the list element names and ignore the `name=` parameter; provide a warning or error to signal the conflict
-
 ### Requirement: Input data assembly and normalisation
-The package SHALL expose `ssd_data()` as the single entry point that assembles one or more datasets into a validated, named collection — an `ssdsims_data` object (a named list of tibbles). `ssd_define_scenario()` SHALL accept either an `ssd_data()` collection or, for convenience, bare data frame input routed through the same per-dataset validation. Each dataset SHALL be required to have a numeric `Conc` column; additional columns SHALL be preserved. Dataset names SHALL be taken from argument names where supplied, otherwise derived by symbol capture, and SHALL be unique.
-
-`ssd_data()` is the extensible input point: a later change (`scenario-input-types`, TARGETS-DESIGN.md §12) MAY extend each input to also be a data generator (`fitdists` / `tmbfit` / a function / a function-name string) that `ssd_run_scenario()` accepts; this change is data-frame-only.
+The package SHALL expose `ssd_scenario_data()` (renamed from `ssd_data()`, which collided with the unrelated `ssdtools::ssd_data(x)`) as the single entry point that assembles one or more inputs into a validated, named collection — an `ssdsims_data` object that is a homogeneous named list of tibbles. Each element SHALL be a tibble with a numeric `Conc` column (additional columns preserved): a data-frame input passed through `Conc` validation, or a tibble produced by `ssd_gen()`. `ssd_scenario_data()` SHALL accept the result of `ssd_gen()` (an `ssdsims_gen` object) both as an unnamed argument (its members flattened into the collection) and via `rlang` splicing (`!!!ssd_gen(...)`), with identical results. Names SHALL be taken from argument names where supplied, otherwise derived by symbol capture, and SHALL be unique across the collection.
 
 #### Scenario: Conc column required
-- **WHEN** `ssd_data()` (or `ssd_define_scenario()`) is given a dataset lacking a `Conc` column
+- **WHEN** `ssd_scenario_data()` is given an input whose tibble lacks a numeric `Conc` column
 - **THEN** the function SHALL abort with an informative error
 
-#### Scenario: Valid data passes through as a collection
-- **WHEN** `ssd_data()` is given one or more data frames with a numeric `Conc` column
-- **THEN** the function SHALL return an `ssdsims_data` collection whose elements are tibbles preserving the `Conc` column and any additional columns
+#### Scenario: Valid data frame passes through as a tibble element
+- **WHEN** `ssd_scenario_data()` is given one or more data frames with a numeric `Conc` column
+- **THEN** the collection SHALL hold those elements as tibbles preserving the `Conc` column and any additional columns
 
-#### Scenario: Names derived and unique
-- **WHEN** `ssd_data(boron = df1, df2)` is called
-- **THEN** names SHALL be taken from the argument name (`"boron"`) or by symbol capture for the unnamed argument, and duplicate names SHALL abort with an informative error
+#### Scenario: An ssd_gen() result is flattened into the collection
+- **WHEN** `ssd_scenario_data(boron = ccme_boron, ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L))` is called with the `ssd_gen()` result as an unnamed argument
+- **THEN** the collection SHALL hold `boron` as the given tibble and `synth` as the materialised generator tibble, each under its name
+
+#### Scenario: Splicing an ssd_gen() result is equivalent
+- **WHEN** the same call is written `ssd_scenario_data(boron = ccme_boron, !!!ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L))`
+- **THEN** the resulting collection SHALL be identical to the unnamed-argument form
+
+#### Scenario: Names derived and unique across mixed inputs
+- **WHEN** `ssd_scenario_data(ccme_boron, !!!ssd_gen(ssd_rlnorm, .n = 30, .seed = 1L))` is called with names derived by symbol capture
+- **THEN** names SHALL be derived (`"ccme_boron"`, `"ssd_rlnorm"`) and duplicate names across the collection SHALL abort with an informative error
 
 ### Requirement: ci is a scalar flag selecting bootstrap confidence intervals
 `ssd_define_scenario()` SHALL accept `ci` as a scalar logical flag (a single non-`NA` `TRUE`/`FALSE`; default `FALSE`), validated with `chk::chk_flag`, stored at `scenario$hc$ci`, and passed to `ssdtools::ssd_hc()`. `ci` SHALL NOT be a grid axis and SHALL NOT enter the `hc` task identity (`task_axes("hc")`) or the per-task RNG primer: the point estimate `est` is invariant to `ci` (computed analytically from the fit, independent of the bootstrap and RNG), so a single `ci = TRUE` run is a superset of `ci = FALSE` (same `est`, plus the `se`/`lcl`/`ucl` columns). The choice is scenario-wide and either/or — `ci = FALSE` for cheap, bootstrap-free point estimates, or `ci = TRUE` for estimates plus confidence intervals. When `ci = FALSE`, supplying any bootstrap-only knob (`nboot`, `ci_method`, or `parametric`) SHALL abort in the user-facing frame, directing the user to set `ci = TRUE` or omit the knob. `print.ssdsims_scenario()` SHALL render `ci` among the hc knobs.
@@ -208,20 +189,112 @@ dimension consumed inside one bootstrap, not a task multiplier.
 - **WHEN** `ssd_define_scenario(..., partition_by = list(hc = "est_method"))` (or the equivalent `bundle`) is called
 - **THEN** the constructor SHALL abort, because `"est_method"` is not in the `hc` step's axis vocabulary
 
+### Requirement: nrow_max sets the shared sample draw size
+`ssd_define_scenario()` SHALL accept `nrow_max` as a scalar whole number
+(default a reasonably high value, `1000L`), validated with
+`chk::chk_whole_number`, stored on the scenario, and used as the **fixed**
+size of the shared `sample` draw — replacing the previously derived
+`max(scenario$nrow)`. `nrow_max` is a sample-level **simulation setting**: it
+SHALL NOT be a cross-join axis, SHALL NOT enter any `task_axes(step)` or the
+per-task RNG primer, and SHALL NOT be carried as a task-row column. The
+effective per-dataset draw size SHALL be `min(nrow_max, nrow(data))` for
+`replace = FALSE` (so a high `nrow_max` yields the full permutation) and
+`nrow_max` for `replace = TRUE`; it is resolved by the runner from `nrow_max`
+and the dataset, not stored per task. Because the fixed `nrow_max` draw is the
+largest sample any `nrow` can sub-truncate, `nrow_max` is the **universal
+ceiling** for `nrow`: each `nrow` value SHALL be a whole number in
+`[5, nrow_max]` (5 being the fit floor), validated at construction, and a value
+outside that range SHALL abort in the user-facing frame with a message that
+**cites `nrow_max`'s value** so a raised ceiling is discoverable. Per-dataset
+`replace = FALSE` infeasibility *within* that range — an `nrow` no greater than
+`nrow_max` but greater than a dataset's row count, whose permutation draw caps
+at `min(nrow_max, nrow(data))` — is **not** an error here; it is governed by the
+`replace`-default requirement (a silent per-cell discard in task expansion).
+`nrow_max` itself SHALL be a whole number of at least 5. Because the draw size
+no longer depends on `max(nrow)`, adding an `nrow` value (within the draw size)
+SHALL NOT change the shared draw. `nrow_max` is **not** `ci`-gated: the draw
+happens regardless of `ci`.
+
+#### Scenario: nrow_max defaults high and is a whole number
+- **WHEN** `ssd_define_scenario()` is called without `nrow_max`
+- **THEN** the scenario SHALL store `nrow_max = 1000L`, and a non-whole-number `nrow_max` SHALL abort in the user-facing frame
+
+#### Scenario: nrow exceeding nrow_max aborts, citing nrow_max
+- **WHEN** `ssd_define_scenario(..., nrow = 50, nrow_max = 20)` is called (an `nrow` above the fixed draw size, regardless of `replace`)
+- **THEN** the constructor SHALL abort in the user-facing frame with a message citing `nrow_max`'s value (`= 20`), because no `nrow` can sub-truncate a draw it exceeds; and `ssd_define_scenario(..., nrow = c(10, 10000), nrow_max = 10000, replace = c(TRUE, FALSE))` SHALL instead succeed, since `nrow_max` admits `nrow = 10000`
+
+#### Scenario: nrow_max is a simulation setting, not an axis
+- **WHEN** the `sample` axis vocabulary (`task_axes("sample")`) is queried
+- **THEN** it SHALL NOT contain `"nrow_max"`, so `nrow_max` never multiplies tasks, enters a primer, or becomes a task-row column
+
+### Requirement: replace defaults to sampling with replacement
+`ssd_define_scenario()` SHALL default `replace` to `TRUE`, so a scenario built
+without an explicit `replace` samples with replacement and its shared draw is
+`nrow_max` rows per `(dataset, sim, replace)` cell — decoupling the default
+`nrow` sweep from each dataset's size. `replace` SHALL remain a structural
+cross-join axis (one or two unique, non-missing logical values), and an
+explicit `replace = FALSE` (the permutation draw, capped at
+`min(nrow_max, nrow(data))`) SHALL behave as specified below.
+
+Because a `replace = FALSE` permutation draw cannot exceed
+`min(nrow_max, nrow(data))` for a given dataset, where `replace` includes
+`FALSE` any `(dataset, nrow)` combination with
+`nrow > min(nrow_max, nrow(data))` SHALL be silently discarded from the
+`replace = FALSE` portion of the task grid — the constructor SHALL NOT abort, emit
+a warning, or permit a short draw for it. The discard SHALL be per dataset, and
+the corresponding `replace = TRUE` cells together with all feasible
+`replace = FALSE` cells SHALL be unaffected. The task grid SHALL therefore be
+the cross-join of the scenario's axes minus these infeasible `replace = FALSE`
+cells, and SHALL remain a deterministic function of the scenario.
+
+An `nrow` exceeding `nrow_max` itself (the scenario's own draw ceiling,
+independent of any dataset) is out of the `[5, nrow_max]` range every `nrow`
+must satisfy, so it SHALL abort construction in the user-facing frame
+regardless of `replace` — with a message citing `nrow_max`'s value — rather than
+being discarded (no draw of any `replace` can supply it). A scenario whose grid
+is left empty by the `replace = FALSE` discard SHALL likewise abort.
+
+#### Scenario: replace defaults to TRUE
+- **WHEN** `ssd_define_scenario()` is called without `replace`
+- **THEN** the scenario SHALL store `replace = TRUE`, the derived `sample` task
+  table's `replace` values SHALL all be `TRUE`, and an `nrow` above a dataset's
+  row count (but within `nrow_max`) SHALL be accepted
+
+#### Scenario: mixed replace discards an nrow infeasible for the FALSE draw
+- **WHEN** `ssd_define_scenario(..., nrow = 50L, replace = c(FALSE, TRUE))` is
+  called with a dataset of fewer than 50 rows
+- **THEN** the constructor SHALL succeed, the `replace = TRUE` cells at
+  `nrow = 50L` SHALL be present in the task grid, and the `replace = FALSE`
+  cells at `nrow = 50L` SHALL be absent (silently discarded, with no warning)
+
+#### Scenario: the discard is per dataset
+- **WHEN** `ssd_define_scenario()` is called with `replace` including `FALSE`,
+  several datasets, and an `nrow` exceeding only the smallest dataset's
+  effective draw size
+- **THEN** only that dataset's `replace = FALSE` cell at that `nrow` SHALL be
+  discarded; the other datasets SHALL retain their `replace = FALSE` cells at
+  that `nrow`
+
+#### Scenario: an all-infeasible FALSE-only grid aborts
+- **WHEN** `ssd_define_scenario()` is called with `replace = FALSE` only and
+  every `nrow` exceeds every dataset's effective draw size
+- **THEN** the discard SHALL leave no feasible task and the constructor SHALL
+  abort in the user-facing frame rather than return an empty scenario
+
 ### Requirement: Constructor arguments are grouped by role
-`ssd_define_scenario()` SHALL order its arguments by role: (1) the required data/`seed`/`nsim` inputs and the dataset `name`; (2) the **structural cross-join axes** (`nrow`, `replace`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`); (3) the **non-`ci`-gated simulation settings** — knobs that are valid and meaningful even when `ci = FALSE`: `dists` (fit-level), then `est_method` and `proportion` (hc-level, shaping the analytical point estimate); (4) `ci`, then the knobs it **gates** — the bootstrap **cross-join axes** `nboot`/`ci_method`/`parametric` (which `ci = FALSE` rejects) and the `samples` setting (which only retains bootstrap draws); (5) the **partitioning and remaining arguments** (`partition_by`, `bundle`, `upload`). A simulation setting is any knob absent from `task_axes(step)`: it never multiplies tasks, but is consumed inside each task — fanning out within the task's output (`est_method`, `proportion`) or applied uniformly (`ci`, `dists`, `samples`). `dists` is the **fit**-level setting (a single character vector handed whole to every fit task's `ssd_fit_dists()` call, absent from `task_axes("fit")`); `est_method`/`proportion`/`ci`/`samples` are **hc**-level. `est_method` and `proportion` SHALL precede `ci` (a `ci = FALSE` scenario still selects an `est_method` and `proportion` for its analytical estimate); the bootstrap-only knobs `nboot`/`ci_method`/`parametric` and `samples` SHALL follow `ci`. Storage SHALL remain step-based: `dists` is stored at `scenario$fit$dists` and the hc knobs at `scenario$hc` in signature order (`est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, `samples`). `print.ssdsims_scenario()` SHALL render each grid in that stored order (settings flagged) and render `dists` among the fit knobs, marked as a setting rather than an axis.
+`ssd_define_scenario()` SHALL order its arguments by role: (1) the required data/`seed`/`nsim` inputs and the dataset `name`; (2) the **structural cross-join axes** (`nrow`, `replace`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`); (3) the **non-`ci`-gated simulation settings** — knobs that are valid and meaningful even when `ci = FALSE`: `nrow_max` (sample-level, the shared draw size), `dists` (fit-level), then `est_method` and `proportion` (hc-level, shaping the analytical point estimate); (4) `ci`, then the knobs it **gates** — the bootstrap **cross-join axes** `nboot`/`ci_method`/`parametric` (which `ci = FALSE` rejects) and the `samples` setting (which only retains bootstrap draws); (5) the **partitioning and remaining arguments** (`partition_by`, `bundle`, `upload`). A simulation setting is any knob absent from `task_axes(step)`: it never multiplies tasks, but is consumed inside each task — setting the shared draw size (`nrow_max`), fanning out within the task's output (`est_method`, `proportion`), or applied uniformly (`ci`, `dists`, `samples`). `nrow_max` is the **sample**-level setting (the fixed shared-draw size, absent from `task_axes("sample")`); `dists` is the **fit**-level setting (a single character vector handed whole to every fit task's `ssd_fit_dists()` call, absent from `task_axes("fit")`); `est_method`/`proportion`/`ci`/`samples` are **hc**-level. `nrow_max`, `dists`, `est_method`, and `proportion` SHALL precede `ci` (none are `ci`-gated — the draw, the fit, and the analytical estimate all happen regardless of `ci`); the bootstrap-only knobs `nboot`/`ci_method`/`parametric` and `samples` SHALL follow `ci`. Storage SHALL remain step-based: `nrow_max` is stored at the sample level, `dists` at `scenario$fit$dists`, and the hc knobs at `scenario$hc` in signature order (`est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, `samples`). `print.ssdsims_scenario()` SHALL render each grid in that stored order (settings flagged), render `nrow_max` among the sample knobs, and render `dists` among the fit knobs, both marked as settings rather than axes.
 
 #### Scenario: non-ci-gated settings precede ci; gated knobs follow it
 - **WHEN** the `ssd_define_scenario()` signature is inspected
-- **THEN** `dists`, `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, and `samples` SHALL appear adjacent to one another in that order, after the last structural axis (`range_shape2`) and before the partitioning arguments (`partition_by`, `bundle`, `upload`), so the non-`ci`-gated settings precede `ci` and the knobs it gates follow it
+- **THEN** `nrow_max`, `dists`, `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, and `samples` SHALL appear adjacent to one another in that order, after the last structural axis (`range_shape2`) and before the partitioning arguments (`partition_by`, `bundle`, `upload`), so the non-`ci`-gated settings precede `ci` and the knobs it gates follow it
 
-#### Scenario: dists is a simulation setting, not an axis
-- **WHEN** the fit-step axis vocabulary (`task_axes("fit")`) is queried
-- **THEN** it SHALL NOT contain `"dists"`, so `dists` is neither a path axis nor an inner axis and does not enter the per-task primer; it is applied uniformly to every fit task and stored at `scenario$fit$dists`
+#### Scenario: nrow_max is a sample-level simulation setting
+- **WHEN** the sample-step axis vocabulary (`task_axes("sample")`) is queried
+- **THEN** it SHALL NOT contain `"nrow_max"`, so `nrow_max` is neither a path axis nor an inner axis and does not enter the per-task primer; it sets the shared draw size and is stored at the sample level
 
-#### Scenario: Print groups the hc knobs by ci-gating
+#### Scenario: Print groups the knobs by ci-gating
 - **WHEN** an `ssdsims_scenario` is printed
-- **THEN** the hc grid SHALL render `est_method`, `proportion`, `ci`, then the bootstrap axes (`nboot`, `ci_method`, `parametric`), then `samples`, with the non-axis knobs flagged as settings; and the fit knobs SHALL render `dists` marked as a setting
+- **THEN** the hc grid SHALL render `est_method`, `proportion`, `ci`, then the bootstrap axes (`nboot`, `ci_method`, `parametric`), then `samples`, with the non-axis knobs flagged as settings; and the sample/fit knobs SHALL render `nrow_max` and `dists` marked as settings
 
 ### Requirement: samples retains the bootstrap draws (output only)
 `ssd_define_scenario()` SHALL accept a scalar logical `samples` argument (default `FALSE`), validated as a flag (a single non-`NA` `TRUE`/`FALSE`), stored at `scenario$hc$samples`, and passed to `ssdtools::ssd_hc()` so that `samples = TRUE` retains the per-row bootstrap draws in the hc `samples` list-column. `samples` SHALL NOT be a grid axis and SHALL NOT enter the task identity (`task_axes("hc")`) or the per-task RNG primer: it does not change the estimates, so changing it SHALL yield byte-identical `est`/`lcl`/`ucl` while re-running the hc step to populate (or empty) the `samples` column. `print.ssdsims_scenario()` SHALL render `samples` among the hc knobs.
@@ -259,3 +332,80 @@ The package SHALL provide a `print.ssdsims_scenario()` method that renders the s
 #### Scenario: Print shows declarative fields
 - **WHEN** an `ssdsims_scenario` object is printed
 - **THEN** the output SHALL show the seed, dataset names, `nsim`, `nrow`, and the fit/hc argument grids
+
+### Requirement: Dataset input via an ssd_scenario_data() collection
+`ssd_define_scenario()` SHALL accept dataset input ONLY as an `ssd_scenario_data()` collection (an `ssdsims_data` object). Bare data frames, bare lists, and a `name=` argument SHALL NOT be accepted; naming and validation are owned by `ssd_scenario_data()`/`ssd_gen()`. Because generation is performed by `ssd_gen()` before construction, `ssd_define_scenario()` SHALL perform no random-number generation (the "No side effects on RNG state" requirement is preserved).
+
+#### Scenario: Collection accepted
+- **WHEN** `ssd_define_scenario(ssd_scenario_data(boron = ccme_boron), nsim = 100L, nrow = c(5L, 10L), seed = 42L)` is called
+- **THEN** the scenario SHALL store `boron` as its sole dataset name and the validated tibble in `$data`
+
+#### Scenario: Collection with a generated dataset accepted
+- **WHEN** `ssd_define_scenario(ssd_scenario_data(boron = ccme_boron, !!!ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L)), nsim = 100L, seed = 42L)` is called
+- **THEN** the scenario SHALL store `c("boron", "synth")` as dataset names and the materialised tibbles in `$data`, indistinguishable downstream from data-frame datasets
+
+#### Scenario: Bare data frame rejected
+- **WHEN** `ssd_define_scenario()` is given a bare data frame (or list, or a `name=` argument) instead of an `ssd_scenario_data()` collection
+- **THEN** the constructor SHALL abort with an informative error directing the user to `ssd_scenario_data()`
+
+#### Scenario: Construction draws no random numbers
+- **WHEN** `ssd_define_scenario()` is called with any `ssd_scenario_data()` collection
+- **THEN** the global RNG state (`.Random.seed`) SHALL be unchanged after the call returns
+
+### Requirement: Generator materialisation via ssd_gen()
+The package SHALL expose `ssd_gen(..., .n, .seed)` that accepts ONLY generator-style inputs — a function, a function-name string, a `fitdists` object, or a `tmbfit` object — and materialises each, once, to a validated tibble with a numeric `Conc` column of `.n` rows, returning a classed `ssdsims_gen` named collection suitable for use within (or splicing into) `ssd_scenario_data()`. `.n` and `.seed` SHALL be required, dot-prefixed formals (never absorbed into `...`, never partial-matched from a `seed=`/`n=` named generator). Dispatch SHALL be most-specific-first (`tmbfit` before `fitdists`); a function-name string SHALL be resolved to a function via a bare-name lookup (`get0()`/`match.fun()`, no `eval(parse())`) and SHALL also be the dataset name; `fitdists`/`tmbfit` SHALL resolve to the matching `ssd_r<dist>` draw via `ssdtools::estimates()`. A `data.frame` SHALL be rejected (it belongs in `ssd_scenario_data()`). Each generator SHALL be materialised under a scoped dqrng state seeded by `.seed` (base seed) with the dataset **name** as the dqrng stream (`task_primer(list(dataset = name))`), so one `.seed` fans out across all generators on independent streams; the global `.Random.seed` SHALL be unchanged on return.
+
+#### Scenario: Function generator materialised
+- **WHEN** `ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)` is called
+- **THEN** the result SHALL be an `ssdsims_gen` collection holding `synth` as a tibble of 30 rows with a numeric `Conc` column
+
+#### Scenario: Function-name string resolved and materialised
+- **WHEN** `ssd_gen("ssd_rlnorm", .n = 30, .seed = 1L)` is called
+- **THEN** the string SHALL resolve to the function, be used as the dataset name, and produce a tibble identical to the function form
+
+#### Scenario: tmbfit and fitdists materialised
+- **WHEN** `ssd_gen(refit = fit[[1]], .n = 30, .seed = 1L)` (a `tmbfit`) or `ssd_gen(refit = fit, .n = 30, .seed = 1L)` (a `fitdists`, top-weighted dist selected) is called
+- **THEN** each SHALL materialise a `Conc` tibble drawn from the matching `ssd_r<dist>` with the fit's estimates
+
+#### Scenario: Reproducible under .seed
+- **WHEN** `ssd_gen()` is called twice with the same generator and the same `.seed`
+- **THEN** the materialised tibble SHALL be byte-identical; a different `.seed` SHALL (for an RNG-using generator) yield different data
+
+#### Scenario: One .seed across several generators
+- **WHEN** `ssd_gen(a = ssd_rlnorm, b = ssd_rlnorm, .n = 30, .seed = 1L)` is called
+- **THEN** each generator SHALL draw on an independent stream keyed by its name (so `a` and `b` differ), and the result SHALL be reproducible
+
+#### Scenario: .seed and .n are required
+- **WHEN** `ssd_gen()` is called without `.seed` (or without `.n`)
+- **THEN** the function SHALL abort with an informative error
+
+#### Scenario: Data frame rejected by ssd_gen()
+- **WHEN** `ssd_gen(d = ccme_boron, .n = 30, .seed = 1L)` is called with a data frame
+- **THEN** the function SHALL abort with an informative error directing the user to `ssd_scenario_data()`
+
+#### Scenario: Global RNG state preserved
+- **WHEN** `ssd_gen(ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)` is called
+- **THEN** `.Random.seed` SHALL be unchanged after the call (the scoped generation restores it)
+
+### Requirement: dqrng-backed, reproducible generation
+`ssd_gen()` SHALL draw under an active dqrng pcg64 backend and SHALL reuse `task-rng-postcheck`'s per-task integrity witness to enforce that each draw actually came from dqrng. Each generator SHALL be seeded through `local_dqrng_state()`, which brackets the draw with `chk_dqrng_backend_intact()`; `ssd_gen()` SHALL abort when a generator escaped dqrng (e.g. drew from base R after switching `RNGkind`), since such a draw is not reproducible under `.seed`. A generator that consumes no randomness SHALL pass.
+
+#### Scenario: A generator escaping dqrng is rejected
+- **WHEN** a generator draws from the base R RNG (escaping the dqrng backend)
+- **THEN** the function SHALL abort with an informative error (the draw is not reproducible under `.seed`)
+
+#### Scenario: A pure generator passes
+- **WHEN** a generator consumes no randomness
+- **THEN** it SHALL materialise successfully under any `.seed`
+
+### Requirement: Structural validation of generator inputs
+`ssd_gen()` SHALL validate generator inputs structurally, in the context of the user-facing function, and abort with an informative error on invalid input. A function-name string SHALL resolve to a function; a generator function SHALL be a function; a name SHALL be derivable for every input (argument name, the string itself, or symbol capture) or supplied explicitly.
+
+#### Scenario: Unresolvable function-name string
+- **WHEN** a function-name string is supplied that does not resolve to a function in scope
+- **THEN** the function SHALL abort with an informative error naming the offending string
+
+#### Scenario: Underivable generator name requires explicit name
+- **WHEN** a generator input has no derivable name (e.g. an anonymous function literal) and no argument name is supplied
+- **THEN** the function SHALL abort with an informative error directing the user to supply a name
+

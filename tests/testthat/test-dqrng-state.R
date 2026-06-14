@@ -48,11 +48,53 @@ test_that("parallel-safe-seeding: surrounding stream undisturbed by a nested loc
   expect_identical(with_nested, without_nested)
 })
 
-test_that("parallel-safe-seeding: local_dqrng_state aborts outside an active backend", {
+test_that("parallel-safe-seeding: local_dqrng_state aborts on entry when the backend is not intact", {
+  # Entry precondition: with no active (intact) backend, the upgraded entry
+  # guard (chk_dqrng_backend_intact()) refuses to start the task.
+  withr::defer(suppressWarnings(RNGkind("Mersenne-Twister")))
+  suppressWarnings(RNGkind("Mersenne-Twister"))
   expect_false(dqrng_backend_active())
   expect_snapshot(error = TRUE, {
     local_dqrng_state(42L, c(1L, 2L))
   })
+})
+
+test_that("parallel-safe-seeding: exit witness aborts a normally-returning task that tore the backend down", {
+  local_dqrng_backend()
+  withr::defer(suppressWarnings(RNGkind("Mersenne-Twister")))
+
+  # A task closure (the real per-task shape) that draws, tears the backend down,
+  # then returns normally -> the deferred exit witness fires and aborts.
+  torn_task <- function() {
+    local_dqrng_state(1L, c(1L, 2L))
+    runif(1)
+    suppressWarnings(RNGkind("Mersenne-Twister"))
+    "result"
+  }
+  expect_error(torn_task(), "dqrng backend is not intact")
+
+  # A healthy closure: the deferred exit witness passes and the result returns.
+  local_dqrng_backend()
+  healthy_task <- function() {
+    local_dqrng_state(2L, c(1L, 2L))
+    runif(1)
+    "result"
+  }
+  expect_identical(healthy_task(), "result")
+})
+
+test_that("parallel-safe-seeding: exit witness is skipped on error and does not mask the task's own error", {
+  local_dqrng_backend()
+  withr::defer(suppressWarnings(RNGkind("Mersenne-Twister")))
+
+  # The body errors while the backend is torn down. The returnValue() gate skips
+  # the exit witness on the error unwind, so the body's OWN error propagates.
+  failing_task <- function() {
+    local_dqrng_state(1L, c(1L, 2L))
+    suppressWarnings(RNGkind("Mersenne-Twister"))
+    stop("boom: the real task failure")
+  }
+  expect_error(failing_task(), "boom: the real task failure")
 })
 
 test_that("parallel-safe-seeding: local_dqrng_state validation", {

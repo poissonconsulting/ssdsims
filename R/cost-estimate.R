@@ -338,13 +338,15 @@ cost_cpu_info <- function() {
 #' @seealso [ssd_calibrate_cost()] and [ssd_cost_calibration()].
 #' @export
 #' @examples
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   data,
 #'   nsim = 10L,
 #'   seed = 42L,
+#'   replace = TRUE,
+#'   nrow = c(5L, 10L, 20L, 50L),
 #'   ci = TRUE,
-#'   nboot = c(1000L, 5000L, 10000L, 50000L),
-#'   nrow = c(5L, 10L, 20L, 50L)
+#'   nboot = c(1000L, 5000L, 10000L, 50000L)
 #' )
 #' ssd_estimate_cost(scenario)
 ssd_estimate_cost <- function(scenario, calibration = ssd_cost_calibration()) {
@@ -358,10 +360,12 @@ ssd_estimate_cost <- function(scenario, calibration = ssd_cost_calibration()) {
   # *setting* summarised within a task from its single bootstrap sample set, and
   # `proportion` is vectorised into one `ssd_hc()` call - so the task expansion
   # already carries "one bootstrap per `nboot x ci_method x parametric` cell" and
-  # neither axis multiplies the estimate. `ci` rides as a carried column and
-  # selects bootstrap vs the cheap analytical addend.
+  # neither axis multiplies the estimate. `ci` is the scenario's scalar setting
+  # (not a task-row column) and selects bootstrap vs the cheap analytical
+  # addend.
   cost_axes <- task_axes("hc")
-  tasks <- dplyr::distinct(hc[c(cost_axes, "ci")])
+  tasks <- dplyr::distinct(hc[cost_axes])
+  tasks$ci <- scenario$hc$ci
   tasks$seconds <- cost_task_seconds(tasks, calibration)
 
   breakdown <- dplyr::arrange(

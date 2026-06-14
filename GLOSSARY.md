@@ -71,25 +71,31 @@ Terminology used throughout `ssdsims`.
   `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`).
   `est_method`, `proportion`, `ci`, and `samples` are **not** hc axes —
   they are *simulation settings* (below), consumed within each task rather
-  than multiplying it. Contrast a *carried column* (e.g. `n_max`), which is
-  data on the row but is **not** fanned out over:
+  than multiplying it. A task row carries **only** its identity — the axis
+  columns, its `<step>_id`/`<parent>_id` keys, and the per-row `seed`/`primer`
+  the shard path attaches; a non-axis value a runner needs (the draw size, the
+  `ci` flag) lives on the scenario as a setting, never as a row column.
   `nrow` is deliberately not a `sample` axis because every `nrow` is
-  a sub-truncation of one `n_max`-row draw (TARGETS-DESIGN.md §5),
-  so it is an axis only of the (RNG-free) `data` truncation step.
+  a sub-truncation of one shared draw sized by the `nrow_max` setting
+  (TARGETS-DESIGN.md §5), truncated inline at the (RNG-free) `fit` step.
 - **simulation setting**: A scenario knob that is **not** an axis — it is
   absent from `task_axes(step)`, so it never creates a task, enters the
   per-task **primer**, or becomes a **shard**/**partition** level. Its effect
   is realised *inside* each task: it either fans out within the task's own
-  output (`est_method`, `proportion` → one HC row per value) or is applied
-  uniformly to every task (`ci`, `dists`, `samples`). Where an **axis**
+  output (`est_method`, `proportion` → one HC row per value), is applied
+  uniformly to every task (`ci`, `dists`, `samples`), or sets the shared draw
+  size (`nrow_max`). Where an **axis**
   multiplies the *task graph*, a simulation setting only shapes the *contents*
   of a task's result. "Scalar" is a near-synonym but a misnomer for `proportion`
   and `est_method` (vector-valued) and for `dists` (a character vector) — all
-  non-scalar yet still not axes. Settings attach at different **steps**: `dists`
-  is a **fit**-level setting (the `dists` vector handed to every fit task), while
+  non-scalar yet still not axes. Settings attach at different **steps**:
+  `nrow_max` is the **sample**-level setting (the fixed shared-draw size),
+  `dists` is a **fit**-level setting (the `dists` vector handed to every fit
+  task), while
   `est_method`, `proportion`, `ci`, and `samples` are **hc**-level. In the
-  `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`dists`,
-  `est_method`, `proportion` — each valid and meaningful when `ci = FALSE`) come
+  `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`nrow_max`,
+  `dists`, `est_method`, `proportion` — each valid and meaningful when
+  `ci = FALSE`) come
   before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
   `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
   (which only retains bootstrap draws).
@@ -183,13 +189,59 @@ Terminology used throughout `ssdsims`.
   packed into jobs. Branches and shards exist with or without a
   scheduler; jobs only exist on a cluster.
 
+## Design terms
+
+These three nest, finest to coarsest: a **scenario** is one regular grid, a
+**design** unions scenarios into one pipeline run, and a **study** aggregates
+design-runs across infrastructure, time, and software versions.
+
+- **scenario**: A single, purely declarative `ssdsims_scenario`
+  (`ssd_define_scenario()`) — one **regular** cross-join of the **axes** at each
+  step (a rectangular sub-grid). It is the construction-time root of one
+  `targets` pipeline (`ssd_scenario_targets()`), carrying a `seed`, the knobs,
+  and the dataset *names*; it draws no random numbers and expands no tasks
+  (TARGETS-DESIGN.md §1). Vignette prose that calls a scenario "the study" is
+  the loose gloss this section tightens: a scenario is one **arm** of a study,
+  not the study.
+- **design**: A named set of scenarios run as **one pipeline** — one `targets`
+  store, one `tar_make()`, one provenance/execution context — built with
+  `ssd_design()` and turned into targets by `ssd_design_targets()`. Where a
+  single scenario is one regular grid, a design unions several into the full,
+  possibly **non-regular** (ragged) experimental design: the union of regular
+  sub-grids is exactly how an irregular design region is expressed. "Design" is
+  used here in the **design-of-experiments** sense (the set of conditions to
+  run); it is distinct from the *software*-design sense of `TARGETS-DESIGN.md`
+  and the openspec `design.md` artifact. Each scenario is a member of the
+  design, addressed by its collection **name** (the `scenario=<name>` results
+  level and the `<name>_` target-name prefix); names enter addressing only,
+  never task identity, the **primer**, or any result value. The design's
+  results table is the combined `summary.parquet`, with a `scenario` identity
+  column.
+- **study**: The whole investigation a design serves — the longitudinal
+  aggregate that may span **multiple design-runs** executed on different
+  infrastructure (laptop / cluster), at different times, or under different
+  software versions. Unlike a scenario or a design, a study is **not a
+  constructible object**: its members are realised in separate sessions, so it
+  is reconstructed on the **read side** by unioning result trees (a future
+  `study` column over several designs' summaries). Reserved for that umbrella
+  level; not built by the design machinery. Distinct from **experiment**, which
+  in this repo names the proof-of-work `scripts/experiment-*.R`.
+
 ## Simulation terms
 
 - **`sim`**: The index of a simulation replicate.
 - **`nsim`**: The number of simulation replicates to perform.
 - **`nrow`**: The number of rows (species) in each simulated dataset.
+- **`nrow_max`**: The fixed size of the shared `sample` draw (default
+  `1000L`) — a sample-level **simulation setting**, not an axis or a task-row
+  column. The effective per-dataset draw is `min(nrow_max, nrow(data))` when
+  `replace = FALSE` (the high default draws the full permutation) and
+  `nrow_max` rows when `replace = TRUE`; every `nrow` is a `head()` prefix of
+  that draw, so adding `nrow` values (within the effective draw size) never
+  re-draws (TARGETS-DESIGN.md §5).
 - **`replace`**: Whether the resampling that generates simulated data is
-  performed with replacement.
+  performed with replacement (default `TRUE`; `FALSE` draws a permutation,
+  capping the effective draw — and so each `nrow` — at the dataset size).
 
 ## SSD terms
 

@@ -28,7 +28,8 @@ the task path carries the dataset \emph{name} and this accessor resolves it back
 the tibble at run time, so the tibble never enters a task identity.
 }
 \examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 scenario_dataset(scenario, "ccme_boron")
 }
 \seealso{

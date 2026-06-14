@@ -49,18 +49,18 @@ contract assembled where \code{params} is built (\code{task-tables}, over the
 take a primer over their task identity:
 \itemize{
 \item \strong{sample} -- keyed \verb{(dataset, sim, replace)} only. \code{nrow} is deliberately
-absent: every \code{nrow} shares one \code{n_max}-row draw that the \code{fit} step
-truncates inline (\code{head(sample, nrow)}, RNG-free, no separate primer), so
-excluding \code{nrow} is load-bearing for the sub-truncation property
-(\code{TARGETS-DESIGN.md} §5).
+absent: every \code{nrow} shares one draw (sized by the scenario's \code{nrow_max}
+setting) that the \code{fit} step truncates inline (\code{head(sample, nrow)},
+RNG-free, no separate primer), so excluding \code{nrow} is load-bearing for the
+sub-truncation property (\code{TARGETS-DESIGN.md} §5).
 \item \strong{fit} -- the parent \code{sample} identity plus \code{nrow} and the fit-grid row
 (\code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix} name,
 \code{range_shape1}, \code{range_shape2}). \code{nrow} IS part of the fit primer: a fit on
 a different truncation is a genuinely different computation.
 \item \strong{hc} -- the parent \code{fit} identity plus the hc-grid row (\code{nboot},
-\code{est_method}, \code{ci_method}, \code{parametric}). \code{ci} is a scalar hc flag applied
-uniformly, not part of the task identity, so it is a carried column rather
-than a primer field.
+\code{est_method}, \code{ci_method}, \code{parametric}). \code{ci} is a scalar hc setting
+applied uniformly and read from the scenario, not part of the task
+identity, so it is never a primer field (nor a task-row column).
 }
 
 Function-valued parameters (e.g. \code{min_pmix}) MUST be referenced \strong{by name},

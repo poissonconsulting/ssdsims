@@ -6,11 +6,13 @@
 # their results can be compared. Edit to taste.
 library(ssdsims)
 
+data <- ssd_scenario_data(ssddata::ccme_boron)
+
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   seed = 42L,
-  nrow = c(5L, 10L), # c(5L, 6L, 10L, 20L, 50L),
+  nrow = c(5L, 10L), # c(5L, 6L, 10L, 20L, 50L); any value up to nrow_max (default 1000L) — the default replace = TRUE draws with replacement, so nrow may exceed nrow(data),
   est_method = c("arithmetic", "geometric", "multi"),
   proportion = c(0.01, 0.05, 0.1, 0.2),
   ci = TRUE,

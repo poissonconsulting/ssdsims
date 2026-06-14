@@ -44,8 +44,9 @@ their materialised functions off the scenario via \code{\link[=scenario_min_pmix
 search.
 }
 \examples{
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 1L,
   nrow = 6L,
   seed = 42L,

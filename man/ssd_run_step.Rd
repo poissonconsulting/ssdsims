@@ -48,9 +48,11 @@ and is order-independent, the per-task results are byte-identical to
 \section{Functions}{
 \itemize{
 \item \code{ssd_run_sample_step()}: Run the \code{sample} tasks: read each task's dataset off
-the scenario via \code{\link[=scenario_dataset]{scenario_dataset()}}, draw \code{n_max} rows through
-\code{sample_data_task_primer()}, and tag each draw with its \code{sample_id} and a
-\code{.row} order index so a downstream \code{fit} shard can isolate and re-order it.
+the scenario via \code{\link[=scenario_dataset]{scenario_dataset()}}, draw the effective draw size - the
+scenario's \code{nrow_max} setting, capped at the dataset size for
+\code{replace = FALSE} - through \code{sample_data_task_primer()}, and tag each draw
+with its \code{sample_id} and a \code{.row} order index so a downstream \code{fit} shard
+can isolate and re-order it.
 
 \item \code{ssd_run_fit_step()}: Run the \code{fit} tasks: read the distinct set of
 parent \code{sample} shards the shard's tasks reference (each once - they may span
@@ -73,13 +75,15 @@ the shard's partition path.
 
 }}
 \examples{
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()
 ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
 \donttest{
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
@@ -99,8 +103,9 @@ ssd_run_fit_step(
 )
 }
 \donttest{
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 1L,
   nrow = 6L,
   seed = 42L,

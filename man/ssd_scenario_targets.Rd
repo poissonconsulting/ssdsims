@@ -44,7 +44,8 @@ this}:
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{library(targets)
 library(tarchetypes)
 library(ssdsims)
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
 }\if{html}{\out{</div>}}
 
@@ -103,10 +104,12 @@ their Parquet), overriding the pin (section 8.4). The default (\code{NULL}) is
 
 The \code{head(sample, nrow)} truncation stays folded into the \code{fit} step (no
 materialised \code{data} shard): a \code{fit} shard is keyed by \code{fit_id}, which includes
-\code{nrow}, so extending \code{nrow} mints new \code{fit} shards and caches the rest, and a
-widened \code{max(nrow)} changes the \code{sample} shard's \code{n_max} task row, so its
-bytes change and the per-child edge propagates to exactly the \code{fit} shards
-that read the wider draw - no stale short draw is produced.
+\code{nrow}, so extending \code{nrow} mints new \code{fit} shards and caches the rest. The
+shared draw is sized by the scenario's fixed \code{nrow_max} setting (carried on
+the \code{sample} slice), not \code{max(nrow)}, so extending \code{nrow} within the
+effective draw size leaves the \code{sample} shards cached too; changing
+\code{nrow_max} invalidates the \code{sample} slice and rebuilds the draw, propagating
+through the per-child edges - no stale short draw can arise.
 
 To parallelise the shards, set a controller (e.g. a mirai-backed
 \code{crew::crew_controller_local()}) with \code{targets::tar_option_set()} in
@@ -145,7 +148,8 @@ modes; only the presence and behaviour of the upload targets differ.
 library(targets)
 library(tarchetypes)
 library(ssdsims)
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
 
 # Pair each shard with a (no-op) upload target, exercised offline:

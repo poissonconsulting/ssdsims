@@ -386,7 +386,7 @@ test_that("cloud-upload: upload = NULL emits no upload_<step> targets", {
   skip_if_not_installed("targets")
   skip_if_not_installed("tarchetypes")
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
@@ -400,7 +400,7 @@ test_that("cloud-upload: a dry-run upload pairs one upload target per shard", {
   skip_if_not_installed("targets")
   skip_if_not_installed("tarchetypes")
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
@@ -467,7 +467,7 @@ test_that("cloud-upload: the factory never runs the ssd_test_upload() probe", {
   skip_if_not_installed("targets")
   skip_if_not_installed("tarchetypes")
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = 6L,
@@ -488,7 +488,11 @@ test_that("cloud-upload: the factory never runs the ssd_test_upload() probe", {
 })
 
 test_that("cloud-upload: root, upload, and cue must be passed by name", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L
+  )
   expect_snapshot(error = TRUE, {
     ssd_scenario_targets(scenario, "results")
   })
@@ -498,7 +502,11 @@ test_that("cloud-upload: root, upload, and cue must be passed by name", {
 })
 
 test_that("cloud-upload: a non-upload object aborts in the factory", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L
+  )
   expect_snapshot(error = TRUE, {
     ssd_scenario_targets(scenario, upload = list())
   })
@@ -510,7 +518,7 @@ test_that("cloud-upload: the step shard commands are identical across upload mod
   skip_if_not_installed("targets")
   skip_if_not_installed("tarchetypes")
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = 6L,

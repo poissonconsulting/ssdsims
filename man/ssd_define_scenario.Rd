@@ -9,15 +9,15 @@ ssd_define_scenario(
   nsim,
   seed,
   ...,
-  name = NULL,
   nrow = 6L,
-  replace = FALSE,
+  replace = TRUE,
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
+  nrow_max = 1000L,
   dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
   proportion = 0.05,
@@ -31,9 +31,9 @@ ssd_define_scenario(
 )
 }
 \arguments{
-\item{data}{An \code{\link[=ssd_data]{ssd_data()}} collection (preferred), or - for convenience -
-a single data frame or a (named or unnamed) list of data frames. Bare
-inputs are validated via the same \code{Conc} contract as \code{\link[=ssd_data]{ssd_data()}}.}
+\item{data}{An \code{\link[=ssd_scenario_data]{ssd_scenario_data()}} collection: a validated, named
+collection of \code{Conc} tibbles assembled from data frames and/or
+\code{\link[=ssd_gen]{ssd_gen()}} generator datasets.}
 
 \item{nsim}{A count of the number of data sets to generate.}
 
@@ -42,13 +42,19 @@ changing it fully re-roots the scenario's random-number draws.}
 
 \item{...}{Unused; must be empty.}
 
-\item{name}{An optional dataset name for the single-data-frame form,
-overriding the derived name. Must not be combined with a named list or an
-\code{\link[=ssd_data]{ssd_data()}} collection.}
+\item{nrow}{A whole-number vector of sample sizes (the \code{fit}-step truncation
+axis), each between 5 (the fit floor) and \code{nrow_max} (the shared draw size,
+the universal ceiling). A value within \code{nrow_max} but above a dataset's row
+count is still valid: its \code{replace = TRUE} cell draws with replacement,
+while its \code{replace = FALSE} cell (which cannot exceed the dataset size) is
+silently discarded for that dataset.}
 
-\item{nrow}{A positive whole number of the minimum number of non-missing rows.}
-
-\item{replace}{A logical vector specifying whether to sample with replacement.}
+\item{replace}{A logical vector (a cross-join axis of one or two values)
+specifying whether the shared \code{sample} draw resamples with replacement.
+Defaults to \code{TRUE} (the standard resampling model, drawing \code{nrow_max}
+rows, so \code{nrow} is not capped by the dataset size); \code{FALSE} draws a
+permutation, capping the effective draw - and so each \code{nrow} - at the
+dataset size.}
 
 \item{rescale}{A flag specifying whether to leave the values unchanged (FALSE) or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values (TRUE) or a string specifying whether to leave the values unchanged ("no") or to rescale concentration values by dividing by the geometric mean of the minimum and maximum positive finite values ("geomean") or to logistically transform ("odds").}
 
@@ -74,6 +80,13 @@ upper bounds for the shape1 parameter.}
 
 \item{range_shape2}{A list of numeric vectors of length two of the lower and
 upper bounds for the shape2 parameter.}
+
+\item{nrow_max}{A whole number (default \code{1000L}): the fixed size of the
+shared \code{sample} draw that every \code{nrow} value sub-truncates. A sample-level
+simulation setting, not a cross-join axis. The effective per-dataset draw is
+\code{min(nrow_max, nrow(data))} when \code{replace = FALSE} (the high default draws
+the full permutation) and \code{nrow_max} rows when \code{replace = TRUE}; each \code{nrow}
+must not exceed the effective draw size.}
 
 \item{dists}{A character vector of the distribution names.}
 
@@ -159,29 +172,41 @@ grids. It performs \strong{no} random-number generation, \strong{no} task expans
 and has \strong{no} dependency on \code{targets}.
 }
 \details{
-Input data is forwarded through \code{\link[=ssd_data]{ssd_data()}} for validation (a numeric
-\code{Conc} column is required) and retained on the scenario (as \verb{$data}) so a
-local run (\code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}}) can sample it directly. The dataset
-\emph{names} (\verb{$datasets}) are what the targets/cluster path hashes; the validated
-tibbles ride on the scenario and are isolated by name via \code{\link[=scenario_dataset]{scenario_dataset()}},
-so the hash need not carry the data frames.
+Input data arrives as an \code{\link[=ssd_scenario_data]{ssd_scenario_data()}} collection (already
+validated: a numeric \code{Conc} column is required) and is retained on the
+scenario (as \verb{$data}) so a local run (\code{\link[=ssd_run_scenario_baseline]{ssd_run_scenario_baseline()}}) can
+sample it directly. The dataset \emph{names} (\verb{$datasets}) are what the
+targets/cluster path hashes; the validated tibbles ride on the scenario and
+are isolated by name via \code{\link[=scenario_dataset]{scenario_dataset()}}, so the hash need not carry
+the data frames.
 }
 \section{Dataset input}{
-The preferred form is an \code{\link[=ssd_data]{ssd_data()}} collection, which owns validation and
-naming: \code{ssd_define_scenario(ssd_data(boron = ccme_boron, cadmium = ccme_cadmium), ...)}. For convenience, bare data frame input is also
-accepted in four forms (routed through the same \code{Conc} validation):
-\enumerate{
-\item A single data frame, name derived from the argument expression:
-\code{ssd_define_scenario(ssddata::ccme_boron, ...)} gives \code{"ccme_boron"}.
-\item A single data frame with an explicit \verb{name=}:
-\code{ssd_define_scenario(ssddata::ccme_boron, name = "boron", ...)}.
-\item A named list, names taken from the list:
-\code{ssd_define_scenario(list(boron = ccme_boron, cadmium = ccme_cadmium), ...)}.
-\item An unnamed list, names derived per element:
-\code{ssd_define_scenario(list(ccme_boron, ccme_cadmium), ...)}.
+Dataset input is accepted \strong{only} as an \code{\link[=ssd_scenario_data]{ssd_scenario_data()}} collection,
+which owns validation and naming. Assemble it first, then pass it in:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{data <- ssd_scenario_data(boron = ccme_boron, cadmium = ccme_cadmium)
+scenario <- ssd_define_scenario(data, ...)
+}\if{html}{\out{</div>}}
+
+Generator inputs (a \code{fitdists}/\code{tmbfit} object, a generator function, or a
+function-name string) are materialised - once, reproducibly - by \code{\link[=ssd_gen]{ssd_gen()}}
+and composed into the same collection; the constructor itself performs \strong{no}
+random-number generation.
 }
 
-Supplying both a named list and \verb{name=} is an error.
+\section{\code{nrow_max}}{
+\code{nrow_max} is the \emph{sample}-level \strong{simulation setting}: the fixed size of
+the shared \code{sample} draw that every \code{nrow} value sub-truncates
+(\code{head(sample, nrow)}, \code{TARGETS-DESIGN.md} section 5). The effective
+per-dataset draw is \code{min(nrow_max, nrow(data))} for \code{replace = FALSE} (the
+high default thus draws the full permutation) and \code{nrow_max} rows for
+\code{replace = TRUE}. Because the draw size is fixed - not derived from
+\code{max(nrow)} - adding \code{nrow} values (within the effective draw size) never
+changes the draw, so cached \code{sample} shards stay valid. Each \code{nrow} is
+validated at construction against the effective draw size. It is not
+\code{ci}-gated (the draw happens regardless of \code{ci}) and, like \code{dists} and
+\code{est_method}, it is absent from \code{task_axes("sample")}, so it never
+multiplies tasks or enters the per-task RNG primer.
 }
 
 \section{\code{ci}}{
@@ -210,5 +235,7 @@ method within a task without fanning out into separate tasks.
 }
 
 \examples{
-ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+scenario
 }

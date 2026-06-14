@@ -2,22 +2,25 @@
 
 test_that("task-lists: sample table has D * nsim * R rows with axes populated", {
   scenario <- ssd_define_scenario(
-    ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),
+    ssd_scenario_data(
+      boron = ssddata::ccme_boron,
+      cadmium = ssddata::ccme_cadmium
+    ),
     nsim = 3L,
     seed = 42L,
     nrow = c(5L, 10L)
   )
   tasks <- ssd_scenario_sample_tasks(scenario)
-  # D = 2 datasets, nsim = 3, R = 1 (replace defaults to FALSE)
+  # D = 2 datasets, nsim = 3, R = 1 (replace defaults to TRUE)
   expect_identical(nrow(tasks), 6L)
   expect_setequal(tasks$dataset, c("boron", "cadmium"))
   expect_setequal(tasks$sim, 1:3)
-  expect_identical(unique(tasks$replace), FALSE)
+  expect_identical(unique(tasks$replace), TRUE)
 })
 
 test_that("task-lists: the scenario replace knob is a sample axis", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     replace = c(FALSE, TRUE)
@@ -28,9 +31,9 @@ test_that("task-lists: the scenario replace knob is a sample axis", {
   expect_setequal(tasks$replace, c(FALSE, TRUE))
 })
 
-test_that("task-lists: nrow does not multiply the sample draw; n_max is carried", {
+test_that("task-lists: nrow does not multiply the sample draw; the draw size is not a row column", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 4L,
     seed = 42L,
     nrow = c(5L, 10L, 20L)
@@ -39,11 +42,18 @@ test_that("task-lists: nrow does not multiply the sample draw; n_max is carried"
   # 1 dataset * 4 sims * 1 replace = 4, not multiplied by the 3 nrow values
   expect_identical(nrow(tasks), 4L)
   expect_false("nrow" %in% names(tasks))
-  expect_identical(unique(tasks$n_max), 20L)
+  # The draw size is the scenario's `nrow_max` setting (resolved by the
+  # runner), not an `n_max` row column: the table carries only the identity.
+  expect_false("n_max" %in% names(tasks))
+  expect_identical(names(tasks), c("dataset", "sim", "replace", "sample_id"))
 })
 
 test_that("task-lists: sample derivation is RNG-free with no seeding columns", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 5L, seed = 42L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 5L,
+    seed = 42L
+  )
   withr::local_seed(1L)
   before <- .Random.seed
   tasks <- ssd_scenario_sample_tasks(scenario)
@@ -55,7 +65,7 @@ test_that("task-lists: sample derivation is RNG-free with no seeding columns", {
 
 test_that("task-lists: fit table crosses sample identity x nrow x fit grid", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 3L,
     seed = 42L,
     nrow = c(5L, 10L),
@@ -80,7 +90,11 @@ test_that("task-lists: fit table crosses sample identity x nrow x fit grid", {
 })
 
 test_that("task-lists: min_pmix is stored by name, not function value", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L
+  )
   fit_tasks <- ssd_scenario_fit_tasks(scenario)
   expect_type(fit_tasks$min_pmix, "character")
   expect_identical(unique(fit_tasks$min_pmix), "ssd_min_pmix")
@@ -90,7 +104,7 @@ test_that("task-lists: min_pmix is stored by name, not function value", {
 
 test_that("task-lists: hc table has K * H rows, not multiplied by est_method", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     est_method = c("arithmetic", "multi"),
@@ -112,7 +126,7 @@ test_that("task-lists: ci is not an hc axis", {
 
 test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     est_method = c("arithmetic", "multi"),
@@ -125,7 +139,9 @@ test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
   # summarised within the single task rather than multiplying it.
   expect_identical(nrow(hc_tasks), nrow(fit_tasks))
   expect_false("est_method" %in% names(hc_tasks))
-  expect_true(all(hc_tasks$ci == FALSE))
+  # `ci` is a setting read from the scenario, not an emitted column; the
+  # NA-canonicalisation of the bootstrap-only knobs is keyed off the scalar.
+  expect_false("ci" %in% names(hc_tasks))
   expect_true(all(is.na(hc_tasks$nboot)))
   expect_true(all(is.na(hc_tasks$ci_method)))
   expect_true(all(is.na(hc_tasks$parametric)))
@@ -133,7 +149,7 @@ test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
 
 test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     ci = TRUE,
@@ -144,20 +160,20 @@ test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
   # 2 nboot * 1 ci_method * 1 parametric = 2 per fit task (est_method is a
   # within-task setting, absent from the fan-out).
   expect_identical(nrow(hc_tasks), nrow(fit_tasks) * 2L)
-  expect_true(all(hc_tasks$ci == TRUE))
+  expect_false("ci" %in% names(hc_tasks))
   expect_false("est_method" %in% attr(hc_tasks, "axes"))
 })
 
 test_that("scenario-definition: dists is a setting, not a fit axis or identity", {
   expect_false("dists" %in% task_axes("fit"))
   s1 <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
     dists = c("lnorm", "gamma")
   )
   s2 <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
     dists = "lnorm"
@@ -232,7 +248,7 @@ test_that("hazard-concentrations: collapsed est_methods match per-method ssd_hc 
 
 test_that("hazard-concentrations: a vector est_method is summarised within one hc task", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
     dists = "lnorm",
@@ -258,7 +274,7 @@ test_that("hazard-concentrations: a vector est_method is summarised within one h
 
 test_that("task-lists: each table carries a path-style id and parent foreign key", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = c(5L, 10L)
@@ -269,8 +285,8 @@ test_that("task-lists: each table carries a path-style id and parent foreign key
   expect_setequal(
     tasks$sample$sample_id,
     c(
-      "dataset=ccme_boron/sim=1/replace=FALSE",
-      "dataset=ccme_boron/sim=2/replace=FALSE"
+      "dataset=ccme_boron/sim=1/replace=TRUE",
+      "dataset=ccme_boron/sim=2/replace=TRUE"
     )
   )
   # fit id extends its sample foreign key with the nrow (and fit-grid) axes
@@ -286,7 +302,11 @@ test_that("task-lists: each table carries a path-style id and parent foreign key
 # ---- ssdsims_tasks class ---------------------------------------------------
 
 test_that("task-lists: derived tables carry the ssdsims_tasks class and step", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 2L,
+    seed = 42L
+  )
   expect_identical(
     attr(ssd_scenario_sample_tasks(scenario), "step"),
     "sample"
@@ -298,7 +318,11 @@ test_that("task-lists: derived tables carry the ssdsims_tasks class and step", {
 })
 
 test_that("task-lists: task tables survive dplyr/tidyr verbs", {
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 3L,
+    seed = 42L
+  )
   tasks <- ssd_scenario_sample_tasks(scenario)
   expect_identical(nrow(dplyr::filter(tasks, sim == 2L)), 1L)
   expect_true("extra" %in% names(dplyr::mutate(tasks, extra = 1L)))
@@ -308,13 +332,17 @@ test_that("task-lists: task tables survive dplyr/tidyr verbs", {
 test_that("task-lists: printing a task table is informative", {
   expect_snapshot(
     ssd_scenario_sample_tasks(
-      ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+      ssd_define_scenario(
+        ssd_scenario_data(ssddata::ccme_boron),
+        nsim = 2L,
+        seed = 42L
+      )
     )
   )
   expect_snapshot(
     ssd_scenario_fit_tasks(
       ssd_define_scenario(
-        ssddata::ccme_boron,
+        ssd_scenario_data(ssddata::ccme_boron),
         nsim = 1L,
         seed = 42L,
         nrow = c(5L, 10L),
@@ -325,7 +353,7 @@ test_that("task-lists: printing a task table is informative", {
   expect_snapshot(
     ssd_scenario_hc_tasks(
       ssd_define_scenario(
-        ssddata::ccme_boron,
+        ssd_scenario_data(ssddata::ccme_boron),
         nsim = 1L,
         seed = 42L,
         ci = TRUE,
@@ -339,7 +367,7 @@ test_that("task-lists: printing a task table is informative", {
 
 test_that("task-lists: ssd_scenario_tasks bundles the three task tables", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = c(5L, 10L),
@@ -358,7 +386,7 @@ test_that("task-lists: printing a task set reports per-step counts", {
   expect_snapshot(
     ssd_scenario_tasks(
       ssd_define_scenario(
-        ssddata::ccme_boron,
+        ssd_scenario_data(ssddata::ccme_boron),
         nsim = 2L,
         seed = 42L,
         nrow = c(5L, 10L),
@@ -374,10 +402,11 @@ test_that("task-lists: printing a task set reports per-step counts", {
 
 test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
     nrow = c(5L, 6L),
+    replace = FALSE,
     dists = "lnorm"
   )
   tmp <- withr::local_tempdir()
@@ -387,8 +416,13 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   expect_s3_class(out$sample$sample[[1L]], "data.frame")
   expect_s3_class(out$fit$fits[[1L]], "fitdists")
   expect_s3_class(out$hc$hc[[1L]], "data.frame")
-  # one shared draw of n_max = 6 rows; both nrow fits truncate that same draw
-  expect_identical(nrow(out$sample$sample[[1L]]), 6L)
+  # one shared draw of the effective draw size - min(nrow_max, nrow(data))
+  # under replace = FALSE, the full permutation here; both nrow fits truncate
+  # that same draw
+  expect_identical(
+    nrow(out$sample$sample[[1L]]),
+    nrow(ssddata::ccme_boron)
+  )
   expect_identical(length(unique(out$fit$sample_id)), 1L)
   # The baseline runner does no Parquet I/O of its own (it threads results in
   # memory). (`targets` is a package dependency since `task-tables`, so its
@@ -396,11 +430,33 @@ test_that("task-lists: baseline runner threads sample -> fit -> hc", {
   expect_length(list.files(tmp, pattern = "\\.parquet$", recursive = TRUE), 0L)
 })
 
+test_that("task-lists: task tables derive and the baseline runs for a generator dataset", {
+  # A generator-backed dataset is just a tibble in `scenario$data`, so task-table
+  # derivation and the baseline runner are unaffected (the `dataset` axis is the
+  # name `"synth"`, exactly as for a data-frame dataset).
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssd_gen(
+      synth = ssdtools::ssd_rlnorm,
+      .n = 30,
+      .seed = 1L
+    )),
+    nsim = 1L,
+    seed = 42L,
+    nrow = c(5L, 6L),
+    dists = "lnorm"
+  )
+  expect_identical(ssd_scenario_sample_tasks(scenario)$dataset, "synth")
+  out <- ssd_run_scenario_baseline(scenario)
+  expect_named(out, c("sample", "fit", "hc"))
+  expect_s3_class(out$fit$fits[[1L]], "fitdists")
+  expect_s3_class(out$hc$hc[[1L]], "data.frame")
+})
+
 test_that("task-lists: sub-truncation property holds across nrow", {
   # The fit step truncates a single shared draw inline; head(draw, 5) is a
   # byte-identical prefix of head(draw, 10) (TARGETS-DESIGN.md section 5).
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
     nrow = c(5L, 10L),
@@ -416,9 +472,32 @@ test_that("task-lists: sub-truncation property holds across nrow", {
   expect_identical(length(unique(out$fit$sample_id)), 1L)
 })
 
+test_that("parallel-safe-seeding: adding an nrow within the draw size never re-draws", {
+  # The draw size is the fixed `nrow_max` setting, not `max(nrow)`: widening
+  # the `nrow` axis (within the effective draw size) leaves the seeded draw
+  # byte-identical, so the `sample` shard would stay cached.
+  base <- ssd_define_scenario(
+    ssd_scenario_data(boron = ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L,
+    dists = "lnorm",
+    nrow = c(5L, 6L)
+  )
+  wider <- ssd_define_scenario(
+    ssd_scenario_data(boron = ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L,
+    dists = "lnorm",
+    nrow = c(5L, 6L, 10L)
+  )
+  out_base <- ssd_run_scenario_baseline(base)
+  out_wider <- ssd_run_scenario_baseline(wider)
+  expect_identical(out_base$sample$sample, out_wider$sample$sample)
+})
+
 test_that("parallel-safe-seeding: baseline runner is reproducible without an external seed", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 42L,
     nrow = c(5L, 6L),
@@ -445,7 +524,7 @@ test_that("parallel-safe-seeding: baseline runner is reproducible without an ext
 
 test_that("parallel-safe-seeding: baseline runner results are order-independent", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 3L,
     seed = 42L,
     nrow = 6L,
@@ -459,9 +538,10 @@ test_that("parallel-safe-seeding: baseline runner results are order-independent"
   primer <- task_primer(row[task_axes("sample")])
   isolated <- local({
     local_dqrng_backend()
+    data <- scenario$data[[row$dataset]]
     sample_data_task_primer(
-      scenario$data[[row$dataset]],
-      row$n_max,
+      data,
+      effective_draw_size(scenario$nrow_max, data, row$replace),
       row$replace,
       scenario$seed,
       primer
@@ -496,7 +576,11 @@ test_that("parallel-safe-seeding: fit/hc wrappers reproduce under a fixed (seed,
   data <- utils::head(ssddata::ccme_boron, 6L)
   fp <- task_primer(list(dataset = "boron", nrow = 6L, rescale = FALSE))
   # The fit path resolves `min_pmix` off the scenario via the accessor.
-  scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L
+  )
 
   fit1 <- fit_data_task_primer(
     data,
@@ -564,7 +648,7 @@ test_that("parallel-safe-seeding: sub-truncation under seeding (replace FALSE an
 
 test_that("task-lists: task-table column contracts are pinned", {
   scenario <- ssd_define_scenario(
-    ssddata::ccme_boron,
+    ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 42L,
     nrow = c(5L, 10L),
@@ -581,7 +665,7 @@ test_that("task-lists: task-table column contracts are pinned", {
 
 test_that("scenario-definition: samples = TRUE retains hc draws but keeps estimates", {
   args <- list(
-    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
+    ssd_scenario_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
     nsim = 1L,
     nrow = 6L,
     seed = 42L,
@@ -607,7 +691,7 @@ test_that("scenario-definition: samples = TRUE works with multiple dists and ci 
   # ("Can't select columns that don't exist"). The no-CI path must therefore
   # never request samples, whatever the scenario flag.
   scenario <- ssd_define_scenario(
-    ssd_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
+    ssd_scenario_data(d = data.frame(Conc = exp(seq(-1, 2, length.out = 20)))),
     nsim = 1L,
     seed = 42L,
     nrow = 6L,
@@ -619,4 +703,35 @@ test_that("scenario-definition: samples = TRUE works with multiple dists and ci 
   # The no-CI path never retains samples, so every samples column is empty.
   lens <- unlist(lapply(out$hc$hc, function(h) lengths(h$samples)))
   expect_true(all(lens == 0L))
+})
+
+test_that("parallel-safe-seeding: *_data_task_primer self-verifies the dqrng backend", {
+  data <- ssddata::ccme_boron
+  primer <- task_primer(list(dataset = "boron", sim = 1L, replace = FALSE))
+
+  # Healthy: under an active backend the wrapper returns normally. (The fit/hc
+  # wrappers share the identical local_dqrng_state() bracket as their first line
+  # and are exercised on the healthy path by the reproduce tests above.)
+  local_dqrng_backend()
+  expect_s3_class(
+    sample_data_task_primer(data, 6L, FALSE, 42L, primer),
+    "data.frame"
+  )
+
+  # Exit postcondition: the wrappers are closures, so if the task body leaves
+  # the backend torn down by the time it returns, the wrapper's deferred exit
+  # witness aborts rather than yielding non-dqrng draws. Mock the state-less op
+  # to tear the backend down mid-body.
+  local_dqrng_backend()
+  withr::defer(suppressWarnings(RNGkind("Mersenne-Twister")))
+  testthat::local_mocked_bindings(
+    sample_data_task = function(...) {
+      suppressWarnings(RNGkind("Mersenne-Twister"))
+      data
+    }
+  )
+  expect_error(
+    sample_data_task_primer(data, 6L, FALSE, 42L, primer),
+    "dqrng backend is not intact"
+  )
 })

@@ -53,8 +53,9 @@
 #'   [ssd_scenario_sample_shards()], [ssd_run_sample_step()].
 #' @export
 #' @examples
+#' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' scenario <- ssd_define_scenario(
-#'   ssddata::ccme_boron,
+#'   data,
 #'   nsim = 1L,
 #'   nrow = 6L,
 #'   seed = 42L,
@@ -85,6 +86,10 @@ ssd_run_scenario_shards <- function(
   # One backend scope for the whole run; each step runner's own
   # `local_dqrng_backend()` is then a reentrant no-op, and each task installs
   # its `(seed, primer)` exactly once - so results match the in-memory runner.
+  # The duckplyr config scope nests safely (each layer restores the one
+  # above), so opening it here too keeps the whole run configured even when
+  # the step runners are bypassed.
+  local_duckplyr_config()
   local_dqrng_backend()
 
   list(
