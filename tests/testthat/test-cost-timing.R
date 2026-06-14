@@ -15,7 +15,9 @@ timing_scenario <- function() {
   )
 }
 
-result_cols <- function(df) df[, setdiff(names(df), c(".start", ".end", ".host"))]
+result_cols <- function(df) {
+  df[, setdiff(names(df), c(".start", ".end", ".host"))]
+}
 
 test_that("cost-analysis: fit and hc shards carry per-task timing columns", {
   run <- ssd_run_scenario_shards(timing_scenario())
@@ -39,7 +41,12 @@ test_that("cost-analysis: sample shards carry no timing columns and stay byte-id
   run1 <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
   run2 <- ssd_run_scenario_shards(scenario, dir = withr::local_tempdir())
 
-  sample1 <- ssd_read_parquet(file.path(run1$dir, "sample", "**", "part.parquet"))
+  sample1 <- ssd_read_parquet(file.path(
+    run1$dir,
+    "sample",
+    "**",
+    "part.parquet"
+  ))
   expect_false(any(c(".start", ".end", ".host") %in% names(sample1)))
 
   # Same scenario + seed: the `sample` part.parquet is byte-identical across runs

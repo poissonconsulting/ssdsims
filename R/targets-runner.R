@@ -739,6 +739,20 @@ edge_block <- function(names) {
 #' their Parquet), overriding the pin (section 8.4). The default (`NULL`) is
 #' `targets`' standard cue.
 #'
+#' @section Volatile fit/hc file hashes (cost-analysis timings):
+#' The `fit`/`hc` shards carry per-task `.start`/`.end`/`.host` timing columns
+#' (the `cost-analysis` instrumentation), so a `fit`/`hc` shard's **file hash is
+#' no longer deterministic across recomputes**: a forced recompute that yields
+#' identical *results* still writes different bytes (a fresh wall-clock), so its
+#' dependent `hc`/`summary` targets re-run and any paired `upload_<step>`
+#' re-ships. This is scoped to `fit`/`hc`; `sample` shards carry no timing columns
+#' and stay byte-deterministic. Routine caching is unaffected (a cache hit is not
+#' a recompute, so a cached shard's bytes are unchanged); the cost lands only on a
+#' *forced* refresh (`tar_invalidate()`, a deleted Parquet) or a code-edit
+#' recompute - and the §8.3 `cue = tar_cue(depend = FALSE)` pin covers the latter.
+#' Per-task *results* remain byte-identical to the baseline oracle (the
+#' shard-runner contract narrows to the result columns, timing excluded).
+#'
 #' The `head(sample, nrow)` truncation stays folded into the `fit` step (no
 #' materialised `data` shard): a `fit` shard is keyed by `fit_id`, which includes
 #' `nrow`, so extending `nrow` mints new `fit` shards and caches the rest. The

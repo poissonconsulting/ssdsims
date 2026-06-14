@@ -329,7 +329,12 @@ test_that("constrained configuration leaves results byte-identical", {
     df[, setdiff(names(df), c(".start", ".end", ".host")), drop = FALSE]
   }
   read_step <- function(dir, step, key) {
-    df <- drop_timing(ssd_read_parquet(file.path(dir, step, "**", "part.parquet")))
+    df <- drop_timing(ssd_read_parquet(file.path(
+      dir,
+      step,
+      "**",
+      "part.parquet"
+    )))
     df[do.call(order, df[key]), , drop = FALSE] |> `rownames<-`(NULL)
   }
   run_once <- function(dir) {
@@ -349,7 +354,11 @@ test_that("constrained configuration leaves results byte-identical", {
     compact <- drop_timing(ssd_read_parquet(file.path(dir, "summary.parquet")))
     list(
       sample_files = sample_files,
-      sample_md5 = unname(tools::md5sum(file.path(dir, "sample", sample_files))),
+      sample_md5 = unname(tools::md5sum(file.path(
+        dir,
+        "sample",
+        sample_files
+      ))),
       fit = read_step(dir, "fit", "fit_id"),
       hc = read_step(dir, "hc", c("hc_id", "dist")),
       compact = compact[do.call(order, compact[c("hc_id", "dist")]), ] |>

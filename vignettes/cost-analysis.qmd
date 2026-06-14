@@ -1,0 +1,153 @@
+---
+title: "Analysing a Run's Observed Compute Cost"
+vignette: >
+  %\VignetteIndexEntry{Analysing a Run's Observed Compute Cost}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+---
+
+```{r}
+#| label: setup
+#| include: false
+# The vignette runs a small scenario through the single-core shard runner and
+# reads its timings back, so it needs the fitting deps and duckplyr. Skip
+# evaluation gracefully on a minimal runner rather than failing the build.
+evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+  requireNamespace("ssdtools", quietly = TRUE) &&
+  requireNamespace("duckplyr", quietly = TRUE)
+knitr::opts_chunk$set(eval = evaluate)
+```
+
+```{r}
+#| label: library
+library(ssdsims)
+```
+
+## Prediction, then measurement
+
+[`ssd_estimate_cost()`](cost-estimation.html) predicts a scenario's compute cost
+*before* a run, from a cost model calibrated by a synthetic micro-benchmark. Once
+a run has happened it leaves **ground truth** behind: every `fit` and `hc` task's
+body is bracketed with a UTC `.start`/`.end` and tagged with the `.host` CPU, and
+those land as columns of the shard Parquets themselves. `ssd_analyse_cost()` reads
+them back and attributes the *observed* compute to the same `ci_method` × `nboot`
+axes the estimate uses --- closing the loop from predicted to measured.
+
+Like the estimator, the analysis functions are strictly **read-only**: they read
+result Parquets (and, optionally, the run's `targets` store), and never run the
+pipeline, fit a distribution, draw a random number, or write a file.
+
+## A small worked run
+
+Any run leaves timings behind --- the serial baseline, the single-core
+[`ssd_run_scenario_shards()`](../reference/ssd_run_scenario_shards.html), or the
+`targets` pipeline. Here we materialise a small scenario single-core so the
+vignette is self-contained:
+
+```{r}
+#| label: run
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(
+  data,
+  nsim = 2L,
+  seed = 42L,
+  nrow = c(6L, 10L),
+  ci = TRUE,
+  nboot = c(100L, 1000L),
+  dists = ssd_distset(lnorm = "lnorm")
+)
+
+run <- ssd_run_scenario_shards(scenario)
+```
+
+## Analysing observed cost
+
+`ssd_analyse_cost()` reads the run's `fit`/`hc` shard timings and reports the
+observed **total** compute and the observed **longest single task**, with a
+breakdown by `ci_method` × `nboot` keyed exactly like the estimate's:
+
+```{r}
+#| label: analyse
+analysis <- ssd_analyse_cost(scenario, root = run$dir)
+analysis
+```
+
+The observed **total is serial-equivalent compute** --- the sum of the per-task
+durations --- *not* elapsed wall time. Under `n` parallel workers the wall time
+is roughly `max(longest_task, total / n)`, so the longest single task is the
+irreducible floor regardless of how many workers you add.
+
+### The shard envelope
+
+Per-task durations measure the *work*; they do not include the per-shard overhead
+of reading the parent shard, writing the Parquet, and `crew` dispatch. Given the
+run's `targets` store, `ssd_analyse_cost()` reads each shard target's wall
+`seconds` from `tar_meta()` and reports the **envelope overhead** ---
+`target seconds − Σ task durations` --- the number that informs `partition_by`
+tuning:
+
+```{r}
+#| label: envelope
+#| eval: false
+# With a targets store (a pipeline run), add the per-shard envelope overhead.
+ssd_analyse_cost(scenario, root = "results", store = "_targets")
+```
+
+## Comparing predicted against observed
+
+`ssd_compare_cost()` places the prediction beside the observation and reports the
+predicted/observed ratio for the total and the longest task --- a one-glance check
+of how well the (machine-specific) cost model tracked reality:
+
+```{r}
+#| label: compare
+ssd_compare_cost(scenario, root = run$dir)
+```
+
+A ratio far from `1` means the shipped default calibration does not match this
+machine --- which is exactly what recalibration fixes.
+
+## Recalibrating from the run
+
+`ssd_calibrate_cost_from_run()` re-fits the per-task cost model from the run's
+**measured** hc task durations (and a measured fit addend), returning the same
+`ssdsims_cost_calibration` object [`ssd_calibrate_cost()`](cost-estimation.html)
+produces --- so it drops straight back into `ssd_estimate_cost()`, now grounded in
+real measurements from this scenario rather than a synthetic sweep:
+
+```{r}
+#| label: recalibrate
+from_run <- ssd_calibrate_cost_from_run(scenario, root = run$dir)
+
+# The run-derived calibration drives the estimator like any other.
+ssd_estimate_cost(scenario, calibration = from_run)
+```
+
+Because the calibration is **architecture-specific**, `ssd_calibrate_cost_from_run()`
+never silently pools timings from different CPUs: a run whose shards span more
+than one `.host` (a cluster of mixed node types) requires an explicit `host =`,
+or the function aborts listing the hosts it found. The result's provenance records
+that it was derived from a run.
+
+## The loop
+
+Putting it together --- predict, run, measure, compare, recalibrate, predict
+again:
+
+```{r}
+#| label: loop
+#| eval: false
+estimate <- ssd_estimate_cost(scenario)        # predict
+run <- ssd_run_scenario_shards(scenario)        # run
+ssd_compare_cost(scenario, root = run$dir)      # predicted vs observed
+better <- ssd_calibrate_cost_from_run(scenario, root = run$dir) # recalibrate
+ssd_estimate_cost(next_scenario, calibration = better)          # predict the next, from truth
+```
+
+Each larger scenario is then sized from the measured cost of the last, rather
+than a synthetic micro-benchmark --- the estimate improves every time the loop
+turns.
