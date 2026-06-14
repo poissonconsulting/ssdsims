@@ -37,7 +37,8 @@ is also queued, ready to propose.
 
 <!-- What is actively being worked on this cycle. -->
 
-- ‼️⏳ [scenario-combine] Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline.
+- ‼️⏳ [distset-hc-axis] Iwasaki.
+- ‼️⏳ [scenario-combine] **Blocked by distset-hc-axis**. Provide a convenient way to run multiple `ssd_scenario` objects as a single targets pipeline.
 - ‼️⏳ [cost-analysis-targets] **Blocked by scenario-combine**. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.
 - ‼️⏳ [replace-default-true] Set the default as `replace = TRUE`, silently discard infeasible tasks with `replace = FALSE` and too many rows. Interacts with `nrow-max-setting`.
 
@@ -46,7 +47,6 @@ is also queued, ready to propose.
 <!-- Queued up. Roughly in priority order. Doesn't have to be exhaustive. -->
 
 - ‼️⏳ [nrow-max-setting] Add an explicit `nrow_max` draw-size setting (default `1000L`), decoupling the draw from the `nrow` axis to retire the §5 re-draw churn, and move the last carried columns (`n_max`, `ci`) off the task tables into the scenario slice. Proposed; breaking pre-release.
-- ‼️⏳ [distset-hc-axis] Iwasaki.
 - ❗️⏳ [migrate-public-api] Migrate `ssd_sim_data.data.frame` / `ssd_fit_dists_sims` / `ssd_hc_sims` to the new per-task contract, keeping the `_seed` wrappers as a one-release shim. Depends on `scenario-input-types` + `primer-primitives`; gates `cleanup-lecuyer`.
 - ❗️ [replay-helper] `ssd_replay_task()` (§7) and `ssd_input_hash()` for the lightweight recipe — reproduce a failed branch locally with no `targets`. Ready to propose (prereqs `task-tables` + `manifest` landed).
 - ❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), `summary` unions the survivors. Ready to propose (prereq `cluster-pipeline` landed).
