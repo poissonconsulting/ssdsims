@@ -35,12 +35,26 @@ test_that("scenario-definition: ssd_distset rejects invalid input naming the off
 
 # ---- ssd_define_scenario(dists = ) input contract (task 2.2, 6.4) ----------
 
-test_that("scenario-definition: a bare-vector / plain-list dists aborts naming ssd_distset()", {
+test_that("scenario-definition: ssd_define_scenario() accepts only an ssd_distset() collection", {
   skip_on_cran()
+  data <- ssd_scenario_data(ssddata::ccme_boron)
+  # An `ssd_distset()` collection is accepted ...
+  expect_s3_class(
+    ssd_define_scenario(
+      data,
+      nsim = 2L,
+      seed = 1L,
+      dists = ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())
+    ),
+    "ssdsims_scenario"
+  )
+  # ... every other shape aborts with a message naming `ssd_distset()`: a bare
+  # character vector (today's legacy form), a plain (even named) list, a
+  # single distribution name, `NULL`, and a non-character value.
   expect_snapshot(
     error = TRUE,
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
       dists = ssdtools::ssd_dists_bcanz()
@@ -49,11 +63,23 @@ test_that("scenario-definition: a bare-vector / plain-list dists aborts naming s
   expect_snapshot(
     error = TRUE,
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
       dists = list(BCANZ = ssdtools::ssd_dists_bcanz())
     )
+  )
+  expect_snapshot(
+    error = TRUE,
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = "lnorm")
+  )
+  expect_snapshot(
+    error = TRUE,
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = NULL)
+  )
+  expect_snapshot(
+    error = TRUE,
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = 1L)
   )
 })
 

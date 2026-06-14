@@ -63,11 +63,10 @@
       Error in `ssd_distset()`:
       ! Distribution-set name '"bad/name"' must be filesystem-safe (letters, digits, `.`, `_`, or `-` only); each becomes a `distset=<name>` path segment.
 
-# scenario-definition: a bare-vector / plain-list dists aborts naming ssd_distset()
+# scenario-definition: ssd_define_scenario() accepts only an ssd_distset() collection
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      dists = ssdtools::ssd_dists_bcanz())
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = ssdtools::ssd_dists_bcanz())
     Condition
       Error in `ssd_define_scenario()`:
       ! `dists` must be an `ssd_distset()` collection; assemble distribution sets with `ssd_distset()` (e.g. `ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())`).
@@ -75,8 +74,31 @@
 ---
 
     Code
-      ssd_define_scenario(ssd_scenario_data(ssddata::ccme_boron), nsim = 2L, seed = 1L,
-      dists = list(BCANZ = ssdtools::ssd_dists_bcanz()))
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = list(BCANZ = ssdtools::ssd_dists_bcanz()))
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `dists` must be an `ssd_distset()` collection; assemble distribution sets with `ssd_distset()` (e.g. `ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())`).
+
+---
+
+    Code
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = "lnorm")
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `dists` must be an `ssd_distset()` collection; assemble distribution sets with `ssd_distset()` (e.g. `ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())`).
+
+---
+
+    Code
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = NULL)
+    Condition
+      Error in `ssd_define_scenario()`:
+      ! `dists` must be an `ssd_distset()` collection; assemble distribution sets with `ssd_distset()` (e.g. `ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())`).
+
+---
+
+    Code
+      ssd_define_scenario(data, nsim = 2L, seed = 1L, dists = 1L)
     Condition
       Error in `ssd_define_scenario()`:
       ! `dists` must be an `ssd_distset()` collection; assemble distribution sets with `ssd_distset()` (e.g. `ssd_distset(BCANZ = ssdtools::ssd_dists_bcanz())`).
