@@ -80,9 +80,17 @@ same machinery also serves.
   `<root>/summary.parquet` with a `scenario` identity column, at the DuckDB level.
 - **Byte identity is preserved** — a member's per-task results are byte-identical
   to running it alone; combining changes addressing only, never `(seed, primer)`.
+- **Single-scenario → design migration is a first-class, supported path.** Wrap an
+  existing scenario in `ssd_design()` and switch `ssd_scenario_targets()` →
+  `ssd_design_targets()` — a one-line change that grows a one-off run into a
+  growable study (add members later; the shared cells stay cached across members
+  within a seed). A dedicated vignette demonstrates the migration end to end. The
+  per-task results are byte-identical to the standalone run; the only cost is a
+  one-time recompute into the design's `seed=`-levelled tree (the addressing gains
+  the `seed=` level), documented as **safe but recomputing**.
 - `ssd_scenario_targets()`'s public contract is **unchanged** (it keeps
-  `layout=` addressing without the `seed=` level); promoting a flat run into a
-  design is documented as safe but recomputing.
+  `layout=` addressing without the `seed=` level), so existing one-off pipelines
+  are untouched until a user opts into a design.
 
 ## Capabilities
 
@@ -109,8 +117,10 @@ same machinery also serves.
 - **APIs**: two new exports (`ssd_design()`, `ssd_design_targets()`); no breaking
   change. **No ssdtools change.**
 - **Docs**: README / `vignettes/sharded-pipeline.qmd` (a design section led by the
-  irregular-grid use case, with setting-comparison secondary), `_pkgdown.yml`,
-  `GLOSSARY.md` (*Design terms*), `ROADMAP.md`, regenerated `man/`.
+  irregular-grid use case, with setting-comparison secondary); a **new
+  `vignettes/scenario-to-design.qmd`** walking the single-scenario → design
+  migration end to end; `_pkgdown.yml`, `GLOSSARY.md` (*Design terms*),
+  `ROADMAP.md`, regenerated `man/`.
 - **Tests**: a ragged two-member design (coarse + refinement) sharing the
   overlapping cells (one target, byte-identical to standalone) and building the
   refinement's extra cells once; distinct-seed members landing under separate

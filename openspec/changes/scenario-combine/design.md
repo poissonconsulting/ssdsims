@@ -50,6 +50,9 @@ Two facts shape the factory:
   `ssdtools::ssd_hc()`'s vectorized `proportion`/`est_method` and
   `hc_collapse_est_methods()`.
 - `ssd_scenario_targets()`'s public contract unchanged.
+- **Single-scenario → design migration is a first-class, supported, documented
+  path** — a one-line switch from `ssd_scenario_targets()` to
+  `ssd_design_targets(ssd_design(...))`, with a dedicated vignette.
 
 **Non-Goals:**
 
@@ -159,6 +162,26 @@ is unchanged — it already consumes vector `est_method`/`proportion` and scalar
 
 *Alternative considered:* global `any(ci)` / `union` across the whole design —
 rejected; it bootstraps cells no `ci = TRUE` member reaches (the 990 wasted sims).
+
+### Decision: single-scenario → design migration is a supported, documented path
+
+Growing a one-off `ssd_scenario_targets(scenario)` run into a study is a first-class
+workflow: wrap the scenario with `ssd_design(scenario)` (or
+`ssd_design(name = scenario)`) and switch the factory to `ssd_design_targets()`.
+Because a design of one is uniformly shaped, later members are added by extending
+the `ssd_design(...)` call — the shared cells (within a seed) stay cached as the
+design grows. The per-task results are byte-identical to the standalone run (the
+oracle), so migration never re-baselines; the one cost is a single recompute into
+the design's `seed=`-levelled tree, because the design addressing gains the `seed=`
+level that the standalone `layout=` tree lacks (**safe but recomputing**). A
+dedicated `vignettes/scenario-to-design.qmd` walks this end to end: a standalone
+run, the one-line switch, the (recomputed but identical) design run, then adding a
+refining member that reuses the cached cells.
+
+*Alternative considered:* fold the `seed=` level into `ssd_scenario_targets()` too
+so migration is cache-free — rejected here; it re-paths every existing standalone
+store (a breaking change) to save a one-time recompute, and the standalone
+contract is explicitly held stable.
 
 ### Decision: per-scenario summaries filter the shared shards; one combined summary
 

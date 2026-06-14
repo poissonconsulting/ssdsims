@@ -161,6 +161,29 @@ and SHALL preserve byte-identity (the served `est` equals the standalone
   `est_method` and `any` of `ci`/`samples`, and each member's summary SHALL contain
   exactly its requested readout rows
 
+### Requirement: Single-scenario runs migrate to a design
+The package SHALL support migrating a single-scenario `ssd_scenario_targets()` run
+to a design as a first-class, documented path: wrapping the scenario in
+`ssd_design()` and calling `ssd_design_targets()` SHALL run that scenario as a
+design of one, and its per-task `sample`/`fit`/`hc` results SHALL be byte-identical
+to the standalone run (migration changes addressing only). The migration SHALL be
+documented as **safe but recomputing** — the design tree gains the `seed=` level
+the standalone `layout=` tree lacks, so the first design run recomputes once — and
+SHALL be demonstrated by a dedicated vignette. `ssd_scenario_targets()` SHALL
+remain unchanged so existing one-off pipelines are unaffected until migration.
+
+#### Scenario: A scenario migrated to a design of one gives identical results
+- **WHEN** a scenario is run via `ssd_scenario_targets()` and then via
+  `ssd_design_targets(ssd_design(scenario))`, aligned by `<step>_id`
+- **THEN** the `sample`/`fit`/`hc` per-task results SHALL be byte-identical across
+  the two runs
+
+#### Scenario: A migrated design grows by adding members
+- **WHEN** a design of one is run to completion and then a refining member is added
+  to the `ssd_design(...)` call and `tar_make()` re-run into the same root
+- **THEN** the cells the new member shares (within the seed) SHALL be reported
+  cached and only its extra cells (and the affected summaries) SHALL build
+
 ### Requirement: A combined design summary with a scenario identity column
 The design pipeline SHALL include per-member `summary_<name>` targets that read the
 shared shards and filter to each member's cells and `(proportion, est_method, ci,
