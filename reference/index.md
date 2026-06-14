@@ -71,7 +71,7 @@ template).
 - [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md)
   : Summarise a Run's hc Estimates Across Shards
 - [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md)
-  : Layout-keyed Results Root for a Scenario
+  : Seed- and Layout-keyed Results Root for a Scenario
 
 ## Designs (combining scenarios)
 
@@ -137,6 +137,20 @@ scenario read-only - no fit, bootstrap, or RNG.
   : Default Cost Calibration
 - [`ssd_cost_calibration_default`](https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration_default.md)
   : Default Cost Calibration Object
+
+## Cost analysis
+
+Read a completed run’s observed compute back from the per-task timings
+its fit/hc shards carry: attribute it to the scenario axes, compare it
+against the prediction, and recalibrate the cost model from the measured
+durations. All read-only - no pipeline, fit, bootstrap, or RNG.
+
+- [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)
+  : Analyse a Run's Observed Compute Cost
+- [`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md)
+  : Compare Predicted Against Observed Compute Cost
+- [`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md)
+  : Recalibrate the Cost Model from an Observed Run
 
 ## Scenario accessors
 

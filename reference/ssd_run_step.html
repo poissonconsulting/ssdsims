@@ -40,6 +40,7 @@ ssd_run_scenario_baseline() regardless of how tasks bundle into shards."></head>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
@@ -162,7 +163,7 @@ that cell (the survivor model).</p></li>
 <span class="r-in"><span><span class="va">shards</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_sample_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ssd_run_sample_step</span><span class="op">(</span><span class="va">shards</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>, <span class="va">scenario</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmplKv2AU/file39a56ab39121/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKjUHx1/file3b3f7d9788b9/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span></span>
@@ -178,14 +179,14 @@ that cell (the survivor model).</p></li>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmplKv2AU/file39a552ca3955/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKjUHx1/file3b3f78139898/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
 <span class="r-in"><span><span class="fu">ssd_run_fit_step</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_fit_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmplKv2AU/file39a552ca3955/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKjUHx1/file3b3f78139898/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
@@ -202,21 +203,21 @@ that cell (the survivor model).</p></li>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmplKv2AU/file39a563f0eb54/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKjUHx1/file3b3f7f616967/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
 <span class="r-in"><span><span class="fu">ssd_run_fit_step</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_fit_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmplKv2AU/file39a563f0eb54/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKjUHx1/file3b3f7f616967/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
 <span class="r-in"><span><span class="fu">ssd_run_hc_step</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_hc_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmplKv2AU/file39a563f0eb54/hc/dataset=ccme_boron/sim=1/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpKjUHx1/file3b3f7f616967/hc/dataset=ccme_boron/sim=1/part.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

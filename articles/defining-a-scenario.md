@@ -555,7 +555,7 @@ out$hc
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 #>   tasks: 48
-#> # A tibble: 48 × 17
+#> # A tibble: 48 × 20
 #>    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>    <chr>   <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #>  1 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
@@ -569,9 +569,9 @@ out$hc
 #>  9 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
 #> 10 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
 #> # ℹ 38 more rows
-#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> # ℹ 12 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
 #> #   ci_method <chr>, parametric <lgl>, distset <chr>, hc_id <chr>,
-#> #   fit_id <chr>, hc <list>
+#> #   fit_id <chr>, hc <list>, .start <dttm>, .end <dttm>, .host <chr>
 ```
 
 Unnest the hazard-concentration estimates back onto their task

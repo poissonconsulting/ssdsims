@@ -47,20 +47,40 @@ artifacts yet is also queued, ready to propose.
 - ‼️⏳ \[scenario-combine\] **Blocked by distset-hc-axis**. Provide a
   convenient way to run multiple `ssd_scenario` objects as a single
   targets pipeline.
-- ‼️⏳ \[cost-analysis-targets\] **Blocked by scenario-combine**.
-  Improve the cost estimation by analyzing an existing targets run.
-  Includes tools to query the targets store for run times of the various
-  targets and mapping this back to the scenario slices. Side change,
-  folded: Record start and end of computation time for each task, and
-  the start time of the simulation run, in the Parquet. Supports a
-  project deliverable.
+- ‼️🛠️ \[cost-analysis-targets\] Scenario-level analysis implemented
+  (timing instrumentation, the tar_meta resolver,
+  [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)/[`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md)/[`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md));
+  the design-level rollup (group 9) stays **blocked by
+  scenario-combine**. Improve the cost estimation by analyzing an
+  existing targets run. Includes tools to query the targets store for
+  run times of the various targets and mapping this back to the scenario
+  slices. Side change, folded: Record start and end of computation time
+  for each task, and the start time of the simulation run, in the
+  Parquet. Also folded: a **design-level rollup** (the former
+  `cost-analysis-design`) —
+  [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)/[`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md)/[`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md)
+  accept an
+  [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md)
+  and aggregate across its per-scenario result trees (gated on
+  `scenario-combine`); a prototype of the aggregation seam is kept as
+  proof of work under the change’s `exploration/`. Supports a project
+  deliverable.
 
 ## Next
 
+- ❗️⏳ \[hc-readout-aggregation\] **Blocked by scenario-combine**.
+  Per-overlap hc readout aggregation: reconcile design members that
+  differ in the non-axis hc settings (`union` `proportion`/`est_method`,
+  `any` `ci`/`samples`) into shared hc shards via per-cell demand
+  reduction and `ci`-routing, instead of aborting. No ssdtools refactor.
 - ❗️⏳ \[migrate-public-api\] Migrate `ssd_sim_data.data.frame` /
   `ssd_fit_dists_sims` / `ssd_hc_sims` to the new per-task contract,
   keeping the `_seed` wrappers as a one-release shim. Depends on
   `scenario-input-types` + `primer-primitives`; gates `cleanup-lecuyer`.
+- 📚⏳ \[readme\] Update README and integrate in the rest of the
+  documentation. Create vignette(“ssdsims”) . Perform comprehensive
+  review of all vignettes for content, output artifacts, and style. Use
+  vignette(…) style links everywhere.
 - ❗️ \[replay-helper\] `ssd_replay_task()` (§7) and `ssd_input_hash()`
   for the lightweight recipe — reproduce a failed branch locally with no
   `targets`. Ready to propose (prereqs `task-tables` + `manifest`
@@ -70,8 +90,6 @@ artifacts yet is also queued, ready to propose.
   survivors. Ready to propose (prereq `cluster-pipeline` landed).
 - 📚 \[cluster-controller\] Run the controller on a long-running SLURM
   job.
-- 📚⏳ \[readme\] Update README and integrate in the rest of the
-  documentation.
 - 😀 \[azure-open-performance\] Analyze performance of
   [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md)
   for many files.

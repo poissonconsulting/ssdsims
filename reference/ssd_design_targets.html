@@ -26,6 +26,7 @@ whole _targets.R reduces to build a design and call this."></head><body>
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
@@ -108,11 +109,12 @@ identities, and the top-level <code>summary</code> target unions those into
 
 <p>Growing a one-off <code><a href="ssd_scenario_targets.html">ssd_scenario_targets()</a></code> run into a study is a one-line
 switch: wrap the scenario with <code><a href="ssd_design.html">ssd_design()</a></code> and call <code>ssd_design_targets()</code>.
-The per-task results are byte-identical to the standalone run; the only cost is
-a one-time recompute into the design's <code>seed=</code>-levelled tree (the addressing
-gains the <code>seed=</code> level the standalone <code>layout=</code> tree lacks) - <strong>safe but
-recomputing</strong>. Later members are added by extending the <code>ssd_design(...)</code> call;
-the cells they share (within a seed) stay cached.</p>
+It is <strong>cache-preserving</strong> - a design of one addresses its shards identically
+to the standalone run (same <code>seed=</code>/<code>layout=</code> root via <code><a href="scenario_results_dir.html">scenario_results_dir()</a></code>
+and the same <code>seed</code>-woven target names), so re-running into the same root
+<strong>reuses every existing shard</strong> (no recompute); only the per-member and combined
+<code>summary</code> targets are new. Later members are added by extending the
+<code>ssd_design(...)</code> call; the cells they share (within a seed) stay cached.</p>
     </div>
     <div class="section level2">
     <h2 id="varying-the-seed">Varying the seed<a class="anchor" aria-label="anchor" href="#varying-the-seed"></a></h2>

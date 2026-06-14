@@ -67,12 +67,15 @@ Growing a one-off
 [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
 run into a study is a one-line switch: wrap the scenario with
 [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md)
-and call `ssd_design_targets()`. The per-task results are byte-identical
-to the standalone run; the only cost is a one-time recompute into the
-design's `seed=`-levelled tree (the addressing gains the `seed=` level
-the standalone `layout=` tree lacks) - **safe but recomputing**. Later
-members are added by extending the `ssd_design(...)` call; the cells
-they share (within a seed) stay cached.
+and call `ssd_design_targets()`. It is **cache-preserving** - a design
+of one addresses its shards identically to the standalone run (same
+`seed=`/`layout=` root via
+[`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md)
+and the same `seed`-woven target names), so re-running into the same
+root **reuses every existing shard** (no recompute); only the per-member
+and combined `summary` targets are new. Later members are added by
+extending the `ssd_design(...)` call; the cells they share (within a
+seed) stay cached.
 
 ## Varying the seed
 

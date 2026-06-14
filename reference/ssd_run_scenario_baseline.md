@@ -73,11 +73,11 @@ out$hc
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 #>   tasks: 1
-#> # A tibble: 1 × 17
+#> # A tibble: 1 × 20
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>   <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
 #> 1 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> # ℹ 12 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
 #> #   ci_method <chr>, parametric <lgl>, distset <chr>, hc_id <chr>,
-#> #   fit_id <chr>, hc <list>
+#> #   fit_id <chr>, hc <list>, .start <dttm>, .end <dttm>, .host <chr>
 ```

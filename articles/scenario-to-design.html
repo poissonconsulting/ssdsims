@@ -37,6 +37,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
@@ -84,19 +85,29 @@
 <p>A typical one-off run defines a scenario and turns it into a <code>targets</code> pipeline with <code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span></span>
+<span>  boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<span>  cadmium <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_cadmium.html" class="external-link">ccme_cadmium</a></span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># shard on (dataset, sim) so each (dataset, sim) is its own cell</span></span>
+<span><span class="va">pb</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  sample <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span><span class="op">)</span>,</span>
+<span>  fit <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span><span class="op">)</span>,</span>
+<span>  hc <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">coarse</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
 <span>  <span class="va">data</span>,</span>
-<span>  nsim <span class="op">=</span> <span class="fl">10L</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">5L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span>, <span class="fl">20L</span><span class="op">)</span>,</span>
-<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span>lnorm <span class="op">=</span> <span class="st">"lnorm"</span><span class="op">)</span></span>
+<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span>lnorm <span class="op">=</span> <span class="st">"lnorm"</span><span class="op">)</span>,</span>
+<span>  partition_by <span class="op">=</span> <span class="va">pb</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">coarse</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_scenario&gt;</span></span>
 <span><span class="co">#&gt;   seed:     42</span></span>
-<span><span class="co">#&gt;   nsim:     10</span></span>
-<span><span class="co">#&gt;   datasets: ccme_boron</span></span>
+<span><span class="co">#&gt;   nsim:     5</span></span>
+<span><span class="co">#&gt;   datasets: boron, cadmium</span></span>
 <span><span class="co">#&gt;   nrow:     5, 10, 20</span></span>
 <span><span class="co">#&gt;   replace:  TRUE</span></span>
 <span><span class="co">#&gt;   nrow_max: 1000 (setting)</span></span>
@@ -119,14 +130,15 @@
 <span><span class="co">#&gt;   distsets:</span></span>
 <span><span class="co">#&gt;     lnorm: lnorm</span></span>
 <span><span class="co">#&gt;   partition_by:</span></span>
-<span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
-<span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
+<span><span class="co">#&gt;     sample: dataset, sim</span></span>
+<span><span class="co">#&gt;     fit: dataset, sim</span></span>
 <span><span class="co">#&gt;     hc: dataset, sim</span></span>
 <span><span class="co">#&gt;   bundle:</span></span>
-<span><span class="co">#&gt;     sample: </span></span>
-<span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
+<span><span class="co">#&gt;     sample: replace</span></span>
+<span><span class="co">#&gt;     fit: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
 <span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset</span></span></code></pre></div>
 </div>
+<p>This sweeps <strong>both</strong> datasets shallowly: a regular <code>{boron, cadmium} x sim 1:5 x nrow {5, 10, 20}</code> grid.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># _targets.R</span></span>
@@ -156,21 +168,22 @@
 <p>A design of <strong>one</strong> is valid and uniformly shaped — the recommended starting point for a study that may grow. The per-task results are <strong>byte-identical</strong> to the standalone run: combining changes only <em>addressing</em> (target names and the results tree), never a task’s reproducible <code>(seed, primer)</code>.</p>
 <div>
 <blockquote>
-<p><strong>Safe but recomputing</strong></p>
-<p>The design tree gains a <code>seed=&lt;value&gt;</code> level the standalone <code>layout=</code> tree lacks (<code>results/seed=42/layout=.../...</code>), so the <em>first</em> design run recomputes into the new tree. Nothing is re-baselined — the numbers are identical — it is a one-time relocation. From then on, growing the design is incremental.</p>
+<p><strong>Cache-preserving upgrade</strong></p>
+<p>The upgrade reuses the standalone run’s shards — it recomputes <strong>nothing</strong>. Both factories root shards under the same seed-/layout-keyed tree (<code>results/seed=42/layout=.../...</code>, from <code><a href="../reference/scenario_results_dir.html">scenario_results_dir()</a></code>) and weave the <code>seed</code> into the same target names, so a design of one mints byte-identical targets and paths to the standalone run. Re-running into the same store is a full cache hit; only the per-member and combined <code>summary</code> targets are new.</p>
 </blockquote>
 </div>
-</section><section class="level2"><h2 id="refine-add-a-denser-member">Refine: add a denser member<a class="anchor" aria-label="anchor" href="#refine-add-a-denser-member"></a>
+</section><section class="level2"><h2 id="refine-zoom-into-one-region">Refine: zoom into one region<a class="anchor" aria-label="anchor" href="#refine-zoom-into-one-region"></a>
 </h2>
-<p>Now add the refinement. Suppose you want a finer <code>nrow</code> sweep — but only the extra sizes, not a whole new rectangular run. Define a second scenario covering just the new region and add it to the design:</p>
+<p>Now the irregular part. Suppose <code>boron</code> deserves a closer look — more replicates <em>and</em> a finer <code>nrow</code> sweep — but <code>cadmium</code> does not. Define a second scenario covering just that <strong>region</strong> (only <code>boron</code>, <code>sim 1:15</code>, a finer <code>nrow</code>) and add it to the design:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dense</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="va">data</span>,</span>
-<span>  nsim <span class="op">=</span> <span class="fl">10L</span>,</span>
+<span>  <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span>boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span>,</span>
+<span>  nsim <span class="op">=</span> <span class="fl">15L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
-<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">12L</span>, <span class="fl">14L</span>, <span class="fl">16L</span>, <span class="fl">18L</span><span class="op">)</span>,</span>
-<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span>lnorm <span class="op">=</span> <span class="st">"lnorm"</span><span class="op">)</span></span>
+<span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8L</span>, <span class="fl">12L</span>, <span class="fl">16L</span><span class="op">)</span>,</span>
+<span>  dists <span class="op">=</span> <span class="fu"><a href="../reference/ssd_distset.html">ssd_distset</a></span><span class="op">(</span>lnorm <span class="op">=</span> <span class="st">"lnorm"</span><span class="op">)</span>,</span>
+<span>  partition_by <span class="op">=</span> <span class="va">pb</span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">study</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_design.html">ssd_design</a></span><span class="op">(</span>coarse <span class="op">=</span> <span class="va">coarse</span>, dense <span class="op">=</span> <span class="va">dense</span><span class="op">)</span></span>
 <span><span class="va">study</span></span>
@@ -184,8 +197,21 @@
 <code class="sourceCode R"><span><span class="co"># _targets.R</span></span>
 <span><span class="fu"><a href="../reference/ssd_design_targets.html">ssd_design_targets</a></span><span class="op">(</span><span class="va">study</span>, root <span class="op">=</span> <span class="st">"results"</span><span class="op">)</span></span></code></pre></div>
 </div>
-<p>Both members share the same <code>seed</code>, dataset, and distributions, differing only in their <code>nrow</code> coverage. So they <strong>share</strong> every <code>sample</code> shard (the draw does not depend on <code>nrow</code>) and the <code>fit</code>/<code>hc</code> shard <em>cells</em> — the union merges their per-<code>nrow</code> tasks into the shared shards. Re-running <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code> builds only the genuinely new work; the cells <code>coarse</code> already computed stay cached.</p>
-<p>The combined <code>results/summary.parquet</code> carries a <code>scenario</code> column (<code>"coarse"</code> or <code>"dense"</code>), and each member’s rows are filtered to exactly its own cells — ready to plot the coarse and refined sweeps together.</p>
+<p>The union is genuinely <strong>ragged</strong> — neither a rectangle nor a strict nesting. Over the <code>(dataset, sim)</code> cells:</p>
+<pre><code>  sim:    1   2   3   4   5   6  ...  15
+  boron   ■   ■   ■   ■   ■   □  ...  □      ■ shared (coarse + dense)
+  cadmium ◆   ◆   ◆   ◆   ◆                  ◆ coarse-only
+                          └── □ dense-only (boron, sim 6:15) ──┘</code></pre>
+<ul>
+<li>
+<strong><code>boron</code> sims 1–5 are shared</strong> — built <strong>once</strong> and read by both members; their <code>fit</code>/<code>hc</code> tasks merge both <code>nrow</code> sweeps (<code>{5,10,20}</code> ∪ <code>{8,12,16}</code>).</li>
+<li>
+<strong><code>cadmium</code> stays coarse-only</strong>; the refinement never touches it.</li>
+<li>
+<strong><code>boron</code> sims 6–15 are the dense-only</strong> zoom.</li>
+</ul>
+<p>A single scenario could not express this without computing the full <code>{boron, cadmium} x sim 1:15 x {5,8,10,12,16,20}</code> cross-product — most of which you never wanted. Re-running <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code> builds only the genuinely new cells; the shared <code>boron</code> 1–5 stay cached.</p>
+<p>The combined <code>results/summary.parquet</code> carries a <code>scenario</code> column (<code>"coarse"</code> or <code>"dense"</code>), and each member’s rows are filtered to exactly its own cells — ready to plot the broad sweep and the zoom together.</p>
 </section><section class="level2"><h2 id="notes">Notes<a class="anchor" aria-label="anchor" href="#notes"></a>
 </h2>
 <ul>

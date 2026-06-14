@@ -169,7 +169,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmprfRxXA/ssdsims-shards-3f6f4f12ee30
+#>   dir: /tmp/RtmpuOzHNH/ssdsims-shards-419e53575dbe
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -318,9 +318,10 @@ Because a shard’s Hive-path depth depends on `partition_by`/`bundle`,
 replaying with a *changed* split must not leave stale-granularity shards
 beside the new ones (a `**` glob would union both). The two drivers
 handle this differently: `run.R` (targets) writes each layout under its
-own root, `scenario_results_dir(scenario)` = `results/layout=<hash>/`,
-so a split change is a fresh tree; `run-serial.R` (single core) instead
-**owns** its `dir` and clears each step subtree on every run.
+own root, `scenario_results_dir(scenario)` =
+`results/seed=<value>/layout=<hash>/`, so a split change is a fresh
+tree; `run-serial.R` (single core) instead **owns** its `dir` and clears
+each step subtree on every run.
 
 Because both drivers `source("scenario.R")` — the same study — and
 `partition_by` is a free re-layout, `run-serial.R` finishes by reading

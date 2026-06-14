@@ -20,6 +20,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
@@ -185,7 +186,7 @@
           <code><a href="scenario_results_dir.html">scenario_results_dir()</a></code>
 
         </dt>
-        <dd>Layout-keyed Results Root for a Scenario</dd>
+        <dd>Seed- and Layout-keyed Results Root for a Scenario</dd>
       </dl></div><div class="section level2">
       <h2 id="designs-combining-scenarios-">Designs (combining scenarios)<a class="anchor" aria-label="anchor" href="#designs-combining-scenarios-"></a></h2>
 
@@ -304,6 +305,36 @@
 
         </dt>
         <dd>Default Cost Calibration Object</dd>
+      </dl></div><div class="section level2">
+      <h2 id="cost-analysis">Cost analysis<a class="anchor" aria-label="anchor" href="#cost-analysis"></a></h2>
+
+      <div class="section-desc"><p>Read a completed run’s observed compute back from the per-task timings its fit/hc shards carry: attribute it to the scenario axes, compare it against the prediction, and recalibrate the cost model from the measured durations. All read-only - no pipeline, fit, bootstrap, or RNG.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ssd_analyse_cost.html">ssd_analyse_cost()</a></code>
+
+        </dt>
+        <dd>Analyse a Run's Observed Compute Cost</dd>
+
+        <dt>
+
+          <code><a href="ssd_compare_cost.html">ssd_compare_cost()</a></code>
+
+        </dt>
+        <dd>Compare Predicted Against Observed Compute Cost</dd>
+
+        <dt>
+
+          <code><a href="ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code>
+
+        </dt>
+        <dd>Recalibrate the Cost Model from an Observed Run</dd>
       </dl></div><div class="section level2">
       <h2 id="scenario-accessors">Scenario accessors<a class="anchor" aria-label="anchor" href="#scenario-accessors"></a></h2>
 

@@ -20,6 +20,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="articles/defining-a-scenario.html">Defining a Scenario</a></li>
     <li><a class="dropdown-item" href="articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
@@ -71,16 +72,17 @@
 <!-- What is actively being worked on this cycle. -->
 <ul><li>‼️🛠️ [distset-hc-axis] Iwasaki.</li>
 <li>‼️⏳ [scenario-combine] <strong>Blocked by distset-hc-axis</strong>. Provide a convenient way to run multiple <code>ssd_scenario</code> objects as a single targets pipeline.</li>
-<li>‼️⏳ [cost-analysis-targets] <strong>Blocked by scenario-combine</strong>. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.</li>
+<li>‼️🛠️ [cost-analysis-targets] Scenario-level analysis implemented (timing instrumentation, the tar_meta resolver, <code><a href="reference/ssd_analyse_cost.html">ssd_analyse_cost()</a></code>/<code><a href="reference/ssd_compare_cost.html">ssd_compare_cost()</a></code>/<code><a href="reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code>); the design-level rollup (group 9) stays <strong>blocked by scenario-combine</strong>. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Also folded: a <strong>design-level rollup</strong> (the former <code>cost-analysis-design</code>) — <code><a href="reference/ssd_analyse_cost.html">ssd_analyse_cost()</a></code>/<code><a href="reference/ssd_compare_cost.html">ssd_compare_cost()</a></code>/<code><a href="reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code> accept an <code><a href="reference/ssd_design.html">ssd_design()</a></code> and aggregate across its per-scenario result trees (gated on <code>scenario-combine</code>); a prototype of the aggregation seam is kept as proof of work under the change’s <code>exploration/</code>. Supports a project deliverable.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a></h2>
 <!-- Queued up. Roughly in priority order. Doesn't have to be exhaustive. -->
-<ul><li>❗️⏳ [migrate-public-api] Migrate <code>ssd_sim_data.data.frame</code> / <code>ssd_fit_dists_sims</code> / <code>ssd_hc_sims</code> to the new per-task contract, keeping the <code>_seed</code> wrappers as a one-release shim. Depends on <code>scenario-input-types</code> + <code>primer-primitives</code>; gates <code>cleanup-lecuyer</code>.</li>
+<ul><li>❗️⏳ [hc-readout-aggregation] <strong>Blocked by scenario-combine</strong>. Per-overlap hc readout aggregation: reconcile design members that differ in the non-axis hc settings (<code>union</code> <code>proportion</code>/<code>est_method</code>, <code>any</code> <code>ci</code>/<code>samples</code>) into shared hc shards via per-cell demand reduction and <code>ci</code>-routing, instead of aborting. No ssdtools refactor.</li>
+<li>❗️⏳ [migrate-public-api] Migrate <code>ssd_sim_data.data.frame</code> / <code>ssd_fit_dists_sims</code> / <code>ssd_hc_sims</code> to the new per-task contract, keeping the <code>_seed</code> wrappers as a one-release shim. Depends on <code>scenario-input-types</code> + <code>primer-primitives</code>; gates <code>cleanup-lecuyer</code>.</li>
+<li>📚⏳ [readme] Update README and integrate in the rest of the documentation. Create vignette(“ssdsims”) . Perform comprehensive review of all vignettes for content, output artifacts, and style. Use vignette(…) style links everywhere.</li>
 <li>❗️ [replay-helper] <code>ssd_replay_task()</code> (§7) and <code>ssd_input_hash()</code> for the lightweight recipe — reproduce a failed branch locally with no <code>targets</code>. Ready to propose (prereqs <code>task-tables</code> + <code>manifest</code> landed).</li>
 <li>❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), <code>summary</code> unions the survivors. Ready to propose (prereq <code>cluster-pipeline</code> landed).</li>
 <li>📚 [cluster-controller] Run the controller on a long-running SLURM job.</li>
-<li>📚⏳ [readme] Update README and integrate in the rest of the documentation.</li>
 <li>😀 [azure-open-performance] Analyze performance of <code><a href="reference/ssd_open_uploaded.html">ssd_open_uploaded()</a></code> for many files.</li>
 <li>😀🛠️ [azure-summary] Conveniently access the summary Parquet files from Azure.</li>
 <li>😀⏳ [terminology] Finalize glossary, replace “knob” term.</li>

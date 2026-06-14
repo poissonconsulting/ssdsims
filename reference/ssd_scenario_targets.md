@@ -11,7 +11,7 @@ call this*:
 ssd_scenario_targets(
   scenario,
   ...,
-  root = scenario_results_dir(scenario),
+  root = "results",
   upload = NULL,
   cue = NULL
 )
@@ -34,9 +34,12 @@ ssd_scenario_targets(
 
 - root:
 
-  The results root the shards and summary are written under; defaults to
-  the per-layout
-  [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md).
+  The **base** results directory (default `"results"`). The shards and
+  summary are written under the seed-/layout-keyed
+  [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md)`(scenario, root)`,
+  so a single-scenario run and a design-of-one address shards
+  identically (a cache-free upgrade to
+  [`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md)).
 
 - upload:
 
@@ -132,6 +135,24 @@ previously errored. Force a refresh of chosen shards with
 [`targets::tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html)
 (or by deleting their Parquet), overriding the pin (section 8.4). The
 default (`NULL`) is `targets`' standard cue.
+
+## Volatile fit/hc file hashes (cost-analysis timings)
+
+The `fit`/`hc` shards carry per-task `.start`/`.end`/`.host` timing
+columns (the `cost-analysis` instrumentation), so a `fit`/`hc` shard's
+**file hash is no longer deterministic across recomputes**: a forced
+recompute that yields identical *results* still writes different bytes
+(a fresh wall-clock), so its dependent `hc`/`summary` targets re-run and
+any paired `upload_<step>` re-ships. This is scoped to `fit`/`hc`;
+`sample` shards carry no timing columns and stay byte-deterministic.
+Routine caching is unaffected (a cache hit is not a recompute, so a
+cached shard's bytes are unchanged); the cost lands only on a *forced*
+refresh
+([`tar_invalidate()`](https://docs.ropensci.org/targets/reference/tar_invalidate.html),
+a deleted Parquet) or a code-edit recompute - and the §8.3
+`cue = tar_cue(depend = FALSE)` pin covers the latter. Per-task
+*results* remain byte-identical to the baseline oracle (the shard-runner
+contract narrows to the result columns, timing excluded).
 
 The `head(sample, nrow)` truncation stays folded into the `fit` step (no
 materialised `data` shard): a `fit` shard is keyed by `fit_id`, which

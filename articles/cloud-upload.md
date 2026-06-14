@@ -140,9 +140,9 @@ target_names <- function(x) {
 }
 names_dry <- target_names(targets_dry)
 grep("^upload_", names_dry, value = TRUE)
-#> [1] "upload_sample_ccme_boron_1_TRUE" "upload_sample_ccme_boron_2_TRUE"
-#> [3] "upload_fit_ccme_boron_1_6_FALSE" "upload_fit_ccme_boron_2_6_FALSE"
-#> [5] "upload_hc_ccme_boron_1"          "upload_hc_ccme_boron_2"
+#> [1] "upload_sample_42_ccme_boron_1_TRUE" "upload_sample_42_ccme_boron_2_TRUE"
+#> [3] "upload_fit_42_ccme_boron_1_6_FALSE" "upload_fit_42_ccme_boron_2_6_FALSE"
+#> [5] "upload_hc_42_ccme_boron_1"          "upload_hc_42_ccme_boron_2"
 ```
 
 Contrast `upload = NULL` — the default — which emits **no** upload nodes
@@ -170,7 +170,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/RtmpeQ5mBO/ssdsims-shards-3ecc75400d4b/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/Rtmp9Kf55r/ssdsims-shards-40c53c02a164/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 

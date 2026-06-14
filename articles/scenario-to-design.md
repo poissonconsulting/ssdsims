@@ -27,19 +27,29 @@ pipeline with
 
 ``` r
 
-data <- ssd_scenario_data(ssddata::ccme_boron)
+data <- ssd_scenario_data(
+  boron = ssddata::ccme_boron,
+  cadmium = ssddata::ccme_cadmium
+)
+# shard on (dataset, sim) so each (dataset, sim) is its own cell
+pb <- list(
+  sample = c("dataset", "sim"),
+  fit = c("dataset", "sim"),
+  hc = c("dataset", "sim")
+)
 coarse <- ssd_define_scenario(
   data,
-  nsim = 10L,
+  nsim = 5L,
   seed = 42L,
   nrow = c(5L, 10L, 20L),
-  dists = ssd_distset(lnorm = "lnorm")
+  dists = ssd_distset(lnorm = "lnorm"),
+  partition_by = pb
 )
 coarse
 #> <ssdsims_scenario>
 #>   seed:     42
-#>   nsim:     10
-#>   datasets: ccme_boron
+#>   nsim:     5
+#>   datasets: boron, cadmium
 #>   nrow:     5, 10, 20
 #>   replace:  TRUE
 #>   nrow_max: 1000 (setting)
@@ -62,14 +72,17 @@ coarse
 #>   distsets:
 #>     lnorm: lnorm
 #>   partition_by:
-#>     sample: dataset, sim, replace
-#>     fit: dataset, sim, nrow, rescale
+#>     sample: dataset, sim
+#>     fit: dataset, sim
 #>     hc: dataset, sim
 #>   bundle:
-#>     sample: 
-#>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
+#>     sample: replace
+#>     fit: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
 #>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 ```
+
+This sweeps **both** datasets shallowly: a regular
+`{boron, cadmium} x sim 1:5 x nrow {5, 10, 20}` grid.
 
 ``` r
 
@@ -111,28 +124,33 @@ starting point for a study that may grow. The per-task results are
 *addressing* (target names and the results tree), never a task’s
 reproducible `(seed, primer)`.
 
-> **Safe but recomputing**
+> **Cache-preserving upgrade**
 >
-> The design tree gains a `seed=<value>` level the standalone `layout=`
-> tree lacks (`results/seed=42/layout=.../...`), so the *first* design
-> run recomputes into the new tree. Nothing is re-baselined — the
-> numbers are identical — it is a one-time relocation. From then on,
-> growing the design is incremental.
+> The upgrade reuses the standalone run’s shards — it recomputes
+> **nothing**. Both factories root shards under the same
+> seed-/layout-keyed tree (`results/seed=42/layout=.../...`, from
+> [`scenario_results_dir()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_results_dir.md))
+> and weave the `seed` into the same target names, so a design of one
+> mints byte-identical targets and paths to the standalone run.
+> Re-running into the same store is a full cache hit; only the
+> per-member and combined `summary` targets are new.
 
-## Refine: add a denser member
+## Refine: zoom into one region
 
-Now add the refinement. Suppose you want a finer `nrow` sweep — but only
-the extra sizes, not a whole new rectangular run. Define a second
-scenario covering just the new region and add it to the design:
+Now the irregular part. Suppose `boron` deserves a closer look — more
+replicates *and* a finer `nrow` sweep — but `cadmium` does not. Define a
+second scenario covering just that **region** (only `boron`, `sim 1:15`,
+a finer `nrow`) and add it to the design:
 
 ``` r
 
 dense <- ssd_define_scenario(
-  data,
-  nsim = 10L,
+  ssd_scenario_data(boron = ssddata::ccme_boron),
+  nsim = 15L,
   seed = 42L,
-  nrow = c(12L, 14L, 16L, 18L),
-  dists = ssd_distset(lnorm = "lnorm")
+  nrow = c(8L, 12L, 16L),
+  dists = ssd_distset(lnorm = "lnorm"),
+  partition_by = pb
 )
 study <- ssd_design(coarse = coarse, dense = dense)
 study
@@ -148,18 +166,29 @@ study
 ssd_design_targets(study, root = "results")
 ```
 
-Both members share the same `seed`, dataset, and distributions,
-differing only in their `nrow` coverage. So they **share** every
-`sample` shard (the draw does not depend on `nrow`) and the `fit`/`hc`
-shard *cells* — the union merges their per-`nrow` tasks into the shared
-shards. Re-running
+The union is genuinely **ragged** — neither a rectangle nor a strict
+nesting. Over the `(dataset, sim)` cells:
+
+      sim:    1   2   3   4   5   6  ...  15
+      boron   ■   ■   ■   ■   ■   □  ...  □      ■ shared (coarse + dense)
+      cadmium ◆   ◆   ◆   ◆   ◆                  ◆ coarse-only
+                              └── □ dense-only (boron, sim 6:15) ──┘
+
+- **`boron` sims 1–5 are shared** — built **once** and read by both
+  members; their `fit`/`hc` tasks merge both `nrow` sweeps (`{5,10,20}`
+  ∪ `{8,12,16}`).
+- **`cadmium` stays coarse-only**; the refinement never touches it.
+- **`boron` sims 6–15 are the dense-only** zoom.
+
+A single scenario could not express this without computing the full
+`{boron, cadmium} x sim 1:15 x {5,8,10,12,16,20}` cross-product — most
+of which you never wanted. Re-running
 [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-builds only the genuinely new work; the cells `coarse` already computed
-stay cached.
+builds only the genuinely new cells; the shared `boron` 1–5 stay cached.
 
 The combined `results/summary.parquet` carries a `scenario` column
 (`"coarse"` or `"dense"`), and each member’s rows are filtered to
-exactly its own cells — ready to plot the coarse and refined sweeps
+exactly its own cells — ready to plot the broad sweep and the zoom
 together.
 
 ## Notes
