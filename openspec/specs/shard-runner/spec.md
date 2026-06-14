@@ -3,9 +3,7 @@
 ## Purpose
 
 Provide the single-core, `targets`-free runner that materialises a scenario's three task steps (`sample`, `fit`, `hc`) as Hive-partitioned Parquet shards and links the steps by reading parent shards back via duckplyr (`TARGETS-DESIGN.md` §5/§6). It proves the storage hand-off and the m:n child←parent-shard resolution in plain R — against the in-memory baseline runner as oracle — before `targets` static branching is layered on (`task-tables`/`hive-partitioning`).
-
 ## Requirements
-
 ### Requirement: Single-core sharded runner materialises each step as Hive-partitioned shards
 The package SHALL provide a single-core runner that executes a scenario's three task steps in dependency order — `sample`, then `fit`, then `hc` — and, for each step, groups the step's task rows into **shards** by that step's `partition_by` **path axes** (`scenario_partition_axes(scenario, step)$path`) and writes **one Parquet file per shard** under a Hive-partitioned path `<dir>/<step>/<axis=value>/.../part.parquet`. Each shard's Parquet SHALL carry the step's **inner** axes (the path complement) and the per-task results as columns. The runner SHALL run each shard's tasks through the existing per-task seed-and-run wrappers (`*_data_task_primer()`), priming the RNG once per task. The runner SHALL operate in-process on a single core with **no** `targets` dependency, **no** `crew`, and **no** cloud upload.
 
@@ -41,15 +39,30 @@ For each non-root step, the runner SHALL obtain each task's parent result by **r
 - **THEN** the runner SHALL abort with a message naming the missing parent identity, rather than fitting or estimating on empty input
 
 ### Requirement: partition_by is a free re-layout — per-task results are byte-identical to the in-memory baseline
-The per-task results produced by the sharded runner SHALL be identical to those of the in-memory baseline runner (`ssd_run_scenario_baseline()`) for the same scenario and seed, because the per-task `(seed, primer)` is derived from the task's canonical identity (`task_axes(step)`) and is invariant under `partition_by`. Changing a step's `partition_by` SHALL change only the shard file paths and the path/inner column placement, never the per-task result values.
+The per-task **result** values produced by the sharded runner SHALL be identical
+to those of the in-memory baseline runner (`ssd_run_scenario_baseline()`) for
+the same scenario and seed, because the per-task `(seed, primer)` is derived
+from the task's canonical identity (`task_axes(step)`) and is invariant under
+`partition_by`. Changing a step's `partition_by` SHALL change only the shard
+file paths and the path/inner column placement, never the per-task result
+values. The `fit` and `hc` layers additionally carry the run-specific timing
+columns `.start`/`.end`/`.host` (the `cost-analysis` capability); those columns
+are **excluded** from the identity contract — equality is asserted over the
+result columns (every column except the timing columns), joined on the task's
+`<step>_id`. The `sample` layer carries no timing columns, so its shards remain
+byte-deterministic at the file level for a fixed scenario and seed.
 
 #### Scenario: Results match the in-memory oracle
 - **WHEN** a scenario is run through both `ssd_run_scenario_baseline()` and the sharded runner
-- **THEN** the per-task result rows (joined on the task's `<step>_id` identity) SHALL be equal
+- **THEN** the per-task result rows (joined on the task's `<step>_id` identity, the `.start`/`.end`/`.host` columns excluded) SHALL be equal
 
 #### Scenario: Re-layout shifts paths but not results
 - **WHEN** the same scenario is run twice through the sharded runner with two different `partition_by` settings for a step
-- **THEN** the set of shard file paths SHALL differ, but the per-task result rows (joined on `<step>_id`) SHALL be byte-identical between the two runs
+- **THEN** the set of shard file paths SHALL differ, but the per-task result rows (joined on `<step>_id`, timing columns excluded) SHALL be byte-identical between the two runs
+
+#### Scenario: sample shards stay file-level deterministic
+- **WHEN** the same scenario and seed produce a `sample` shard twice
+- **THEN** the two `part.parquet` files SHALL be byte-identical (no timing columns are written on the `sample` layer)
 
 ### Requirement: Sharded run is reproducible and order-independent
 For a fixed `scenario$seed`, the sharded runner SHALL be reproducible without an external seed and SHALL be independent of the order in which shards are processed, because each task installs its own `(seed, primer)` exactly once via its `*_data_task_primer()` wrapper.
@@ -83,3 +96,4 @@ The `fit` step's per-task result is a non-tabular `fitdists` object that the run
 #### Scenario: The summary read path projects the blob column out without decoding
 - **WHEN** a reader projects the heavy/non-tabular column out at the DuckDB level (as the §6 summary read path does with `select(-any_of(...))` before collecting into R)
 - **THEN** the blob column SHALL be droppable by column projection alone, so the reader pulls no blob bytes into R and never decodes the object
+

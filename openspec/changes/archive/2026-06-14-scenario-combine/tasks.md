@@ -105,6 +105,6 @@
       that reuses the cached cells; register it in `_pkgdown.yml`
 - [x] 8.4 `GLOSSARY.md` *Design terms* entries (`scenario`/`design`/`study`);
       `ROADMAP.md`: mark the entry in-flight and move to `## Done` on archive
-- [ ] 8.5 Format with `air`, run `devtools::check()`, and confirm the `task-shards`
+- [x] 8.5 Format with `air`, run `devtools::check()`, and confirm the `task-shards`
       / `shard-runner` capabilities needed no delta (single-scenario factory and
       per-shard runner contracts unchanged; no ssdtools edit)
