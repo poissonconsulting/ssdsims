@@ -7,7 +7,7 @@
 ssd_scenario_targets(
   scenario,
   ...,
-  root = scenario_results_dir(scenario),
+  root = "results",
   upload = NULL,
   cue = NULL
 )
@@ -20,8 +20,11 @@ ssd_scenario_targets(
 positional or misspelled argument), since \code{root} and \code{upload} are both
 path-shaped and easy to transpose.}
 
-\item{root}{The results root the shards and summary are written under;
-defaults to the per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}}.}
+\item{root}{The \strong{base} results directory (default \code{"results"}). The shards
+and summary are written under the seed-/layout-keyed
+\code{\link[=scenario_results_dir]{scenario_results_dir()}}\verb{(scenario, root)}, so a single-scenario run and a
+design-of-one address shards identically (a cache-free upgrade to
+\code{\link[=ssd_design_targets]{ssd_design_targets()}}).}
 
 \item{upload}{An optional upload destination (the remote-destination sibling
 of \code{root}) from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}, or \code{NULL}

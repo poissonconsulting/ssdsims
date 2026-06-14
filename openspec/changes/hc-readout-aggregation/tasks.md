@@ -12,13 +12,18 @@
 ## 2. Per-overlap demand reduction in the design factory
 
 - [ ] 2.1 In `ssd_design_targets()`/`design_reference_scenario()`
-      (`R/design-targets.R`), drop `require_uniform()` for `proportion`,
-      `est_method`, `ci`, `samples` (keep it for `nrow_max`, fit `dists`,
-      `partition_by`)
+      (`R/design-targets.R`), drop `require_uniform()` for the shareable settings —
+      `proportion`, `est_method`, `ci`, `samples`, and the fit `dists` union —
+      keeping it only for `nrow_max` and `partition_by`
 - [ ] 2.2 Union the members' hc tasks tagged with each member's readout demand and
       group by the hc cell (`fit` identity + `nboot`/`ci_method`/`parametric`/
       `distset`); reduce per cell: `union` `proportion`/`est_method`, `any`
       `ci`/`samples`; attach the reduced demand to the shard tasks
+- [ ] 2.3 Reconcile differing fit `dists` unions: fit the **design-wide union** of
+      the members' `dists` once per fit cell and let each member subset via its
+      `distset` axis (sound by distset-subset-invariance — fitting extra dists does
+      not change a member's subset hc), so members differing in `distset` coverage
+      share the `sample`/`fit` shards
 
 ## 3. ci NA-collapse routing
 
@@ -40,8 +45,11 @@
       its standalone `ci = FALSE` value
 - [ ] 4.3 Byte-identity: a `ci = TRUE` member's CI matches its standalone run; the
       single-scenario hc path is unchanged
-- [ ] 4.4 A distset-coverage comparison shares `sample`/`fit` and reconciles hc
-      readouts across members
+- [ ] 4.4 distset-coverage sharing (moved from `scenario-combine` task 7.4): two
+      members differing only in `distset` coverage (hence in their fit `dists`
+      union) share every `sample`/`fit` shard (one design-wide union fit) and
+      differ only in their `distset` hc cells; each member's hc subset equals its
+      standalone run
 
 ## 5. Docs
 

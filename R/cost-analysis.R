@@ -79,9 +79,15 @@ cost_shard_target_names <- function(scenario) {
       fit = ssd_scenario_fit_shards(scenario),
       hc = ssd_scenario_hc_shards(scenario)
     )
+    # Mirror the factory's naming: the `seed` is woven into every shard target
+    # name (`scenario_results_dir()` keys the tree on `seed=` too), so the
+    # resolver must carry the `seed` column and lead the `names` with it.
+    shards$seed <- scenario$seed
     mapped <- tarchetypes::tar_map(
       values = shards,
-      names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
+      names = tidyselect::all_of(
+        c("seed", scenario_partition_axes(scenario, step)$path)
+      ),
       targets::tar_target_raw(paste0(step, "_step"), quote(NULL))
     )
     nm <- shard_cell_names(mapped, shards, scenario, step)

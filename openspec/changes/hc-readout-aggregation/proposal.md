@@ -21,11 +21,19 @@ expensive bootstrap runs only where a `ci = TRUE` member actually has tasks.
 
 ## What Changes
 
-- **Remove the `require_uniform()` guard on the four non-axis hc settings**
-  (`proportion`, `est_method`, `ci`, `samples`) in the design factory. Members
-  within a seed-group MAY now differ in them; they continue to be rejected only
-  for the genuinely byte-shaping settings (`nrow_max`, the fit `dists` union, and
-  `partition_by`, which remain `scenario-combine`'s contract).
+- **Remove the `require_uniform()` guard on the shareable settings** — the four
+  non-axis hc settings (`proportion`, `est_method`, `ci`, `samples`) **and the fit
+  `dists` union** — in the design factory. Members within a seed-group MAY now
+  differ in them; only the genuinely layout-shaping settings (`nrow_max`,
+  `partition_by`) remain `scenario-combine`'s uniform contract.
+- **Reconcile differing fit `dists` unions (distset-coverage sharing).** When
+  members declare different distribution sets, fit the **design-wide union** of
+  their `dists` once per fit cell and let each member subset via its `distset` hc
+  axis. This is sound by distset-subset-invariance (per-dist fits are independent;
+  a member's subset hc equals its standalone fit's hc), so members differing only
+  in `distset` coverage **share every `sample`/`fit` shard** and differ only in
+  their `distset` hc cells. (Moved here from `scenario-combine` task 7.4, which
+  could not express it under that change's uniform-`dists` contract.)
 - **Per-overlap readout aggregation.** For each shared hc cell, reduce the demand
   over the members whose task set contains that cell: **`union()` over
   `proportion` and `est_method`**, **`any()` over `ci` and `samples`**. A cell only

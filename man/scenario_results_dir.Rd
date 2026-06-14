@@ -2,7 +2,7 @@
 % Please edit documentation in R/targets-runner.R
 \name{scenario_results_dir}
 \alias{scenario_results_dir}
-\title{Layout-keyed Results Root for a Scenario}
+\title{Seed- and Layout-keyed Results Root for a Scenario}
 \usage{
 scenario_results_dir(scenario, root = "results")
 }
@@ -12,13 +12,20 @@ scenario_results_dir(scenario, root = "results")
 \item{root}{The results root directory (default \code{"results"}).}
 }
 \value{
-The layout-keyed path \verb{file.path(root, paste0("layout=", <hash>))}.
+The seed- and layout-keyed path
+\verb{file.path(root, paste0("seed=", <seed>), paste0("layout=", <hash>))}.
 }
 \description{
-Returns \verb{<root>/layout=<hash>}, where the hash is derived from the scenario's
-\code{partition_by}. A step's Hive shard path depth and axes are a function of
-\code{partition_by}/\code{bundle}, so writing two different layouts into one root would
-leave shards of \emph{different granularity} side by side - and the depth-agnostic
+Returns \verb{<root>/seed=<value>/layout=<hash>}, where the hash is derived from the
+scenario's \code{partition_by}. The leading \verb{seed=<value>} level isolates each
+scenario's RNG streams (scenarios that differ only in \code{seed} share no draws, so
+they never mix shards) and - crucially - makes a single-scenario run and a
+design-of-one (\code{ssd_design_targets(ssd_design(scenario))}) address shards
+\strong{identically}, so wrapping a scenario into a design reuses its existing shards
+rather than recomputing them. A step's Hive shard path depth and axes are a
+function of \code{partition_by}/\code{bundle}, so writing two different layouts into one
+root would leave shards of \emph{different granularity} side by side - and the
+depth-agnostic
 glob the readers use (\verb{<step>/**/part.parquet}) would then union stale and
 current shards, double-counting tasks. Keying the results root on the layout
 isolates each \code{partition_by} into its own subtree: re-running a scenario with
