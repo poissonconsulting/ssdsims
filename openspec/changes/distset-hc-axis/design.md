@@ -26,8 +26,9 @@ cost for results that should share one fit.
   subset" efficiency.
 - Keep the engine's invariants: name-only task hashing, byte-identity across the
   three runners, path-axis-growth caching, and a side-effect-free target factory.
-- Preserve full back-compatibility: a bare character `dists` behaves exactly as
-  today (one anonymous pool, no new axis).
+- Supply sets through a validated `ssd_distset()` collection (the `ssd_scenario_data()`
+  precedent, naming by value); the legacy bare-vector `dists` form fails loudly
+  (BREAKING, pre-release).
 
 **Non-Goals:**
 - Fanning out over *individual* distributions (that dissolves averaging — the
@@ -39,19 +40,25 @@ cost for results that should share one fit.
 
 ## Decisions
 
-### 1. The axis value is a set (a named character vector), keyed by name
-`dists` accepts a **named list of character vectors**. An axis value must be a
-complete averaging pool, so each value is itself a vector; the collection is a
-list. The set **name** (not its members) is what enters the `distset=` Hive path
-segment and the per-task primer — the exact by-name pattern already used for
-`min_pmix` and datasets (the members ride on the scenario for execution, isolated
-by the new `scenario_distset()` accessor, and never enter a hash). Names must be
-filesystem-safe; the iwasaki chemical-style strings the *datasets* carry are a
-separate concern (this is about set labels like `BCANZ`, which are already safe).
+### 1. The axis value is a set, supplied via `ssd_distset()` and keyed by name
+`dists` accepts an **`ssd_distset()` collection** — a validated, named list of
+character vectors. An axis value must be a complete averaging pool, so each value
+is itself a vector; the collection is a named list. The constructor owns naming
+(from `...` names) and validation (members ⊆ `ssd_dists_all()`, names unique and
+filesystem-safe) **by value**, mirroring `ssd_scenario_data()` — so `ssd_define_scenario()`
+does no expression-archaeology to name sets. The set **name** (not its members) is
+what enters the `distset=` Hive path segment and the per-task primer — the by-name
+pattern already used for `min_pmix` and datasets (the members ride on the scenario
+for execution, isolated by the new `scenario_distset()` accessor, and never enter
+a hash). The legacy bare-vector / plain-list forms abort loudly with a message
+naming `ssd_distset()` (BREAKING, pre-release).
 
-*Alternative considered:* a `list of lists` where each member carries per-dist
-options — rejected: members are bare distribution names with no per-member
-structure, so a list-of-character-vectors is the precise shape.
+*Alternative considered:* accept a bare named list (names via `names()`, no
+constructor). Rejected: it skips up-front member validation and splits the input
+surface; a typed constructor is the single, teachable, validated entry point
+(the `ssd_scenario_data()` precedent). *Also considered:* a `list of lists` carrying
+per-distribution options — rejected: members are bare distribution names with no
+per-member structure, so a list-of-character-vectors is the precise shape.
 
 ### 2. `distset` is an **hc** axis over a post-fit subset — not a fit axis
 The fit step fits the **union** `sort(unique(unlist(dists)))` once; `distset`
@@ -98,11 +105,11 @@ statistically equivalent) — the same re-baseline pattern as `est-method-settin
 ## Risks / Trade-offs
 
 - **Re-baselining existing CI snapshots** → `distset` in the hc primer re-seeds
-  every hc task even for a single anonymous set. Mitigation: the single-set path
+  every hc task even for a single-set collection. Mitigation: the single-set path
   has exactly one `distset` value, and `est` is analytical/unchanged; only
   `ci = TRUE` CI snapshots move, and those re-record like any primer change.
-  Document in the proposal Impact; back-compat is preserved for *behaviour*
-  (one pool), not for *bootstrap byte-streams*.
+  Document in the proposal Impact; the single-pool *estimates* are preserved,
+  not the *bootstrap byte-streams*.
 - **Refining a settled decision** → the `dists-simulation-setting` decision said
   "dists is not an axis". Mitigation: this does not contradict it — *individual
   distributions still never fan out*; a named set of *pools* becomes an axis over

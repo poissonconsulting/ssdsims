@@ -2,17 +2,18 @@
 
 - [ ] 1.1 Write `exploration/distset-subset-invariance.R`: at a fixed seed, show `ssdtools::ssd_hc(subset(union_fit, set, strict = FALSE))` is byte-identical to `ssd_hc(ssd_fit_dists(data, dists = set))` for both averaged pools (BCANZ, Iwasaki) and single-distribution sets, with `ci = FALSE` and `ci = TRUE`. This is the premise of the whole change; capture it before coding.
 
-## 2. Scenario constructor: dists as distribution sets
+## 2. `ssd_distset()` constructor and scenario input
 
-- [ ] 2.1 In `R/scenario.R`, accept `dists` as either a bare character vector (one anonymous set — unchanged) or a named list of character vectors. Validate: unique non-missing filesystem-safe set names; each set a non-empty, unique, non-`NA` character vector ⊆ `ssdtools::ssd_dists_all()`. Abort in the user-facing function's context with the offending set named.
-- [ ] 2.2 Derive the fit union `sort(unique(unlist(dists)))` and store it as `scenario$fit$dists`; store the named sets as `scenario$hc$distsets` (member vectors keyed by set name). The bare-vector form stores the vector as `fit$dists` and a single anonymous set in `hc$distsets`.
-- [ ] 2.3 Keep `dists` in the simulation-settings block of the signature (it remains a fit-level setting feeding the union); update its `@param`/roxygen to describe the named-set form and the union/by-name semantics.
-- [ ] 2.4 Render the distribution sets in `print.ssdsims_scenario()` via `fmt_grid_value()` (set names + members, no large dumps).
+- [ ] 2.1 Add `R/distset.R`: `ssd_distset(...)` returning an `ssdsims_distset` collection (named list of distribution-name character vectors). Names from `...` names; validate unique/non-missing/filesystem-safe. Validate each set: non-empty, unique, non-`NA` character ⊆ `ssdtools::ssd_dists_all()`. Abort in the constructor's context naming the offending set. Add a snapshot-stable `print.ssdsims_distset()`; export and `devtools::document()`.
+- [ ] 2.2 In `R/scenario.R`, change `dists` to accept **only** an `ssd_distset()` collection; a bare character vector or plain list SHALL abort with a message naming `ssd_distset()` (no expression-archaeology for set names).
+- [ ] 2.3 Derive the fit union `sort(unique(unlist(dists)))` and store it as `scenario$fit$dists`; store the named sets as `scenario$hc$distsets` (member vectors keyed by set name).
+- [ ] 2.4 Keep `dists` in the simulation-settings block of the signature (it remains a fit-level setting feeding the union); update its `@param`/roxygen to describe the `ssd_distset()` form and the union/by-name semantics.
+- [ ] 2.5 Render the distribution sets in `print.ssdsims_scenario()` via `fmt_grid_value()` (set names + members, no large dumps).
 
 ## 3. Axis vocabulary and hc task table
 
 - [ ] 3.1 Add `"distset"` to `task_axes("hc")` in `R/task-lists.R` (hc axes become `nboot`, `ci_method`, `parametric`, `distset`).
-- [ ] 3.2 Derive the hc task table by crossing each fit-task identity with the hc grid **and** the `distset` names: `ci = FALSE` → `D` rows per fit task (one per set, bootstrap knobs `NA`); `ci = TRUE` → `distset × nboot × ci_method × parametric`. Each hc row carries its `distset` name and parent `fit_id`. A single anonymous set yields one `distset` value (row count unchanged from pre-change).
+- [ ] 3.2 Derive the hc task table by crossing each fit-task identity with the hc grid **and** the `distset` names: `ci = FALSE` → `D` rows per fit task (one per set, bootstrap knobs `NA`); `ci = TRUE` → `distset × nboot × ci_method × parametric`. Each hc row carries its `distset` name and parent `fit_id`. A single-set collection (`ssd_distset(BCANZ = ...)`) yields one `distset` value (one hc row per fit task when `ci = FALSE`).
 - [ ] 3.3 Confirm `partition_by`/`bundle` validation accepts `"distset"` for the `hc` step (falls out of `task_axes("hc")`); keep the default hc path `c("dataset", "sim")` so `distset` is inner by default.
 
 ## 4. Accessor and scenario slice
@@ -32,7 +33,7 @@
 - [ ] 6.1 Same-seed subset-reuse invariant unit test (per §1.1): collapsed pool result equals direct-fit-then-hc at the same primer, across averaged and single-dist sets and both `ci` values. NOT an old-vs-new pipeline equality.
 - [ ] 6.2 Byte-identity test: baseline runner, single-core shard runner, and `targets` pipeline agree per task for a multi-set scenario.
 - [ ] 6.3 Path-axis-growth test: adding a distribution set (with `distset` on the hc path) mints only new hc shards and caches all sample/fit shards and pre-existing hc shards.
-- [ ] 6.4 Task-table tests: `D` sets multiply hc rows by `D` (not by `est_method`); a bare-vector `dists` leaves the row count unchanged.
+- [ ] 6.4 Task-table tests: `D` sets multiply hc rows by `D` (not by `est_method`); a single-set `ssd_distset()` yields one hc row per fit task; a bare-vector / plain-list `dists` aborts with a message naming `ssd_distset()`.
 - [ ] 6.5 Empty-subset test: a set whose members all dropped yields zero hc rows, and `ssd_summarise()` unions the survivors.
 
 ## 7. Docs, snapshots, decision log
