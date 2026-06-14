@@ -92,8 +92,9 @@
 <p>A <strong>shard</strong> is one Parquet file: one cell of the <code>partition_by</code> <em>path</em> axes for a step. The remaining axes — the <code>bundle</code> (inner) axes — become ordinary columns <em>within</em> a shard, so several tasks share one file. The two are exact complements (<code>path ⊎ inner = task_axes(step)</code>), and you can specify either, per step, with at most one of <code>partition_by</code>/<code>bundle</code> naming a given step.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
@@ -147,7 +148,7 @@
 <code class="sourceCode R"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">run</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_shard_run&gt;</span></span>
-<span><span class="co">#&gt;   dir: /tmp/Rtmpstw4Zt/ssdsims-shards-3c0714eec515</span></span>
+<span><span class="co">#&gt;   dir: /tmp/RtmpL256zW/ssdsims-shards-3c0a587fbc61</span></span>
 <span><span class="co">#&gt;   sample shards: 2</span></span>
 <span><span class="co">#&gt;   fit    shards: 8</span></span>
 <span><span class="co">#&gt;   hc     shards: 2</span></span></code></pre></div>

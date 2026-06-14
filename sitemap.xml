@@ -31,10 +31,10 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration_default.html</loc></url>
-<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_data.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_read_manifest.html</loc></url>
@@ -43,6 +43,7 @@
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.html</loc></url>
+<url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.html</loc></url>
 <url><loc>https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.html</loc></url>

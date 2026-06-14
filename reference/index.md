@@ -6,8 +6,10 @@ Define a declarative simulation scenario and expand it into the per-step
 task tables (`sample`, `fit`, `hc`) that the targets-based pipeline
 builds on, with a baseline loop runner.
 
-- [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
+- [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
   : Assemble and Validate Datasets for a Simulation Scenario
+- [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+  : Materialise Generator Datasets for a Simulation Scenario
 - [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   : Define a Simulation Scenario
 - [`ssd_scenario_tasks()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_tasks.md)

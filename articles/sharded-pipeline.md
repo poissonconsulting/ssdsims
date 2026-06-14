@@ -41,8 +41,9 @@ can specify either, per step, with at most one of
 
 ``` r
 
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   seed = 42L,
   nrow = c(5L, 10L),
@@ -114,7 +115,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/Rtmpstw4Zt/ssdsims-shards-3c0714eec515
+#>   dir: /tmp/RtmpL256zW/ssdsims-shards-3c0a587fbc61
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2

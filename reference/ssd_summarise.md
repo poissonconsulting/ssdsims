@@ -106,8 +106,9 @@ Evidence: the `duckplyr-config` change's
 
 ``` r
 # \donttest{
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 1L,
   nrow = 6L,
   seed = 42L,
@@ -121,6 +122,6 @@ ssd_summarise(
   file.path(run$dir, "hc"),
   file.path(run$dir, "summary.parquet")
 )
-#> [1] "/tmp/RtmpvBEnv9/ssdsims-shards-36ed6520f35f/summary.parquet"
+#> [1] "/tmp/RtmpMluuv4/ssdsims-shards-36e87dead924/summary.parquet"
 # }
 ```

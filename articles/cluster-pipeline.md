@@ -167,8 +167,9 @@ the **wiring**, not waiting on a big study. Temporarily shrink the
 
 ``` r
 
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   seed = 42L,
   nrow = 5L

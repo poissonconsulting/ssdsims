@@ -34,7 +34,9 @@ the `targets` backend), new sections will document them here. See
 The four stages this vignette covers:
 
 1.  **Assemble** the data with
-    [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md).
+    [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+    (and, for generated data,
+    [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)).
 2.  **Declare** the scenario with
     [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md).
 3.  **Expand** it into per-step task tables with
@@ -42,11 +44,14 @@ The four stages this vignette covers:
 4.  **Run** the baseline in-process loop with
     [`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md).
 
-Stages 1–3 are side-effect-free. Only stage 4 touches the RNG.
+Stages 2–3 are side-effect-free; generation
+([`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md),
+in stage 1) and stage 4 draw random numbers under scoped, seeded dqrng
+state.
 
 ## Stage 1: assemble the data
 
-[`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
+[`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
 is the single entry point for dataset input. It validates each data
 frame — every dataset must carry a numeric `Conc` column, the species
 sensitivity distribution convention — and assembles them into a named
@@ -54,11 +59,11 @@ collection.
 
 ``` r
 
-datasets <- ssd_data(
+data <- ssd_scenario_data(
   boron = ssddata::ccme_boron,
   cadmium = ssddata::ccme_cadmium
 )
-datasets
+data
 #> $boron
 #> # A tibble: 28 × 5
 #>    Chemical Species                  Conc Group        Units
@@ -102,11 +107,73 @@ becomes `"ccme_boron"`). Names must be unique, and a literal with no
 derivable name (e.g. a bare `data.frame(...)`) must be given an explicit
 name.
 
-[`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-is the extensible input point. A planned change (`scenario-input-types`)
-will let each input also be a data *generator* — a `fitdists`/`tmbfit`
-object, a generator function, or a function-name string — materialised
-by a dataset registry. For now each input must be a data frame.
+### Generated datasets with `ssd_gen()`
+
+Each dataset can also be *generated* rather than observed.
+[`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+accepts the same generator inputs the legacy
+[`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
+dispatches over — a generator function, a function-name string, or a
+`fitdists`/`tmbfit` object (drawn from the matching `ssd_r<dist>` with
+the fit’s estimates) — and materialises each, **once**, to a `Conc`
+tibble of `.n` rows. The result composes with the data frames in
+[`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md),
+either as an unnamed argument or spliced with `!!!` (the two are
+equivalent):
+
+``` r
+
+ssd_scenario_data(
+  boron = ssddata::ccme_boron,
+  ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)
+)
+#> $boron
+#> # A tibble: 28 × 5
+#>    Chemical Species                  Conc Group        Units
+#>    <chr>    <chr>                   <dbl> <fct>        <chr>
+#>  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L 
+#>  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L 
+#>  3 Boron    Micropterus salmoides     4.1 Fish         mg/L 
+#>  4 Boron    Brachydanio rerio        10   Fish         mg/L 
+#>  5 Boron    Carassius auratus        15.6 Fish         mg/L 
+#>  6 Boron    Pimephales promelas      18.3 Fish         mg/L 
+#>  7 Boron    Daphnia magna             6   Invertebrate mg/L 
+#>  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L 
+#>  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L 
+#> 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L 
+#> # ℹ 18 more rows
+#> 
+#> $synth
+#> # A tibble: 30 × 1
+#>     Conc
+#>    <dbl>
+#>  1 1.05 
+#>  2 0.814
+#>  3 3.41 
+#>  4 3.16 
+#>  5 0.883
+#>  6 2.71 
+#>  7 0.741
+#>  8 0.457
+#>  9 5.49 
+#> 10 0.310
+#> # ℹ 20 more rows
+#> 
+#> attr(,"class")
+#> [1] "ssdsims_data"
+```
+
+Both `.n` (the generated population size) and `.seed` are **required**,
+so unsized or irreproducible generation is impossible. Each generator
+draws under the dqrng `pcg64` backend on an independent stream keyed by
+its dataset *name* (with `.seed` as the base seed), so one `.seed`
+reproducibly fans out across all generators in a call; the global RNG
+state is untouched.
+
+A materialised generator dataset is a *fixture the scenario resamples*:
+once inside the collection it is an ordinary tibble, indistinguishable
+from a data-frame dataset downstream (the generator code is its
+provenance).
 
 ## Stage 2: declare the scenario
 
@@ -119,7 +186,7 @@ knob with a sensible default.
 ``` r
 
 scenario <- ssd_define_scenario(
-  datasets,
+  data,
   nsim = 3L,
   seed = 42L,
   nrow = c(5L, 10L),
@@ -170,18 +237,19 @@ Note what is *not* shown — the data frames themselves are retained for
 the local runner but are not part of the declarative identity; the
 cluster path carries only the names.
 
-### Dataset input is flexible
+### Dataset input is the collection
 
-The preferred form is an
-[`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-collection (above), which owns validation and naming. For convenience
-the constructor also accepts bare data frame input, routed through the
-same `Conc` validation, in several forms:
+Dataset input is accepted **only** as an
+[`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+collection — naming, validation, and (via
+[`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md))
+generation all live there, so the constructor itself stays inert and
+draws no random numbers:
 
 ``` r
 
-# 1. A single data frame; name derived from the expression ("ccme_boron").
-ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+ssd_define_scenario(data, nsim = 2L, seed = 1L)
 #> <ssdsims_scenario>
 #>   seed:     1
 #>   nsim:     2
@@ -212,44 +280,7 @@ ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L)
 #>     sample: 
 #>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
 #>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
-
-# 2. A single data frame with an explicit name.
-ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, name = "boron")
-#> <ssdsims_scenario>
-#>   seed:     1
-#>   nsim:     2
-#>   datasets: boron
-#>   nrow:     6
-#>   replace:  FALSE
-#>   fit grid:
-#>     rescale: FALSE
-#>     computable: FALSE
-#>     at_boundary_ok: TRUE
-#>     min_pmix: ssd_min_pmix
-#>     range_shape1: {0.05, 20}
-#>     range_shape2: {0.05, 20}
-#>     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)
-#>   hc grid:
-#>     est_method: multi (setting)
-#>     proportion: 0.05 (setting)
-#>     ci: FALSE (setting)
-#>     nboot: 1000
-#>     ci_method: weighted_samples
-#>     parametric: TRUE
-#>     samples: FALSE (setting)
-#>   partition_by:
-#>     sample: dataset, sim, replace
-#>     fit: dataset, sim, nrow, rescale
-#>     hc: dataset, sim
-#>   bundle:
-#>     sample: 
-#>     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
-#>     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 ```
-
-A named list (`list(boron = ..., cadmium = ...)`) takes names from the
-list; an unnamed list derives them per element. Supplying both a named
-list and `name=` is an error.
 
 ### `min_pmix` is referenced by name
 
@@ -312,13 +343,8 @@ When `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`,
 
 ``` r
 
-ssd_define_scenario(
-  ssddata::ccme_boron,
-  nsim = 2L,
-  seed = 1L,
-  ci = FALSE,
-  nboot = 1000
-)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+ssd_define_scenario(data, nsim = 2L, seed = 1L, ci = FALSE, nboot = 1000)
 #> Error in `ssd_define_scenario()`:
 #> ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
 ```

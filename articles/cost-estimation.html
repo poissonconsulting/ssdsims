@@ -135,8 +135,9 @@
 <p><code><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost()</a></code> takes a scenario and (optionally) a calibration. Here is the motivating ~430-hour scenario:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">10L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -186,8 +187,9 @@
 <p><code>proportion</code> and <code>est_method</code> are free, so widening them leaves the total unchanged:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">wider</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<span><span class="va">wider</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">10L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  ci <span class="op">=</span> <span class="cn">TRUE</span>,</span>

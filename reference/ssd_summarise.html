@@ -162,8 +162,9 @@ order and byte-identical across runs regardless. Evidence: the
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
+<span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span></span>
+<span class="r-in"><span>  <span class="va">data</span>,</span></span>
 <span class="r-in"><span>  nsim <span class="op">=</span> <span class="fl">1L</span>,</span></span>
 <span class="r-in"><span>  nrow <span class="op">=</span> <span class="fl">6L</span>,</span></span>
 <span class="r-in"><span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span></span>
@@ -177,7 +178,7 @@ order and byte-identical across runs regardless. Evidence: the
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">run</span><span class="op">$</span><span class="va">dir</span>, <span class="st">"summary.parquet"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpvBEnv9/ssdsims-shards-36ed6520f35f/summary.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/RtmpMluuv4/ssdsims-shards-36e87dead924/summary.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

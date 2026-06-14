@@ -13,7 +13,9 @@
 
 #### scenario-input-types
 
-- Redesign to `ssd_scenario_data()` + `ssd_gen()`
+- Redesign to
+  [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md) +
+  [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
   ([\#118](https://github.com/poissonconsulting/ssdsims/issues/118)).
 
 - Archive landed changes and establish ROADMAP.md
@@ -290,8 +292,7 @@
 
 - Add declarative
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
-  and
-  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
+  and `ssd_data()`
   ([\#71](https://github.com/poissonconsulting/ssdsims/issues/71)).
 
 - Add scenario-scoped dqrng `pcg64` RNG backend (dqrng-init)

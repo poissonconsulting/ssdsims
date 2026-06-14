@@ -67,15 +67,17 @@ parent shard by partition path.
 ## Examples
 
 ``` r
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 ssd_scenario_sample_shards(scenario)
 #> # A tibble: 2 × 4
 #>   dataset      sim replace              tasks
 #>   <chr>      <int> <lgl>   <list<tibble[,7]>>
 #> 1 ccme_boron     1 FALSE              [1 × 7]
 #> 2 ccme_boron     2 FALSE              [1 × 7]
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   seed = 42L,
   rescale = c(FALSE, TRUE)
@@ -88,8 +90,9 @@ ssd_scenario_fit_shards(scenario)
 #> 2 ccme_boron     1     6 TRUE               [1 × 14]
 #> 3 ccme_boron     2     6 FALSE              [1 × 14]
 #> 4 ccme_boron     2     6 TRUE               [1 × 14]
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   seed = 42L,
   ci = TRUE

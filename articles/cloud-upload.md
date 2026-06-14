@@ -114,8 +114,9 @@ own — it just pairs each step shard with a no-op `upload_<step>` target:
 
 ``` r
 
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   seed = 42L,
   nrow = 6L,
@@ -170,7 +171,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/RtmppJGN0m/ssdsims-shards-3b883b561fda/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/Rtmp0dBKJs/ssdsims-shards-3b8b243f2a47/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 

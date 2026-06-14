@@ -137,8 +137,9 @@
 <p>Build a scenario and hand it to the factory with <code>upload = ssd_upload_dryrun()</code>. You run <code><a href="../reference/ssd_test_upload.html">ssd_test_upload()</a></code> yourself as a preflight (above); the factory does no network I/O of its own — it just pairs each step shard with a no-op <code>upload_&lt;step&gt;</code> target:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
+<span>  <span class="va">data</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fl">6L</span>,</span>
@@ -184,7 +185,7 @@
 <span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/ssd_upload_shard.html">ssd_upload_shard</a></span><span class="op">(</span><span class="va">shard</span>, <span class="va">dryrun</span><span class="op">)</span>, <span class="va">shard</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dry-run upload: skipped</span></span>
-<span><span class="co">#&gt; "/tmp/RtmppJGN0m/ssdsims-shards-3b883b561fda/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
+<span><span class="co">#&gt; "/tmp/Rtmp0dBKJs/ssdsims-shards-3b8b243f2a47/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
 <p>That is the whole upload DAG — the probe, the paired <code>upload_&lt;step&gt;</code> targets, and the per-shard ship — exercised end to end with no network and no credentials.</p>

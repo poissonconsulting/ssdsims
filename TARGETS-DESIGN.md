@@ -217,18 +217,16 @@ Three design points distinguish this from the current code:
 
 The scenario carries datasets and `min_pmix` entries as **values
 materialised at construction, keyed by name** — the dataset tibbles
-(`scenario-input-types` realises every input via
-[`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md),
-`Conc` verified) and the `min_pmix` functions (a supplied function kept
-under its derived name; a name-string resolved to a function at
-construction). A consumer **isolates a value by name** with a thin
-accessor — `scenario_dataset(scenario, name)` /
-`scenario_min_pmix(scenario, name)` (the `scenario-accessors` step, §12)
-— so there is **no registry**: no per-project resolution target, no
-`results/datasets/*.parquet`, no pinned function value. The scenario is
-a referenced global in `_targets.R` transported to workers, and
-datasets/min_pmix functions are tiny, so the materialised values simply
-ride along.
+(`scenario-input-types` realises every input via `ssd_data()`, `Conc`
+verified) and the `min_pmix` functions (a supplied function kept under
+its derived name; a name-string resolved to a function at construction).
+A consumer **isolates a value by name** with a thin accessor —
+`scenario_dataset(scenario, name)` / `scenario_min_pmix(scenario, name)`
+(the `scenario-accessors` step, §12) — so there is **no registry**: no
+per-project resolution target, no `results/datasets/*.parquet`, no
+pinned function value. The scenario is a referenced global in
+`_targets.R` transported to workers, and datasets/min_pmix functions are
+tiny, so the materialised values simply ride along.
 
 The crucial split is **hash by name, carry value for execution**: the
 per-task primer hashes the *name* (`task_axes`), never the value, so a
@@ -2209,14 +2207,13 @@ implemented; the Mermaid graph below colours these nodes green inside
   (S3); replaces the PoC’s `data2`-prefixed names. Signature along the
   lines of
   `ssd_define_scenario(data, ..., nsim, nrow, rescale, est_method, nboot, ci, ...)`,
-  forwarding the input data through
-  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-  (a tiny normaliser that validates the `Conc` column and tibble shape).
-  Stores only declarative fields (seed, knobs, dataset names — the
-  datasets themselves are materialised on the scenario, reached by name
-  via `scenario-accessors`). No RNG, no tasks, no targets yet. **Scoped
-  to data-frame input only** (single or list); the other generator
-  inputs are `scenario-input-types`, below.
+  forwarding the input data through `ssd_data()` (a tiny normaliser that
+  validates the `Conc` column and tibble shape). Stores only declarative
+  fields (seed, knobs, dataset names — the datasets themselves are
+  materialised on the scenario, reached by name via
+  `scenario-accessors`). No RNG, no tasks, no targets yet. **Scoped to
+  data-frame input only** (single or list); the other generator inputs
+  are `scenario-input-types`, below.
 
 - **`task-list-loop-baseline`** — Derive three task lists (data, fit, hc
   rows; one column per cross-join axis; no RNG, no shards, no targets)

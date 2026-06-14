@@ -16,7 +16,6 @@ ssd_define_scenario(
   nsim,
   seed,
   ...,
-  name = NULL,
   nrow = 6L,
   replace = FALSE,
   rescale = FALSE,
@@ -43,11 +42,11 @@ ssd_define_scenario(
 - data:
 
   An
-  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-  collection (preferred), or - for convenience - a single data frame or
-  a (named or unnamed) list of data frames. Bare inputs are validated
-  via the same `Conc` contract as
-  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md).
+  [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+  collection: a validated, named collection of `Conc` tibbles assembled
+  from data frames and/or
+  [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+  generator datasets.
 
 - nsim:
 
@@ -61,13 +60,6 @@ ssd_define_scenario(
 - ...:
 
   Unused; must be empty.
-
-- name:
-
-  An optional dataset name for the single-data-frame form, overriding
-  the derived name. Must not be combined with a named list or an
-  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-  collection.
 
 - nrow:
 
@@ -236,10 +228,10 @@ An S3 object of class `ssdsims_scenario`.
 
 ## Details
 
-Input data is forwarded through
-[`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-for validation (a numeric `Conc` column is required) and retained on the
-scenario (as `$data`) so a local run
+Input data arrives as an
+[`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+collection (already validated: a numeric `Conc` column is required) and
+is retained on the scenario (as `$data`) so a local run
 ([`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md))
 can sample it directly. The dataset *names* (`$datasets`) are what the
 targets/cluster path hashes; the validated tibbles ride on the scenario
@@ -249,27 +241,19 @@ so the hash need not carry the data frames.
 
 ## Dataset input
 
-The preferred form is an
-[`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-collection, which owns validation and naming:
-`ssd_define_scenario(ssd_data(boron = ccme_boron, cadmium = ccme_cadmium), ...)`.
-For convenience, bare data frame input is also accepted in four forms
-(routed through the same `Conc` validation):
+Dataset input is accepted **only** as an
+[`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+collection, which owns validation and naming. Assemble it first, then
+pass it in:
 
-1.  A single data frame, name derived from the argument expression:
-    `ssd_define_scenario(ssddata::ccme_boron, ...)` gives
-    `"ccme_boron"`.
+    data <- ssd_scenario_data(boron = ccme_boron, cadmium = ccme_cadmium)
+    scenario <- ssd_define_scenario(data, ...)
 
-2.  A single data frame with an explicit `name=`:
-    `ssd_define_scenario(ssddata::ccme_boron, name = "boron", ...)`.
-
-3.  A named list, names taken from the list:
-    `ssd_define_scenario(list(boron = ccme_boron, cadmium = ccme_cadmium), ...)`.
-
-4.  An unnamed list, names derived per element:
-    `ssd_define_scenario(list(ccme_boron, ccme_cadmium), ...)`.
-
-Supplying both a named list and `name=` is an error.
+Generator inputs (a `fitdists`/`tmbfit` object, a generator function, or
+a function-name string) are materialised - once, reproducibly - by
+[`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+and composed into the same collection; the constructor itself performs
+**no** random-number generation.
 
 ## `ci`
 
@@ -301,7 +285,9 @@ task without fanning out into separate tasks.
 ## Examples
 
 ``` r
-ssd_define_scenario(ssddata::ccme_boron, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 100L, seed = 42L, nrow = c(5L, 10L))
+scenario
 #> <ssdsims_scenario>
 #>   seed:     42
 #>   nsim:     100

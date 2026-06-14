@@ -112,8 +112,9 @@ takes a scenario and (optionally) a calibration. Here is the motivating
 
 ``` r
 
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 10L,
   seed = 42L,
   ci = TRUE,
@@ -172,8 +173,9 @@ total unchanged:
 
 ``` r
 
+data <- ssd_scenario_data(ssddata::ccme_boron)
 wider <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 10L,
   seed = 42L,
   ci = TRUE,

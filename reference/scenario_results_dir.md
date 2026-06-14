@@ -50,7 +50,8 @@ each run.
 ## Examples
 
 ``` r
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 scenario_results_dir(scenario)
 #> [1] "results/layout=b078bfa16655"
 ```

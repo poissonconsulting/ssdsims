@@ -64,7 +64,8 @@ A list of `targets` target objects, for `_targets.R` to return.
     library(targets)
     library(tarchetypes)
     library(ssdsims)
-    scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+    data <- ssd_scenario_data(ssddata::ccme_boron)
+    scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
     ssd_scenario_targets(scenario)
 
 The shard and summary targets carry `error = "null"` so a shard whose
@@ -191,7 +192,8 @@ if (FALSE) { # \dontrun{
 library(targets)
 library(tarchetypes)
 library(ssdsims)
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 ssd_scenario_targets(scenario)
 
 # Pair each shard with a (no-op) upload target, exercised offline:

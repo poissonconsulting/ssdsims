@@ -46,13 +46,14 @@ for the dataset counterpart.
 ## Examples
 
 ``` r
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 1L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 scenario_min_pmix(scenario, "ssd_min_pmix")
 #> function(n) {
 #>   chk_whole_number(n)
 #>   chk_gt(n)
 #>   max(min(3 / n, 0.5), 0.1)
 #> }
-#> <bytecode: 0x556a8d5d9d00>
+#> <bytecode: 0x55e4b1baf3a8>
 #> <environment: namespace:ssdtools>
 ```

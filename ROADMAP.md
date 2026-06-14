@@ -43,23 +43,22 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- ❗️🛠️ \[scenario-input-types\] Accept the generator inputs
+- ❗️🚀 \[scenario-input-types\] Accept the generator inputs
   [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
   handles (`fitdists`, `tmbfit`, a generator function, a function-name
   string) in the declarative path via a new `ssd_gen(..., .n, .seed)`
   that materialises each once to a reproducible `Conc` tibble (name as
-  the dqrng stream, required `.seed`/`.n`);
-  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-  is renamed `ssd_scenario_data()` (escaping the `ssdtools::ssd_data(x)`
-  clash) and
+  the dqrng stream, required `.seed`/`.n`); `ssd_data()` is renamed
+  [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+  (escaping the `ssdtools::ssd_data(x)` clash) and
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   accepts only that collection, so the constructor stays RNG-free. Deps
   `task-primer` / `local-dqrng-state` **and** `task-rng-postcheck`
-  (`ssd_gen()` reuses its `dqrng_usable()` gate +
-  `chk_dqrng_backend_intact()` witness — postcheck is booked under Done
-  but its helpers are not yet in the tree, so it must land first); gates
-  `migrate-public-api`. Name-only regeneration is the deferred
-  `dataset-provenance`.
+  ([`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+  reuses its `dqrng_usable()` gate + `chk_dqrng_backend_intact()`
+  witness — postcheck’s helpers and the dqrng-as-`Suggests` move landed
+  physically alongside this change); gates `migrate-public-api`.
+  Name-only regeneration is the deferred `dataset-provenance`.
 - ‼️⏳ \[cost-analysis-targets\] Improve the cost estimation by
   analyzing an existing targets run. Includes tools to query the targets
   store for run times of the various targets and mapping this back to
@@ -123,15 +122,13 @@ artifacts yet is also queued, ready to propose.
   [`print()`](https://rdrr.io/r/base/print.html) methods for all
   objects. Independent.
 - 😀 \[canonical-call-sites\] Sweep the remaining public constructors
-  ([`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md),
-  the `ssd_run_*` / `ssd_scenario_*` family) so arguments are passed in
-  signature order, as the
+  (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments
+  are passed in signature order, as the
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)
   pass already did. Independent.
 - 😀 \[cleanup-as-ssd-data\] Add a public `as_ssd_data()` coercing the
-  already-named input forms into a validated
-  [`ssd_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_data.md)
-  collection. Proposed.
+  already-named input forms into a validated `ssd_data()` collection.
+  Proposed.
 
 ## Bluesky
 
@@ -268,8 +265,11 @@ artifacts yet is also queued, ready to propose.
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/task-rng-postcheck/)
   — Per-task RNG-backend postcondition: each `*_data_task_primer()`
   verifies dqrng still held the `user_unif_rand` slot for the whole
-  body, aborting on a foreign-RNG hijack. *Treated as merged for this
-  roadmap split; the change directory is not yet physically archived.*
+  body, aborting on a foreign-RNG hijack. dqrng moved `Imports` →
+  `Suggests` with a `dqrng_usable()` gate and a
+  `chk_dqrng_backend_intact()` witness. *Helpers landed physically
+  alongside `scenario-input-types` (which depends on them); the change
+  directory is not yet archived.*
 - ✅ 2026-06-07 \[cluster-pipeline\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cluster-pipeline/)
   — Editable SLURM `crew.cluster` targets template

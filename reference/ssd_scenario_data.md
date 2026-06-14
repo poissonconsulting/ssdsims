@@ -10,15 +10,17 @@ are preserved.
 ## Usage
 
 ``` r
-ssd_data(...)
+ssd_scenario_data(...)
 ```
 
 ## Arguments
 
 - ...:
 
-  One or more data frames, optionally named. Each is validated for a
-  numeric `Conc` column.
+  One or more data frames, optionally named, and/or
+  [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+  collections (unnamed, or spliced with `!!!`). Each data frame is
+  validated for a numeric `Conc` column.
 
 ## Value
 
@@ -30,20 +32,35 @@ Names are taken from the argument names where supplied, otherwise
 derived from the argument expression by symbol capture (e.g.
 [`ssddata::ccme_boron`](https://rdrr.io/pkg/ssddata/man/ccme_boron.html)
 becomes `"ccme_boron"`). A literal with no derivable name (e.g. a bare
-`data.frame(...)` call) must be given an explicit name.
+`data.frame(...)` call) must be given an explicit name. Names must be
+unique across the collection.
 
-`ssd_data()` is intended to grow: the planned `scenario-input-types`
-change (see `TARGETS-DESIGN.md` section 12) will let each input also be
-one of the data *generators*
-[`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-accepts today - a `fitdists` or `tmbfit` object, a generator function,
-or a function-name string - with the data materialised by the dataset
-registry. For now each input must be a data frame.
+Generator-style inputs (a `fitdists` or `tmbfit` object, a generator
+function, or a function-name string) enter the collection through
+[`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md),
+which materialises each, once, to a reproducible `Conc` tibble. Its
+result composes with the data-frame inputs in two equivalent ways:
+passed as an unnamed argument, the collection is flattened in (each
+materialised tibble becomes a member under its own name); or spliced
+with `!!!`
+([`rlang::list2()`](https://rlang.r-lib.org/reference/list2.html)
+splicing), with identical results:
+
+    ssd_scenario_data(boron = ccme_boron, ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L))
+    ssd_scenario_data(boron = ccme_boron, !!!ssd_gen(synth = ssd_rlnorm, .n = 30, .seed = 1L))
+
+A materialised generator dataset is an ordinary tibble in the
+collection, indistinguishable downstream from a data-frame dataset.
+
+## See also
+
+[`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md),
+[`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md).
 
 ## Examples
 
 ``` r
-ssd_data(ssddata::ccme_boron)
+ssd_scenario_data(ssddata::ccme_boron)
 #> $ccme_boron
 #> # A tibble: 28 × 5
 #>    Chemical Species                  Conc Group        Units
@@ -62,7 +79,7 @@ ssd_data(ssddata::ccme_boron)
 #> 
 #> attr(,"class")
 #> [1] "ssdsims_data"
-ssd_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium)
+ssd_scenario_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium)
 #> $boron
 #> # A tibble: 28 × 5
 #>    Chemical Species                  Conc Group        Units

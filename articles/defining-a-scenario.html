@@ -88,7 +88,7 @@
 <p>The four stages this vignette covers:</p>
 <ol type="1">
 <li>
-<strong>Assemble</strong> the data with <code><a href="../reference/ssd_data.html">ssd_data()</a></code>.</li>
+<strong>Assemble</strong> the data with <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code> (and, for generated data, <code><a href="../reference/ssd_gen.html">ssd_gen()</a></code>).</li>
 <li>
 <strong>Declare</strong> the scenario with <code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>.</li>
 <li>
@@ -96,17 +96,17 @@
 <li>
 <strong>Run</strong> the baseline in-process loop with <code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code>.</li>
 </ol>
-<p>Stages 1–3 are side-effect-free. Only stage 4 touches the RNG.</p>
+<p>Stages 2–3 are side-effect-free; generation (<code><a href="../reference/ssd_gen.html">ssd_gen()</a></code>, in stage 1) and stage 4 draw random numbers under scoped, seeded dqrng state.</p>
 </section><section class="level2"><h2 id="stage-1-assemble-the-data">Stage 1: assemble the data<a class="anchor" aria-label="anchor" href="#stage-1-assemble-the-data"></a>
 </h2>
-<p><code><a href="../reference/ssd_data.html">ssd_data()</a></code> is the single entry point for dataset input. It validates each data frame — every dataset must carry a numeric <code>Conc</code> column, the species sensitivity distribution convention — and assembles them into a named collection.</p>
+<p><code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code> is the single entry point for dataset input. It validates each data frame — every dataset must carry a numeric <code>Conc</code> column, the species sensitivity distribution convention — and assembles them into a named collection.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">datasets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_data.html">ssd_data</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span></span>
 <span>  boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
 <span>  cadmium <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_cadmium.html" class="external-link">ccme_cadmium</a></span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">datasets</span></span>
+<span><span class="va">data</span></span>
 <span><span class="co">#&gt; $boron</span></span>
 <span><span class="co">#&gt; # A tibble: 28 × 5</span></span>
 <span><span class="co">#&gt;    Chemical Species                  Conc Group        Units</span></span>
@@ -143,14 +143,60 @@
 <span><span class="co">#&gt; [1] "ssdsims_data"</span></span></code></pre></div>
 </div>
 <p>Names come from the argument names where you supply them; otherwise they are derived from the argument expression by symbol capture (so a bare <code><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ssddata::ccme_boron</a></code> becomes <code>"ccme_boron"</code>). Names must be unique, and a literal with no derivable name (e.g. a bare <code>data.frame(...)</code>) must be given an explicit name.</p>
-<p><code><a href="../reference/ssd_data.html">ssd_data()</a></code> is the extensible input point. A planned change (<code>scenario-input-types</code>) will let each input also be a data <em>generator</em> — a <code>fitdists</code>/<code>tmbfit</code> object, a generator function, or a function-name string — materialised by a dataset registry. For now each input must be a data frame.</p>
-</section><section class="level2"><h2 id="stage-2-declare-the-scenario">Stage 2: declare the scenario<a class="anchor" aria-label="anchor" href="#stage-2-declare-the-scenario"></a>
+<section class="level3"><h3 id="generated-datasets-with-ssd_gen">Generated datasets with <code>ssd_gen()</code>
+<a class="anchor" aria-label="anchor" href="#generated-datasets-with-ssd_gen"></a>
+</h3>
+<p>Each dataset can also be <em>generated</em> rather than observed. <code><a href="../reference/ssd_gen.html">ssd_gen()</a></code> accepts the same generator inputs the legacy <code><a href="../reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> dispatches over — a generator function, a function-name string, or a <code>fitdists</code>/<code>tmbfit</code> object (drawn from the matching <code>ssd_r&lt;dist&gt;</code> with the fit’s estimates) — and materialises each, <strong>once</strong>, to a <code>Conc</code> tibble of <code>.n</code> rows. The result composes with the data frames in <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code>, either as an unnamed argument or spliced with <code>!!!</code> (the two are equivalent):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span></span>
+<span>  boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<span>  <span class="fu"><a href="../reference/ssd_gen.html">ssd_gen</a></span><span class="op">(</span>synth <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_r.html" class="external-link">ssd_rlnorm</a></span>, .n <span class="op">=</span> <span class="fl">30</span>, .seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt; $boron</span></span>
+<span><span class="co">#&gt; # A tibble: 28 × 5</span></span>
+<span><span class="co">#&gt;    Chemical Species                  Conc Group        Units</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;                   &lt;dbl&gt; &lt;fct&gt;        &lt;chr&gt;</span></span>
+<span><span class="co">#&gt;  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L </span></span>
+<span><span class="co">#&gt;  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L </span></span>
+<span><span class="co">#&gt;  3 Boron    Micropterus salmoides     4.1 Fish         mg/L </span></span>
+<span><span class="co">#&gt;  4 Boron    Brachydanio rerio        10   Fish         mg/L </span></span>
+<span><span class="co">#&gt;  5 Boron    Carassius auratus        15.6 Fish         mg/L </span></span>
+<span><span class="co">#&gt;  6 Boron    Pimephales promelas      18.3 Fish         mg/L </span></span>
+<span><span class="co">#&gt;  7 Boron    Daphnia magna             6   Invertebrate mg/L </span></span>
+<span><span class="co">#&gt;  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L </span></span>
+<span><span class="co">#&gt;  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L </span></span>
+<span><span class="co">#&gt; 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L </span></span>
+<span><span class="co">#&gt; # ℹ 18 more rows</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $synth</span></span>
+<span><span class="co">#&gt; # A tibble: 30 × 1</span></span>
+<span><span class="co">#&gt;     Conc</span></span>
+<span><span class="co">#&gt;    &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 1.05 </span></span>
+<span><span class="co">#&gt;  2 0.814</span></span>
+<span><span class="co">#&gt;  3 3.41 </span></span>
+<span><span class="co">#&gt;  4 3.16 </span></span>
+<span><span class="co">#&gt;  5 0.883</span></span>
+<span><span class="co">#&gt;  6 2.71 </span></span>
+<span><span class="co">#&gt;  7 0.741</span></span>
+<span><span class="co">#&gt;  8 0.457</span></span>
+<span><span class="co">#&gt;  9 5.49 </span></span>
+<span><span class="co">#&gt; 10 0.310</span></span>
+<span><span class="co">#&gt; # ℹ 20 more rows</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; attr(,"class")</span></span>
+<span><span class="co">#&gt; [1] "ssdsims_data"</span></span></code></pre></div>
+</div>
+<p>Both <code>.n</code> (the generated population size) and <code>.seed</code> are <strong>required</strong>, so unsized or irreproducible generation is impossible. Each generator draws under the dqrng <code>pcg64</code> backend on an independent stream keyed by its dataset <em>name</em> (with <code>.seed</code> as the base seed), so one <code>.seed</code> reproducibly fans out across all generators in a call; the global RNG state is untouched.</p>
+<p>A materialised generator dataset is a <em>fixture the scenario resamples</em>: once inside the collection it is an ordinary tibble, indistinguishable from a data-frame dataset downstream (the generator code is its provenance).</p>
+</section></section><section class="level2"><h2 id="stage-2-declare-the-scenario">Stage 2: declare the scenario<a class="anchor" aria-label="anchor" href="#stage-2-declare-the-scenario"></a>
 </h2>
 <p><code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> is the constructor. Its required arguments are the dataset input, <code>nsim</code> (the replicate count), and <code>seed</code> (the RNG root — it has no default because changing it fully re-roots every draw). Everything else is a knob with a sensible default.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="va">datasets</span>,</span>
+<span>  <span class="va">data</span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">3L</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
@@ -194,13 +240,13 @@
 <span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span></code></pre></div>
 </div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method shows the declarative fields: the scalar <code>seed</code> and <code>nsim</code>, the <code>nrow</code> sample sizes, the dataset names, and the two argument grids (<code>fit</code> and <code>hc</code>). Note what is <em>not</em> shown — the data frames themselves are retained for the local runner but are not part of the declarative identity; the cluster path carries only the names.</p>
-<section class="level3"><h3 id="dataset-input-is-flexible">Dataset input is flexible<a class="anchor" aria-label="anchor" href="#dataset-input-is-flexible"></a>
+<section class="level3"><h3 id="dataset-input-is-the-collection">Dataset input is the collection<a class="anchor" aria-label="anchor" href="#dataset-input-is-the-collection"></a>
 </h3>
-<p>The preferred form is an <code><a href="../reference/ssd_data.html">ssd_data()</a></code> collection (above), which owns validation and naming. For convenience the constructor also accepts bare data frame input, routed through the same <code>Conc</code> validation, in several forms:</p>
+<p>Dataset input is accepted <strong>only</strong> as an <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code> collection — naming, validation, and (via <code><a href="../reference/ssd_gen.html">ssd_gen()</a></code>) generation all live there, so the constructor itself stays inert and draws no random numbers:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 1. A single data frame; name derived from the expression ("ccme_boron").</span></span>
-<span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
+<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_scenario&gt;</span></span>
 <span><span class="co">#&gt;   seed:     1</span></span>
 <span><span class="co">#&gt;   nsim:     2</span></span>
@@ -230,54 +276,20 @@
 <span><span class="co">#&gt;   bundle:</span></span>
 <span><span class="co">#&gt;     sample: </span></span>
 <span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
-<span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
-<span></span>
-<span><span class="co"># 2. A single data frame with an explicit name.</span></span>
-<span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span>, name <span class="op">=</span> <span class="st">"boron"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;ssdsims_scenario&gt;</span></span>
-<span><span class="co">#&gt;   seed:     1</span></span>
-<span><span class="co">#&gt;   nsim:     2</span></span>
-<span><span class="co">#&gt;   datasets: boron</span></span>
-<span><span class="co">#&gt;   nrow:     6</span></span>
-<span><span class="co">#&gt;   replace:  FALSE</span></span>
-<span><span class="co">#&gt;   fit grid:</span></span>
-<span><span class="co">#&gt;     rescale: FALSE</span></span>
-<span><span class="co">#&gt;     computable: FALSE</span></span>
-<span><span class="co">#&gt;     at_boundary_ok: TRUE</span></span>
-<span><span class="co">#&gt;     min_pmix: ssd_min_pmix</span></span>
-<span><span class="co">#&gt;     range_shape1: {0.05, 20}</span></span>
-<span><span class="co">#&gt;     range_shape2: {0.05, 20}</span></span>
-<span><span class="co">#&gt;     dists: gamma, lgumbel, llogis, lnorm, lnorm_lnorm, weibull (setting)</span></span>
-<span><span class="co">#&gt;   hc grid:</span></span>
-<span><span class="co">#&gt;     est_method: multi (setting)</span></span>
-<span><span class="co">#&gt;     proportion: 0.05 (setting)</span></span>
-<span><span class="co">#&gt;     ci: FALSE (setting)</span></span>
-<span><span class="co">#&gt;     nboot: 1000</span></span>
-<span><span class="co">#&gt;     ci_method: weighted_samples</span></span>
-<span><span class="co">#&gt;     parametric: TRUE</span></span>
-<span><span class="co">#&gt;     samples: FALSE (setting)</span></span>
-<span><span class="co">#&gt;   partition_by:</span></span>
-<span><span class="co">#&gt;     sample: dataset, sim, replace</span></span>
-<span><span class="co">#&gt;     fit: dataset, sim, nrow, rescale</span></span>
-<span><span class="co">#&gt;     hc: dataset, sim</span></span>
-<span><span class="co">#&gt;   bundle:</span></span>
-<span><span class="co">#&gt;     sample: </span></span>
-<span><span class="co">#&gt;     fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2</span></span>
 <span><span class="co">#&gt;     hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span></code></pre></div>
 </div>
-<p>A named list (<code>list(boron = ..., cadmium = ...)</code>) takes names from the list; an unnamed list derives them per element. Supplying both a named list and <code>name=</code> is an error.</p>
 </section><section class="level3"><h3 id="min_pmix-is-referenced-by-name">
 <code>min_pmix</code> is referenced by name<a class="anchor" aria-label="anchor" href="#min_pmix-is-referenced-by-name"></a>
 </h3>
 <p>The <code>min_pmix</code> knob is referenced <strong>by name</strong>: the name — not the function body — is what enters the task identity and hashes, so the scenario’s identity stays stable under a recompile or a cosmetic edit. You can pass a character vector of names directly, or a function (or list of functions) whose name is derived by symbol capture (mirroring dataset naming). The default <code><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssdtools::ssd_min_pmix</a></code> is stored as <code>"ssd_min_pmix"</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scenario</span><span class="op">$</span><span class="va">fit</span><span class="op">$</span><span class="va">min_pmix</span></span>
 <span><span class="co">#&gt; [1] "ssd_min_pmix"</span></span></code></pre></div>
 </div>
 <p>The resolved single-argument <em>function</em> is additionally <strong>materialised on the scenario</strong> at construction (a name-string is resolved then, from <code>ssdtools</code> or the caller’s environment, failing fast if it cannot be resolved). It rides along for execution and is retrieved by name with the <code><a href="../reference/scenario_min_pmix.html">scenario_min_pmix()</a></code> accessor; datasets are reached the same way with <code><a href="../reference/scenario_dataset.html">scenario_dataset()</a></code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/scenario_min_pmix.html">scenario_min_pmix</a></span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"ssd_min_pmix"</span><span class="op">)</span>, <span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/scenario_dataset.html">scenario_dataset</a></span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"boron"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
@@ -294,14 +306,9 @@
 <p><code>ci</code> is a scalar flag, not a cross-join axis. The point estimate is computed analytically from the fit and is identical whether <code>ci</code> is <code>TRUE</code> or <code>FALSE</code>, so a <code>ci = TRUE</code> run is a strict superset of <code>ci = FALSE</code> (the same estimate, plus the <code>se</code>/<code>lcl</code>/<code>ucl</code> columns). The choice is a scenario-wide either/or: <code>ci = TRUE</code> for estimates plus bootstrap intervals (as in the scenario above), or <code>ci = FALSE</code> for cheap, bootstrap-free point estimates only.</p>
 <p>When <code>ci = FALSE</code>, the bootstrap-only knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are meaningless, so passing any of them is an error — set <code>ci = TRUE</code> to enable the bootstrap, or omit the knob:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
-<span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span>
-<span>  seed <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  ci <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  nboot <span class="op">=</span> <span class="fl">1000</span></span>
-<span><span class="op">)</span></span>
+<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span>, ci <span class="op">=</span> <span class="cn">FALSE</span>, nboot <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error in `ssd_define_scenario()`:</span></span>
 <span><span class="co">#&gt; ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.</span></span></code></pre></div>
 </div>
@@ -309,7 +316,7 @@
 </h2>
 <p><code><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks()</a></code> expands the scenario into the three per-step task tables — <code>sample</code>, <code>fit</code>, and <code>hc</code> — bundled into a task set. This is still RNG-free: no draws happen here.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_tasks.html">ssd_scenario_tasks</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">tasks</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_task_set&gt;</span></span>
@@ -320,7 +327,7 @@
 <p>The counts show how each step fans out from its parent. The key design choice is that the single expensive <strong>random draw</strong> is its own <code>sample</code> task, keyed only by <code>(dataset, sim, replace)</code>. The draw is of <code>n_max = max(nrow)</code> rows; every <code>nrow</code> value is then a cheap, RNG-free <code><a href="https://rdrr.io/r/utils/head.html" class="external-link">head()</a></code> <em>sub-truncation</em> of that one draw, done inline at the <code>fit</code> step. So <code>nrow</code> is an ordinary cross-join axis of the <code>fit</code> step and never multiplies the underlying draw — one draw is shared across all sample sizes.</p>
 <p>Each row carries a path-style <code>&lt;step&gt;_id</code> primary key (the Hive partition path) plus its parent step’s id as a foreign key, so dependencies are explicit and joinable:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">sample</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: sample&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace</span></span>
@@ -337,7 +344,7 @@
 </div>
 <p>The scalar <code>ci</code> is carried uniformly on the <code>hc</code> table (it is not an axis), as is the <code>est_method</code> setting. With <code>ci = TRUE</code> the bootstrap knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) fan out fully; a <code>ci = FALSE</code> scenario would instead give exactly one <code>hc</code> row per fit task, carrying <code>NA</code> for those bootstrap-only knobs (every requested <code>est_method</code> is summarised within each task from a single bootstrap, so it never fans out into separate tasks).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
@@ -365,14 +372,14 @@
 <p><code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> is the no-frills runner. It executes the three task tables in dependency order, threading each task’s result forward to its children by the foreign-key id. It runs <strong>in-process</strong>, with no <code>targets</code>, no shard grouping, and no Parquet I/O.</p>
 <p>It <strong>is reproducible without an external seed</strong>: the runner opens one <code><a href="../reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> scope and seeds each task exactly once from <code>scenario$seed</code> plus a per-task primer (<code><a href="../reference/task_primer.html">task_primer()</a></code> over the task’s identity), so two runs of a scenario with a fixed <code>seed</code> yield identical results, regardless of the order in which tasks run:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">out</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "sample" "fit"    "hc"</span></span></code></pre></div>
 </div>
 <p>Each element is the corresponding task table augmented with a list column of per-task results — <code>sample</code> draws, <code>fits</code> objects, and <code>hc</code> tibbles (the <code>fit</code> step truncates its sample inline before fitting):</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">out</span><span class="op">$</span><span class="va">hc</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_tasks: hc&gt;</span></span>
 <span><span class="co">#&gt;   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric</span></span>
@@ -397,7 +404,7 @@
 </div>
 <p>Unnest the hazard-concentration estimates back onto their task identities to get a tidy results table. <code>proportion</code> and <code>est_method</code> are not task axes — they are passed whole to each <code>hc</code> call (one row per value, from a single bootstrap), so every result already carries its own <code>proportion</code> and <code>est_method</code> columns:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hcs</span> <span class="op">&lt;-</span> <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/unnest.html" class="external-link">unnest</a></span><span class="op">(</span></span>
 <span>  <span class="va">out</span><span class="op">$</span><span class="va">hc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dataset"</span>, <span class="st">"sim"</span>, <span class="st">"nrow"</span>, <span class="st">"ci"</span>, <span class="st">"hc"</span><span class="op">)</span><span class="op">]</span>,</span>
 <span>  <span class="va">hc</span>,</span>

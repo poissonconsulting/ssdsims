@@ -115,15 +115,17 @@ the matching <code>fit</code> shard by partition path.</p></li>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ssd_scenario_sample_shards</span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 4</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   dataset      sim replace              tasks</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;list&lt;tibble[,7]&gt;&gt;</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> ccme_boron     1 FALSE              <span style="color: #949494;">[1 × 7]</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> ccme_boron     2 FALSE              <span style="color: #949494;">[1 × 7]</span></span>
+<span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span></span>
+<span class="r-in"><span>  <span class="va">data</span>,</span></span>
 <span class="r-in"><span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span></span>
 <span class="r-in"><span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span></span>
 <span class="r-in"><span>  rescale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">FALSE</span>, <span class="cn">TRUE</span><span class="op">)</span></span></span>
@@ -136,8 +138,9 @@ the matching <code>fit</code> shard by partition path.</p></li>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> ccme_boron     1     6 TRUE               <span style="color: #949494;">[1 × 14]</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> ccme_boron     2     6 FALSE              <span style="color: #949494;">[1 × 14]</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> ccme_boron     2     6 TRUE               <span style="color: #949494;">[1 × 14]</span></span>
+<span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span></span>
+<span class="r-in"><span>  <span class="va">data</span>,</span></span>
 <span class="r-in"><span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span></span>
 <span class="r-in"><span>  seed <span class="op">=</span> <span class="fl">42L</span>,</span></span>
 <span class="r-in"><span>  ci <span class="op">=</span> <span class="cn">TRUE</span></span></span>

@@ -88,7 +88,8 @@ that step's cross-join.
 ## Examples
 
 ``` r
-scenario <- ssd_define_scenario(ssddata::ccme_boron, nsim = 3L, seed = 42L)
+data <- ssd_scenario_data(ssddata::ccme_boron)
+scenario <- ssd_define_scenario(data, nsim = 3L, seed = 42L)
 tasks <- ssd_scenario_tasks(scenario)
 tasks
 #> <ssdsims_task_set>
@@ -129,8 +130,9 @@ ssd_scenario_sample_tasks(scenario)
 #> 1 ccme_boron     1 FALSE       6 dataset=ccme_boron/sim=1/replace=FALSE
 #> 2 ccme_boron     2 FALSE       6 dataset=ccme_boron/sim=2/replace=FALSE
 #> 3 ccme_boron     3 FALSE       6 dataset=ccme_boron/sim=3/replace=FALSE
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 3L,
   seed = 42L,
   rescale = c(FALSE, TRUE)
@@ -150,8 +152,9 @@ ssd_scenario_fit_tasks(scenario)
 #> 6 ccme_boron     3 FALSE       6 TRUE    FALSE      TRUE           ssd_min_pmix
 #> # ℹ 4 more variables: range_shape1 <list>, range_shape2 <list>, fit_id <chr>,
 #> #   sample_id <chr>
+data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
-  ssddata::ccme_boron,
+  data,
   nsim = 2L,
   seed = 42L,
   ci = TRUE,
