@@ -1,5 +1,24 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9016
+
+## Features
+
+- Scope single-thread, memory-capped, telemetry-silent duckplyr config to the pipeline (#151).
+
+## Documentation
+
+- Update roadmap.
+
+- Add shard-granularity-benchmark roadmap item (#156).
+
+- Specs for planned changes.
+
+## Testing
+
+- Cut the slow tail of the targets and cost-estimation suites (#144).
+
+
 # ssdsims 0.0.0.9015
 
 ## Chore
