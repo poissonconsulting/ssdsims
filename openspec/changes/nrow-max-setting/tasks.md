@@ -34,8 +34,4 @@
 ## 6. Finalise
 
 - [ ] 6.1 `air format .`, then `devtools::test()` / `R CMD check`; fix fallout.
-  (`devtools::test()`: 668 pass. The only 3 failures are pre-existing
-  `tar_make()` "could not find function `tar_map`/`tar_option_set`" errors in
-  the persistent `targets_session()` callr worker — reproduced identically on
-  the base branch, an environment libpath quirk unrelated to this change.)
 - [ ] 6.2 `openspec validate nrow-max-setting --strict` passes.
