@@ -2,184 +2,216 @@
 
 ## ADDED Requirements
 
-### Requirement: A design is a named scenario collection
+### Requirement: A design is a named scenario collection with a consistency contract
 The package SHALL provide `ssd_design(...)` returning a classed `ssdsims_design`
 named collection of `ssdsims_scenario` objects — the **design** (DoE sense: the
 set of conditions to run), the union of regular per-scenario grids into one
-possibly-non-regular design. Names SHALL be taken from explicit argument names
-or derived from the argument expression (mirroring the `ssd_data()` dataset-name
-derivation); each name is a **scenario name** within the design. The constructor
-SHALL accept **one or more** scenarios — a design of a single scenario is valid
-and SHALL be shaped exactly like any larger design (the member still gets its
-name, `<name>_` target-name prefix, and `scenario=<name>` results level; no
-special-casing) — and SHALL abort on an empty call. The constructor SHALL
-validate that every element is an `ssdsims_scenario` and that the names
-are unique, non-empty, non-`NA`, and safe to serve as both a target-name prefix
-and a results directory level (starting with a letter; letters, digits, and
-underscore only), aborting with an informative error otherwise. Construction
-SHALL be RNG-free (no draws; `.Random.seed` unchanged).
+possibly-non-regular design. Names SHALL be taken from explicit argument names or
+derived from the argument expression (mirroring the `ssd_data()` derivation); each
+name is a **scenario name** used only as the `scenario` identity-column value and
+the per-scenario summary target-name suffix — never in a shard path, shard target
+name, the per-task primer, or any result value. The constructor SHALL accept
+**one or more** scenarios (a design of one is valid and uniformly shaped) and
+SHALL abort on an empty call. It SHALL validate that every element is an
+`ssdsims_scenario` and that names are unique, non-empty, non-`NA`, and safe
+(letters, digits, underscore; starting with a letter). It SHALL further enforce a
+**name→value consistency contract** across members: the same `dataset` name SHALL
+bind identical data, the same `min_pmix` name SHALL bind an identical function, the
+same `distset` name SHALL bind identical members, and `partition_by` SHALL be
+identical across members — aborting with an informative error naming the offending
+binding otherwise. Construction SHALL be RNG-free.
 
 #### Scenario: Names are derived or explicit
-- **WHEN** `ssd_design(base, wide = scenario2)` is called with `base` a
+- **WHEN** `ssd_design(coarse, dense = scenario2)` is called with `coarse` a
   variable holding a scenario
-- **THEN** the design SHALL contain the two scenarios named `"base"` (from the
-  argument expression) and `"wide"` (explicit), in input order
+- **THEN** the design SHALL contain the two scenarios named `"coarse"` and
+  `"dense"`, in input order
 
-#### Scenario: A design of one is valid and uniformly shaped
-- **WHEN** `ssd_design(base)` is called with a single scenario
-- **THEN** it SHALL return a one-member design whose member is addressed
-  exactly as in a larger design (named `"base"`, with the `base_` prefix and
-  `scenario=base` results level downstream), while a no-argument
-  `ssd_design()` call SHALL abort with an informative error
+#### Scenario: Inconsistent name bindings abort
+- **WHEN** two members bind the same `dataset` (or `min_pmix`, or `distset`) name
+  to different values, or use different `partition_by`
+- **THEN** `ssd_design()` SHALL abort with an informative error naming the
+  offending binding
 
 #### Scenario: Invalid elements and names abort
-- **WHEN** `ssd_design()` is called with an element that is not an
-  `ssdsims_scenario`, or with duplicate, empty, or unsafe names (e.g. a name
-  not matching the documented safe shape)
-- **THEN** it SHALL abort with an informative error identifying the offending
-  element or name
+- **WHEN** `ssd_design()` is called with a non-`ssdsims_scenario` element, with
+  duplicate/empty/unsafe names, or with no arguments
+- **THEN** it SHALL abort with an informative error
 
-### Requirement: A design target factory builds one pipeline
+### Requirement: A design is the de-duplicated union of its members' task sets
 The package SHALL provide
-`ssd_design_targets(design, ..., root = "results", upload = NULL, cue = NULL)`
-that accepts an `ssdsims_design` collection and returns the complete list of
-`targets` objects running every scenario in the design in a single
-static-branching pipeline. For each named scenario it SHALL emit the same target
-set `ssd_scenario_targets()` builds for that scenario — the per-step shard
-targets, the per-child upstream edges, and the per-scenario summary — with every
-target name prefixed `<name>_` (so target names are disjoint across scenarios)
-and written under the per-scenario, per-layout root
-`<root>/scenario=<name>/layout=<hash>`. The factory SHALL place `...`
-immediately after `design` and call `rlang::check_dots_empty()`, so `root`,
-`upload`, and `cue` MUST be passed by name. The factory SHALL perform no network
-I/O. The public contract of the single-scenario `ssd_scenario_targets()` SHALL
-be unchanged.
+`ssd_design_targets(design, ..., root = "results", upload = NULL, cue = NULL)`,
+which SHALL accept an `ssdsims_design` and return the complete list of `targets`
+objects running every member in one static-branching pipeline, runnable by a
+single `targets::tar_make()`. The factory SHALL union the members' per-step task tables
+and **de-duplicate by task identity (the `<step>_id` cell key)**, so a cell
+several members share resolves to **one** target computed **once**, and the
+pipeline computes exactly the ragged union of cells the members request (never the
+full cross-product). The factory SHALL place `...` immediately after `design` and
+call `rlang::check_dots_empty()`. It SHALL perform no network I/O. The public
+contract of `ssd_scenario_targets()` and the per-shard step runners SHALL be
+unchanged (no ssdtools refactor).
+
+#### Scenario: A refinement shares the coarse overlap
+- **WHEN** a design unions a coarse member and a denser member that refines a
+  subregion (extra axis values for one dataset/distset), under the same `seed`
+- **THEN** every cell the two members share SHALL be a single target computed
+  once, the denser member's extra cells SHALL build once, and the combined target
+  list SHALL contain no duplicate names
 
 #### Scenario: One tar_make runs the whole design
-- **WHEN** a `_targets.R` builds two scenarios, calls
-  `ssd_design_targets(ssd_design(a, b))`, and `targets::tar_make()` runs
-- **THEN** every shard target of both scenarios SHALL build in the one
-  pipeline, each scenario's shards and summary landing under its own
-  `<root>/scenario=<name>/layout=<hash>` tree
-
-#### Scenario: Target names are disjoint across scenarios
-- **WHEN** two scenarios in the design share path cells (e.g. the same dataset
-  and `sim` values) and the pipeline is sourced
-- **THEN** each scenario's targets SHALL carry its `<name>_` prefix and the
-  combined target list SHALL contain no duplicate target names
-
-#### Scenario: Scenarios sharing a layout do not mix shards
-- **WHEN** two scenarios in the design have identical `partition_by` (the same
-  layout hash)
-- **THEN** their shards SHALL land under distinct `scenario=<name>` subtrees
-  and neither scenario's readers SHALL union the other scenario's shards
+- **WHEN** a `_targets.R` builds `design <- ssd_design(a, b)`, calls
+  `ssd_design_targets(design)`, and `targets::tar_make()` runs
+- **THEN** every shard target the design requires SHALL build and the combined
+  design summary SHALL be written
 
 #### Scenario: root, upload, and cue must be passed by name
 - **WHEN** `ssd_design_targets()` is called with a positional argument after
   `design`, or a misspelled named argument
 - **THEN** `rlang::check_dots_empty()` SHALL abort with an informative error
 
+### Requirement: Shards use naked cell addressing under seed and layout levels
+The design factory SHALL address each shard at
+`<root>/seed=<value>/layout=<hash(partition_by)>/<step>/<cells>` and name its
+target `<step>_<cells>`, with **no** per-scenario path prefix, **no** `<name>_`
+target-name prefix, and **no** opaque content key. The `seed=<value>` level SHALL
+isolate members with different seeds (which share no draws) while members sharing
+a `seed` share every coincident cell. Correctness of naked addressing SHALL rest
+on the `ssd_design()` consistency contract and a uniform `partition_by`: at a given
+`seed` and layout, the same cell SHALL denote byte-identical content.
+
+#### Scenario: Distinct-seed members share nothing
+- **WHEN** a design contains two members differing only in `seed`
+- **THEN** their shards SHALL land under distinct `seed=<value>` trees and no
+  shard SHALL be shared between them
+
+#### Scenario: Same-seed members share coincident cells
+- **WHEN** two same-`seed` members have a coincident cell (same `<step>_id`, same
+  layout)
+- **THEN** that cell SHALL be one target writing one path, read by both members
+
 ### Requirement: Design-pipeline results are byte-identical to standalone runs
-A scenario's per-task `sample`, `fit`, and `hc` results SHALL be byte-identical
-(as read-back R values) between `ssd_design_targets()` and a run of the same
-scenario alone through `ssd_scenario_targets()`:
-combination changes addressing only (target names and results roots), never any
-task's `(seed, primer)`. Scenario *names* SHALL NOT enter task identity, the
-per-task primer, or any result value. Two scenarios in a design sharing a `seed`
-SHALL share `(seed, primer)` on overlapping task identities (common random
-numbers for paired settings comparisons); this SHALL be documented and SHALL NOT
-be warned about or rejected.
+A member's per-task `sample`, `fit`, and `hc` results SHALL be byte-identical (as
+read-back R values) between `ssd_design_targets()` and a run of the same scenario
+alone through `ssd_scenario_targets()`: combination changes addressing only
+(target names and the `seed=` results level), never any task's `(seed, primer)`.
+Scenario *names* SHALL NOT enter task identity, the primer, or any result value.
 
 #### Scenario: Per-task results equal the standalone pipeline's
-- **WHEN** a scenario is run both standalone (`ssd_scenario_targets()`) and as
-  a member of a design (`ssd_design_targets()`), and the per-task results are
-  aligned by the task-identity key (`<step>_id`)
-- **THEN** the `sample`, `fit`, and `hc` results SHALL be equal across the two
-  runs
+- **WHEN** a member is run both standalone and as part of a design, and per-task
+  results are aligned by `<step>_id`
+- **THEN** the `sample`, `fit`, and `hc` results SHALL be equal across the runs
 
-#### Scenario: Renaming a scenario leaves results unchanged
-- **WHEN** the same scenario object is placed in a design under two different
-  names (in separate runs)
-- **THEN** the per-task results SHALL be identical across the two runs, with
-  only the target names and `scenario=<name>` paths differing
+### Requirement: dists is resolved design-wide as the union fit with a distset subset
+The design factory SHALL rely on the existing single-scenario mechanism in which
+`fit` fits the union `scenario$fit$dists` once per fit cell and `hc` carries
+`distset` as an axis subsetting that union fit. Members requesting different
+distribution sets SHALL therefore share the union fit shards and differ only by the
+`distset` cell; `dists` SHALL NOT fork a `fit` shard. The design factory SHALL NOT
+introduce a `dists` axis or refit per set.
 
-### Requirement: Design growth mints the new member's targets and caches existing ones
-Design growth SHALL be additive: adding a scenario to a design that has already
-been `tar_make()`'d into a root SHALL mint new named targets only for the new
-member. On re-sourcing, `tar_make()` SHALL build only the new member's shard
-and summary targets plus the top-level combined `summary`, and every
-pre-existing member's target SHALL be reported cached (skipped) by `targets`
-with its Parquet byte-identical (no in-place rewrite, no recomputation). This
-holds because member addressing — the `<name>_` target-name prefix and the
-`scenario=<name>/layout=<hash>` root — is independent of the design's other
-members, so an existing member's target names, commands, and `format = "file"`
-outputs are unchanged by the addition (the path-axis-growth contract, one level
-up: extension is literally more named targets). Removing a member SHALL
-likewise leave every remaining member cached, with only the combined `summary`
-re-running (over the remaining members) and the removed member's
-`scenario=<name>` subtree abandoned in place, the standard addressing-change
-behaviour. The documentation SHALL steer studies that may grow toward starting
-as a **design of one** (growth is then purely additive), and SHALL document
-promoting a standalone `ssd_scenario_targets()` run into a design as **safe but
-recomputing** — task identity and every `(seed, primer)` are unchanged, but the
-addressing changes (names gain the `<name>_` prefix; the root gains the
-`scenario=<name>` level), so no prior shard satisfies the cache.
+#### Scenario: Different distsets share the fit shards
+- **WHEN** two same-`seed` members differ only in their requested `distset`
+  (consistently named per the contract)
+- **THEN** they SHALL share every `sample` and `fit` shard, differing only in their
+  `distset` hc cells
 
-#### Scenario: Adding a scenario builds only the new member and the combined summary
-- **WHEN** a design of scenario `a` is run to completion through
-  `ssd_design_targets()` + `tar_make()`, then the design is grown to
-  `ssd_design(a, b)` and `tar_make()` is re-run into the same root
-- **THEN** only `b`'s shard and summary targets and the top-level `summary`
-  SHALL build; every `a` target SHALL be reported cached (skipped) and `a`'s
-  shard and summary Parquets SHALL be byte-identical to before
+### Requirement: nrow_max is a uniform draw-size guard
+`nrow_max` SHALL be treated as a uniform sample draw-size guard across a design.
+The factory SHALL NOT aggregate `nrow_max`; a design whose members differ in
+`nrow_max`, or that changes `nrow_max` between runs into the same root, SHALL be
+documented as **undefined behaviour** (the stored sample bytes are not guaranteed
+to coincide).
 
-#### Scenario: Removing a scenario leaves the remaining members cached
-- **WHEN** the completed design `ssd_design(a, b)` is re-sourced as
-  `ssd_design(a)` and `tar_make()` is re-run into the same root
-- **THEN** every `a` target SHALL be reported cached (skipped), only the
-  combined `summary` SHALL re-run (unioning `a` alone), and the
-  `scenario=b` subtree SHALL remain on disk untouched
+#### Scenario: Documented undefined behaviour for non-uniform nrow_max
+- **WHEN** members of a design specify different `nrow_max` values
+- **THEN** the documentation SHALL state that shard coincidence is not guaranteed
+  and `nrow_max` SHOULD be held uniform
+
+### Requirement: Members in a seed group must agree on hc readout settings
+Members of a design that share a `seed` SHALL agree on the four non-axis hc
+settings (`proportion`, `est_method`, `ci`, `samples`) — as well as on `nrow_max`
+and the fit `dists` union — and the factory SHALL **abort** with an informative
+error when they differ, rather than silently writing divergent bytes to a shared
+cell. This change ships the ragged-grid (irregular-grid) primary driver and defers
+the per-overlap hc readout aggregation to the follow-up `hc-readout-aggregation`
+change, to which the abort message SHALL point. Members MAY still differ freely in
+the **axes** (`nrow`, `dataset`, `sim`, `distset`, the fit grid), which is the
+irregular-grid use this change delivers.
+
+#### Scenario: Differing hc readouts abort with a pointer to the follow-up
+- **WHEN** `ssd_design_targets(design)` is called for a design whose seed-group
+  members differ in `proportion`, `est_method`, `ci`, or `samples`
+- **THEN** it SHALL abort with an informative error stating the per-overlap
+  aggregation is not yet supported
+
+#### Scenario: Differing axis coverage is accepted
+- **WHEN** seed-group members agree on the hc readout settings but differ in axis
+  coverage (e.g. different `nrow` or `distset` values)
+- **THEN** `ssd_design_targets(design)` SHALL build the ragged union of their cells
+  without aborting
+
+### Requirement: Single-scenario runs migrate to a design
+The package SHALL support migrating a single-scenario `ssd_scenario_targets()` run
+to a design as a first-class, documented path: wrapping the scenario in
+`ssd_design()` and calling `ssd_design_targets()` SHALL run that scenario as a
+design of one, and its per-task `sample`/`fit`/`hc` results SHALL be byte-identical
+to the standalone run (migration changes addressing only). The migration SHALL be
+documented as **safe but recomputing** — the design tree gains the `seed=` level
+the standalone `layout=` tree lacks, so the first design run recomputes once — and
+SHALL be demonstrated by a dedicated vignette. `ssd_scenario_targets()` SHALL
+remain unchanged so existing one-off pipelines are unaffected until migration.
+
+#### Scenario: A scenario migrated to a design of one gives identical results
+- **WHEN** a scenario is run via `ssd_scenario_targets()` and then via
+  `ssd_design_targets(design)` for `design <- ssd_design(scenario)`, aligned by
+  `<step>_id`
+- **THEN** the `sample`/`fit`/`hc` per-task results SHALL be byte-identical across
+  the two runs
+
+#### Scenario: A migrated design grows by adding members
+- **WHEN** a design of one is run to completion and then a refining member is added
+  to the `ssd_design(...)` call and `tar_make()` re-run into the same root
+- **THEN** the cells the new member shares (within the seed) SHALL be reported
+  cached and only its extra cells (and the affected summaries) SHALL build
 
 ### Requirement: A combined design summary with a scenario identity column
-The design pipeline SHALL include one top-level `summary` target (the only
-unprefixed target the factory mints) that names every per-scenario summary
-target (ordering and invalidation) and writes a combined `<root>/summary.parquet`
-unioning the per-scenario **compact** summaries, each row tagged with a
-`scenario` column holding the scenario's name within the design. The union SHALL
-be performed at the DuckDB level (lazy reads written straight back out) so no
-per-scenario summary is collected into R. Per-scenario compact summary files
-that did not land SHALL be skipped, so the combined summary unions the surviving
-scenarios (the §6.2 keep-going property). Retained-draws
-(`summary-samples.parquet`) files SHALL remain per-scenario and SHALL NOT be
-combined.
+The design pipeline SHALL include per-member `summary_<name>` targets that read the
+shared shards and filter to each member's cells and `(proportion, est_method, ci,
+samples)` readout slice, and one top-level `summary` target that names every
+`summary_<name>` target and writes a combined `<root>/summary.parquet` unioning the
+per-member **compact** summaries, each row tagged with a `scenario` column. The
+union SHALL be performed at the DuckDB level (lazy reads written straight back out)
+so no per-member summary is collected into R. Per-member compact summary files that
+did not land SHALL be skipped (survivors union). Retained-draws
+(`summary-samples.parquet`) files SHALL remain per-member and SHALL NOT be combined.
 
-#### Scenario: Combined summary unions and tags the per-scenario summaries
-- **WHEN** a design of scenarios `a` and `b` runs to completion
-- **THEN** `<root>/summary.parquet` SHALL contain the union of the two
-  per-scenario compact summaries with a `scenario` column equal to `"a"` or
-  `"b"` per row, and each per-scenario `summary.parquet` SHALL be unchanged by
-  the combination
+#### Scenario: Combined summary unions and tags the per-member summaries
+- **WHEN** a design of members `a` and `b` runs to completion
+- **THEN** `<root>/summary.parquet` SHALL contain the union of the two members'
+  filtered compact summaries with a `scenario` column equal to `"a"` or `"b"` per
+  row
 
-#### Scenario: A scenario whose summary did not land is skipped
-- **WHEN** one scenario's summary fails to land while the others succeed
-- **THEN** the combined summary SHALL union the surviving scenarios' compact
-  summaries rather than aborting
+#### Scenario: A member whose summary did not land is skipped
+- **WHEN** one member's summary fails to land while the others succeed
+- **THEN** the combined summary SHALL union the surviving members rather than
+  aborting
 
-### Requirement: Per-scenario upload prefixing
-With a non-`NULL` `upload`, `ssd_design_targets()` SHALL pair each scenario's
-step shards with `upload_<step>` targets (per the `cloud-upload` capability)
-whose destination is the supplied upload object with its blob prefix extended by
-`scenario=<name>`, so the remote layout mirrors the local `scenario=<name>`
-trees and no two scenarios upload to the same blob path. With `upload = NULL`
-(the default) the factory SHALL emit no upload targets. The per-task results
-SHALL be unchanged and independent of `upload`.
+### Requirement: Upload mirrors the addressed tree
+With a non-`NULL` `upload`, `ssd_design_targets()` SHALL pair each shard with an
+`upload_<step>` target (per the `cloud-upload` capability) whose destination is the
+supplied upload object addressed by the **same** `seed=`/`layout=`/`<cells>` path
+the local shard uses — with no per-scenario prefix — so a shared shard uploads
+**once** and the remote layout mirrors the local one. With `upload = NULL` (the
+default) the factory SHALL emit no upload targets. The per-task results SHALL be
+unchanged and independent of `upload`.
 
-#### Scenario: Each scenario uploads under its own prefix
+#### Scenario: Shared shards upload once under their cell path
 - **WHEN** `ssd_design_targets(design, upload = <destination>)` is called for a
-  design of scenarios `a` and `b`
-- **THEN** the returned list SHALL contain per-shard upload targets whose
-  destinations carry blob prefixes ending `scenario=a` and `scenario=b`
-  respectively (extending any prefix already on the destination)
+  design whose members share shards
+- **THEN** each shared shard SHALL have a single `upload_<step>` target whose
+  destination path carries the shard's `seed=`/`layout=`/`<cells>` (no per-scenario
+  level)
 
 #### Scenario: upload defaults to no upload targets
 - **WHEN** `ssd_design_targets(design)` is called without `upload`
