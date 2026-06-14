@@ -80,7 +80,8 @@ design
 #| label: design-targets-one
 #| eval: false
 # _targets.R
-ssd_design_targets(ssd_design(coarse), root = "results")
+design <- ssd_design(coarse)
+ssd_design_targets(design, root = "results")
 ```
 
 A design of **one** is valid and uniformly shaped --- the recommended starting

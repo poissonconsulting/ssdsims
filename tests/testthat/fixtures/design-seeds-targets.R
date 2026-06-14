@@ -22,4 +22,5 @@ mk <- function(seed) {
   )
 }
 
-ssd_design_targets(ssd_design(a = mk(42L), b = mk(43L)), root = "results")
+design <- ssd_design(a = mk(42L), b = mk(43L))
+ssd_design_targets(design, root = "results")

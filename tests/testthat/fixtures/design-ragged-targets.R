@@ -30,4 +30,5 @@ dense <- ssd_define_scenario(
   partition_by = pb
 )
 
-ssd_design_targets(ssd_design(coarse = coarse, dense = dense), root = "results")
+design <- ssd_design(coarse = coarse, dense = dense)
+ssd_design_targets(design, root = "results")

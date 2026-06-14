@@ -60,8 +60,8 @@ unchanged (no ssdtools refactor).
   list SHALL contain no duplicate names
 
 #### Scenario: One tar_make runs the whole design
-- **WHEN** a `_targets.R` calls `ssd_design_targets(ssd_design(a, b))` and
-  `targets::tar_make()` runs
+- **WHEN** a `_targets.R` builds `design <- ssd_design(a, b)`, calls
+  `ssd_design_targets(design)`, and `targets::tar_make()` runs
 - **THEN** every shard target the design requires SHALL build and the combined
   design summary SHALL be written
 
@@ -174,7 +174,8 @@ remain unchanged so existing one-off pipelines are unaffected until migration.
 
 #### Scenario: A scenario migrated to a design of one gives identical results
 - **WHEN** a scenario is run via `ssd_scenario_targets()` and then via
-  `ssd_design_targets(ssd_design(scenario))`, aligned by `<step>_id`
+  `ssd_design_targets(design)` for `design <- ssd_design(scenario)`, aligned by
+  `<step>_id`
 - **THEN** the `sample`/`fit`/`hc` per-task results SHALL be byte-identical across
   the two runs
 

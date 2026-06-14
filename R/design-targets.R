@@ -239,7 +239,8 @@ ssd_summarise_member <- function(dir_hc, hc_ids, path) {
 #' data <- ssd_scenario_data(ssddata::ccme_boron)
 #' coarse <- ssd_define_scenario(data, nsim = 2L, seed = 42L, nrow = c(5L, 10L))
 #' dense <- ssd_define_scenario(data, nsim = 2L, seed = 42L, nrow = c(6L, 7L, 8L))
-#' ssd_design_targets(ssd_design(coarse, dense))
+#' design <- ssd_design(coarse, dense)
+#' ssd_design_targets(design)
 #' }
 ssd_design_targets <- function(
   design,

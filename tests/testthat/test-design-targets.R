@@ -27,7 +27,8 @@ test_that("members sharing a seed must agree on hc readouts (for now)", {
   data <- ssd_scenario_data(d = numeric_dataset())
   a <- ssd_define_scenario(data, nsim = 1L, seed = 42L, ci = FALSE)
   b <- ssd_define_scenario(data, nsim = 1L, seed = 42L, ci = TRUE)
-  expect_error(ssd_design_targets(ssd_design(a = a, b = b)), "ci")
+  design <- ssd_design(a = a, b = b)
+  expect_error(ssd_design_targets(design), "ci")
 })
 
 # ---- ragged grid: shared cells computed once -------------------------------
