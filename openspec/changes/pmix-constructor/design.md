@@ -39,13 +39,21 @@ makes `ssd_pmix(f)` / `ssd_pmix(pkg::g)` robust where `min_pmix = list(f)` is no
 (e.g. fall back to value-based names). Rejected: it preserves two code paths and
 the indirect-value trap; the constructor is the single, teachable surface.
 
-### 2. Loud failure over silent fallback (BREAKING)
-The retired forms (`min_pmix` as a function or a list) abort in the user-facing
-call's context with an actionable message. This is the "old interface fails
-loudly" requirement: a pre-release tightening preferred over silently accepting an
-ambiguous input. `min_pmix` as a **character vector of names** stays valid (it is
-already explicit and value-based), so the simplest call
-(`min_pmix = "ssd_min_pmix"`, the new default) needs no constructor.
+### 2. `ssd_pmix()` only — no string magic, loud failure for everything else (BREAKING)
+`min_pmix` accepts **only** an `ssd_pmix()` collection. Every other form — a bare
+function, a (named or unnamed) plain list, **and a character vector of names** —
+aborts in the user-facing call's context with an actionable message. We
+deliberately do **not** keep a character-vector path: a name-string would have to
+be resolved to a function by lookup (in `ssdtools` or the caller's environment),
+which is exactly the "string magic" we are removing — implicit, environment-
+sensitive, and a second code path. Functions are passed directly through
+`ssd_pmix()`; to use the package default, pass the function
+(`ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)`), which is also the default
+value of the argument.
+
+*Alternative considered:* accept a character vector of names as a terse shortcut
+(the prior draft). Rejected per the above — it reintroduces string→function
+resolution and a divergent input path.
 
 ### 3. `ssd_pmix()`, not `ssd_min_pmix()` — avoid the dependency clash
 `ssdtools::ssd_min_pmix` is the function users pass *into* the collection. An
@@ -58,12 +66,13 @@ constructor is `ssd_pmix()`.
 *Alternative considered:* `ssd_min_pmix_set()` / `ssd_min_pmixes()` — wordier and
 no clearer; `ssd_pmix()` reads as "a collection of min_pmix functions".
 
-### 4. Default `min_pmix = "ssd_min_pmix"` (a character name)
+### 4. Default `min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)`
 The current default `list(ssdtools::ssd_min_pmix)` is the worst offender: an
 *unnamed* list whose name is recovered only by capturing the **default
-expression**. Switching the default to the character name `"ssd_min_pmix"`
-(resolved from `ssdtools` at construction) removes that capture entirely and is
-the minimal explicit form.
+expression**. The new default is an `ssd_pmix()` call evaluated at construction —
+an `ssdsims_pmix` **value**, named explicitly (`ssd_min_pmix =`) so no symbol
+capture, string resolution, or default-expression parsing is involved. It flows
+through the same single `ssd_pmix()`-only path as a user-supplied collection.
 
 ### 5. Independent of `distset-hc-axis`
 This change touches only `min_pmix`; `distset-hc-axis` touches only
@@ -74,11 +83,11 @@ typed-constructor philosophy and the `ssd_scenario_data()` precedent.
 
 ## Risks / Trade-offs
 
-- **Breaking existing call sites** → every `min_pmix` function/list call site in
-  examples, tests, snapshots, `scripts/`, `vignettes/`, and
+- **Breaking existing call sites** → every `min_pmix` function/list/character call
+  site in examples, tests, snapshots, `scripts/`, `vignettes/`, and
   `inst/targets-templates/` must migrate. Mitigation: pre-release; the migration
-  is mechanical (most become the terse `"ssd_min_pmix"` default), and the error
-  message names the replacement.
+  is mechanical (most just drop the argument and take the default, or wrap in
+  `ssd_pmix(...)`), and the error message names the replacement.
 - **Two pending changes touch `scenario-definition`** → `distset-hc-axis` and this
   one. Mitigation: their delta requirements are disjoint (`dists` vs `min_pmix`),
   so they compose without ordering.
@@ -86,9 +95,10 @@ typed-constructor philosophy and the `ssd_scenario_data()` precedent.
 ## Migration Plan
 
 Pre-release, no data migration (stored shape and hashes unchanged). Mechanical
-call-site sweep: `min_pmix = ssdtools::ssd_min_pmix` → `"ssd_min_pmix"` (or
-`ssd_pmix(...)`). Roll back by reverting the constructor commits; no persisted
-artefacts depend on the input surface.
+call-site sweep: `min_pmix = ssdtools::ssd_min_pmix` →
+`ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)`, or drop the argument to take
+the (equivalent) default. Roll back by reverting the constructor commits; no
+persisted artefacts depend on the input surface.
 
 ## Open Questions
 
