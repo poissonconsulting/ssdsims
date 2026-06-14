@@ -107,19 +107,31 @@ test_that("scenario-definition: nrow_max must be a whole number", {
   })
 })
 
-test_that("scenario-definition: nrow exceeding nrow_max under replace = TRUE errors", {
-  # replace = TRUE: the draw is `nrow_max` rows (the scenario's own ceiling,
-  # independent of any dataset), so an `nrow` above it is a misconfiguration.
+test_that("scenario-definition: nrow exceeding nrow_max errors, citing nrow_max", {
+  # `nrow_max` is the fixed draw size and so the universal `nrow` ceiling: an
+  # `nrow` above it can sub-truncate no draw, regardless of `replace`. The
+  # error cites `nrow_max`'s value so a raised ceiling is discoverable.
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
       ssddata::ccme_boron,
       nsim = 2L,
       seed = 1L,
       nrow = 50L,
-      replace = TRUE,
       nrow_max = 20L
     )
   })
+  # The user's report: a high `nrow` is accepted once `nrow_max` admits it.
+  expect_s3_class(
+    ssd_define_scenario(
+      ssddata::ccme_boron,
+      nsim = 1L,
+      seed = 42L,
+      nrow = c(10L, 10000L),
+      nrow_max = 10000L,
+      replace = c(TRUE, FALSE)
+    ),
+    "ssdsims_scenario"
+  )
 })
 
 test_that("scenario-definition: the default replace = TRUE frees nrow from the dataset size", {
@@ -185,6 +197,29 @@ test_that("scenario-definition: the replace = FALSE discard is per dataset", {
   fit <- ssd_scenario_fit_tasks(s)
   expect_setequal(fit$dataset[!fit$replace & fit$nrow == 35L], "big")
   expect_setequal(fit$dataset[fit$replace & fit$nrow == 35L], c("big", "small"))
+})
+
+test_that("scenario-definition: the fit task table excludes the infeasible nrow+FALSE cell end to end", {
+  # ccme_boron has 28 rows. With nrow = c(10, 20, 30) and replace = c(TRUE,
+  # FALSE), every (nrow, replace) cell is feasible except (30, FALSE) - 30 > 28
+  # so the permutation draw cannot supply it. The fit task table must carry the
+  # full cross-join minus exactly that one cell.
+  stopifnot(nrow(ssddata::ccme_boron) == 28L)
+  s <- ssd_define_scenario(
+    ssddata::ccme_boron,
+    nsim = 1L,
+    seed = 42L,
+    nrow = c(10L, 20L, 30L),
+    replace = c(TRUE, FALSE)
+  )
+  combos <- unique(ssd_scenario_fit_tasks(s)[c("nrow", "replace")])
+  key <- paste(combos$nrow, combos$replace)
+  # Full 3x2 cross-join minus exactly (nrow = 30, replace = FALSE).
+  expect_setequal(
+    key,
+    c("10 TRUE", "20 TRUE", "30 TRUE", "10 FALSE", "20 FALSE")
+  )
+  expect_false("30 FALSE" %in% key)
 })
 
 test_that("scenario-definition: an all-infeasible replace = FALSE grid aborts", {

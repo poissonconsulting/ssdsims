@@ -1,7 +1,7 @@
 ## 1. `nrow_max` setting in the constructor (`R/scenario.R`, `R/params.R`)
 
 - [x] 1.1 Add `nrow_max` to `ssd_define_scenario()` in the contiguous simulation-settings block (after `parametric`, with `proportion`/`ci`/`samples`); `chk::chk_whole_number(nrow_max)`, default `1000L`; store it on the scenario (decide top-level `scenario$nrow_max` vs `scenario$sample$nrow_max` — see design Open Questions).
-- [x] 1.2 Move/extend `nrow` validation to check each `nrow` against the effective draw size: `nrow <= nrow(data)` for `replace = FALSE`, `nrow <= nrow_max` for `replace = TRUE`; abort in the user-facing frame (`call = environment()`), keeping the existing `[5, 1000]` range check.
+- [x] 1.2 Make `nrow_max` the universal `nrow` ceiling: validate each `nrow` to lie in `[5, nrow_max]` (replacing the hard-coded `[5, 1000]` range), aborting in the user-facing frame (`call = environment()`) with a message citing `nrow_max`'s value. (Per-dataset `replace = FALSE` infeasibility within range is a silent discard, handled by `replace-default-true`.)
 - [x] 1.3 Add the `@param nrow_max` roxygen in `R/params.R`; have `print.ssdsims_scenario()` render `nrow_max` among the simulation settings.
 
 ## 2. Drop the carried columns from the task tables (`R/task-lists.R`)

@@ -83,6 +83,12 @@
 #'   [ssd_data()] collection.
 #' @param seed A scalar whole number; the scenario's RNG root. Required -
 #'   changing it fully re-roots the scenario's random-number draws.
+#' @param nrow A whole-number vector of sample sizes (the `fit`-step truncation
+#'   axis), each between 5 (the fit floor) and `nrow_max` (the shared draw size,
+#'   the universal ceiling). A value within `nrow_max` but above a dataset's row
+#'   count is still valid: its `replace = TRUE` cell draws with replacement,
+#'   while its `replace = FALSE` cell (which cannot exceed the dataset size) is
+#'   silently discarded for that dataset.
 #' @param replace A logical vector (a cross-join axis of one or two values)
 #'   specifying whether the shared `sample` draw resamples with replacement.
 #'   Defaults to `TRUE` (the standard resampling model, drawing `nrow_max`
@@ -195,21 +201,36 @@ ssd_define_scenario <- function(
   chk::chk_whole_number(nsim)
   chk::chk_gt(nsim)
 
+  # `nrow_max` is the sample-level simulation setting sizing the shared draw
+  # (not an axis): the fixed draw is `nrow_max` rows, so it is the universal
+  # ceiling for `nrow` (no `nrow` can sub-truncate a draw it exceeds). Validate
+  # it before `nrow` so the `nrow` range check can cite it. It must be at least
+  # the fit floor (5) for any `nrow` to be valid.
+  chk::chk_whole_number(nrow_max)
+  chk::chk_range(nrow_max, c(5, Inf))
+
   chk::chk_whole_numeric(nrow)
   chk::chk_not_any_na(nrow)
   chk::chk_unique(nrow)
-  chk::chk_range(nrow, c(5, 1000))
   chk::chk_length(nrow, upper = Inf)
+  # `nrow` is bounded below by the fit floor (5) and above by `nrow_max` (the
+  # fixed draw size). The message cites `nrow_max`'s value so a raised ceiling
+  # is discoverable. (Per-dataset `replace = FALSE` infeasibility - `nrow`
+  # within `nrow_max` but above a dataset's row count - is handled later by a
+  # silent discard in task expansion, not here.)
+  if (any(nrow < 5L) || any(nrow > nrow_max)) {
+    chk::abort_chk(
+      "`nrow` must have values between 5 and `nrow_max` (= ",
+      nrow_max,
+      ").",
+      call = call
+    )
+  }
 
   chk::chk_logical(replace)
   chk::chk_not_any_na(replace)
   chk::chk_unique(replace)
   chk::chk_length(replace, upper = 2L)
-
-  # `nrow_max` is the sample-level simulation setting sizing the shared draw
-  # (not an axis); each `nrow` is checked against the effective draw size
-  # below, once the datasets are validated.
-  chk::chk_whole_number(nrow_max)
 
   chk::chk_null_or(name, vld = chk::vld_string)
   # `partition_by`/`bundle` are validated and normalised below.
@@ -310,35 +331,19 @@ ssd_define_scenario <- function(
   # --- datasets: validated and retained as an ssd_data() collection ------
   datasets <- scenario_datasets(data, name, data_expr, call = call)
 
-  # --- nrow vs the effective draw size ------------------------------------
-  # The shared `sample` draw is the fixed `nrow_max` setting (not `max(nrow)`):
-  # `nrow_max` rows when `replace = TRUE`, capped at the dataset size
-  # (`min(nrow_max, nrow(data))`) when `replace = FALSE`. Two cases are hard
-  # construction errors; the partial-infeasibility case is handled by a silent
-  # per-cell discard in task expansion (`sample_task_grid()`/`fit_task_table()`),
-  # not here, so the stored scenario records the axes the user asked for.
-  #
-  # (1) `nrow > nrow_max` while `replace` includes `TRUE`: `nrow_max` is the
-  #     scenario's own draw ceiling, independent of any dataset, so exceeding it
-  #     is a misconfiguration rather than an infeasible cell.
-  if (any(replace) && any(nrow > nrow_max)) {
-    bad <- nrow[nrow > nrow_max]
-    chk::abort_chk(
-      "`nrow` value",
-      if (length(bad) > 1L) "s " else " ",
-      chk::cc(bad, conj = " and "),
-      if (length(bad) > 1L) " exceed" else " exceeds",
-      " the shared draw size: the draw is `nrow_max` (",
-      nrow_max,
-      ") rows when `replace = TRUE`.",
-      call = call
-    )
-  }
-  # (2) A `replace = FALSE`-only scenario whose every `(dataset, nrow)` cell is
-  #     infeasible (every `nrow` above every dataset's effective draw size)
-  #     would discard to nothing, so it aborts rather than producing an empty
-  #     pipeline. With `replace = TRUE` present, the with-replacement cells are
-  #     always feasible (checked above), so the grid can never be empty.
+  # --- replace = FALSE empty-grid guard -----------------------------------
+  # `nrow` is already bounded by `[5, nrow_max]` above (the `nrow_max` draw is
+  # the universal ceiling, so `nrow > nrow_max` aborted there regardless of
+  # `replace`). The remaining per-dataset `replace = FALSE` infeasibility -
+  # `nrow` within `nrow_max` but above a dataset's row count, so its permutation
+  # draw caps at `min(nrow_max, nrow(data)) = nrow(data)` - is handled by a
+  # silent per-cell discard in task expansion (`sample_task_grid()` /
+  # `fit_task_table()`), so the stored scenario records the axes the user asked
+  # for. The one case that cannot be a silent discard is a `replace = FALSE`-only
+  # scenario whose every `(dataset, nrow)` cell is infeasible: that would
+  # discard to nothing, so it aborts rather than producing an empty pipeline.
+  # With `replace = TRUE` present the with-replacement cells are always feasible,
+  # so the grid can never be empty.
   if (!any(replace)) {
     any_feasible <- any(vapply(
       names(datasets),

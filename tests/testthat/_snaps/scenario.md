@@ -38,14 +38,14 @@
       Error in `ssd_define_scenario()`:
       ! `nrow_max` must be a whole number (non-missing integer scalar or double equivalent).
 
-# scenario-definition: nrow exceeding nrow_max under replace = TRUE errors
+# scenario-definition: nrow exceeding nrow_max errors, citing nrow_max
 
     Code
       ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 50L,
-      replace = TRUE, nrow_max = 20L)
+      nrow_max = 20L)
     Condition
       Error in `ssd_define_scenario()`:
-      ! `nrow` value 50 exceeds the shared draw size: the draw is `nrow_max` (20) rows when `replace = TRUE`.
+      ! `nrow` must have values between 5 and `nrow_max` (= 20).
 
 # scenario-definition: an all-infeasible replace = FALSE grid aborts
 
@@ -292,7 +292,7 @@
       ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 4L)
     Condition
       Error in `ssd_define_scenario()`:
-      ! `nrow` must be between 5 and 1000, not 4.
+      ! `nrow` must have values between 5 and `nrow_max` (= 1000).
 
 ---
 
@@ -300,7 +300,7 @@
       ssd_define_scenario(ssddata::ccme_boron, nsim = 2L, seed = 1L, nrow = 1001L)
     Condition
       Error in `ssd_define_scenario()`:
-      ! `nrow` must be between 5 and 1000, not 1001.
+      ! `nrow` must have values between 5 and `nrow_max` (= 1000).
 
 # scenario-definition: print is stable for a single dataset
 

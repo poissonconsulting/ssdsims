@@ -31,9 +31,10 @@ churn.
   simulation settings of `ssd_define_scenario()` — leading the block as the
   sample-level setting, before `dists` (fit) and `est_method`/`proportion` (hc)
   and ahead of `ci` (the draw happens regardless of `ci`; cf. the #139 ci-gating
-  grouping). `nrow` is validated at construction against the effective draw size
-  (`nrow <= nrow(data)` for `replace = FALSE`, `nrow <= nrow_max` for
-  `replace = TRUE`).
+  grouping). `nrow_max` is the universal ceiling for `nrow`: `nrow` is validated
+  at construction to lie in `[5, nrow_max]`, aborting with a message that cites
+  `nrow_max`'s value. (Per-dataset `replace = FALSE` infeasibility *within* that
+  range is a silent discard, governed by the `replace-default-true` change.)
 - **Direction B — a task row carries only its identity.** The `sample` task
   table drops the `n_max` column and the `hc` task table drops the `ci` column;
   both values move into the scenario slice and are read there by the runners

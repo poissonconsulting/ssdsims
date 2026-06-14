@@ -47,7 +47,12 @@ changing it fully re-roots the scenario's random-number draws.}
 overriding the derived name. Must not be combined with a named list or an
 \code{\link[=ssd_data]{ssd_data()}} collection.}
 
-\item{nrow}{A positive whole number of the minimum number of non-missing rows.}
+\item{nrow}{A whole-number vector of sample sizes (the \code{fit}-step truncation
+axis), each between 5 (the fit floor) and \code{nrow_max} (the shared draw size,
+the universal ceiling). A value within \code{nrow_max} but above a dataset's row
+count is still valid: its \code{replace = TRUE} cell draws with replacement,
+while its \code{replace = FALSE} cell (which cannot exceed the dataset size) is
+silently discarded for that dataset.}
 
 \item{replace}{A logical vector (a cross-join axis of one or two values)
 specifying whether the shared \code{sample} draw resamples with replacement.
