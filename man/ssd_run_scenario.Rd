@@ -155,9 +155,9 @@ parameters at the boundary should be considered to have converged (default = TRU
 
 \item{min_pmix}{A number between 0 and 0.5 specifying the minimum proportion in mixture models.}
 
-\item{range_shape1}{A numeric vector of length two of the lower and upper bounds for the shape1 parameter for the burrIII3 distribution.}
+\item{range_shape1}{A numeric vector of length two of the lower and upper bounds for the shape1 parameter.}
 
-\item{range_shape2}{A numeric vector of length two of the lower and upper bounds for the shape2 parameter for the burrIII3 distribution.}
+\item{range_shape2}{shape2 parameter.}
 
 \item{proportion}{A numeric vector of proportion values to estimate hazard concentrations for.}
 

@@ -90,12 +90,14 @@ the standalone run: combining changes only *addressing* (target names and the
 results tree), never a task's reproducible `(seed, primer)`.
 
 ::: callout-note
-## Safe but recomputing
+## Cache-preserving upgrade
 
-The design tree gains a `seed=<value>` level the standalone `layout=` tree
-lacks (`results/seed=42/layout=.../...`), so the *first* design run recomputes
-into the new tree. Nothing is re-baselined --- the numbers are identical --- it
-is a one-time relocation. From then on, growing the design is incremental.
+The upgrade reuses the standalone run's shards --- it recomputes **nothing**.
+Both factories root shards under the same seed-/layout-keyed tree
+(`results/seed=42/layout=.../...`, from `scenario_results_dir()`) and weave the
+`seed` into the same target names, so a design of one mints byte-identical
+targets and paths to the standalone run. Re-running into the same store is a full
+cache hit; only the per-member and combined `summary` targets are new.
 :::
 
 ## Refine: add a denser member

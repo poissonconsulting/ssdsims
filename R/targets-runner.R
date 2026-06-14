@@ -69,12 +69,18 @@ decode_obj <- function(s) {
   unserialize(charToRaw(s))
 }
 
-#' Layout-keyed Results Root for a Scenario
+#' Seed- and Layout-keyed Results Root for a Scenario
 #'
-#' Returns `<root>/layout=<hash>`, where the hash is derived from the scenario's
-#' `partition_by`. A step's Hive shard path depth and axes are a function of
-#' `partition_by`/`bundle`, so writing two different layouts into one root would
-#' leave shards of *different granularity* side by side - and the depth-agnostic
+#' Returns `<root>/seed=<value>/layout=<hash>`, where the hash is derived from the
+#' scenario's `partition_by`. The leading `seed=<value>` level isolates each
+#' scenario's RNG streams (scenarios that differ only in `seed` share no draws, so
+#' they never mix shards) and - crucially - makes a single-scenario run and a
+#' design-of-one (`ssd_design_targets(ssd_design(scenario))`) address shards
+#' **identically**, so wrapping a scenario into a design reuses its existing shards
+#' rather than recomputing them. A step's Hive shard path depth and axes are a
+#' function of `partition_by`/`bundle`, so writing two different layouts into one
+#' root would leave shards of *different granularity* side by side - and the
+#' depth-agnostic
 #' glob the readers use (`<step>/**/part.parquet`) would then union stale and
 #' current shards, double-counting tasks. Keying the results root on the layout
 #' isolates each `partition_by` into its own subtree: re-running a scenario with
@@ -88,7 +94,8 @@ decode_obj <- function(s) {
 #'
 #' @inheritParams scenario_dataset
 #' @param root The results root directory (default `"results"`).
-#' @return The layout-keyed path `file.path(root, paste0("layout=", <hash>))`.
+#' @return The seed- and layout-keyed path
+#'   `file.path(root, paste0("seed=", <seed>), paste0("layout=", <hash>))`.
 #' @seealso [ssd_run_scenario_shards()], [ssd_summarise()].
 #' @export
 #' @examples
@@ -100,6 +107,7 @@ scenario_results_dir <- function(scenario, root = "results") {
   chk::chk_string(root)
   file.path(
     root,
+    paste0("seed=", scenario$seed),
     paste0("layout=", substr(rlang::hash(scenario$partition_by), 1L, 12L))
   )
 }
@@ -755,8 +763,11 @@ edge_block <- function(names) {
 #'   `cue` to be passed **by name** (`rlang::check_dots_empty()` aborts on a
 #'   positional or misspelled argument), since `root` and `upload` are both
 #'   path-shaped and easy to transpose.
-#' @param root The results root the shards and summary are written under;
-#'   defaults to the per-layout [scenario_results_dir()].
+#' @param root The **base** results directory (default `"results"`). The shards
+#'   and summary are written under the seed-/layout-keyed
+#'   [scenario_results_dir()]`(scenario, root)`, so a single-scenario run and a
+#'   design-of-one address shards identically (a cache-free upgrade to
+#'   [ssd_design_targets()]).
 #' @param upload An optional upload destination (the remote-destination sibling
 #'   of `root`) from [ssd_upload_azure()] or [ssd_upload_dryrun()], or `NULL`
 #'   (default) for no upload targets. See the section above.
@@ -784,7 +795,7 @@ edge_block <- function(names) {
 ssd_scenario_targets <- function(
   scenario,
   ...,
-  root = scenario_results_dir(scenario),
+  root = "results",
   upload = NULL,
   cue = NULL
 ) {
@@ -811,16 +822,22 @@ ssd_scenario_targets <- function(
   # before `tar_make()`); a missing credential still fails loud per-shard at
   # `ssd_upload_shard()` time as a backstop (section 6.1).
 
-  sample_dir <- file.path(root, "sample")
-  fit_dir <- file.path(root, "fit")
-  hc_dir <- file.path(root, "hc")
-  summary_path <- file.path(root, "summary.parquet")
+  # `root` is the **base**; the shards and summary live under the seed-/layout-
+  # keyed `scenario_results_dir(scenario, root)`, so a single-scenario run and a
+  # design-of-one (`ssd_design_targets()`, which roots each seed group the same
+  # way) address shards identically - wrapping a scenario into a design reuses its
+  # shards (no recompute).
+  results_dir <- scenario_results_dir(scenario, root)
+  sample_dir <- file.path(results_dir, "sample")
+  fit_dir <- file.path(results_dir, "fit")
+  hc_dir <- file.path(results_dir, "hc")
+  summary_path <- file.path(results_dir, "summary.parquet")
   # When the scenario retains the bootstrap draws (`samples = TRUE`), also fan in
   # a full summary that keeps the `dists`/`samples` list-columns the compact
   # summary projects out; otherwise those draws are empty and the second file
   # would carry nothing extra (TARGETS-DESIGN.md §12 `dual-summary-outputs`).
   summary_samples_path <- if (isTRUE(scenario$hc$samples)) {
-    file.path(root, "summary-samples.parquet")
+    file.path(results_dir, "summary-samples.parquet")
   } else {
     NULL
   }
@@ -828,6 +845,14 @@ ssd_scenario_targets <- function(
   sample_shards <- ssd_scenario_sample_shards(scenario)
   fit_shards <- ssd_scenario_fit_shards(scenario)
   hc_shards <- ssd_scenario_hc_shards(scenario)
+
+  # The `seed` is woven into each step's target names (and the `seed=` results
+  # level via `root`), so a single-scenario run and a design-of-one
+  # (`ssd_design_targets()`) mint byte-identical target names and shard paths -
+  # wrapping a scenario into a design then reuses its shards (no recompute).
+  sample_shards$seed <- scenario$seed
+  fit_shards$seed <- scenario$seed
+  hc_shards$seed <- scenario$seed
 
   # One `tar_map` per step: a named, format="file", error="null" target per
   # `partition_by` path cell. `tar_target_raw()` + `rlang::expr()` injects the
@@ -856,7 +881,7 @@ ssd_scenario_targets <- function(
       return(tarchetypes::tar_map(
         values = shards,
         names = tidyselect::all_of(
-          scenario_partition_axes(scenario, step)$path
+          c("seed", scenario_partition_axes(scenario, step)$path)
         ),
         step_target
       ))
@@ -873,7 +898,9 @@ ssd_scenario_targets <- function(
     )
     tarchetypes::tar_map(
       values = shards,
-      names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
+      names = tidyselect::all_of(
+        c("seed", scenario_partition_axes(scenario, step)$path)
+      ),
       step_target,
       upload_target
     )

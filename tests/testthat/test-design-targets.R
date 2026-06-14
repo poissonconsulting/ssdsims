@@ -88,7 +88,15 @@ test_that("design per-task hc results equal a standalone scenario run", {
       },
       args = list(d = dir)
     )
-    ssd_read_parquet(file.path(dir, "results", "summary.parquet"))
+    # The standalone summary lives under its `seed=`/`layout=` tree; the design's
+    # combined summary at the base root. Find the (single) `summary.parquet`.
+    f <- list.files(
+      file.path(dir, "results"),
+      pattern = "^summary\\.parquet$",
+      recursive = TRUE,
+      full.names = TRUE
+    )
+    ssd_read_parquet(f[[1L]])
   }
 
   dir1 <- withr::local_tempdir()
@@ -124,6 +132,46 @@ test_that("design per-task hc results equal a standalone scenario run", {
   )
   expect_gt(nrow(m), 0L)
   expect_equal(m$est_alone, m$est_design)
+})
+
+# ---- cache-free upgrade: standalone -> design of one -----------------------
+
+test_that("upgrading a standalone scenario to a design of one reuses its shards", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  withr::local_dir(dir)
+  saveRDS(numeric_dataset(), "data.rds")
+
+  preamble <- c(
+    "library(targets); library(tarchetypes); library(ssdsims)",
+    "data <- ssd_scenario_data(d = readRDS('data.rds'))",
+    "pb <- list(sample = c('dataset','sim'), fit = c('dataset','sim'), hc = c('dataset','sim'))",
+    "scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L,",
+    "  nrow = c(5L, 10L), dists = ssd_distset(lnorm = 'lnorm'), partition_by = pb)"
+  )
+
+  # 1. standalone run into `results`
+  writeLines(
+    c(preamble, "ssd_scenario_targets(scenario, root = 'results')"),
+    "_targets.R"
+  )
+  tar_make_local()
+
+  # 2. swap to a design of one (same scenario, same root, same `_targets/` store)
+  writeLines(
+    c(
+      preamble,
+      "design <- ssd_design(scenario)",
+      "ssd_design_targets(design, root = 'results')"
+    ),
+    "_targets.R"
+  )
+  outdated <- tar_outdated_local()
+
+  # every sample/fit/hc shard target is cached - the design addresses them
+  # identically (same `seed=`/`layout=` root and `seed`-woven names). Only the
+  # summary targets (new/changed command) are outdated.
+  expect_length(grep("_step_", outdated), 0L)
 })
 
 # ---- distinct seeds: separate trees, no sharing ----------------------------
