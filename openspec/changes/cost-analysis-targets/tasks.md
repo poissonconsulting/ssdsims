@@ -1,14 +1,14 @@
 ## 1. Timing instrumentation (fit/hc runners + baseline)
 
-- [ ] 1.1 Bracket each task body in `ssd_run_fit_step()` and `ssd_run_hc_step()`
+- [x] 1.1 Bracket each task body in `ssd_run_fit_step()` and `ssd_run_hc_step()`
   with `Sys.time()` and write `.start`/`.end` (UTC, Parquet TIMESTAMP) and
   `.host` (`cost_cpu_info()`) columns into the shard rows; on hc the values
   repeat across a task's `proportion` rows. `sample` runner untouched.
-- [ ] 1.2 Add the same columns to `ssd_run_scenario_baseline()`'s in-memory
+- [x] 1.2 Add the same columns to `ssd_run_scenario_baseline()`'s in-memory
   `fit`/`hc` tibbles (legacy `ssd_*_sims` untouched).
-- [ ] 1.3 Keep `.start`/`.end`/`.host` in both `ssd_summarise()` outputs while
+- [x] 1.3 Keep `.start`/`.end`/`.host` in both `ssd_summarise()` outputs while
   still projecting out `dists`/`samples` from the compact summary.
-- [ ] 1.4 Migrate the byte-identity oracle, re-layout, and atomic-rewrite tests
+- [x] 1.4 Migrate the byte-identity oracle, re-layout, and atomic-rewrite tests
   to result-column comparisons (timing columns excluded, joined on `<step>_id`);
   add a test that `sample` shards stay file-level byte-identical and that
   fit/hc result columns are unchanged by instrumentation; update shard-schema

@@ -310,6 +310,9 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   local_duckplyr_config()
   local_dqrng_backend()
+  # Per-task timing rides in-band on the shard rows (cost-analysis): the host is
+  # constant for the run, the per-task `.start`/`.end` bracket the task body only.
+  host <- cost_cpu_info()
   # Read each distinct parent `sample` shard once, then isolate each task's draw
   # in memory by `sample_id` (tasks in this shard may span several sample shards).
   sample_tbl <- read_parent_shards(tasks, scenario, "sample", sample_dir)
@@ -328,6 +331,7 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
     draw$.sample_id <- NULL
     draw$.row <- NULL
     data <- utils::head(draw, t$nrow)
+    t_start <- utc_now()
     fit <- fit_data_task_primer(
       data = data,
       scenario = scenario,
@@ -341,7 +345,14 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
       seed = t$seed,
       primer = t$primer[[1L]]
     )
-    rows[[i]] <- tibble::tibble(fit_id = t$fit_id, fit_blob = encode_obj(fit))
+    t_end <- utc_now()
+    rows[[i]] <- tibble::tibble(
+      fit_id = t$fit_id,
+      fit_blob = encode_obj(fit),
+      .start = t_start,
+      .end = t_end,
+      .host = host
+    )
   }
   out <- file.path(out_dir, shard_path(tasks, scenario, "fit"), "part.parquet")
   ssd_write_parquet(dplyr::bind_rows(rows), out)
@@ -394,6 +405,10 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   local_duckplyr_config()
   local_dqrng_backend()
+  # Per-task timing rides in-band on the hc rows (cost-analysis): the host is
+  # constant for the run; `.start`/`.end` bracket each task body and repeat
+  # across that task's `proportion` rows.
+  host <- cost_cpu_info()
   # Read each distinct parent `fit` shard once, then isolate each task's fit in
   # memory by `fit_id` (an hc shard typically spans several fit shards).
   fit_tbl <- read_parent_shards(tasks, scenario, "fit", fit_dir)
@@ -423,6 +438,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   for (i in seq_len(nrow(tasks))) {
     t <- tasks[i, ]
     fits <- decode_fit(t$fit_id)
+    t_start <- utc_now()
     hc <- hc_data_task_primer(
       fits = fits,
       proportion = scenario$hc$proportion,
@@ -438,6 +454,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
       seed = t$seed,
       primer = t$primer[[1L]]
     )
+    t_end <- utc_now()
     hc <- tibble::as_tibble(hc)
     # An empty subset (all members dropped from the union fit) emits no rows for
     # this `(cell, distset)` - the survivor model - so this task contributes
@@ -450,6 +467,10 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
     # The `distset` column disambiguates rows within a bundled shard, mirroring
     # the `distset=<name>` path segment when it is promoted to a path axis.
     hc$distset <- t$distset
+    # Per-task timing, repeated across this task's `proportion` rows.
+    hc$.start <- t_start
+    hc$.end <- t_end
+    hc$.host <- host
     rows[[i]] <- hc
   }
   out <- file.path(out_dir, shard_path(tasks, scenario, "hc"), "part.parquet")

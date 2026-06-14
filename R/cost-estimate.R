@@ -294,6 +294,16 @@ calibrate_nrow_factor <- function(sweep, coefficients) {
   )
 }
 
+# Current instant stamped UTC. `Sys.time()` carries an empty `tzone`, which the
+# Parquet writer's DuckDB conversion refuses; an explicit UTC zone is accepted and
+# is the contract for the in-band `.start`/`.end` timing columns (the instant is
+# unchanged - only its declared zone).
+utc_now <- function() {
+  t <- Sys.time()
+  attr(t, "tzone") <- "UTC"
+  t
+}
+
 # CPU description from /proc/cpuinfo (Linux) with a portable fallback; no
 # benchmarkme dependency.
 cost_cpu_info <- function() {
