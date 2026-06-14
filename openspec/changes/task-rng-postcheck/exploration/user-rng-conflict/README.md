@@ -46,7 +46,12 @@ Rscript case4-resolution-probe.R randtoolbox   # binds randtoolbox, segfault
 Rscript case5-state-witness.R              # the detection mechanism (basis of the spec)
 Rscript case6-witness-vs-hijack.R          # witness catches a hijack the cheap probe misses
 Rscript case7-who-owns-rng.R               # name the culprit + list providers (for the error message)
+Rscript case8-task-brackets.R              # entry+exit brackets in one wrapper, success-path-gated
 ```
+
+`case8` is self-contained (only `dqrng`) and needs no second user-RNG package:
+it models the parent change's per-task wiring (`local_dqrng_state()`) and tears
+the backend down via base `RNGkind()`, so it runs in a single process.
 
 Tested with R 4.5.3, dqrng 0.4.1, randtoolbox 2.0.5 (rngWELL 0.10-10).
 
@@ -70,14 +75,16 @@ load-time-inert design is avoiding: a second user-RNG package in the same
 session can hijack base R's `runif()` or crash it, depending purely on load
 order.
 
-Because these findings make clear that *loading* a user-RNG package is itself
-a potentially destructive act, the parent change goes further: `dqrng` moves to
-**`Suggests`** and ssdsims uses it **only when the caller has already loaded
-it** (gated on `isNamespaceLoaded("dqrng")` + version `>= 0.4.1`, never
-`requireNamespace()`/`dqrng::`, which would load it). When the backend is
-required but dqrng is not loaded, ssdsims **aborts** with guidance to
-`library(dqrng)` rather than loading it or silently falling back. See
-`../../proposal.md` and `../../design.md`.
+These findings make clear that *loading* a user-RNG package is a process-global
+act and that base R's last-loaded-wins rule means ssdsims **cannot prevent** a
+co-loaded package from taking the slot — so being a "good citizen" (not loading
+dqrng) would buy politeness, not safety. The parent change therefore keeps
+`dqrng` in **`Imports`** (always loaded, so the witness can always run) and
+invests in *detection* instead: a runtime witness that refuses to emit
+silently-wrong draws once a hijack or teardown has happened. (An earlier
+revision that moved dqrng to `Suggests` with a `dqrng_usable()` gate was
+dropped as not worth the friction; see the *keep dqrng in Imports* decision in
+`../../design.md`.)
 
 ## Mitigations
 
@@ -107,8 +114,13 @@ stopifnot(!identical(s0, s1))  # dqrng advanced  <=>  dqrng is the bound generat
 ```
 
 If a foreign RNG holds the slot, the draw advances *its* state and dqrng's
-stays frozen, so the witness is `FALSE` and the check aborts. This is the basis
-for the parent change's per-task **postcondition**: each RNG-consuming task
-(`sample`/`fit`/`hc`) runs this witness when it *ends*, certifying that the
-draws it just made actually came from dqrng's pcg64. See `../../proposal.md`
-and `../../design.md`.
+stays frozen, so the witness is `FALSE` and the check aborts. The parent change
+wires this as **both** a per-task precondition and postcondition, both inside
+`local_dqrng_state()` (`case8-task-brackets.R`): the witness runs on **entry**
+(a task refuses to *start* on a corrupted backend) and again on **exit** via the
+`withr::defer()` the wrapper already registers. The exit check is gated to the
+**success path** with `base::returnValue()` so a failing task body's own error
+is never masked by a witness abort during unwinding. `case8` exercises all of
+this — healthy, torn-down-at-entry, torn-down-before-return, body-errors, and
+reproducibility — in one self-contained process. See `../../proposal.md` and
+`../../design.md`.
