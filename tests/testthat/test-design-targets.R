@@ -31,6 +31,62 @@ test_that("members sharing a seed must agree on hc readouts (for now)", {
   expect_error(ssd_design_targets(design), "ci")
 })
 
+# ---- upload shape (no pipeline) --------------------------------------------
+
+flat_target_names <- function(x) {
+  if (inherits(x, "tar_target")) {
+    return(x$settings$name)
+  }
+  if (is.list(x)) {
+    return(unlist(lapply(x, flat_target_names), use.names = FALSE))
+  }
+  character(0L)
+}
+
+test_that("a dry-run upload pairs one upload target per shard, cell-addressed", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
+  data <- ssd_scenario_data(d = numeric_dataset())
+  coarse <- ssd_define_scenario(
+    data,
+    nsim = 2L,
+    seed = 42L,
+    nrow = c(5L, 10L),
+    dists = ssd_distset(lnorm = "lnorm"),
+    partition_by = design_pb
+  )
+  dense <- ssd_define_scenario(
+    data,
+    nsim = 2L,
+    seed = 42L,
+    nrow = c(6L, 7L),
+    dists = ssd_distset(lnorm = "lnorm"),
+    partition_by = design_pb
+  )
+  design <- ssd_design(coarse = coarse, dense = dense)
+
+  names <- flat_target_names(ssd_design_targets(
+    design,
+    upload = ssd_upload_dryrun()
+  ))
+  for (step in c("sample", "fit", "hc")) {
+    n_step <- length(grep(paste0("^", step, "_step_"), names))
+    expect_gt(n_step, 0L)
+    # one upload target per (deduplicated) shard
+    expect_length(grep(paste0("^upload_", step, "_"), names), n_step)
+  }
+  # shard and upload targets are addressed by cell, never by a member (scenario)
+  # name - only the per-member `summary_<name>` targets carry a member name.
+  shard_upload <- grep("^(sample|fit|hc)_step_|^upload_", names, value = TRUE)
+  expect_false(any(grepl("coarse|dense", shard_upload)))
+
+  # with no upload, no upload targets
+  expect_length(
+    grep("^upload_", flat_target_names(ssd_design_targets(design))),
+    0L
+  )
+})
+
 # ---- ragged grid: shared cells computed once -------------------------------
 
 test_that("a ragged design shares cells and unions members into one summary", {
