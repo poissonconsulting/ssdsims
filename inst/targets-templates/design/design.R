@@ -7,27 +7,38 @@
 # `scenario` identity column. Edit to taste.
 library(ssdsims)
 
-data <- ssd_scenario_data(ssddata::ccme_boron)
-
-# A coarse grid everywhere ...
-coarse <- ssd_define_scenario(
-  data,
-  nsim = 2L,
-  seed = 42L,
-  nrow = c(5L, 10L, 20L),
-  dists = ssd_distset(lnorm = "lnorm")
+# shard on (dataset, sim) so each (dataset, sim) is its own cell
+pb <- list(
+  sample = c("dataset", "sim"),
+  fit = c("dataset", "sim"),
+  hc = c("dataset", "sim")
 )
 
-# ... plus a dense refinement over just the extra `nrow` values. It shares the
-# `seed`, dataset, and distributions with `coarse`, so it reuses every `sample`
-# shard (the draw does not depend on `nrow`) and only its new `nrow` cells are
-# extra work - the irregular (ragged) grid.
-dense <- ssd_define_scenario(
-  data,
-  nsim = 2L,
+# A coarse grid over BOTH datasets (a broad, shallow sweep) ...
+coarse <- ssd_define_scenario(
+  ssd_scenario_data(
+    boron = ssddata::ccme_boron,
+    cadmium = ssddata::ccme_cadmium
+  ),
+  nsim = 5L,
   seed = 42L,
-  nrow = c(12L, 14L, 16L, 18L),
-  dists = ssd_distset(lnorm = "lnorm")
+  nrow = c(5L, 10L, 20L),
+  dists = ssd_distset(lnorm = "lnorm"),
+  partition_by = pb
+)
+
+# ... plus a dense ZOOM into one region: only `boron`, more replicates, and a
+# finer `nrow` sweep. The union is ragged - `boron` sims 1-5 are shared with
+# `coarse` (built once, their `nrow` tasks merged), `cadmium` stays coarse-only,
+# and `boron` sims 6-15 are the dense-only refinement. `boron` must be identical
+# in both members (the consistency contract); `cadmium` appears only in `coarse`.
+dense <- ssd_define_scenario(
+  ssd_scenario_data(boron = ssddata::ccme_boron),
+  nsim = 15L,
+  seed = 42L,
+  nrow = c(8L, 12L, 16L),
+  dists = ssd_distset(lnorm = "lnorm"),
+  partition_by = pb
 )
 
 # `ssd_design()` validates the collection (names must be unique and safe; a name

@@ -206,10 +206,13 @@ The factory performs no network I/O.
 
 ## Migration Plan
 
-Additive only: two new exports, no signature or behaviour change to existing
-functions, no re-baselining (per-task results unchanged). Promotion of a flat
-`ssd_scenario_targets()` run into a design recomputes (it gains the `seed=` level),
-as documented. Nothing to roll back beyond reverting the commit.
+Two new exports, and the single-scenario tree gains a `seed=` level
+(`scenario_results_dir()` now keys on `seed=`/`layout=`, and `root` is the base in
+both factories) — a one-time re-path of an existing `layout=`-only store, with no
+re-baselining (per-task results unchanged). With both factories rooting and naming
+shards identically, promoting a flat `ssd_scenario_targets()` run into a design is
+**cache-preserving** (the design reuses every existing shard; only the summary
+targets are new). Nothing to roll back beyond reverting the commit.
 
 ## Open Questions
 
