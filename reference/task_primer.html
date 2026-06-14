@@ -105,18 +105,18 @@ is part of the <code>task-tables</code> caller contract below).</p>
 contract assembled where <code>params</code> is built (<code>task-tables</code>, over the
 <code>task-lists</code> tables). Per the three-step model the RNG-consuming steps each
 take a primer over their task identity:</p><ul><li><p><strong>sample</strong> – keyed <code>(dataset, sim, replace)</code> only. <code>nrow</code> is deliberately
-absent: every <code>nrow</code> shares one <code>n_max</code>-row draw that the <code>fit</code> step
-truncates inline (<code>head(sample, nrow)</code>, RNG-free, no separate primer), so
-excluding <code>nrow</code> is load-bearing for the sub-truncation property
-(<code>TARGETS-DESIGN.md</code> §5).</p></li>
+absent: every <code>nrow</code> shares one draw (sized by the scenario's <code>nrow_max</code>
+setting) that the <code>fit</code> step truncates inline (<code>head(sample, nrow)</code>,
+RNG-free, no separate primer), so excluding <code>nrow</code> is load-bearing for the
+sub-truncation property (<code>TARGETS-DESIGN.md</code> §5).</p></li>
 <li><p><strong>fit</strong> – the parent <code>sample</code> identity plus <code>nrow</code> and the fit-grid row
 (<code>rescale</code>, <code>computable</code>, <code>at_boundary_ok</code>, <code>min_pmix</code> name,
 <code>range_shape1</code>, <code>range_shape2</code>). <code>nrow</code> IS part of the fit primer: a fit on
 a different truncation is a genuinely different computation.</p></li>
 <li><p><strong>hc</strong> – the parent <code>fit</code> identity plus the hc-grid row (<code>nboot</code>,
-<code>est_method</code>, <code>ci_method</code>, <code>parametric</code>). <code>ci</code> is a scalar hc flag applied
-uniformly, not part of the task identity, so it is a carried column rather
-than a primer field.</p></li>
+<code>est_method</code>, <code>ci_method</code>, <code>parametric</code>). <code>ci</code> is a scalar hc setting
+applied uniformly and read from the scenario, not part of the task
+identity, so it is never a primer field (nor a task-row column).</p></li>
 </ul><p>Function-valued parameters (e.g. <code>min_pmix</code>) MUST be referenced <strong>by name</strong>,
 not by function value, so a recompile or JIT does not move a task's primer.</p>
     </div>

@@ -55,10 +55,11 @@ that step's cross-join.
 - `ssd_scenario_sample_tasks()`: Derive just the `sample` task table:
   one row per cell of the cross-join of the scenario's dataset names,
   replicate index (`1:nsim`), and `replace` values, keyed by
-  `sample_id`. Each row is the single random draw of `n_max = max(nrow)`
-  rows that every `nrow` value sub-truncates (`TARGETS-DESIGN.md`
-  section 5), so `nrow` is **not** a sample axis - the draw is shared -
-  and `n_max` is carried as an ordinary integer column.
+  `sample_id`. Each row is the single random draw that every `nrow`
+  value sub-truncates (`TARGETS-DESIGN.md` section 5), so `nrow` is
+  **not** a sample axis - the draw is shared. The draw size is the
+  scenario's `nrow_max` setting, resolved by the runner against each
+  dataset, not a row column: the table carries only the task identity.
 
 - `ssd_scenario_fit_tasks()`: Derive just the `fit` task table: cross
   each sample-task identity (`dataset`, `sim`, `replace`) with the
@@ -76,14 +77,15 @@ that step's cross-join.
   fit-task identity with each row of the scenario's `hc` argument grid
   (`nboot`, `ci_method`, `parametric`). The scenario's scalar `ci` flag
   and the `est_method` setting are applied uniformly to every hc row -
-  neither is a cross-join axis; `ci` rides as a carried column and every
-  requested `est_method` is summarised within each task from its single
-  bootstrap sample set. When `ci = FALSE` the bootstrap-only knobs
-  (`nboot`, `ci_method`, `parametric`) are canonically `NA` and there is
-  no fan-out axis, so the grid is exactly one hc row per fit task; when
-  `ci = TRUE` the grid fans out across `nboot x ci_method x parametric`.
-  Each row carries an `hc_id` primary key and a `fit_id` foreign key
-  referencing its parent fit task.
+  neither is a cross-join axis nor an emitted column; the runners read
+  `ci` from the scenario and every requested `est_method` is summarised
+  within each task from its single bootstrap sample set. When
+  `ci = FALSE` the bootstrap-only knobs (`nboot`, `ci_method`,
+  `parametric`) are canonically `NA` and there is no fan-out axis, so
+  the grid is exactly one hc row per fit task; when `ci = TRUE` the grid
+  fans out across `nboot x ci_method x parametric`. Each row carries an
+  `hc_id` primary key and a `fit_id` foreign key referencing its parent
+  fit task.
 
 ## Examples
 
@@ -100,36 +102,36 @@ tasks$hc
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 3
-#> # A tibble: 3 × 16
+#> # A tibble: 3 × 15
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>   <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-#> 1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 2 ccme_boron     2 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 3 ccme_boron     3 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
+#> 1 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 2 ccme_boron     2 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 3 ccme_boron     3 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 ssd_scenario_tasks(scenario, "hc")
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 3
-#> # A tibble: 3 × 16
+#> # A tibble: 3 × 15
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>   <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-#> 1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 2 ccme_boron     2 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 3 ccme_boron     3 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
+#> 1 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 2 ccme_boron     2 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 3 ccme_boron     3 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 ssd_scenario_sample_tasks(scenario)
 #> <ssdsims_tasks: sample>
 #>   axes:  dataset, sim, replace
 #>   tasks: 3
-#> # A tibble: 3 × 5
-#>   dataset      sim replace n_max sample_id                             
-#>   <chr>      <int> <lgl>   <int> <chr>                                 
-#> 1 ccme_boron     1 FALSE       6 dataset=ccme_boron/sim=1/replace=FALSE
-#> 2 ccme_boron     2 FALSE       6 dataset=ccme_boron/sim=2/replace=FALSE
-#> 3 ccme_boron     3 FALSE       6 dataset=ccme_boron/sim=3/replace=FALSE
+#> # A tibble: 3 × 4
+#>   dataset      sim replace sample_id                            
+#>   <chr>      <int> <lgl>   <chr>                                
+#> 1 ccme_boron     1 TRUE    dataset=ccme_boron/sim=1/replace=TRUE
+#> 2 ccme_boron     2 TRUE    dataset=ccme_boron/sim=2/replace=TRUE
+#> 3 ccme_boron     3 TRUE    dataset=ccme_boron/sim=3/replace=TRUE
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
   data,
@@ -144,12 +146,12 @@ ssd_scenario_fit_tasks(scenario)
 #> # A tibble: 6 × 12
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>   <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-#> 1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 2 ccme_boron     1 FALSE       6 TRUE    FALSE      TRUE           ssd_min_pmix
-#> 3 ccme_boron     2 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 4 ccme_boron     2 FALSE       6 TRUE    FALSE      TRUE           ssd_min_pmix
-#> 5 ccme_boron     3 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 6 ccme_boron     3 FALSE       6 TRUE    FALSE      TRUE           ssd_min_pmix
+#> 1 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 2 ccme_boron     1 TRUE        6 TRUE    FALSE      TRUE           ssd_min_pmix
+#> 3 ccme_boron     2 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 4 ccme_boron     2 TRUE        6 TRUE    FALSE      TRUE           ssd_min_pmix
+#> 5 ccme_boron     3 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 6 ccme_boron     3 TRUE        6 TRUE    FALSE      TRUE           ssd_min_pmix
 #> # ℹ 4 more variables: range_shape1 <list>, range_shape2 <list>, fit_id <chr>,
 #> #   sample_id <chr>
 data <- ssd_scenario_data(ssddata::ccme_boron)
@@ -164,13 +166,13 @@ ssd_scenario_hc_tasks(scenario)
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 4
-#> # A tibble: 4 × 16
+#> # A tibble: 4 × 15
 #>   dataset      sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>   <chr>      <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-#> 1 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 2 ccme_boron     1 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 3 ccme_boron     2 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 4 ccme_boron     2 FALSE       6 FALSE   FALSE      TRUE           ssd_min_pmix
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
+#> 1 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 2 ccme_boron     1 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 3 ccme_boron     2 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 4 ccme_boron     2 TRUE        6 FALSE   FALSE      TRUE           ssd_min_pmix
+#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 ```

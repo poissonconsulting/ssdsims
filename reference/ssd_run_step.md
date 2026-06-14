@@ -62,9 +62,11 @@ The shard's Parquet path (the `format = "file"` contract).
 - `ssd_run_sample_step()`: Run the `sample` tasks: read each task's
   dataset off the scenario via
   [`scenario_dataset()`](https://poissonconsulting.github.io/ssdsims/reference/scenario_dataset.md),
-  draw `n_max` rows through `sample_data_task_primer()`, and tag each
-  draw with its `sample_id` and a `.row` order index so a downstream
-  `fit` shard can isolate and re-order it.
+  draw the effective draw size - the scenario's `nrow_max` setting,
+  capped at the dataset size for `replace = FALSE` - through
+  `sample_data_task_primer()`, and tag each draw with its `sample_id`
+  and a `.row` order index so a downstream `fit` shard can isolate and
+  re-order it.
 
 - `ssd_run_fit_step()`: Run the `fit` tasks: read the distinct set of
   parent `sample` shards the shard's tasks reference (each once - they
@@ -104,7 +106,7 @@ scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()
 ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
-#> [1] "/tmp/RtmpwNMlII/file36d547a09d65/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
+#> [1] "/tmp/RtmpQheXBb/file36cf38b6fb3a/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 # \donttest{
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
@@ -120,14 +122,14 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/RtmpwNMlII/file36d53583bc05/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
+#> [1] "/tmp/RtmpQheXBb/file36cf66cce493/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/RtmpwNMlII/file36d53583bc05/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/RtmpQheXBb/file36cf66cce493/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 # }
 # \donttest{
 data <- ssd_scenario_data(ssddata::ccme_boron)
@@ -144,20 +146,20 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/RtmpwNMlII/file36d56586c82a/sample/dataset=ccme_boron/sim=1/replace=FALSE/part.parquet"
+#> [1] "/tmp/RtmpQheXBb/file36cf1a5c575e/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/RtmpwNMlII/file36d56586c82a/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/RtmpQheXBb/file36cf1a5c575e/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 ssd_run_hc_step(
   ssd_scenario_hc_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "fit"),
   file.path(dir, "hc")
 )
-#> [1] "/tmp/RtmpwNMlII/file36d56586c82a/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/RtmpQheXBb/file36cf1a5c575e/hc/dataset=ccme_boron/sim=1/part.parquet"
 # }
 ```

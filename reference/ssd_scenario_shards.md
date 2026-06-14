@@ -72,9 +72,9 @@ scenario <- ssd_define_scenario(data, nsim = 2L, seed = 42L)
 ssd_scenario_sample_shards(scenario)
 #> # A tibble: 2 × 4
 #>   dataset      sim replace              tasks
-#>   <chr>      <int> <lgl>   <list<tibble[,7]>>
-#> 1 ccme_boron     1 FALSE              [1 × 7]
-#> 2 ccme_boron     2 FALSE              [1 × 7]
+#>   <chr>      <int> <lgl>   <list<tibble[,6]>>
+#> 1 ccme_boron     1 TRUE               [1 × 6]
+#> 2 ccme_boron     2 TRUE               [1 × 6]
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
   data,
@@ -100,7 +100,7 @@ scenario <- ssd_define_scenario(
 ssd_scenario_hc_shards(scenario)
 #> # A tibble: 2 × 3
 #>   dataset      sim               tasks
-#>   <chr>      <int> <list<tibble[,18]>>
-#> 1 ccme_boron     1            [1 × 18]
-#> 2 ccme_boron     2            [1 × 18]
+#>   <chr>      <int> <list<tibble[,17]>>
+#> 1 ccme_boron     1            [1 × 17]
+#> 2 ccme_boron     2            [1 × 17]
 ```

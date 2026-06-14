@@ -68,13 +68,14 @@ and has <strong>no</strong> dependency on <code>targets</code>.</p>
 <span>  <span class="va">seed</span>,</span>
 <span>  <span class="va">...</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fl">6L</span>,</span>
-<span>  replace <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  replace <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  rescale <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  computable <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  at_boundary_ok <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  min_pmix <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span>,</span>
 <span>  range_shape1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>  range_shape2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  nrow_max <span class="op">=</span> <span class="fl">1000L</span>,</span>
 <span>  dists <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="fu"><a href="https://bcgov.github.io/ssdtools/reference/ssd_dists_bcanz.html" class="external-link">ssd_dists_bcanz</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  est_method <span class="op">=</span> <span class="st">"multi"</span>,</span>
 <span>  proportion <span class="op">=</span> <span class="fl">0.05</span>,</span>
@@ -112,11 +113,21 @@ changing it fully re-roots the scenario's random-number draws.</p></dd>
 
 
 <dt id="arg-nrow">nrow<a class="anchor" aria-label="anchor" href="#arg-nrow"></a></dt>
-<dd><p>A positive whole number of the minimum number of non-missing rows.</p></dd>
+<dd><p>A whole-number vector of sample sizes (the <code>fit</code>-step truncation
+axis), each between 5 (the fit floor) and <code>nrow_max</code> (the shared draw size,
+the universal ceiling). A value within <code>nrow_max</code> but above a dataset's row
+count is still valid: its <code>replace = TRUE</code> cell draws with replacement,
+while its <code>replace = FALSE</code> cell (which cannot exceed the dataset size) is
+silently discarded for that dataset.</p></dd>
 
 
 <dt id="arg-replace">replace<a class="anchor" aria-label="anchor" href="#arg-replace"></a></dt>
-<dd><p>A logical vector specifying whether to sample with replacement.</p></dd>
+<dd><p>A logical vector (a cross-join axis of one or two values)
+specifying whether the shared <code>sample</code> draw resamples with replacement.
+Defaults to <code>TRUE</code> (the standard resampling model, drawing <code>nrow_max</code>
+rows, so <code>nrow</code> is not capped by the dataset size); <code>FALSE</code> draws a
+permutation, capping the effective draw - and so each <code>nrow</code> - at the
+dataset size.</p></dd>
 
 
 <dt id="arg-rescale">rescale<a class="anchor" aria-label="anchor" href="#arg-rescale"></a></dt>
@@ -154,6 +165,15 @@ upper bounds for the shape1 parameter.</p></dd>
 <dt id="arg-range-shape-">range_shape2<a class="anchor" aria-label="anchor" href="#arg-range-shape-"></a></dt>
 <dd><p>A list of numeric vectors of length two of the lower and
 upper bounds for the shape2 parameter.</p></dd>
+
+
+<dt id="arg-nrow-max">nrow_max<a class="anchor" aria-label="anchor" href="#arg-nrow-max"></a></dt>
+<dd><p>A whole number (default <code>1000L</code>): the fixed size of the
+shared <code>sample</code> draw that every <code>nrow</code> value sub-truncates. A sample-level
+simulation setting, not a cross-join axis. The effective per-dataset draw is
+<code>min(nrow_max, nrow(data))</code> when <code>replace = FALSE</code> (the high default draws
+the full permutation) and <code>nrow_max</code> rows when <code>replace = TRUE</code>; each <code>nrow</code>
+must not exceed the effective draw size.</p></dd>
 
 
 <dt id="arg-dists">dists<a class="anchor" aria-label="anchor" href="#arg-dists"></a></dt>
@@ -274,6 +294,21 @@ and composed into the same collection; the constructor itself performs <strong>n
 random-number generation.</p>
     </div>
     <div class="section level2">
+    <h2 id="nrow-max"><code>nrow_max</code><a class="anchor" aria-label="anchor" href="#nrow-max"></a></h2>
+    <p><code>nrow_max</code> is the <em>sample</em>-level <strong>simulation setting</strong>: the fixed size of
+the shared <code>sample</code> draw that every <code>nrow</code> value sub-truncates
+(<code>head(sample, nrow)</code>, <code>TARGETS-DESIGN.md</code> section 5). The effective
+per-dataset draw is <code>min(nrow_max, nrow(data))</code> for <code>replace = FALSE</code> (the
+high default thus draws the full permutation) and <code>nrow_max</code> rows for
+<code>replace = TRUE</code>. Because the draw size is fixed - not derived from
+<code>max(nrow)</code> - adding <code>nrow</code> values (within the effective draw size) never
+changes the draw, so cached <code>sample</code> shards stay valid. Each <code>nrow</code> is
+validated at construction against the effective draw size. It is not
+<code>ci</code>-gated (the draw happens regardless of <code>ci</code>) and, like <code>dists</code> and
+<code>est_method</code>, it is absent from <code>task_axes("sample")</code>, so it never
+multiplies tasks or enters the per-task RNG primer.</p>
+    </div>
+    <div class="section level2">
     <h2 id="ci"><code>ci</code><a class="anchor" aria-label="anchor" href="#ci"></a></h2>
     <p><code>ci</code> is a scalar flag (not a cross-join axis): the point estimate <code>est</code> is
 invariant to <code>ci</code> - it is computed analytically from the fit, independent of
@@ -309,7 +344,8 @@ method within a task without fanning out into separate tasks.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   nsim:     100</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   datasets: ccme_boron</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   nrow:     5, 10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   replace:  FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   replace:  TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   nrow_max: 1000 (setting)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   fit grid:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     rescale: FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     computable: FALSE</span>

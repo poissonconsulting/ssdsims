@@ -39,6 +39,15 @@ functions.
   A numeric vector of the number of rows in the generated data which
   must be between 5 and 1,000,
 
+- nrow_max:
+
+  A whole number (default `1000L`): the fixed size of the shared
+  `sample` draw that every `nrow` value sub-truncates. A sample-level
+  simulation setting, not a cross-join axis. The effective per-dataset
+  draw is `min(nrow_max, nrow(data))` when `replace = FALSE` (the high
+  default draws the full permutation) and `nrow_max` rows when
+  `replace = TRUE`; each `nrow` must not exceed the effective draw size.
+
 - nsim:
 
   A count of the number of data sets to generate.

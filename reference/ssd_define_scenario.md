@@ -17,13 +17,14 @@ ssd_define_scenario(
   seed,
   ...,
   nrow = 6L,
-  replace = FALSE,
+  replace = TRUE,
   rescale = FALSE,
   computable = FALSE,
   at_boundary_ok = TRUE,
   min_pmix = list(ssdtools::ssd_min_pmix),
   range_shape1 = list(c(0.05, 20)),
   range_shape2 = list(c(0.05, 20)),
+  nrow_max = 1000L,
   dists = ssdtools::ssd_dists_bcanz(),
   est_method = "multi",
   proportion = 0.05,
@@ -63,11 +64,21 @@ ssd_define_scenario(
 
 - nrow:
 
-  A positive whole number of the minimum number of non-missing rows.
+  A whole-number vector of sample sizes (the `fit`-step truncation
+  axis), each between 5 (the fit floor) and `nrow_max` (the shared draw
+  size, the universal ceiling). A value within `nrow_max` but above a
+  dataset's row count is still valid: its `replace = TRUE` cell draws
+  with replacement, while its `replace = FALSE` cell (which cannot
+  exceed the dataset size) is silently discarded for that dataset.
 
 - replace:
 
-  A logical vector specifying whether to sample with replacement.
+  A logical vector (a cross-join axis of one or two values) specifying
+  whether the shared `sample` draw resamples with replacement. Defaults
+  to `TRUE` (the standard resampling model, drawing `nrow_max` rows, so
+  `nrow` is not capped by the dataset size); `FALSE` draws a
+  permutation, capping the effective draw - and so each `nrow` - at the
+  dataset size.
 
 - rescale:
 
@@ -115,6 +126,15 @@ ssd_define_scenario(
 
   A list of numeric vectors of length two of the lower and upper bounds
   for the shape2 parameter.
+
+- nrow_max:
+
+  A whole number (default `1000L`): the fixed size of the shared
+  `sample` draw that every `nrow` value sub-truncates. A sample-level
+  simulation setting, not a cross-join axis. The effective per-dataset
+  draw is `min(nrow_max, nrow(data))` when `replace = FALSE` (the high
+  default draws the full permutation) and `nrow_max` rows when
+  `replace = TRUE`; each `nrow` must not exceed the effective draw size.
 
 - dists:
 
@@ -255,6 +275,21 @@ a function-name string) are materialised - once, reproducibly - by
 and composed into the same collection; the constructor itself performs
 **no** random-number generation.
 
+## `nrow_max`
+
+`nrow_max` is the *sample*-level **simulation setting**: the fixed size
+of the shared `sample` draw that every `nrow` value sub-truncates
+(`head(sample, nrow)`, `TARGETS-DESIGN.md` section 5). The effective
+per-dataset draw is `min(nrow_max, nrow(data))` for `replace = FALSE`
+(the high default thus draws the full permutation) and `nrow_max` rows
+for `replace = TRUE`. Because the draw size is fixed - not derived from
+`max(nrow)` - adding `nrow` values (within the effective draw size)
+never changes the draw, so cached `sample` shards stay valid. Each
+`nrow` is validated at construction against the effective draw size. It
+is not `ci`-gated (the draw happens regardless of `ci`) and, like
+`dists` and `est_method`, it is absent from `task_axes("sample")`, so it
+never multiplies tasks or enters the per-task RNG primer.
+
 ## `ci`
 
 `ci` is a scalar flag (not a cross-join axis): the point estimate `est`
@@ -293,7 +328,8 @@ scenario
 #>   nsim:     100
 #>   datasets: ccme_boron
 #>   nrow:     5, 10
-#>   replace:  FALSE
+#>   replace:  TRUE
+#>   nrow_max: 1000 (setting)
 #>   fit grid:
 #>     rescale: FALSE
 #>     computable: FALSE

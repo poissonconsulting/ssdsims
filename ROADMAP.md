@@ -43,12 +43,17 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- ‼️⏳ \[cost-analysis-targets\] Improve the cost estimation by
-  analyzing an existing targets run. Includes tools to query the targets
-  store for run times of the various targets and mapping this back to
-  the scenario slices. Side change, folded: Record start and end of
-  computation time for each task, and the start time of the simulation
-  run, in the Parquet. Supports a project deliverable.
+- ‼️⏳ \[distset-hc-axis\] Iwasaki.
+- ‼️⏳ \[scenario-combine\] **Blocked by distset-hc-axis**. Provide a
+  convenient way to run multiple `ssd_scenario` objects as a single
+  targets pipeline.
+- ‼️⏳ \[cost-analysis-targets\] **Blocked by scenario-combine**.
+  Improve the cost estimation by analyzing an existing targets run.
+  Includes tools to query the targets store for run times of the various
+  targets and mapping this back to the scenario slices. Side change,
+  folded: Record start and end of computation time for each task, and
+  the start time of the simulation run, in the Parquet. Supports a
+  project deliverable.
 - ‼️⏳ \[replace-default-true\] Set the default as `replace = TRUE`,
   silently discard infeasible tasks with `replace = FALSE` and too many
   rows. Interacts with `nrow-max-setting`.
@@ -60,9 +65,6 @@ artifacts yet is also queued, ready to propose.
   the §5 re-draw churn, and move the last carried columns (`n_max`,
   `ci`) off the task tables into the scenario slice. Proposed; breaking
   pre-release.
-- ‼️⏳ \[scenario-combine\] Provide a convenient way to run multiple
-  `ssd_scenario` objects as a single targets pipeline.
-- ‼️⏳ \[distset-hc-axis\] Iwasaki.
 - ❗️⏳ \[migrate-public-api\] Migrate `ssd_sim_data.data.frame` /
   `ssd_fit_dists_sims` / `ssd_hc_sims` to the new per-task contract,
   keeping the `_seed` wrappers as a one-release shim. Depends on

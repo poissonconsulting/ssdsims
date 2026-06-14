@@ -203,7 +203,8 @@ scenario
 #>   nsim:     3
 #>   datasets: boron, cadmium
 #>   nrow:     5, 10
-#>   replace:  FALSE
+#>   replace:  TRUE
+#>   nrow_max: 1000 (setting)
 #>   fit grid:
 #>     rescale: FALSE
 #>     computable: FALSE
@@ -255,7 +256,8 @@ ssd_define_scenario(data, nsim = 2L, seed = 1L)
 #>   nsim:     2
 #>   datasets: ccme_boron
 #>   nrow:     6
-#>   replace:  FALSE
+#>   replace:  TRUE
+#>   nrow_max: 1000 (setting)
 #>   fit grid:
 #>     rescale: FALSE
 #>     computable: FALSE
@@ -368,12 +370,16 @@ tasks
 
 The counts show how each step fans out from its parent. The key design
 choice is that the single expensive **random draw** is its own `sample`
-task, keyed only by `(dataset, sim, replace)`. The draw is of
-`n_max = max(nrow)` rows; every `nrow` value is then a cheap, RNG-free
-[`head()`](https://rdrr.io/r/utils/head.html) *sub-truncation* of that
-one draw, done inline at the `fit` step. So `nrow` is an ordinary
-cross-join axis of the `fit` step and never multiplies the underlying
-draw — one draw is shared across all sample sizes.
+task, keyed only by `(dataset, sim, replace)`. The draw is sized by the
+scenario’s fixed `nrow_max` setting (`nrow_max` resampled rows under the
+default `replace = TRUE`; capped at the dataset size — the full
+permutation — when `replace = FALSE`); every `nrow` value is then a
+cheap, RNG-free [`head()`](https://rdrr.io/r/utils/head.html)
+*sub-truncation* of that one draw, done inline at the `fit` step. So
+`nrow` is an ordinary cross-join axis of the `fit` step and never
+multiplies the underlying draw — one draw is shared across all sample
+sizes, and adding an `nrow` value (within the effective draw size) never
+changes it.
 
 Each row carries a path-style `<step>_id` primary key (the Hive
 partition path) plus its parent step’s id as a foreign key, so
@@ -385,24 +391,25 @@ tasks$sample
 #> <ssdsims_tasks: sample>
 #>   axes:  dataset, sim, replace
 #>   tasks: 6
-#> # A tibble: 6 × 5
-#>   dataset   sim replace n_max sample_id                          
-#>   <chr>   <int> <lgl>   <int> <chr>                              
-#> 1 boron       1 FALSE      10 dataset=boron/sim=1/replace=FALSE  
-#> 2 boron       2 FALSE      10 dataset=boron/sim=2/replace=FALSE  
-#> 3 boron       3 FALSE      10 dataset=boron/sim=3/replace=FALSE  
-#> 4 cadmium     1 FALSE      10 dataset=cadmium/sim=1/replace=FALSE
-#> 5 cadmium     2 FALSE      10 dataset=cadmium/sim=2/replace=FALSE
-#> 6 cadmium     3 FALSE      10 dataset=cadmium/sim=3/replace=FALSE
+#> # A tibble: 6 × 4
+#>   dataset   sim replace sample_id                         
+#>   <chr>   <int> <lgl>   <chr>                             
+#> 1 boron       1 TRUE    dataset=boron/sim=1/replace=TRUE  
+#> 2 boron       2 TRUE    dataset=boron/sim=2/replace=TRUE  
+#> 3 boron       3 TRUE    dataset=boron/sim=3/replace=TRUE  
+#> 4 cadmium     1 TRUE    dataset=cadmium/sim=1/replace=TRUE
+#> 5 cadmium     2 TRUE    dataset=cadmium/sim=2/replace=TRUE
+#> 6 cadmium     3 TRUE    dataset=cadmium/sim=3/replace=TRUE
 ```
 
-The scalar `ci` is carried uniformly on the `hc` table (it is not an
-axis), as is the `est_method` setting. With `ci = TRUE` the bootstrap
-knobs (`nboot`, `ci_method`, `parametric`) fan out fully; a `ci = FALSE`
-scenario would instead give exactly one `hc` row per fit task, carrying
-`NA` for those bootstrap-only knobs (every requested `est_method` is
-summarised within each task from a single bootstrap, so it never fans
-out into separate tasks).
+The scalar `ci` is applied uniformly to every `hc` task (it is a setting
+read from the scenario, not an axis or a table column), as is
+`est_method`. With `ci = TRUE` the bootstrap knobs (`nboot`,
+`ci_method`, `parametric`) fan out fully; a `ci = FALSE` scenario would
+instead give exactly one `hc` row per fit task, carrying `NA` for those
+bootstrap-only knobs (every requested `est_method` is summarised within
+each task from a single bootstrap, so it never fans out into separate
+tasks).
 
 ``` r
 
@@ -410,22 +417,22 @@ tasks$hc
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 24
-#> # A tibble: 24 × 16
+#> # A tibble: 24 × 15
 #>    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>    <chr>   <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-#>  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  2 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  3 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  4 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  5 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  6 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  7 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  8 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  9 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 10 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  1 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  2 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  3 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  4 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  5 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  6 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  7 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  8 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  9 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 10 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
 #> # ℹ 14 more rows
-#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
+#> # ℹ 7 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>
 ```
 
 The per-step derivations are also available individually
@@ -467,23 +474,22 @@ out$hc
 #> <ssdsims_tasks: hc>
 #>   axes:  dataset, sim, replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric
 #>   tasks: 24
-#> # A tibble: 24 × 17
+#> # A tibble: 24 × 16
 #>    dataset   sim replace  nrow rescale computable at_boundary_ok min_pmix    
 #>    <chr>   <int> <lgl>   <int> <lgl>   <lgl>      <lgl>          <chr>       
-#>  1 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  2 boron       1 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  3 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  4 boron       1 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  5 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  6 boron       2 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  7 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  8 boron       2 FALSE      10 FALSE   FALSE      TRUE           ssd_min_pmix
-#>  9 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
-#> 10 boron       3 FALSE       5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  1 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  2 boron       1 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  3 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  4 boron       1 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  5 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  6 boron       2 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  7 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  8 boron       2 TRUE       10 FALSE   FALSE      TRUE           ssd_min_pmix
+#>  9 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
+#> 10 boron       3 TRUE        5 FALSE   FALSE      TRUE           ssd_min_pmix
 #> # ℹ 14 more rows
-#> # ℹ 9 more variables: range_shape1 <list>, range_shape2 <list>, ci <lgl>,
-#> #   nboot <int>, ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>,
-#> #   hc <list>
+#> # ℹ 8 more variables: range_shape1 <list>, range_shape2 <list>, nboot <int>,
+#> #   ci_method <chr>, parametric <lgl>, hc_id <chr>, fit_id <chr>, hc <list>
 ```
 
 Unnest the hazard-concentration estimates back onto their task
@@ -495,24 +501,24 @@ value, from a single bootstrap), so every result already carries its own
 ``` r
 
 hcs <- tidyr::unnest(
-  out$hc[c("dataset", "sim", "nrow", "ci", "hc")],
+  out$hc[c("dataset", "sim", "nrow", "hc")],
   hc,
   names_sep = "_"
 )
-hcs[c("dataset", "sim", "nrow", "ci", "hc_est_method", "hc_proportion", "hc_est")]
-#> # A tibble: 48 × 7
-#>    dataset   sim  nrow ci    hc_est_method hc_proportion hc_est
-#>    <chr>   <int> <int> <lgl> <chr>                 <dbl>  <dbl>
-#>  1 boron       1     5 TRUE  multi                  0.05  2.65 
-#>  2 boron       1     5 TRUE  multi                  0.2   6.54 
-#>  3 boron       1     5 TRUE  multi                  0.05  2.65 
-#>  4 boron       1     5 TRUE  multi                  0.2   6.54 
-#>  5 boron       1    10 TRUE  multi                  0.05  1.63 
-#>  6 boron       1    10 TRUE  multi                  0.2   4.91 
-#>  7 boron       1    10 TRUE  multi                  0.05  1.63 
-#>  8 boron       1    10 TRUE  multi                  0.2   4.91 
-#>  9 boron       2     5 TRUE  multi                  0.05  0.873
-#> 10 boron       2     5 TRUE  multi                  0.2   4.48 
+hcs[c("dataset", "sim", "nrow", "hc_est_method", "hc_proportion", "hc_est")]
+#> # A tibble: 48 × 6
+#>    dataset   sim  nrow hc_est_method hc_proportion hc_est
+#>    <chr>   <int> <int> <chr>                 <dbl>  <dbl>
+#>  1 boron       1     5 multi                  0.05  0.922
+#>  2 boron       1     5 multi                  0.2   3.22 
+#>  3 boron       1     5 multi                  0.05  0.922
+#>  4 boron       1     5 multi                  0.2   3.22 
+#>  5 boron       1    10 multi                  0.05  0.620
+#>  6 boron       1    10 multi                  0.2   2.35 
+#>  7 boron       1    10 multi                  0.05  0.620
+#>  8 boron       1    10 multi                  0.2   2.35 
+#>  9 boron       2     5 multi                  0.05  2.72 
+#> 10 boron       2     5 multi                  0.2   9.63 
 #> # ℹ 38 more rows
 ```
 

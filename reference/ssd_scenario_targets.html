@@ -164,10 +164,12 @@ their Parquet), overriding the pin (section 8.4). The default (<code>NULL</code>
 <code>targets</code>' standard cue.</p>
 <p>The <code>head(sample, nrow)</code> truncation stays folded into the <code>fit</code> step (no
 materialised <code>data</code> shard): a <code>fit</code> shard is keyed by <code>fit_id</code>, which includes
-<code>nrow</code>, so extending <code>nrow</code> mints new <code>fit</code> shards and caches the rest, and a
-widened <code>max(nrow)</code> changes the <code>sample</code> shard's <code>n_max</code> task row, so its
-bytes change and the per-child edge propagates to exactly the <code>fit</code> shards
-that read the wider draw - no stale short draw is produced.</p>
+<code>nrow</code>, so extending <code>nrow</code> mints new <code>fit</code> shards and caches the rest. The
+shared draw is sized by the scenario's fixed <code>nrow_max</code> setting (carried on
+the <code>sample</code> slice), not <code>max(nrow)</code>, so extending <code>nrow</code> within the
+effective draw size leaves the <code>sample</code> shards cached too; changing
+<code>nrow_max</code> invalidates the <code>sample</code> slice and rebuilds the draw, propagating
+through the per-child edges - no stale short draw can arise.</p>
 <p>To parallelise the shards, set a controller (e.g. a mirai-backed
 <code><a href="https://wlandau.github.io/crew/reference/crew_controller_local.html" class="external-link">crew::crew_controller_local()</a></code>) with <code><a href="https://docs.ropensci.org/targets/reference/tar_option_set.html" class="external-link">targets::tar_option_set()</a></code> in
 <code>_targets.R</code> before calling this - the target set is unchanged.</p>

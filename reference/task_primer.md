@@ -63,10 +63,11 @@ over the `task-lists` tables). Per the three-step model the
 RNG-consuming steps each take a primer over their task identity:
 
 - **sample** – keyed `(dataset, sim, replace)` only. `nrow` is
-  deliberately absent: every `nrow` shares one `n_max`-row draw that the
-  `fit` step truncates inline (`head(sample, nrow)`, RNG-free, no
-  separate primer), so excluding `nrow` is load-bearing for the
-  sub-truncation property (`TARGETS-DESIGN.md` §5).
+  deliberately absent: every `nrow` shares one draw (sized by the
+  scenario's `nrow_max` setting) that the `fit` step truncates inline
+  (`head(sample, nrow)`, RNG-free, no separate primer), so excluding
+  `nrow` is load-bearing for the sub-truncation property
+  (`TARGETS-DESIGN.md` §5).
 
 - **fit** – the parent `sample` identity plus `nrow` and the fit-grid
   row (`rescale`, `computable`, `at_boundary_ok`, `min_pmix` name,
@@ -74,9 +75,9 @@ RNG-consuming steps each take a primer over their task identity:
   fit on a different truncation is a genuinely different computation.
 
 - **hc** – the parent `fit` identity plus the hc-grid row (`nboot`,
-  `est_method`, `ci_method`, `parametric`). `ci` is a scalar hc flag
-  applied uniformly, not part of the task identity, so it is a carried
-  column rather than a primer field.
+  `est_method`, `ci_method`, `parametric`). `ci` is a scalar hc setting
+  applied uniformly and read from the scenario, not part of the task
+  identity, so it is never a primer field (nor a task-row column).
 
 Function-valued parameters (e.g. `min_pmix`) MUST be referenced **by
 name**, not by function value, so a recompile or JIT does not move a

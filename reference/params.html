@@ -81,6 +81,15 @@ identical whether <code>TRUE</code> or <code>FALSE</code>, so <code>ci = TRUE</c
 <dd><p>A numeric vector of the number of rows in the generated data which must be between 5 and 1,000,</p></dd>
 
 
+<dt id="arg-nrow-max">nrow_max<a class="anchor" aria-label="anchor" href="#arg-nrow-max"></a></dt>
+<dd><p>A whole number (default <code>1000L</code>): the fixed size of the
+shared <code>sample</code> draw that every <code>nrow</code> value sub-truncates. A sample-level
+simulation setting, not a cross-join axis. The effective per-dataset draw is
+<code>min(nrow_max, nrow(data))</code> when <code>replace = FALSE</code> (the high default draws
+the full permutation) and <code>nrow_max</code> rows when <code>replace = TRUE</code>; each <code>nrow</code>
+must not exceed the effective draw size.</p></dd>
+
+
 <dt id="arg-nsim">nsim<a class="anchor" aria-label="anchor" href="#arg-nsim"></a></dt>
 <dd><p>A count of the number of data sets to generate.</p></dd>
 

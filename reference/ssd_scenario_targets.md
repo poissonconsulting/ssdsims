@@ -136,10 +136,12 @@ default (`NULL`) is `targets`' standard cue.
 The `head(sample, nrow)` truncation stays folded into the `fit` step (no
 materialised `data` shard): a `fit` shard is keyed by `fit_id`, which
 includes `nrow`, so extending `nrow` mints new `fit` shards and caches
-the rest, and a widened `max(nrow)` changes the `sample` shard's `n_max`
-task row, so its bytes change and the per-child edge propagates to
-exactly the `fit` shards that read the wider draw - no stale short draw
-is produced.
+the rest. The shared draw is sized by the scenario's fixed `nrow_max`
+setting (carried on the `sample` slice), not `max(nrow)`, so extending
+`nrow` within the effective draw size leaves the `sample` shards cached
+too; changing `nrow_max` invalidates the `sample` slice and rebuilds the
+draw, propagating through the per-child edges - no stale short draw can
+arise.
 
 To parallelise the shards, set a controller (e.g. a mirai-backed
 [`crew::crew_controller_local()`](https://wlandau.github.io/crew/reference/crew_controller_local.html))

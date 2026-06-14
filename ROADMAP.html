@@ -68,15 +68,15 @@
 <div class="section level2">
 <h2 id="now">Now<a class="anchor" aria-label="anchor" href="#now"></a></h2>
 <!-- What is actively being worked on this cycle. -->
-<ul><li>‼️⏳ [cost-analysis-targets] Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.</li>
+<ul><li>‼️⏳ [distset-hc-axis] Iwasaki.</li>
+<li>‼️⏳ [scenario-combine] <strong>Blocked by distset-hc-axis</strong>. Provide a convenient way to run multiple <code>ssd_scenario</code> objects as a single targets pipeline.</li>
+<li>‼️⏳ [cost-analysis-targets] <strong>Blocked by scenario-combine</strong>. Improve the cost estimation by analyzing an existing targets run. Includes tools to query the targets store for run times of the various targets and mapping this back to the scenario slices. Side change, folded: Record start and end of computation time for each task, and the start time of the simulation run, in the Parquet. Supports a project deliverable.</li>
 <li>‼️⏳ [replace-default-true] Set the default as <code>replace = TRUE</code>, silently discard infeasible tasks with <code>replace = FALSE</code> and too many rows. Interacts with <code>nrow-max-setting</code>.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a></h2>
 <!-- Queued up. Roughly in priority order. Doesn't have to be exhaustive. -->
 <ul><li>‼️⏳ [nrow-max-setting] Add an explicit <code>nrow_max</code> draw-size setting (default <code>1000L</code>), decoupling the draw from the <code>nrow</code> axis to retire the §5 re-draw churn, and move the last carried columns (<code>n_max</code>, <code>ci</code>) off the task tables into the scenario slice. Proposed; breaking pre-release.</li>
-<li>‼️⏳ [scenario-combine] Provide a convenient way to run multiple <code>ssd_scenario</code> objects as a single targets pipeline.</li>
-<li>‼️⏳ [distset-hc-axis] Iwasaki.</li>
 <li>❗️⏳ [migrate-public-api] Migrate <code>ssd_sim_data.data.frame</code> / <code>ssd_fit_dists_sims</code> / <code>ssd_hc_sims</code> to the new per-task contract, keeping the <code>_seed</code> wrappers as a one-release shim. Depends on <code>scenario-input-types</code> + <code>primer-primitives</code>; gates <code>cleanup-lecuyer</code>.</li>
 <li>❗️ [replay-helper] <code>ssd_replay_task()</code> (§7) and <code>ssd_input_hash()</code> for the lightweight recipe — reproduce a failed branch locally with no <code>targets</code>. Ready to propose (prereqs <code>task-tables</code> + <code>manifest</code> landed).</li>
 <li>❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), <code>summary</code> unions the survivors. Ready to propose (prereq <code>cluster-pipeline</code> landed).</li>

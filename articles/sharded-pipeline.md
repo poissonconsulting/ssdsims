@@ -56,7 +56,8 @@ scenario
 #>   nsim:     2
 #>   datasets: ccme_boron
 #>   nrow:     5, 10
-#>   replace:  FALSE
+#>   replace:  TRUE
+#>   nrow_max: 1000 (setting)
 #>   fit grid:
 #>     rescale: FALSE, TRUE
 #>     computable: FALSE
@@ -115,7 +116,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmpHOmDrP/ssdsims-shards-3bf7618d868
+#>   dir: /tmp/RtmpvZj8X0/ssdsims-shards-3bf062054444
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2

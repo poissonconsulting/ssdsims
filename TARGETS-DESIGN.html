@@ -64,7 +64,7 @@
 <li>
 <strong>Scenario is purely declarative (§1).</strong> Stores <code>seed</code>, knobs, and <em>names</em> of datasets and <code>min_pmix</code> entries; the values are <strong>materialised on the scenario, reached by name via accessors</strong> (§1.1). Names enter the per-task hash, function definitions do not (so a code edit / JIT does not move tasks across primers, and the data stored in Parquet files remains simple).</li>
 <li>
-<strong>Three step grids, one primer per task (§5).</strong> Data, fit and hc fan out independently; <code>nrow</code> is <strong>never</strong> an axis of the data step — every <code>nrow</code> value is a <code>head(., n)</code> of a single <code>n_max</code>-row sample.</li>
+<strong>Three step grids, one primer per task (§5).</strong> Data, fit and hc fan out independently; <code>nrow</code> is <strong>never</strong> an axis of the data step — every <code>nrow</code> value is a <code>head(., n)</code> of a single fixed-size sample (the scenario’s <code>nrow_max</code> setting).</li>
 <li>
 <strong><code>ci</code> is a scalar flag, not an axis (§1.2).</strong> <code>ci</code> is a scenario-wide <code>TRUE</code>/<code>FALSE</code> choice (the point estimate is identical either way; <code>ci = TRUE</code> merely adds the CI columns), so it is excluded from <code>task_axes("hc")</code> and the per-task primer. When <code>ci = FALSE</code> the <code>nboot</code> / <code>ci_method</code> / <code>parametric</code> axes are stored as <code>NA</code> in the hc-task table — no phantom branches.</li>
 <li>
@@ -360,14 +360,14 @@
 <span>  <span class="va">idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample.int</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span>, size <span class="op">=</span> <span class="va">n_max</span>, replace <span class="op">=</span> <span class="va">replace</span><span class="op">)</span></span>
 <span>  <span class="va">data</span><span class="op">[</span><span class="va">idx</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="va">n</span><span class="op">)</span><span class="op">]</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span><span class="op">}</span></span></code></pre></div>
-<p>with <code>n_max = max(scenario$nrow)</code> pre-computed from the scenario. Result: <code>slice_sample_state(data, n_max, 5, …)</code> is a prefix of <code>slice_sample_state(data, n_max, 10, …)</code> — same <code>(seed, state)</code>, same <code>sample.int</code> call, just truncated.</p>
+<p>with <code>n_max</code> the <strong>effective draw size</strong> resolved from the scenario’s fixed <code>nrow_max</code> setting (<code>min(nrow_max, nrow(data))</code> for <code>replace = FALSE</code> — the high default thus draws the full permutation — and <code>nrow_max</code> rows for <code>replace = TRUE</code>), <strong>not</strong> <code>max(scenario$nrow)</code>: deriving the draw size from the <code>nrow</code> axis meant a widened <code>max(nrow)</code> re-drew the sample and invalidated the fit shards reading it; the <code>nrow_max</code>-sized draw is axis-independent, so extending <code>nrow</code> (within the effective draw size) never re-draws (the <code>nrow-max-setting</code> change). Result: <code>slice_sample_state(data, n_max, 5, …)</code> is a prefix of <code>slice_sample_state(data, n_max, 10, …)</code> — same <code>(seed, state)</code>, same <code>sample.int</code> call, just truncated.</p>
 <p><strong>Why the property holds for both <code>replace</code> values.</strong></p>
 <ul><li>
 <code>replace = FALSE</code>: <code>sample.int(N, n_max, replace = FALSE)</code> runs Fisher-Yates internally; the first <code>n</code> indices are a permutation prefix and a valid size-<code>n</code> sample by construction.</li>
 <li>
 <code>replace = TRUE</code>: <code>sample.int(N, n_max, replace = TRUE)</code> is <code>n_max</code> independent uniform draws; the first <code>n</code> are a size-<code>n</code> sample drawn from the same RNG sequence.</li>
 </ul><p>Both cases assume the byte-stable behavior of <code><a href="https://rdrr.io/r/base/sample.html" class="external-link">base::sample.int()</a></code> (and <code><a href="https://dplyr.tidyverse.org/reference/slice.html" class="external-link">dplyr::slice_sample()</a></code> which delegates to it). Pin R version in the manifest (§9).</p>
-<p>The trick costs one extra integer column on the data task table (<code>n_max</code>) and cuts <code>|data grid|</code> from <code>|dataset| · |sim| · |nrow|</code> to <code>|dataset| · |sim| · |replace|</code>. For a scenario with <code>nrow = c(5, 6, 10, 20, 50)</code> and <code>replace = FALSE</code> only, it cuts the data fan-out by 5×.</p>
+<p>The trick costs nothing on the task table — the draw size is the scenario’s <code>nrow_max</code> setting, resolved by the runner per dataset, not a row column — and cuts <code>|data grid|</code> from <code>|dataset| · |sim| · |nrow|</code> to <code>|dataset| · |sim| · |replace|</code>. For a scenario with <code>nrow = c(5, 6, 10, 20, 50)</code> and <code>replace = FALSE</code> only, it cuts the data fan-out by 5×.</p>
 </div>
 <div class="section level3">
 <h3 id="implications-for-the-targets-pipeline">Implications for the targets pipeline<a class="anchor" aria-label="anchor" href="#implications-for-the-targets-pipeline"></a></h3>
@@ -394,7 +394,7 @@
 </tr></thead><tbody><tr><td><code>sample</code></td>
 <td><code>dataset, sim, replace</code></td>
 <td>yes</td>
-<td>one draw of <code>n_max = max(nrow)</code> rows (carried column)</td>
+<td>one draw sized by the <code>nrow_max</code> setting (resolved per dataset; no row column)</td>
 </tr><tr><td><code>fit</code></td>
 <td>
 <code>sample</code> axes, <code>nrow</code> <code>× fit grid</code>
@@ -405,7 +405,7 @@
 <td>fit axes <code>× hc grid</code> (scalar <code>ci</code>, §1.2)</td>
 <td>yes</td>
 <td>
-<code>ci</code> is a scalar flag, not an axis; bootstrap knobs <code>NA</code> when <code>ci = FALSE</code>
+<code>ci</code> is a scalar setting read from the scenario, not an axis or a row column; bootstrap knobs <code>NA</code> when <code>ci = FALSE</code>
 </td>
 </tr></tbody></table><p>This keeps the sub-truncation property <strong>structural</strong>: there is exactly one <code>sample</code> task per <code>(dataset, sim, replace)</code>, so the expensive draw is shared across every <code>nrow</code>, while <code>nrow</code> is an ordinary scalar cross-join axis at the <code>fit</code> step — no compound/list column on the draw. <code>partition_by</code> is correspondingly three-step (<code>sample</code>/<code>fit</code>/<code>hc</code>); by default <code>nrow</code> shards at the <code>fit</code> level (<code>dataset, sim, nrow, rescale</code>).</p>
 <p>This fold is <strong>provisional</strong>: whether to reinstate an explicit <code>data</code> step (as a buffering checkpoint) is a deferred decision tied to the caching/invalidation model — see the note in §8.</p>
@@ -574,9 +574,15 @@
 <td>re-run</td>
 </tr><tr><td>
 <code>nrow</code> value added (sub-trunc; not an axis)</td>
-<td>rewrite all if <code>max(nrow)</code> grows; cached otherwise</td>
-<td>inherits via prefix (open Q, §11)</td>
-<td>inherits via prefix (open Q, §11)</td>
+<td>cached (the draw is the fixed <code>nrow_max</code> setting, not <code>max(nrow)</code>)</td>
+<td>new shards only (<code>nrow</code> ∈ fit path)</td>
+<td>rewrite all (<code>nrow</code> ∈ hc inner)</td>
+<td>re-run</td>
+</tr><tr><td>
+<code>nrow_max</code> changed (sample setting)</td>
+<td>rewrite all (the draw resizes)</td>
+<td>rewrite all (per-child edge)</td>
+<td>rewrite all</td>
 <td>re-run</td>
 </tr><tr><td>
 <code>replace</code> value added (data path; fit/hc inner under default)</td>
