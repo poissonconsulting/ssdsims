@@ -73,10 +73,13 @@
       repetitions per cell; "factor"/"level"/"study" are glosses). **Do not**
       add a competing hierarchy section — cross-reference the existing
       `## Design terms` (D5)
-- [ ] 3.4 Verify the live main specs match this change's reconciled delta specs
+- [ ] 3.4 Add the one-line storage-hierarchy pointer to the `shard` glossary
+      entry (design D8 — the exact wording is there); do **not** add the full
+      diagram (it lives in `exploration/`, deferred to a separate docs change)
+- [ ] 3.5 Verify the live main specs match this change's reconciled delta specs
       (`openspec validate scenario-option-vocabulary --strict`; a dry sync
       shows no unintended drift)
-- [ ] 3.5 Final verification: `devtools::test()`, `devtools::document()`
+- [ ] 3.6 Final verification: `devtools::test()`, `devtools::document()`
       diff-clean, `air format .` clean, `R CMD check` if time permits; commit
 
 ## 4. PR

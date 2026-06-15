@@ -119,6 +119,29 @@ the rename. Two delta specs are added that the first attempt lacked —
 evolved main). The `distset-hc-axis` change is *active* (not a main spec), so
 its old-vocabulary uses are reworded in place, not via a delta of this change.
 
+### D8: Glossary pointer — storage layout is a separate hierarchy
+
+An explore-mode thread (does `study ⊃ design ⊃ scenario ⊃ task` include
+**shard**?) concluded it does not: shards and the on-disk tree are a *separate,
+configurable* storage hierarchy that meets the experimental one only at the
+**task**. This change adds a **one-line pointer** to the glossary so the
+question is answered for the next reader — added to the `shard` (Pipeline
+terms) entry during the glossary work (task 3.x):
+
+> *The on-disk results tree is a separate, configurable hierarchy from
+> `design → scenario → task` above: it is keyed by `seed=`/`layout=` (and,
+> within a shard, `partition_by`), with the design root holding the combined
+> `summary.parquet`. A scenario has no directory of its own — members sharing a
+> `(seed, layout)` blend into one subtree (common random numbers) and surface
+> only via the `scenario` identity column. The two hierarchies meet at the
+> task.*
+
+The **full two-ladders diagram** and the on-disk facts behind it live in
+`exploration/storage-vs-experimental-hierarchy.md`; promoting them to a
+`## Storage layout` glossary subsection (or a dedicated docs change) is
+**deferred** — that documents the design/seed-keying machinery (#172/#174),
+not the option vocabulary, so it stays out of this rename's scope.
+
 ### D6: Commit plan (per user instruction)
 
 1. `refactor: rename knob to scenario option` — bulk knob → scenario option /
