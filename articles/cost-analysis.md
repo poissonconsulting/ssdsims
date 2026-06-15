@@ -58,12 +58,12 @@ breakdown by `ci_method` × `nboot` keyed exactly like the estimate’s:
 analysis <- ssd_analyse_cost(scenario, root = run$dir)
 analysis
 #> <ssdsims_cost_analysis>  (observed, serial-equivalent; measured)
-#>   total compute:  18.7 s
-#>   longest task:   4.2 s
+#>   total compute:  16.3 s
+#>   longest task:   3.6 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples       nboot   1000     4 tasks  16.3 s
+#>     weighted_samples       nboot   1000     4 tasks  14.0 s
 #>     weighted_samples       nboot    100     4 tasks  2.3 s
-#>   host(s):        Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz
+#>   host(s):        AMD EPYC 7763 64-Core Processor
 ```
 
 The observed **total is serial-equivalent compute** — the sum of the
@@ -102,8 +102,8 @@ reality:
 
 ssd_compare_cost(scenario, root = run$dir)
 #> <ssdsims_cost_comparison>  (predicted vs observed)
-#>   total compute:  predicted 22.4 s | observed 18.7 s | obs/pred 0.84x
-#>   longest task:   predicted 6.7 s | observed 4.2 s | obs/pred 0.63x
+#>   total compute:  predicted 22.4 s | observed 16.3 s | obs/pred 0.73x
+#>   longest task:   predicted 6.7 s | observed 3.6 s | obs/pred 0.55x
 ```
 
 A ratio far from `1` means the shipped default calibration does not
@@ -128,12 +128,12 @@ from_run <- ssd_calibrate_cost_from_run(scenario, root = run$dir)
 # The run-derived calibration drives the estimator like any other.
 ssd_estimate_cost(scenario, calibration = from_run)
 #> <ssdsims_cost_estimate>  (ballpark, serial)
-#>   total compute:  18.7 s
-#>   longest task:   2.4 s
+#>   total compute:  16.3 s
+#>   longest task:   2.1 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples   nboot   1000     4 tasks  9.4 s
-#>     weighted_samples   nboot    100     4 tasks  9.3 s
-#>   calibration:    Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz | R 4.6.0 | ssdtools 2.6.0.9002 | 2026-06-14
+#>     weighted_samples   nboot   1000     4 tasks  8.2 s
+#>     weighted_samples   nboot    100     4 tasks  8.1 s
+#>   calibration:    AMD EPYC 7763 64-Core Processor | R 4.6.0 | ssdtools 2.6.0.9002 | 2026-06-15
 #>   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.
 ```
 

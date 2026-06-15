@@ -43,29 +43,6 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- ‼️🛠️ \[distset-hc-axis\] Iwasaki.
-- ‼️⏳ \[scenario-combine\] **Blocked by distset-hc-axis**. Provide a
-  convenient way to run multiple `ssd_scenario` objects as a single
-  targets pipeline.
-- ‼️🛠️ \[cost-analysis-targets\] Scenario-level analysis implemented
-  (timing instrumentation, the tar_meta resolver,
-  [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)/[`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md)/[`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md));
-  the design-level rollup (group 9) stays **blocked by
-  scenario-combine**. Improve the cost estimation by analyzing an
-  existing targets run. Includes tools to query the targets store for
-  run times of the various targets and mapping this back to the scenario
-  slices. Side change, folded: Record start and end of computation time
-  for each task, and the start time of the simulation run, in the
-  Parquet. Also folded: a **design-level rollup** (the former
-  `cost-analysis-design`) —
-  [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)/[`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md)/[`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md)
-  accept an
-  [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md)
-  and aggregate across its per-scenario result trees (gated on
-  `scenario-combine`); a prototype of the aggregation seam is kept as
-  proof of work under the change’s `exploration/`. Supports a project
-  deliverable.
-
 ## Next
 
 - ❗️⏳ \[hc-readout-aggregation\] **Blocked by scenario-combine**.
@@ -95,7 +72,18 @@ artifacts yet is also queued, ready to propose.
   for many files.
 - 😀🛠️ \[azure-summary\] Conveniently access the summary Parquet files
   from Azure.
-- 😀⏳ \[terminology\] Finalize glossary, replace “knob” term.
+- 😀⏳ \[scenario-option-vocabulary\] Retire “knob” for the genus
+  **scenario option** (a **scenario axis** fans out into tasks; a
+  **scenario setting**, renamed from “simulation setting”, applies
+  within each task), with always-qualified discipline (bare
+  “option”/“setting” never used as terms) and `crew` config knobs
+  becoming **crew option**. Full-repo rename including archives,
+  `NEWS.md`, and file names (e.g. the `knobs.rds` fixture);
+  `GLOSSARY.md` gains the *study* ⊃ *design* ⊃ *scenario* ⊃ *task*
+  hierarchy plus a DoE / Morris-White-Crowther (2019) mapping. BREAKING
+  (cosmetic): the `ci = FALSE` rejection error text. Settles the
+  vocabulary before `scenario-combine`’s collection layer accretes more
+  on it.
 
 ## Later
 
@@ -187,6 +175,33 @@ artifacts yet is also queued, ready to propose.
   decoupling the draw from the `nrow` axis to retire the §5 re-draw
   churn, and move the last carried columns (`n_max`, `ci`) off the task
   tables into the scenario slice. Proposed; breaking pre-release.
+- ✅ 2026-06-14 \[distset-hc-axis\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-distset-hc-axis/)
+  — Iwasaki.
+- ✅ 2026-06-14 \[scenario-combine\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-scenario-combine/)
+  — **Blocked by distset-hc-axis**. Provide a convenient way to run
+  multiple `ssd_scenario` objects as a single targets pipeline.
+- ✅ 2026-06-14 \[cost-analysis-targets\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-cost-analysis-targets/)
+  — Scenario-level analysis implemented (timing instrumentation, the
+  tar_meta resolver,
+  [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)/[`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md)/[`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md));
+  the design-level rollup (group 9) stays **blocked by
+  scenario-combine**. Improve the cost estimation by analyzing an
+  existing targets run. Includes tools to query the targets store for
+  run times of the various targets and mapping this back to the scenario
+  slices. Side change, folded: Record start and end of computation time
+  for each task, and the start time of the simulation run, in the
+  Parquet. Also folded: a **design-level rollup** (the former
+  `cost-analysis-design`) —
+  [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)/[`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md)/[`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md)
+  accept an
+  [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md)
+  and aggregate across its per-scenario result trees (gated on
+  `scenario-combine`); a prototype of the aggregation seam is kept as
+  proof of work under the change’s `exploration/`. Supports a project
+  deliverable.
 - ✅ 2026-06-10 \[duckplyr-config\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-duckplyr-config/)
   — Pipeline-scoped duckplyr/DuckDB configuration: a

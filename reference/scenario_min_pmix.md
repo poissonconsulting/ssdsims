@@ -54,6 +54,6 @@ scenario_min_pmix(scenario, "ssd_min_pmix")
 #>   chk_gt(n)
 #>   max(min(3 / n, 0.5), 0.1)
 #> }
-#> <bytecode: 0x555c7731b618>
+#> <bytecode: 0x558211016100>
 #> <environment: namespace:ssdtools>
 ```
