@@ -1,81 +1,86 @@
 # Tasks: scenario-option-vocabulary
 
+> Redone against the evolved `main` (see design.md *Second-attempt note*). The
+> proposal, design, and **delta specs are reconciled** against current `main`
+> already (this propose pass). The tasks below are the implement phase.
+
 ## 1. Commit 1 — `refactor: rename knob to scenario option`
 
-- [ ] 1.1 Rename "knob" → "scenario option" (with anaphora per design D2, and
-      "bootstrap-only knobs" → "bootstrap-only scenario options" /
-      "bootstrap axes" in fan-out contexts) across `R/` roxygen and comments
-      (`scenario.R`, `task-lists.R`, `manifest.R`, `targets-runner.R`),
-      reviewing each hunk for grammar — no blind `sed`
-- [ ] 1.2 Change the `validate_scenario_ci()` error to the design D3 wording
-      ("Bootstrap-only scenario option ('nboot') cannot be set when
-      `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the
-      option."), update `tests/testthat/test-scenario.R` expectations and
-      regenerate `_snaps/scenario.md`
-- [ ] 1.3 Rename "knob" in test names/comments (`test-scenario.R`,
-      `test-task-lists.R`, `test-task-shards.R`, `test-manifest.R`) and the
-      runtime fixture `knobs.rds`/`knobs` → `opts.rds`/`opts` in
-      `fixtures/slice-invalidation-targets.R` + `test-task-shards.R` (design
-      D4)
-- [ ] 1.4 Rename the three "crew configuration knob" uses to "crew option"
-      (`inst/targets-templates/cluster/controller.R`, its `README.md`, and
-      the archived `cluster-pipeline` design)
-- [ ] 1.5 Rename "knob" across docs: `GLOSSARY.md` (entry prose only — the
-      genus entry itself lands in 3.2), `TARGETS-DESIGN.md`, `AGENTS.md`,
-      `ROADMAP.md`, vignettes, `scripts/example2.R`, `NEWS.md`, and
-      `openspec/specs/` main specs (apply the delta-spec wording, including
-      the two RENAMED requirement headers and the Purpose line of
-      `scenario-definition`)
-- [ ] 1.6 Rename "knob" in `openspec/changes/` active changes and `archive/`
-      (all files; old term remains only in this change's artifacts)
-- [ ] 1.7 Regenerate `man/` (`devtools::document()`), run `air format .`,
-      run `devtools::test()`; verify `git grep -i knob` hits only this
-      change's artifacts; commit
+- [ ] 1.1 Rename "knob" → "scenario option" (always qualified per design D2;
+      "bootstrap-only knobs" → "bootstrap-only scenario options"; fan-out
+      "bootstrap knobs" → "bootstrap axes") across `R/` roxygen/comments:
+      `scenario.R`, `task-lists.R`, `manifest.R`, `targets-runner.R`,
+      `hc-sims.R`, `internal.R`, `params.R` — reviewing each hunk, no blind sed
+- [ ] 1.2 Rename the **env-var** sense (not a scenario option) in
+      `R/duckplyr-config.R` and `openspec/specs/duckplyr-config/spec.md`:
+      "the `SSDSIMS_DUCKDB_*` knob" → "… environment variable"; the two
+      scenario titles → "… environment variable" (matches the reconciled
+      `duckplyr-config` delta)
+- [ ] 1.3 Change the `validate_scenario_ci()` error to design D3 wording
+      ("Bootstrap-only scenario option ('nboot') … omit the option."), update
+      `tests/testthat/test-scenario.R` and regenerate `_snaps/scenario.md`
+- [ ] 1.4 Rename "knob" in test names/comments (`test-scenario.R`,
+      `test-task-lists.R`, `test-task-shards.R`, `test-manifest.R`,
+      `test-duckplyr-config.R`) and the runtime fixture `knobs.rds`/`knobs` →
+      `opts.rds`/`opts` (`fixtures/slice-invalidation-targets.R`,
+      `test-task-shards.R`) (design D4)
+- [ ] 1.5 Rename the "crew configuration knob" / env-var uses → "crew option"
+      / "environment variable" in `inst/targets-templates/`
+      (`cluster/controller.R`, `cluster/README.md`, `small/_targets.R`,
+      `large/_targets.R`)
+- [ ] 1.6 Rename "knob" across docs: `GLOSSARY.md` (entry prose only — genus
+      entry lands in 3.2), `TARGETS-DESIGN.md`, `AGENTS.md`, `ROADMAP.md`,
+      vignettes, `scripts/example2.R`, `NEWS.md`, and the live `openspec/specs/`
+      main specs (apply the reconciled delta wording, incl. the two RENAMED
+      headers and the Purpose line of `scenario-definition`)
+- [ ] 1.7 Rename "knob" in `openspec/changes/` active changes
+      (`distset-hc-axis`, `migrate-public-api`, `scenario-input-types`,
+      `error-call-origin`) and `archive/` (all files; old term survives only in
+      this change's `proposal.md`/`design.md`)
+- [ ] 1.8 Regenerate `man/` (`devtools::document()`), `air format .`,
+      `devtools::test()`; verify `git grep -i knob` hits only this change's
+      proposal/design; commit
 
 ## 2. Commit 2 — `refactor: rename simulation setting to scenario setting`
 
 - [ ] 2.1 Rename "simulation setting" → "scenario setting" across `R/`
-      roxygen/comments, tests, vignettes, `TARGETS-DESIGN.md`, `ROADMAP.md`,
-      `NEWS.md`, and `GLOSSARY.md` (retitle the **simulation setting** entry
-      to **scenario setting**; retitle **axis** to **scenario axis
-      (cross-join axis)** per design D5)
-- [ ] 2.2 Apply the delta-spec wording to `openspec/specs/` (scenario-setting
-      occurrences incl. the `est_method` RENAMED header) and rename the term
-      across active changes and `archive/` contents
+      (`scenario.R`, `task-lists.R`, `hc-sims.R`, `internal.R`, `params.R`),
+      tests, vignettes, `TARGETS-DESIGN.md`, `ROADMAP.md`, `NEWS.md`,
+      `GLOSSARY.md` (retitle the **simulation setting** entry → **scenario
+      setting**; retitle **axis** → **scenario axis (cross-join axis)**, D5)
+- [ ] 2.2 Apply the reconciled wording to the live `openspec/specs/`
+      (`scenario-definition`, `task-lists`, `hazard-concentrations`,
+      `scenario-accessors`, incl. the est_method RENAMED header) and rename the
+      term across active changes and `archive/`
 - [ ] 2.3 `git mv openspec/changes/archive/2026-06-07-dists-simulation-setting
-      2026-06-07-dists-scenario-setting` and fix references to the old change
-      name in live docs (design D4)
-- [ ] 2.4 Regenerate `man/`, run `air format .`, run `devtools::test()`;
-      verify `git grep -i "simulation setting"` hits only this change's
-      artifacts; commit
+      2026-06-07-dists-scenario-setting` and fix references in live docs (D4)
+- [ ] 2.4 Regenerate `man/`, `air format .`, `devtools::test()`; verify
+      `git grep -i "simulation setting"` hits only this change's
+      proposal/design; commit
 
-## 3. Commit 3 — `docs: add glossary hierarchy and DoE mapping`
+## 3. Commit 3 — `docs: add glossary genus entry and DoE mapping`
 
-- [ ] 3.1 Cleanup pass: re-read every paragraph touched by 1.x/2.x for
-      grammar, line-wrap (80-col Markdown), and always-qualified discipline
-      (no bare "option"/"setting" introducing a term); catch stragglers via
+- [ ] 3.1 Cleanup pass: re-read every paragraph touched by 1.x/2.x for grammar,
+      80-col wrap, and always-qualified discipline; catch stragglers via
       `git grep -niE "knob|simulation setting"`
-- [ ] 3.2 Add the **scenario option** genus entry to `GLOSSARY.md` (design
-      D1: axis|setting dichotomy; `data`/`nsim`/`seed`/`name` and the layout
-      arguments `partition_by`/`bundle`/`upload` are excluded) and align the
+- [ ] 3.2 Add the **scenario option** genus entry to `GLOSSARY.md` (design D1:
+      axis|setting dichotomy; `data`/`nsim`/`seed`/`name` and the layout
+      arguments `partition_by`/`bundle`/`upload` excluded) and align the
       scenario-axis/scenario-setting entries with it
-- [ ] 3.3 Add the GLOSSARY "Hierarchy" section: simulation study ⊃ design
-      (`ssd_design()`, marked in-flight → `scenario-combine`) ⊃ scenario ⊃
-      task, with the multi-design-study examples (design D5)
-- [ ] 3.4 Add the literature mapping table to `GLOSSARY.md` with citations —
-      Morris, White & Crowther (2019) *Statistics in Medicine* 38:2074–2102
-      (ADEMP, factors varied factorially) and DoE factor/level/cell — mapping
-      scenario axis ≈ factor, axis value ≈ level, task ≈ factorial cell (the
-      literature's "scenario"), scenario setting ≈ held-constant condition,
-      `nsim` ≈ repetitions per cell; note "factor"/"level"/"study" are
-      glosses, never working terms
+- [ ] 3.3 Add the DoE / Morris-White-Crowther (2019) mapping table to
+      `GLOSSARY.md` (scenario axis ≈ factor, axis value ≈ level, task ≈
+      factorial cell, scenario setting ≈ held-constant condition, `nsim` ≈
+      repetitions per cell; "factor"/"level"/"study" are glosses). **Do not**
+      add a competing hierarchy section — cross-reference the existing
+      `## Design terms` (D5)
+- [ ] 3.4 Verify the live main specs match this change's reconciled delta specs
+      (`openspec validate scenario-option-vocabulary --strict`; a dry sync
+      shows no unintended drift)
 - [ ] 3.5 Final verification: `devtools::test()`, `devtools::document()`
-      diff-clean, `air format .` clean, full `R CMD check` if time permits;
-      commit
+      diff-clean, `air format .` clean, `R CMD check` if time permits; commit
 
 ## 4. PR
 
-- [ ] 4.1 Push branch `claude/happy-curie-8te0ci` and open the PR titled
-      `refactor: rename knob/simulation-setting vocabulary to scenario
-      option/axis/setting`, description capturing the final vocabulary table
-      and scope decisions
+- [ ] 4.1 Force-push `claude/happy-curie-8te0ci` (rebased onto current `main`)
+      and update PR #154 (base now current `main`; description reflects the
+      reconciled scope)
