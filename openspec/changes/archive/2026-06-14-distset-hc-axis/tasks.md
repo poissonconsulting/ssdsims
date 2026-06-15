@@ -43,4 +43,4 @@
 - [x] 7.3 Update the `defining-a-scenario` and `sharded-pipeline` vignettes with a multi-set example (and the bundled-vs-path `distset` trade-off); add a worked iwasaki-style snippet.
 - [x] 7.4 Re-record affected snapshots (printed scenarios; hc task-count assertions; `ci = TRUE` CI snapshots re-seeded by the primer change).
 - [x] 7.5 Run `air format .`, `devtools::document()`, `devtools::test()`, `devtools::check()`; verify a multi-set `ci = FALSE` scenario fits the union once and re-averages per pool (one fit, cheap per-pool hc).
-- [ ] 7.6 Move the ROADMAP item for distribution sets to Done with the archive link on completion.
+- [x] 7.6 Move the ROADMAP item for distribution sets to Done with the archive link on completion.
