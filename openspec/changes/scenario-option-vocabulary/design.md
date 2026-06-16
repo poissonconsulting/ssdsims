@@ -14,6 +14,14 @@ factor"), "level" collides with the repo's pervasive `-level` qualifiers and
 Hive directory levels, and "study" is already anchored at the top of the
 hierarchy (`DESCRIPTION`, README: "simulation studies").
 
+**Second-attempt note.** This change's *proposal* artifacts landed on `main`
+first; the rename commits did not, and `main` then moved substantially
+(`ssd_design()`, the `distset` hc axis, `ssd_pmix()`/`ssd_distset()`,
+`nrow_max`, `duckplyr-config`, cost-analysis — all using the old vocabulary).
+The rename is therefore redone *in spirit* against the evolved `main` rather
+than replayed; the first attempt is preserved on branch
+`happy-curie-attempt-1` for reference.
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -22,8 +30,10 @@ hierarchy (`DESCRIPTION`, README: "simulation studies").
   **scenario axis** | **scenario setting**; **crew option** for crew config.
 - Full-repo rename including archives, `NEWS.md`, and file names; old terms
   survive only in this change's artifacts.
-- GLOSSARY hierarchy (*simulation study* ⊃ *design* ⊃ *scenario* ⊃ *task*)
-  and the DoE/Morris-et-al. mapping table.
+- GLOSSARY: the **scenario option** genus entry, the axis/setting retitles,
+  and the DoE/Morris-et-al. mapping table. The *study ⊃ design ⊃ scenario ⊃
+  task* hierarchy already exists (`## Design terms`, landed with
+  `scenario-combine`), so it is **not** re-added.
 
 **Non-Goals:**
 
@@ -83,19 +93,54 @@ options"). Snapshots regenerate in the same commit.
 
 ### D5: GLOSSARY structure
 
-The "axis" entry is retitled **scenario axis (cross-join axis)** and
-**simulation setting** becomes **scenario setting**; a new **scenario option**
-entry defines the genus and the exclusions (D1). A new "Hierarchy" section
-states: **simulation study** (the endeavour — may span several collections,
-e.g. different performance-measure schemas, pilot vs cluster runs, or run
-epochs) ⊃ **design** (`ssd_design()`, a named set of scenarios run as one
-pipeline / store / union summary, DoE sense — in-flight `scenario-combine`
-change) ⊃ **scenario** ⊃
-**task**. A mapping table glosses the DoE/Morris-White-Crowther (2019,
-*Statistics in Medicine* 38:2074–2102) terms: scenario axis ≈ factor, axis
-value ≈ level, task ≈ factorial cell (the literature's "scenario"), scenario
-setting ≈ held-constant condition, `nsim` ≈ repetitions per cell. "Factor",
-"level", "study" remain glosses, never working terms.
+The Pipeline-terms "axis" entry is retitled **scenario axis (cross-join axis)**
+and "simulation setting" becomes **scenario setting**; a new **scenario
+option** entry defines the genus and the exclusions (D1). The
+*study ⊃ design ⊃ scenario ⊃ task* hierarchy is **already present** as the
+`## Design terms` section (landed with `scenario-combine`, with `ssd_design()`),
+so this change does **not** add a competing "Hierarchy" section — it only
+cross-references it. A new mapping subsection glosses the
+DoE/Morris-White-Crowther (2019, *Statistics in Medicine* 38:2074–2102) terms:
+scenario axis ≈ factor, axis value ≈ level, task ≈ factorial cell (the
+literature's "scenario"), scenario setting ≈ held-constant condition, `nsim` ≈
+repetitions per cell. "Factor", "level", "study" remain glosses, never working
+terms.
+
+### D7: Reconcile delta specs against current main (per user decision)
+
+This change's delta specs (`MODIFIED Requirements` with full requirement text)
+were authored against the *old* main spec text. `main` has since gained the
+`distset` hc axis, `ssd_pmix()`/`ssd_distset()`, and `nrow_max`, so a verbatim
+delta would, on sync, **overwrite** (revert) that landed wording. Therefore
+each delta requirement is **regenerated from the current `main` requirement
+text with the rename applied**, so syncing reproduces today's wording *plus*
+the rename. Two delta specs are added that the first attempt lacked —
+`scenario-accessors` and `duckplyr-config` (both gained the old terms on the
+evolved main). The `distset-hc-axis` change is *active* (not a main spec), so
+its old-vocabulary uses are reworded in place, not via a delta of this change.
+
+### D8: Glossary pointer — storage layout is a separate hierarchy
+
+An explore-mode thread (does `study ⊃ design ⊃ scenario ⊃ task` include
+**shard**?) concluded it does not: shards and the on-disk tree are a *separate,
+configurable* storage hierarchy that meets the experimental one only at the
+**task**. This change adds a **one-line pointer** to the glossary so the
+question is answered for the next reader — added to the `shard` (Pipeline
+terms) entry during the glossary work (task 3.x):
+
+> *The on-disk results tree is a separate, configurable hierarchy from
+> `design → scenario → task` above: it is keyed by `seed=`/`layout=` (and,
+> within a shard, `partition_by`), with the design root holding the combined
+> `summary.parquet`. A scenario has no directory of its own — members sharing a
+> `(seed, layout)` blend into one subtree (common random numbers) and surface
+> only via the `scenario` identity column. The two hierarchies meet at the
+> task.*
+
+The **full two-ladders diagram** and the on-disk facts behind it live in
+`exploration/storage-vs-experimental-hierarchy.md`; promoting them to a
+`## Storage layout` glossary subsection (or a dedicated docs change) is
+**deferred** — that documents the design/seed-keying machinery (#172/#174),
+not the option vocabulary, so it stays out of this rename's scope.
 
 ### D6: Commit plan (per user instruction)
 
@@ -122,13 +167,13 @@ scenario option/axis/setting`.
   explicit user decision; git history preserves the originals.
 - [Snapshot/man churn hides real diffs] → regenerate in the same commit as
   the source change so each commit is self-consistent and `R CMD check`-green.
-- [In-flight changes (`nrow-max-setting`, `scenario-input-types`,
+- [Active changes (`distset-hc-axis`, `scenario-input-types`,
   `migrate-public-api`, `error-call-origin`) edited here may conflict with
   their own branches] → wording-only edits; conflicts are trivial to resolve
   in favour of the new vocabulary.
-- [GLOSSARY references `ssd_design()` before scenario-combine lands] →
-  marked as in-flight with a pointer to the change, like other
-  forward-references in the glossary.
+- [Reconciled delta specs drift from current main between now and merge] →
+  the delta specs are regenerated from current `main`; if `main` moves again
+  before merge, re-reconcile the affected requirement(s) rather than replay.
 
 ## Open Questions
 
