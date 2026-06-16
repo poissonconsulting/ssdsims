@@ -43,33 +43,6 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-## Next
-
-- ❗️⏳ \[hc-readout-aggregation\] **Blocked by scenario-combine**.
-  Per-overlap hc readout aggregation: reconcile design members that
-  differ in the non-axis hc settings (`union` `proportion`/`est_method`,
-  `any` `ci`/`samples`) into shared hc shards via per-cell demand
-  reduction and `ci`-routing, instead of aborting. No ssdtools refactor.
-- ❗️⏳ \[migrate-public-api\] Migrate `ssd_sim_data.data.frame` /
-  `ssd_fit_dists_sims` / `ssd_hc_sims` to the new per-task contract,
-  keeping the `_seed` wrappers as a one-release shim. Depends on
-  `scenario-input-types` + `primer-primitives`; gates `cleanup-lecuyer`.
-- 📚⏳ \[readme\] Update README and integrate in the rest of the
-  documentation. Create vignette(“ssdsims”) . Perform comprehensive
-  review of all vignettes for content, output artifacts, and style. Use
-  vignette(…) style links everywhere.
-- ❗️ \[replay-helper\] `ssd_replay_task()` (§7) and `ssd_input_hash()`
-  for the lightweight recipe — reproduce a failed branch locally with no
-  `targets`. Ready to propose (prereqs `task-tables` + `manifest`
-  landed).
-- ❗️ \[shard-failure-survival\] §6.2 partial-failure survival: a bad
-  task yields a shorter shard (not an abort), `summary` unions the
-  survivors. Ready to propose (prereq `cluster-pipeline` landed).
-- 📚 \[cluster-controller\] Run the controller on a long-running SLURM
-  job.
-- 😀 \[azure-open-performance\] Analyze performance of
-  [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md)
-  for many files.
 - 😀🛠️ \[azure-summary\] Conveniently access the summary Parquet files
   from Azure.
 - 😀⏳ \[scenario-option-vocabulary\] Retire “knob” for the genus
@@ -84,6 +57,32 @@ artifacts yet is also queued, ready to propose.
   (cosmetic): the `ci = FALSE` rejection error text. Settles the
   vocabulary before `scenario-combine`’s collection layer accretes more
   on it.
+- ❗️⏳ \[hc-readout-aggregation\] Per-overlap hc readout aggregation:
+  reconcile design members that differ in the non-axis hc settings
+  (`union` `proportion`/`est_method`, `any` `ci`/`samples`) into shared
+  hc shards via per-cell demand reduction and `ci`-routing, instead of
+  aborting. No ssdtools refactor.
+- ❗️⏳ \[migrate-public-api\] Changed scope: retire legacy API; gates
+  `cleanup-lecuyer`.
+- 📚⏳ \[readme\] **Blocked by migrate-public-api**. Update README and
+  integrate in the rest of the documentation. Create vignette(“ssdsims”)
+  . Perform comprehensive review of all vignettes for content, output
+  artifacts, and style. Use vignette(…) style links everywhere.
+
+## Next
+
+- ❗️ \[replay-helper\] `ssd_replay_task()` (§7) and `ssd_input_hash()`
+  for the lightweight recipe — reproduce a failed branch locally with no
+  `targets`. Ready to propose (prereqs `task-tables` + `manifest`
+  landed).
+- ❗️ \[shard-failure-survival\] §6.2 partial-failure survival: a bad
+  task yields a shorter shard (not an abort), `summary` unions the
+  survivors. Ready to propose (prereq `cluster-pipeline` landed).
+- 📚 \[cluster-controller\] Run the controller on a long-running SLURM
+  job.
+- 😀 \[azure-open-performance\] Analyze performance of
+  [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md)
+  for many files.
 
 ## Later
 

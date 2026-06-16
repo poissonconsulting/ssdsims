@@ -70,19 +70,19 @@
 <div class="section level2">
 <h2 id="now">Now<a class="anchor" aria-label="anchor" href="#now"></a></h2>
 <!-- What is actively being worked on this cycle. -->
-</div>
+<ul><li>😀🛠️ [azure-summary] Conveniently access the summary Parquet files from Azure.</li>
+<li>😀⏳ [scenario-option-vocabulary] Retire “knob” for the genus <strong>scenario option</strong> (a <strong>scenario axis</strong> fans out into tasks; a <strong>scenario setting</strong>, renamed from “simulation setting”, applies within each task), with always-qualified discipline (bare “option”/“setting” never used as terms) and <code>crew</code> config knobs becoming <strong>crew option</strong>. Full-repo rename including archives, <code>NEWS.md</code>, and file names (e.g. the <code>knobs.rds</code> fixture); <code>GLOSSARY.md</code> gains the <em>study</em> ⊃ <em>design</em> ⊃ <em>scenario</em> ⊃ <em>task</em> hierarchy plus a DoE / Morris-White-Crowther (2019) mapping. BREAKING (cosmetic): the <code>ci = FALSE</code> rejection error text. Settles the vocabulary before <code>scenario-combine</code>’s collection layer accretes more on it.</li>
+<li>❗️⏳ [hc-readout-aggregation] Per-overlap hc readout aggregation: reconcile design members that differ in the non-axis hc settings (<code>union</code> <code>proportion</code>/<code>est_method</code>, <code>any</code> <code>ci</code>/<code>samples</code>) into shared hc shards via per-cell demand reduction and <code>ci</code>-routing, instead of aborting. No ssdtools refactor.</li>
+<li>❗️⏳ [migrate-public-api] Changed scope: retire legacy API; gates <code>cleanup-lecuyer</code>.</li>
+<li>📚⏳ [readme] <strong>Blocked by migrate-public-api</strong>. Update README and integrate in the rest of the documentation. Create vignette(“ssdsims”) . Perform comprehensive review of all vignettes for content, output artifacts, and style. Use vignette(…) style links everywhere.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a></h2>
 <!-- Queued up. Roughly in priority order. Doesn't have to be exhaustive. -->
-<ul><li>❗️⏳ [hc-readout-aggregation] <strong>Blocked by scenario-combine</strong>. Per-overlap hc readout aggregation: reconcile design members that differ in the non-axis hc settings (<code>union</code> <code>proportion</code>/<code>est_method</code>, <code>any</code> <code>ci</code>/<code>samples</code>) into shared hc shards via per-cell demand reduction and <code>ci</code>-routing, instead of aborting. No ssdtools refactor.</li>
-<li>❗️⏳ [migrate-public-api] Migrate <code>ssd_sim_data.data.frame</code> / <code>ssd_fit_dists_sims</code> / <code>ssd_hc_sims</code> to the new per-task contract, keeping the <code>_seed</code> wrappers as a one-release shim. Depends on <code>scenario-input-types</code> + <code>primer-primitives</code>; gates <code>cleanup-lecuyer</code>.</li>
-<li>📚⏳ [readme] Update README and integrate in the rest of the documentation. Create vignette(“ssdsims”) . Perform comprehensive review of all vignettes for content, output artifacts, and style. Use vignette(…) style links everywhere.</li>
-<li>❗️ [replay-helper] <code>ssd_replay_task()</code> (§7) and <code>ssd_input_hash()</code> for the lightweight recipe — reproduce a failed branch locally with no <code>targets</code>. Ready to propose (prereqs <code>task-tables</code> + <code>manifest</code> landed).</li>
+<ul><li>❗️ [replay-helper] <code>ssd_replay_task()</code> (§7) and <code>ssd_input_hash()</code> for the lightweight recipe — reproduce a failed branch locally with no <code>targets</code>. Ready to propose (prereqs <code>task-tables</code> + <code>manifest</code> landed).</li>
 <li>❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), <code>summary</code> unions the survivors. Ready to propose (prereq <code>cluster-pipeline</code> landed).</li>
 <li>📚 [cluster-controller] Run the controller on a long-running SLURM job.</li>
 <li>😀 [azure-open-performance] Analyze performance of <code><a href="reference/ssd_open_uploaded.html">ssd_open_uploaded()</a></code> for many files.</li>
-<li>😀🛠️ [azure-summary] Conveniently access the summary Parquet files from Azure.</li>
-<li>😀⏳ [scenario-option-vocabulary] Retire “knob” for the genus <strong>scenario option</strong> (a <strong>scenario axis</strong> fans out into tasks; a <strong>scenario setting</strong>, renamed from “simulation setting”, applies within each task), with always-qualified discipline (bare “option”/“setting” never used as terms) and <code>crew</code> config knobs becoming <strong>crew option</strong>. Full-repo rename including archives, <code>NEWS.md</code>, and file names (e.g. the <code>knobs.rds</code> fixture); <code>GLOSSARY.md</code> gains the <em>study</em> ⊃ <em>design</em> ⊃ <em>scenario</em> ⊃ <em>task</em> hierarchy plus a DoE / Morris-White-Crowther (2019) mapping. BREAKING (cosmetic): the <code>ci = FALSE</code> rejection error text. Settles the vocabulary before <code>scenario-combine</code>’s collection layer accretes more on it.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="later">Later<a class="anchor" aria-label="anchor" href="#later"></a></h2>
