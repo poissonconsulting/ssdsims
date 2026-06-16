@@ -10,7 +10,7 @@ Because a step's Hive shard path depth/axes are a function of `partition_by`/`bu
 - **THEN** the two roots SHALL differ
 
 #### Scenario: Same layout yields the same root
-- **WHEN** `scenario_results_dir()` is computed twice for the same `partition_by` (other arguments may differ)
+- **WHEN** `scenario_results_dir()` is computed twice for the same `partition_by` (other scenario options may differ)
 - **THEN** the root SHALL be identical
 
 ### Requirement: Each step target depends only on its minimal scenario slice

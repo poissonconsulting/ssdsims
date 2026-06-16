@@ -63,6 +63,16 @@ Terminology used throughout `ssdsims`.
   at that step, and the upstream partition path it depends on.
   Many tasks bundle into one **shard** (below) when they share
   the step's `partition_by` column values.
+- **scenario option**: The genus term for a declarative
+  `ssd_define_scenario()` parameter that shapes the *results*. Every
+  scenario option is either a **scenario axis** (below — it multiplies
+  tasks) or a **scenario setting** (below — it is consumed within each
+  task), and the two species exhaust the genus. The required inputs
+  `data`/`nsim`/`seed` (and the `name`) are **not** scenario options, nor are
+  the **layout arguments** `partition_by`/`bundle`/`upload` — those relocate
+  shards on disk without changing any task result (the byte-identity
+  invariant, §5/§8). Bare "option" never introduces the term; always
+  qualify it ("scenario option", "scenario axis", "scenario setting").
 - **scenario axis** (cross-join axis): A scenario option a step *fans out*
   over — one task per combination of the step's axis values. The
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
@@ -115,6 +125,14 @@ Terminology used throughout `ssdsims`.
   results, one row per task, with `task_id` as a column. In our
   design **one shard ≡ one partition leaf** (no `part-N` style
   splitting); the leaf file is always named `part.parquet`.
+
+  > *The on-disk results tree is a separate, configurable hierarchy from
+  > `design → scenario → task` above: it is keyed by `seed=`/`layout=` (and,
+  > within a shard, `partition_by`), with the design root holding the combined
+  > `summary.parquet`. A scenario has no directory of its own — members
+  > sharing a `(seed, layout)` blend into one subtree (common random numbers)
+  > and surface only via the `scenario` identity column. The two hierarchies
+  > meet at the task.*
 - **sidecar**: A small auxiliary metadata file written *beside* the
   data it describes (in the same directory), rather than embedded in
   it — human-readable, diffable JSON kept separate from the bulk
@@ -202,8 +220,8 @@ design-runs across infrastructure, time, and software versions.
   `targets` pipeline (`ssd_scenario_targets()`), carrying a `seed`, the scenario
   options, and the dataset *names*; it draws no random numbers and expands no
   tasks (TARGETS-DESIGN.md §1). Vignette prose that calls a scenario "the study"
-  is the loose gloss this section tightens: a scenario is one **arm** of a study,
-  not the study.
+  is the loose gloss this section tightens: a scenario is one **arm** of a
+  study, not the study.
 - **design**: A named set of scenarios run as **one pipeline** — one `targets`
   store, one `tar_make()`, one provenance/execution context — built with
   `ssd_design()` and turned into targets by `ssd_design_targets()`. Where a
@@ -227,6 +245,26 @@ design-runs across infrastructure, time, and software versions.
   `study` column over several designs' summaries). Reserved for that umbrella
   level; not built by the design machinery. Distinct from **experiment**, which
   in this repo names the proof-of-work `scripts/experiment-*.R`.
+
+### Mapping to design-of-experiments terminology
+
+The vocabulary above maps onto the design-of-experiments / simulation-study
+literature (Morris, White & Crowther 2019, *Statistics in Medicine*
+38:2074–2102). The mapping is a **gloss** for readers coming from that
+literature — "factor", "level", and "study" are not working terms in this repo
+(see the `## Design terms` hierarchy above for the terms we do use):
+
+| ssdsims term       | DoE / Morris-White-Crowther (2019) gloss      |
+| ------------------ | --------------------------------------------- |
+| scenario axis      | factor                                        |
+| axis value         | level                                         |
+| task               | factorial cell (the literature's "scenario")  |
+| scenario setting   | held-constant condition                       |
+| `nsim`             | repetitions per cell                          |
+
+Note the terminology clash the gloss resolves: the literature's **"scenario"**
+is our **task** (one factorial cell), whereas our **scenario** is a whole
+regular grid of cells. "Factor"/"level"/"study" remain glosses only.
 
 ## Simulation terms
 
