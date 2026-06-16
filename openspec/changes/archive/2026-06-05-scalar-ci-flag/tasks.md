@@ -1,11 +1,11 @@
 ## 1. Constructor and validation (`R/scenario.R`)
 
 - [x] 1.1 Replace the `ci` validation (`chk_logical` + `chk_not_any_na` + `chk_unique` + `chk_length(ci, upper = 2L)`) with `chk::chk_flag(ci)`; keep the default `ci = FALSE`
-- [x] 1.2 Simplify the bootstrap-knob guard from `if (length(ci) == 1L && isFALSE(ci))` to `if (isFALSE(ci))`, and change the message escape hatch from "Set `ci = c(FALSE, TRUE)` to enable bootstrap" to "Set `ci = TRUE` to enable bootstrap"
+- [x] 1.2 Simplify the bootstrap-only scenario option guard from `if (length(ci) == 1L && isFALSE(ci))` to `if (isFALSE(ci))`, and change the message escape hatch from "Set `ci = c(FALSE, TRUE)` to enable bootstrap" to "Set `ci = TRUE` to enable bootstrap"
 - [x] 1.3 Update the `ssd_define_scenario()` roxygen: the *"# `ci = FALSE`"* section (scalar flag; estimate invariant; `ci = TRUE` superset; `ci = FALSE` cheap/bootstrap-free) **and** the `@param partition_by` line that enumerates the hc vocabulary (`hc` adds `ci`, `nboot`, …) — drop `ci` there
 - [x] 1.4 Reorder the `ssd_define_scenario()` signature by role so the **simulation settings** are contiguous: keep data/`seed`/`nsim`/`name` first, then the cross-join axes (`nrow`, `replace`, `dists`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`, `nboot`, `est_method`, `ci_method`, `parametric`), then the simulation settings (`proportion`, `ci`, `samples`), then `partition_by`, `bundle`, `upload`. Concretely, move `proportion = 0.05` and `ci = FALSE` down from inside the hc axes to sit before `samples = FALSE`
 - [x] 1.5 Mirror the role order in the stored `hc` list (`scenario$hc <- list(nboot, est_method, ci_method, parametric, proportion, ci, samples)`) and reorder the roxygen `@param`/`@inheritParams` so the generated `man/` lists `proportion`/`ci`/`samples` together
-- [x] 1.6 Confirm `print.ssdsims_scenario()` renders the hc knobs in the new role order — hc axes first, then the simulation settings `proportion`/`ci`/`samples` (covered by the print snapshot in §9)
+- [x] 1.6 Confirm `print.ssdsims_scenario()` renders the hc scenario options in the new role order — hc axes first, then the simulation settings `proportion`/`ci`/`samples` (covered by the print snapshot in §9)
 
 ## 2. Task axes and hc grid (`R/task-lists.R`)
 
@@ -17,7 +17,7 @@
 ## 3. Step runner shared by the single-core and targets pipelines (`R/targets-runner.R`, `R/shard-runner.R`)
 
 - [x] 3.1 `ssd_run_hc_step()` reads `ci = t$ci` from the carried column — confirm this still holds with `ci` out of `task_axes("hc")` (**no code change expected**, since the column persists); this one function backs both `ssd_run_scenario_sharded()` (single-core) and the `tar_map` hc target
-- [x] 3.2 Update `ssd_run_hc_step()` roxygen (the *"`ci = FALSE` collapse, section 1.2"* mention) to "scalar `ci`; bootstrap-only knobs `NA` when `ci = FALSE`"
+- [x] 3.2 Update `ssd_run_hc_step()` roxygen (the *"`ci = FALSE` collapse, section 1.2"* mention) to "scalar `ci`; bootstrap-only scenario options `NA` when `ci = FALSE`"
 - [x] 3.3 Confirm the shard write/read round-trips `ci` as a non-axis carried column exactly as it already does for `n_max` (no path-key/partition involvement); add a targeted check in §9 rather than new runner code
 
 ## 4. Per-task primer identity (`R/task-primer.R`)
@@ -48,9 +48,9 @@
 
 ## 9. Tests and snapshots
 
-- [x] 9.1 `tests/testthat/test-scenario.R`: replace the "ci = c(FALSE, TRUE) retains bootstrap knobs" test (asserting `s$hc$ci == c(FALSE, TRUE)`) with: `ci = c(FALSE, TRUE)` (and any non-flag) aborts; a scalar `ci = TRUE` stores `s$hc$ci == TRUE` and retains bootstrap knobs; `ci = FALSE` + a bootstrap knob aborts with the "Set `ci = TRUE`" message. Update the other `ci = c(FALSE, TRUE)` call sites (e.g. line 705) to scalar
+- [x] 9.1 `tests/testthat/test-scenario.R`: replace the "ci = c(FALSE, TRUE) retains bootstrap axes" test (asserting `s$hc$ci == c(FALSE, TRUE)`) with: `ci = c(FALSE, TRUE)` (and any non-flag) aborts; a scalar `ci = TRUE` stores `s$hc$ci == TRUE` and retains bootstrap axes; `ci = FALSE` + a bootstrap-only scenario option aborts with the "Set `ci = TRUE`" message. Update the other `ci = c(FALSE, TRUE)` call sites (e.g. line 705) to scalar
 - [x] 9.2 `tests/testthat/test-scenario.R` axis-vocabulary assertions (the `task_axes("hc")` / path-vs-inner checks around lines 79, 465–480): drop `"ci"` from the expected hc vocabulary; add a case asserting `partition_by = list(hc = "ci")` is **rejected** as an unknown hc axis (and `bundle = list(hc = "ci")` likewise)
-- [x] 9.3 `tests/testthat/test-task-lists.R`: rewrite the "ci = c(FALSE, TRUE) collapses the bootstrap-only knobs" test (and the `hc_tasks$ci == FALSE` filter) for scalar `ci`: a `ci = FALSE` scenario yields one row per `est_method` with `NA` bootstrap knobs; a `ci = TRUE` scenario fans out; assert `!"ci" %in% task_axes("hc")`. Update remaining `ci = c(FALSE, TRUE)` call sites to scalar
+- [x] 9.3 `tests/testthat/test-task-lists.R`: rewrite the "ci = c(FALSE, TRUE) collapses the bootstrap-only scenario options" test (and the `hc_tasks$ci == FALSE` filter) for scalar `ci`: a `ci = FALSE` scenario yields one row per `est_method` with `NA` bootstrap scenario options; a `ci = TRUE` scenario fans out; assert `!"ci" %in% task_axes("hc")`. Update remaining `ci = c(FALSE, TRUE)` call sites to scalar
 - [x] 9.4 `tests/testthat/test-task-shards.R`: update the `ci = c(FALSE, TRUE)` scenario to scalar; assert `ci` is a carried column (present, not a path/inner axis) on the hc shards
 - [x] 9.5 `tests/testthat/test-hc-sims.R`: assert `ssd_hc_sims(..., ci = c(FALSE, TRUE))` aborts; assert `est` is byte-identical between `ci = FALSE` and `ci = TRUE`; re-baseline the `hc_sims1` / `hc_sims1ci` snapshots (CI columns shift because `ci` left the primer; `est` unchanged)
 - [x] 9.6 `tests/testthat/test-run-scenario.R` and the single-core/targets runner tests: confirm byte-identical results across baseline / sharded / targets for a scalar-`ci` scenario (the cross-runner oracle), and that `ci` round-trips as a carried column through the Parquet shards

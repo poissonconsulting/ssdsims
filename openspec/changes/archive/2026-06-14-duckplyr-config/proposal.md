@@ -70,7 +70,7 @@ with a multi-line "fallback events can be collected and uploaded…" banner
   write was observed byte-identical and in input order).
 - Documented sizing guidance (design.md + the helper's docs): writing an `hc`
   shard whose `samples` list-column holds `P` bytes of draws needs
-  `memory_limit` ≳ 5 × `P`; the limit is a knob, not a magic constant, and the
+  `memory_limit` ≳ 5 × `P`; the limit is a configuration option, not a magic constant, and the
   experiments' RESULT tables are the evidence.
 - Per-task results stay **byte-identical**: threads, memory limits, and
   telemetry switches change resource usage and chatter only, never values.
@@ -96,7 +96,7 @@ with a multi-line "fallback events can be collected and uploaded…" banner
   `R/shard-runner.R` (`ssd_run_scenario_shards()`), a new internal helper file;
   tests in `tests/testthat/`.
 - **Templates**: `inst/targets-templates/*` gain a comment pointing at the
-  memory knob next to the controller's `memory_gigabytes_per_cpu`.
+  memory environment variable next to the controller's `memory_gigabytes_per_cpu`.
 - **Dependencies**: none added — `duckplyr::db_exec()` and `withr` are already
   in use.
 - **Docs**: roadmap items `duckplyr-config` and `duckplyr-message` are both

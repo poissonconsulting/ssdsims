@@ -1,7 +1,7 @@
 ## Why
 
 The `scenario-definition` spec (`Constructor arguments are grouped by role`)
-lists `dists` among the **cross-join axes** — "the grid knobs that fan out over
+lists `dists` among the **cross-join axes** — "the grid axes that fan out over
 tasks". The implementation disagrees: `task_axes("fit")` does **not** contain
 `dists` (`R/task-lists.R:363`). `dists` is a single character vector passed
 *whole* and *uniformly* to one `ssdtools::ssd_fit_dists()` call per fit task
@@ -28,8 +28,8 @@ OpenSpec workflow.
 - **Re-classify `dists` as a fit-level simulation setting** in the
   `Constructor arguments are grouped by role` requirement: remove it from the
   cross-join-axes clause (2) and name it in the simulation-settings clause (3),
-  alongside `proportion`/`ci`/`samples`. The taxonomy stays binary: a knob is
-  either an axis (in `task_axes(step)`) or a simulation setting.
+  alongside `proportion`/`ci`/`samples`. The taxonomy stays binary: a scenario
+  option is either an axis (in `task_axes(step)`) or a simulation setting.
 - **Move `dists` in the `ssd_define_scenario()` signature** out of the fit-axis
   block to the contiguous simulation-settings block, leading it (fit setting
   before the hc settings): `… parametric, dists, proportion, ci, samples,
@@ -37,7 +37,7 @@ OpenSpec workflow.
   call site, so the reorder is behaviour-preserving.
 - **Keep storage step-based**: `dists` remains stored at `scenario$fit$dists`
   (it shapes the fit). `print.ssdsims_scenario()` renders it among the fit
-  knobs but marked as a setting, not an axis.
+  scenario options but marked as a setting, not an axis.
 - **Sweep call sites** (`canonical-call-sites` convention) so examples,
   fixtures, tests, scripts, vignettes, and `inst/targets-templates/` pass the
   constructor arguments in the new signature order.
@@ -61,7 +61,7 @@ and the docs agree with the implementation.
 
 - **Spec**: `openspec/specs/scenario-definition/spec.md` — the role-grouping
   requirement and its `Simulation settings are contiguous` / `Print groups the
-  hc knobs by role` scenarios.
+  hc scenario options by role` scenarios.
 - **Code**: `R/scenario.R` (signature reorder; `print.ssdsims_scenario()` if it
   positions `dists`). No change to `R/task-lists.R` (`task_axes()` already
   excludes `dists`).

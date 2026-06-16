@@ -194,7 +194,7 @@ See `?crew.cluster::crew_controller_sge` (and the `_pbs`/`_lsf` equivalents).
 
 Shards are the **unit of parallelism**: independent shard targets run
 concurrently across your SLURM jobs. How many shard targets ride in one job is a
-`crew` configuration knob (`workers` caps concurrent jobs; `tasks_max` on the
+`crew` configuration option (`workers` caps concurrent jobs; `tasks_max` on the
 controller packs several shards into one worker's lifetime — "many-to-one";
 `tasks_max = 1L` gives one shard per job — "one-to-one"). It is documented in
 `controller.R`, not hard-coded as 1:1 (`TARGETS-DESIGN.md` §11 Q6).

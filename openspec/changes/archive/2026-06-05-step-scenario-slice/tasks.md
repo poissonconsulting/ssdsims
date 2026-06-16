@@ -23,8 +23,8 @@
 ## 4. Tests
 
 - [x] 4.1 `scenario_step_slice()`: each step's slice carries exactly its runner's consumed fields and omits the others; the slice is `ssdsims_scenario`-classed and byte-identical across two computations (deterministic/hashable)
-- [x] 4.2 End-to-end: `tar_make()` a tiny scenario, change an `hc`-only knob (`hc$samples`), `tar_make()` again, and assert only `hc` (and `summary`) rebuild while `sample`/`fit` shards are skipped (via `tar_progress()`/`tar_outdated()`) — finalised against the `hive-partitioning` model
-- [x] 4.3 End-to-end: change a `fit`-only knob (`fit$dists`) and assert `sample` shards stay cached while `fit`/`hc`/`summary` rebuild
+- [x] 4.2 End-to-end: `tar_make()` a tiny scenario, change an `hc`-only scenario option (`hc$samples`), `tar_make()` again, and assert only `hc` (and `summary`) rebuild while `sample`/`fit` shards are skipped (via `tar_progress()`/`tar_outdated()`) — finalised against the `hive-partitioning` model
+- [x] 4.3 End-to-end: change a `fit`-only scenario option (`fit$dists`) and assert `sample` shards stay cached while `fit`/`hc`/`summary` rebuild
 - [x] 4.4 Regression: the per-task `sample`/`fit`/`hc` results remain byte-identical to `ssd_run_scenario_baseline()` for the same scenario (the slice drops no consumed field)
 - [x] 4.5 Unit: the `sample` slice carries only the named dataset(s) and is byte-identical when the scenario gains further datasets (the per-dataset independence)
 - [x] 4.6 End-to-end: `tar_make()` a one-dataset scenario, append a dataset, re-source, and assert only the new dataset's `sample`/`fit`/`hc` shards (and `summary`) are outdated while every existing dataset's shards stay cached

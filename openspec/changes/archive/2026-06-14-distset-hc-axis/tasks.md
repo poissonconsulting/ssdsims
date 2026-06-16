@@ -13,7 +13,7 @@
 ## 3. Axis vocabulary and hc task table
 
 - [x] 3.1 Add `"distset"` to `task_axes("hc")` in `R/task-lists.R` (hc axes become `nboot`, `ci_method`, `parametric`, `distset`).
-- [x] 3.2 Derive the hc task table by crossing each fit-task identity with the hc grid **and** the `distset` names: `ci = FALSE` → `D` rows per fit task (one per set, bootstrap knobs `NA`); `ci = TRUE` → `distset × nboot × ci_method × parametric`. Each hc row carries its `distset` name and parent `fit_id`. A single-set collection (`ssd_distset(BCANZ = ...)`) yields one `distset` value (one hc row per fit task when `ci = FALSE`).
+- [x] 3.2 Derive the hc task table by crossing each fit-task identity with the hc grid **and** the `distset` names: `ci = FALSE` → `D` rows per fit task (one per set, bootstrap scenario options `NA`); `ci = TRUE` → `distset × nboot × ci_method × parametric`. Each hc row carries its `distset` name and parent `fit_id`. A single-set collection (`ssd_distset(BCANZ = ...)`) yields one `distset` value (one hc row per fit task when `ci = FALSE`).
 - [x] 3.3 Confirm `partition_by`/`bundle` validation accepts `"distset"` for the `hc` step (falls out of `task_axes("hc")`); keep the default hc path `c("dataset", "sim")` so `distset` is inner by default.
 
 ## 4. Accessor and scenario slice

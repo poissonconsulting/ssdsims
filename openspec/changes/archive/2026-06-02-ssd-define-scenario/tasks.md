@@ -16,11 +16,11 @@
 - [x] 2.6 Validate arguments with `chk` (scalar whole-number `seed`, `nrow` in `[5, 1000]`, `nsim`, etc.); abort on invalid input; error if both named list and `name=` are supplied
 - [x] 2.7 Ensure the constructor performs no RNG draws and leaves `.Random.seed` untouched
 
-## 3. ci = FALSE rejects bootstrap-only knobs
+## 3. ci = FALSE rejects bootstrap-only scenario options
 
-- [x] 3.1 When `ci = FALSE` is the only value, abort with an informative error if any bootstrap-only knob (`nboot`/`ci_method`/`parametric`) was explicitly passed
-- [x] 3.2 Error message names the offending knob(s) and points to `ci = c(FALSE, TRUE)` as the way to enable bootstrap
-- [x] 3.3 When `ci = c(FALSE, TRUE)`, retain bootstrap knobs and emit no error
+- [x] 3.1 When `ci = FALSE` is the only value, abort with an informative error if any bootstrap-only scenario option (`nboot`/`ci_method`/`parametric`) was explicitly passed
+- [x] 3.2 Error message names the offending scenario option(s) and points to `ci = c(FALSE, TRUE)` as the way to enable bootstrap
+- [x] 3.3 When `ci = c(FALSE, TRUE)`, retain bootstrap axes and emit no error
 
 ## 4. Print method
 
@@ -33,6 +33,6 @@
 - [x] 5.2 Tests for `ssd_data()`: `Conc` required, collection of validated tibbles preserves extra columns, names via args + symbol capture, duplicate names rejected, underivable literal needs a name
 - [x] 5.3 Tests for dataset input API: single data frame (implicit name + explicit `name=`), named list, unnamed list; symbol capture for common patterns; error on conflict (both named list + `name=`)
 - [x] 5.3a Tests for `min_pmix` by name: stored as character (default derives `"ssd_min_pmix"`), names accepted verbatim, function / named-list / unnamed-list derivation, non-function list element rejected
-- [x] 5.4 Tests for the `ci = FALSE` rejection (error on bootstrap knobs) and the `ci = c(FALSE, TRUE)` non-rejection
+- [x] 5.4 Tests for the `ci = FALSE` rejection (error on bootstrap-only scenario options) and the `ci = c(FALSE, TRUE)` non-rejection
 - [x] 5.5 Snapshot test for `print.ssdsims_scenario()` (with various dataset counts and forms)
 - [x] 5.6 Run `devtools::document()`, `air` formatting, and `devtools::check()`; update `NAMESPACE`/`man/`

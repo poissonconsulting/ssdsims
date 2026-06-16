@@ -13,13 +13,13 @@
 
 ## 2. Print and docs
 
-- [x] 2.1 Update `print.ssdsims_scenario()` so `dists` renders among the **fit** knobs marked as a setting (not an axis), the hc knobs keep role order (axes then `proportion`/`ci`/`samples`)
+- [x] 2.1 Update `print.ssdsims_scenario()` so `dists` renders among the **fit** scenario options marked as a setting (not an axis), the hc scenario options keep role order (axes then `proportion`/`ci`/`samples`)
 - [x] 2.2 Update the `ssd_define_scenario()` roxygen: document `dists` as a fit-level simulation setting; regenerate `man/`
 
 ## 3. Call-site sweep (`canonical-call-sites`)
 
 - [x] 3.1 Reorder `dists` to its new signature position in every `ssd_define_scenario()` call: `@examples`, `tests/`, `tests/testthat/_snaps/`, `scripts/`, `vignettes/`, and `inst/targets-templates/`
-- [x] 3.2 Re-record any scenario `print()` snapshots affected by the fit/hc knob grouping
+- [x] 3.2 Re-record any scenario `print()` snapshots affected by the fit/hc scenario option grouping
 
 ## 4. Tests
 

@@ -8,9 +8,9 @@ Terminology used throughout `ssdsims`.
   `seed` argument of `dqrng::dqset.seed()`). Both base R and dqrng
   accept a single integer as the seed. In `ssd_define_scenario()` it is
   the scenario's RNG root — one of the three **required positional**
-  arguments (`data, nsim, seed`), **not** a grid **axis** or a
+  arguments (`data, nsim, seed`), **not** a grid **scenario axis** or a
   **simulation setting** (below). Its canonical call-site slot is third,
-  immediately after `nsim` and before any `...` knob (e.g. `nrow`).
+  immediately after `nsim` and before any `...` scenario option (e.g. `nrow`).
 - **state**: The full internal state of an RNG. For L'Ecuyer-CMRG,
   the state is a length-7 integer vector assignable to
   `.Random.seed` (it cannot be passed to `set.seed()`). For dqrng,
@@ -63,7 +63,7 @@ Terminology used throughout `ssdsims`.
   at that step, and the upstream partition path it depends on.
   Many tasks bundle into one **shard** (below) when they share
   the step's `partition_by` column values.
-- **axis** (cross-join axis): A scenario knob a step *fans out*
+- **scenario axis** (cross-join axis): A scenario option a step *fans out*
   over — one task per combination of the step's axis values. The
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
   `fit` adds the fit-grid axes (`rescale`, `computable`,
@@ -79,7 +79,7 @@ Terminology used throughout `ssdsims`.
   `nrow` is deliberately not a `sample` axis because every `nrow` is
   a sub-truncation of one shared draw sized by the `nrow_max` setting
   (TARGETS-DESIGN.md §5), truncated inline at the (RNG-free) `fit` step.
-- **simulation setting**: A scenario knob that is **not** an axis — it is
+- **simulation setting**: A scenario option that is **not** an axis — it is
   absent from `task_axes(step)`, so it never creates a task, enters the
   per-task **primer**, or becomes a **shard**/**partition** level. Its effect
   is realised *inside* each task: it either fans out within the task's own
@@ -97,9 +97,9 @@ Terminology used throughout `ssdsims`.
   `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`nrow_max`,
   `dists`, `est_method`, `proportion` — each valid and meaningful when
   `ci = FALSE`) come
-  before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
-  `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
-  (which only retains bootstrap draws).
+  before `ci`; the scenario options `ci` **gates** then follow it — the
+  bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`)
+  and `samples` (which only retains bootstrap draws).
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is
   a *read-side* concept — query engines (duckplyr / DuckDB)
@@ -134,7 +134,7 @@ Terminology used throughout `ssdsims`.
   Parquet columns that vary row-to-row inside a shard. Together
   `path ⊎ inner = task_axes(step)`.
 - **`partition_by`**: The per-step **path axes** — the canonical
-  sharding knob (`scenario$partition_by`, a `sample`/`fit`/`hc` named
+  sharding argument (`scenario$partition_by`, a `sample`/`fit`/`hc` named
   list). `partition_by[[step]]` is a subset of `task_axes(step)` whose
   values become the shard's Hive path, one shard per cell; shard count
   is `Π |path axis|`. More path axes → finer (more, smaller) shards.
@@ -199,10 +199,10 @@ design-runs across infrastructure, time, and software versions.
 - **scenario**: A single, purely declarative `ssdsims_scenario`
   (`ssd_define_scenario()`) — one **regular** cross-join of the **axes** at each
   step (a rectangular sub-grid). It is the construction-time root of one
-  `targets` pipeline (`ssd_scenario_targets()`), carrying a `seed`, the knobs,
-  and the dataset *names*; it draws no random numbers and expands no tasks
-  (TARGETS-DESIGN.md §1). Vignette prose that calls a scenario "the study" is
-  the loose gloss this section tightens: a scenario is one **arm** of a study,
+  `targets` pipeline (`ssd_scenario_targets()`), carrying a `seed`, the scenario
+  options, and the dataset *names*; it draws no random numbers and expands no
+  tasks (TARGETS-DESIGN.md §1). Vignette prose that calls a scenario "the study"
+  is the loose gloss this section tightens: a scenario is one **arm** of a study,
   not the study.
 - **design**: A named set of scenarios run as **one pipeline** — one `targets`
   store, one `tar_make()`, one provenance/execution context — built with

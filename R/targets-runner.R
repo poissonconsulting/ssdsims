@@ -375,10 +375,10 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #'   concentration with the per-task `(seed, primer)` through
 #'   `hc_data_task_primer()` (the subset happens in that shared primitive). Each
 #'   task's hc tibble (with the scalar `ci` applied uniformly and bootstrap-only
-#'   knobs `NA` when `ci = FALSE`) is tagged with its `hc_id`, parent `fit_id`, and
-#'   `distset` name, stacked, and written as one Parquet at the shard's partition
-#'   path. A set whose members all dropped from the union fit emits no rows for
-#'   that cell (the survivor model).
+#'   scenario options `NA` when `ci = FALSE`) is tagged with its `hc_id`, parent
+#'   `fit_id`, and `distset` name, stacked, and written as one Parquet at the
+#'   shard's partition path. A set whose members all dropped from the union fit
+#'   emits no rows for that cell (the survivor model).
 #' @export
 #' @examples
 #' \donttest{

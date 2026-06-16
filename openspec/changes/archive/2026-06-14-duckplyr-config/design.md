@@ -31,8 +31,8 @@ Four experiments (all under `exploration/`, RESULT tables reproducible with
    `preserve_insertion_order = false`, a `temp_directory` for spilling, and
    `ROW_GROUP_SIZE 2048` all fail with the *identical* allocation. The failed
    allocation is exactly `rows × doubles × 8` bytes — the LIST column's entire
-   child array demanded as **one buffer**, which streaming/spilling knobs
-   cannot split.
+   child array demanded as **one buffer**, which streaming/spilling
+   configuration options cannot split.
 3. **`experiment-nested-vs-flat.R`** — nesting, not payload, is the culprit:
    the *same* 50M doubles written **flat** (long format, 50M rows) succeed
    under `memory_limit = '100MB'`, while the **nested** form needs
@@ -58,7 +58,7 @@ Four experiments (all under `exploration/`, RESULT tables reproducible with
    `ROW_GROUP_SIZE_BYTES '100MB'` (payload-aware; requires
    `preserve_insertion_order = false`) passes even at 500 MB. The compact
    summary (`samples` projected out) stays trivial (100 MB, 0.7 s).
-5. **`experiment-rgbytes.R`** — the knob choice, on reprexes: with ordering
+5. **`experiment-rgbytes.R`** — the configuration-option choice, on reprexes: with ordering
    preserved the engine **refuses** `ROW_GROUP_SIZE_BYTES` outright (a Binder
    error naming the fix — never silently ignored); with `threads = 1` and
    ordering relaxed, repeated runs were byte-identical *and* kept the input
@@ -95,7 +95,7 @@ restored (verified on duckplyr 1.2.1 / duckdb 1.5.2).
 - Silence duckplyr's fallback-telemetry collection (and thus the downstream
   interactive attach banner) for pipeline-context use — the `duckplyr-message`
   roadmap item.
-- Document the nested-list sizing rule so the memory knob can be set
+- Document the nested-list sizing rule so the memory environment variable can be set
   rationally.
 
 **Non-Goals:**
@@ -142,7 +142,7 @@ snapshot the outer scope's values and restore them, so
 any custom values the user set on the shared managed connection before calling
 a runner interactively. Alternative rejected.
 
-### D2. Env-var knobs: `SSDSIMS_DUCKDB_THREADS`, `SSDSIMS_DUCKDB_MEMORY_LIMIT`
+### D2. Environment variables: `SSDSIMS_DUCKDB_THREADS`, `SSDSIMS_DUCKDB_MEMORY_LIMIT`
 
 - `SSDSIMS_DUCKDB_THREADS` — default **`1`** when unset. The roadmap item asks
   for a single thread outright; the experiments show it is free (faster, even,
@@ -220,7 +220,7 @@ order):
   `nboot` — 1000-double cells yielded 13 000-row groups (≈ the 104 MB
   budget), 50k-double cells yielded 246-row groups. A fixed row count would
   need scenario-derived sizing in the factory and would still mis-size mixed
-  `nboot` sweeps; the bytes knob sizes each group as it fills.
+  `nboot` sweeps; the bytes configuration option sizes each group as it fills.
 - **The ordering requirement is loud, not a foot-gun**: with insertion order
   preserved the engine *refuses* the option outright (Binder error naming
   `SET preserve_insertion_order = false`), so a mispaired configuration can
@@ -274,7 +274,7 @@ later (`cost-analysis-targets` territory).
 - [A too-low `SSDSIMS_DUCKDB_MEMORY_LIMIT` fails shards that used to pass] →
   That is the intended trade: a loud per-shard `error = "null"` with DuckDB's
   sizing advice beats a silent cgroup kill of the whole worker. The sizing rule
-  is documented next to the knob.
+  is documented next to the environment variable.
 - [Memory floor is duckdb-version-specific] The 5× rule was measured on duckdb
   1.5.2. → Recorded as an empirical bound with the reproduction scripts kept in
   `exploration/`; re-measure on major engine upgrades.
@@ -299,6 +299,6 @@ later (`cost-analysis-targets` territory).
 
 ## Open Questions
 
-- None blocking. (Whether to *also* surface the knobs as arguments on
+- None blocking. (Whether to *also* surface the configuration options as arguments on
   `ssd_run_scenario_shards()` for interactive use can be decided at review; the
   env vars already work there.)

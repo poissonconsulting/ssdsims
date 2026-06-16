@@ -158,7 +158,7 @@
       ci = FALSE, nboot = 500)
     Condition
       Error in `ssd_define_scenario()`:
-      ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
+      ! Bootstrap-only scenario option ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the option.
 
 # scenario-definition: ci = FALSE rejects ci_method and parametric
 
@@ -167,7 +167,7 @@
       ci = FALSE, ci_method = "MACL")
     Condition
       Error in `ssd_define_scenario()`:
-      ! Bootstrap-only knob ('ci_method') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
+      ! Bootstrap-only scenario option ('ci_method') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the option.
 
 ---
 
@@ -176,7 +176,7 @@
       ci = FALSE, parametric = FALSE)
     Condition
       Error in `ssd_define_scenario()`:
-      ! Bootstrap-only knob ('parametric') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
+      ! Bootstrap-only scenario option ('parametric') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the option.
 
 # scenario-definition: a vector ci is rejected
 
@@ -286,7 +286,7 @@
           fit: replace, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2
           hc: replace, nrow, rescale, computable, at_boundary_ok, min_pmix, range_shape1, range_shape2, nboot, ci_method, parametric, distset
 
-# scenario-definition: print is stable for multiple datasets and vector knobs
+# scenario-definition: print is stable for multiple datasets and vector scenario options
 
     Code
       ssd_define_scenario(ssd_scenario_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium),

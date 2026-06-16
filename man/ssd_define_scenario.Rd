@@ -220,9 +220,9 @@ the bootstrap and RNG - so a single \code{ci = TRUE} run is a strict superset of
 \code{ci = FALSE} (same \code{est}, plus the \code{se}/\code{lcl}/\code{ucl} columns). The choice is
 scenario-wide either/or: \code{ci = FALSE} for cheap, bootstrap-free point
 estimates, or \code{ci = TRUE} for estimates plus confidence intervals. When
-\code{ci = FALSE}, the bootstrap-only knobs \code{nboot}, \code{ci_method}, and \code{parametric}
-are meaningless; passing any of them in that case is an error, so set
-\code{ci = TRUE} to enable bootstrap, or omit the knobs.
+\code{ci = FALSE}, the bootstrap-only scenario options \code{nboot}, \code{ci_method}, and
+\code{parametric} are meaningless; passing any of them in that case is an error,
+so set \code{ci = TRUE} to enable bootstrap, or omit the options.
 }
 
 \section{\code{dists} and \code{est_method}}{

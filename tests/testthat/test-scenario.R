@@ -222,13 +222,13 @@ test_that("scenario-definition: nrow at the effective draw size is accepted", {
   )
 })
 
-test_that("scenario-definition: non-ci-gated settings precede ci, gated knobs follow", {
+test_that("scenario-definition: non-ci-gated settings precede ci, gated scenario options follow", {
   fmls <- names(formals(ssd_define_scenario))
   # The non-`ci`-gated settings (`nrow_max`, `dists`, `est_method`, `proportion`
   # — all valid and meaningful when `ci = FALSE`, led by the sample-level
-  # `nrow_max`) come first, then `ci`, then the knobs it gates: the bootstrap
-  # axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and
-  # `samples` (only retains bootstrap draws). Contiguous, after the last
+  # `nrow_max`) come first, then `ci`, then the scenario options it gates: the
+  # bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`)
+  # and `samples` (only retains bootstrap draws). Contiguous, after the last
   # structural axis (`range_shape2`) and before the partitioning args.
   group <- c(
     "nrow_max",
@@ -725,7 +725,7 @@ test_that("scenario-definition: the dropped name= argument is rejected", {
   })
 })
 
-# ---- ci = FALSE rejects bootstrap-only knobs -------------------------------
+# ---- ci = FALSE rejects bootstrap-only scenario options --------------------
 
 test_that("scenario-definition: ci = FALSE rejects an explicit nboot", {
   expect_snapshot(error = TRUE, {
@@ -760,7 +760,7 @@ test_that("scenario-definition: ci = FALSE rejects ci_method and parametric", {
   })
 })
 
-test_that("scenario-definition: ci = FALSE alone is fine with default knobs", {
+test_that("scenario-definition: ci = FALSE alone is fine with default scenario options", {
   expect_s3_class(
     ssd_define_scenario(
       ssd_scenario_data(ssddata::ccme_boron),
@@ -783,7 +783,7 @@ test_that("scenario-definition: a vector ci is rejected", {
   })
 })
 
-test_that("scenario-definition: scalar ci = TRUE retains bootstrap knobs", {
+test_that("scenario-definition: scalar ci = TRUE retains bootstrap axes", {
   s <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
@@ -866,7 +866,7 @@ test_that("scenario-definition: print is stable for a single dataset", {
   )
 })
 
-test_that("scenario-definition: print is stable for multiple datasets and vector knobs", {
+test_that("scenario-definition: print is stable for multiple datasets and vector scenario options", {
   expect_snapshot(
     ssd_define_scenario(
       ssd_scenario_data(

@@ -31,7 +31,7 @@ data <- ssd_scenario_data(
 # the dataset *names*, and the fit/hc argument grids. `min_pmix` is kept by
 # name only. `ci` is a scalar flag, an either/or choice: `ci = TRUE` for
 # estimates plus bootstrap intervals, or `ci = FALSE` for cheap point estimates
-# only (which forbids the bootstrap-only knobs `nboot`, `ci_method`,
+# only (which forbids the bootstrap-only scenario options `nboot`, `ci_method`,
 # `parametric`). A `ci = TRUE` run is a superset of `ci = FALSE`.
 scenario <- ssd_define_scenario(
   data,
@@ -55,9 +55,9 @@ print(scenario)
 tasks <- ssd_scenario_tasks(scenario)
 print(tasks)
 
-# With the scalar `ci = TRUE` the hc grid fans out over the bootstrap knobs
+# With the scalar `ci = TRUE` the hc grid fans out over the bootstrap axes
 # (`nboot x est_method x ci_method x parametric`); a `ci = FALSE` scenario would
-# instead give one row per `est_method` with the bootstrap knobs `NA`.
+# instead give one row per `est_method` with the bootstrap scenario options `NA`.
 print(tasks$hc)
 
 # Per-step derivations are also available individually:
