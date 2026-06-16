@@ -1,5 +1,5 @@
 # Distribution sets: the validated, by-value collection `dists` accepts
-# (TARGETS-DESIGN.md `dists-simulation-setting`, refined by `distset-hc-axis`). A
+# (TARGETS-DESIGN.md `dists-scenario-setting`, refined by `distset-hc-axis`). A
 # distribution *set* is the pool of distributions model-averaged together to
 # form one SSD (one `est`); a *collection* is a named list of such sets. The
 # constructor owns naming (from `...`) and member validation by value - the

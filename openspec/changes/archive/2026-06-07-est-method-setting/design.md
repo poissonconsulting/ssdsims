@@ -25,13 +25,13 @@ scalar `est_method` and exposes no public re-aggregation entry point for retaine
 
 This mirrors the already-correct treatment of `proportion` (a vector consumed
 within one `ssd_hc()` call, absent from `task_axes("hc")`) and the
-`dists-simulation-setting` re-classification — but unlike the latter it removes a
+`dists-scenario-setting` re-classification — but unlike the latter it removes a
 *real* fan-out and recomputation, not just a label.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Make `est_method` an hc simulation setting: absent from `task_axes("hc")`, not
+- Make `est_method` an hc scenario setting: absent from `task_axes("hc")`, not
   a `partition_by`/`bundle` axis, stored at `scenario$hc$est_method`, allowed to
   be a vector without multiplying tasks.
 - Compute every requested `est_method` from a **single** bootstrap per
@@ -126,7 +126,7 @@ exploration record:
 - **Snapshot / row-count churn** → hc task-count and printed-scenario snapshots
   that assumed an `est_method` fan-out must be re-recorded; `hc` *tibble* row
   counts (one row per method) are unchanged.
-- **Ships with `dists-simulation-setting` in one PR (rebased, ordered).** Both
+- **Ships with `dists-scenario-setting` in one PR (rebased, ordered).** Both
   changes edit `scenario-definition`'s "Constructor arguments are grouped by
   role" and the `ssd_define_scenario()` signature. Rather than collide at
   archive time, this delta is **rebased onto the `dists` end-state**: its
@@ -136,11 +136,11 @@ exploration record:
   `ci = FALSE` — precede `ci`, and the scenario options `ci` gates follow it
   (the bootstrap axes `nboot`/`ci_method`/`parametric` and `samples`):
   `… range_shape2, dists, est_method, proportion, ci, nboot, ci_method,
-  parametric, samples, partition_by …`.) `dists-simulation-setting`
+  parametric, samples, partition_by …`.) `dists-scenario-setting`
   **owns** the behaviour-preserving signature reorder + call-site sweep
   groundwork (it establishes the contiguous settings block); this change only
   slots `est_method` into that block on top of the real bootstrap-collapse work.
-  **Archive order: `dists-simulation-setting` first, then this change** — the
+  **Archive order: `dists-scenario-setting` first, then this change** — the
   last-synced delta wins the requirement text, and only this (rebased) delta
   carries both scenario options moved.
 

@@ -38,7 +38,7 @@
 
 ## 7. Docs, snapshots, decision log
 
-- [x] 7.1 Update `TARGETS-DESIGN.md`: the `dists-simulation-setting` decision log entry and the §"No nested reuse" note get an addendum — *individual distributions still never fan out*; a named set of pools is an hc-level axis over post-fit subsets of one union fit (reuse now holds within one union).
+- [x] 7.1 Update `TARGETS-DESIGN.md`: the `dists-scenario-setting` decision log entry and the §"No nested reuse" note get an addendum — *individual distributions still never fan out*; a named set of pools is an hc-level axis over post-fit subsets of one union fit (reuse now holds within one union).
 - [x] 7.2 Update `GLOSSARY.md` (define "distribution set" / `distset` axis) and `task_axes("hc")` references that list the hc axes.
 - [x] 7.3 Update the `defining-a-scenario` and `sharded-pipeline` vignettes with a multi-set example (and the bundled-vs-path `distset` trade-off); add a worked iwasaki-style snippet.
 - [x] 7.4 Re-record affected snapshots (printed scenarios; hc task-count assertions; `ci = TRUE` CI snapshots re-seeded by the primer change).

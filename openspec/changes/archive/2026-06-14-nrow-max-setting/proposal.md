@@ -19,7 +19,7 @@ churn.
 
 ## What Changes
 
-- **New simulation setting `nrow_max`** (`chk_whole_number`, default a reasonably
+- **New scenario setting `nrow_max`** (`chk_whole_number`, default a reasonably
   high value, recommended `1000L`) — the **fixed** shared-draw size, replacing
   the derived `n_max = max(scenario$nrow)`. The effective per-dataset draw is
   `min(nrow_max, nrow(data))` for `replace = FALSE` (a high default ⇒ the full
@@ -27,8 +27,8 @@ churn.
   `replace = TRUE`. Because the draw size is now **fixed**, adding `nrow` values
   (up to the effective draw size) never re-draws — the `sample` shard stays
   cached and only new `fit` shards (keyed by `nrow`) mint.
-- **`nrow_max` is a simulation setting**, placed among the non-`ci`-gated
-  simulation settings of `ssd_define_scenario()` — leading the block as the
+- **`nrow_max` is a scenario setting**, placed among the non-`ci`-gated
+  scenario settings of `ssd_define_scenario()` — leading the block as the
   sample-level setting, before `dists` (fit) and `est_method`/`proportion` (hc)
   and ahead of `ci` (the draw happens regardless of `ci`; cf. the #139 ci-gating
   grouping). `nrow_max` is the universal ceiling for `nrow`: `nrow` is validated
@@ -56,7 +56,7 @@ the awkward constant list-columns `proportion`/`dists` would become.
 ## Capabilities
 
 ### Modified Capabilities
-- `scenario-definition`: add the `nrow_max` simulation setting (validation,
+- `scenario-definition`: add the `nrow_max` scenario setting (validation,
   default, signature placement) and validate `nrow` against the effective draw
   size rather than only `nrow(data)`.
 - `task-lists`: the `sample` task table no longer carries the `n_max` column
@@ -93,5 +93,5 @@ the awkward constant list-columns `proportion`/`dists` would become.
   entry; add `nrow_max`), regenerated `man/`, example scripts/templates that pass
   `nrow`, and the re-baselined snapshots.
 - **Dependencies**: an **independent tidy-up** in the
-  `scalar-ci-flag` / `dists-simulation-setting` / `est-method-setting`
+  `scalar-ci-flag` / `dists-scenario-setting` / `est-method-setting`
   "axis/row → setting" family — no prerequisites, no dependants.

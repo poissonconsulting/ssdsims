@@ -305,7 +305,7 @@ FALSE` — same `est`, plus the populated `se` / `lcl` / `ucl`. Running both in
 one scenario would only emit a redundant point-estimate row per fit-task, so
 `ci` is a single either/or choice: `ci = FALSE` for cheap, bootstrap-free point
 estimates, or `ci = TRUE` for estimates plus CIs. This makes `ci` a
-**simulation setting** (GLOSSARY) — a non-axis scenario option consumed within
+**scenario setting** (GLOSSARY) — a non-axis scenario option consumed within
 each task — alongside `samples` (applied uniformly) and `proportion` (which fans
 out within the task's own output). The three are grouped together in the
 `ssd_define_scenario()` signature, after the axes.
@@ -317,7 +317,7 @@ only affect the bootstrap:
 
 - If `ci = FALSE`, those scenario options are meaningless: supplying any of them
   aborts at scenario construction (set `ci = TRUE` or omit them), and the
-  hc-task table stores them as `NA`. `est_method` is an hc simulation setting
+  hc-task table stores them as `NA`. `est_method` is an hc scenario setting
   (not an axis), so this leaves no fan-out axis at all — exactly one hc row per
   fit task.
 - If `ci = TRUE`, the hc grid fans out across `nboot × ci_method × parametric`.
@@ -442,7 +442,7 @@ fit task: data-task identity plus the fit-arg-grid row (`rescale`,
 `computable`, `at_boundary_ok`, `min_pmix_name`, `range_shape1`,
 `range_shape2`). For an hc task: fit-task identity plus the hc-arg-
 grid row (`nboot`, `ci_method`, `parametric`). `ci` and `est_method` are
-hc simulation settings, **not** in the hash (§1.2; `est_method` is summarised
+hc scenario settings, **not** in the hash (§1.2; `est_method` is summarised
 within the task from a single bootstrap sample set); when `ci = FALSE` the
 bootstrap-only scenario options are `NA` in that row (canonically encoded).
 
@@ -1743,7 +1743,7 @@ more (smaller) Parquets up front. This escape hatch applies only to
 the genuine inner *axes* (`min_pmix`, `nboot`, `est_method`,
 `ci_method`, `parametric`): they are in `task_axes(step)`, so they
 can be promoted to path axes. `dists` is in the table for its cost,
-not its category — it is a fit-level **simulation setting**, not an
+not its category — it is a fit-level **scenario setting**, not an
 axis, so it cannot be a partition level and its rewrite is intrinsic
 (changing `dists` re-fits the *contents* of every fit task, rather
 than adding a row).
@@ -1927,7 +1927,7 @@ The two scenario options sit on **opposite** sides of the axis/setting split
 (GLOSSARY.md), and their cache behaviour differs accordingly — the
 heading is *not* "neither is an axis":
 
-- **`dists` is a fit-level *simulation setting*, not an axis.** It is
+- **`dists` is a fit-level *scenario setting*, not an axis.** It is
   the **union** of the declared distribution sets — a single character
   vector applied uniformly to every fit task (one model-averaged
   `ssd_fit_dists()` call per task); it is absent from
@@ -2299,9 +2299,9 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   the spec; the benchmark is preserved in the change's `exploration` (the
   `benchmark-blob-encoding.R` script). Independent tidy-up with no dependants;
   not on the dependency DAG.
-- **`dists-simulation-setting`** — Reconcile `dists`'s classification across the
+- **`dists-scenario-setting`** — Reconcile `dists`'s classification across the
   spec, signature, and docs. `dists` is absent from `task_axes("fit")` — a
-  fit-level **simulation setting** (one model-averaged `ssd_fit_dists()` per
+  fit-level **scenario setting** (one model-averaged `ssd_fit_dists()` per
   task, applied uniformly), not a cross-join axis — but the `scenario-definition`
   role-grouping requirement listed it among the axes and the signature wedged it
   in the fit-axis block. This change moved `dists` to lead the contiguous
@@ -2311,7 +2311,7 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   fixed the stale *"`dists` and `nboot` are not fit/hc grid axes"* heading
   (`nboot` **is** an hc axis). Independent tidy-up; not on the dependency DAG.
 - **`est-method-setting`** — Reclassify `est_method` from an hc cross-join axis
-  to an hc-level **simulation setting** (the same shape as `dists-simulation-setting`
+  to an hc-level **scenario setting** (the same shape as `dists-scenario-setting`
   / `scalar-ci-flag`: `scenario-definition` + `task-lists` + `hazard-concentrations`
   deltas). `est_method` is removed from `task_axes("hc")`; the hc fan-out becomes
   `nboot × ci_method × parametric` and a single bootstrap per cell yields every
@@ -2322,7 +2322,7 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   hc task, so bootstrap CIs change numerically (point estimates unchanged). ~3×
   cost reduction on the `est_method` axis. Independent tidy-up; not on the
   dependency DAG.
-- **`distset-hc-axis`** — Refine `dists-simulation-setting`: `dists` becomes an
+- **`distset-hc-axis`** — Refine `dists-scenario-setting`: `dists` becomes an
   `ssd_distset()` collection of named **distribution sets** (pools), and the set
   *name* becomes an **hc** cross-join axis (`distset` ∈ `task_axes("hc")`). The
   fit step fits the **union** `sort(unique(unlist(dists)))` once
@@ -2330,7 +2330,7 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   pool (`strict = FALSE`) and re-averages — so several pools share one fit (the
   iwasaki "fit superset, subset" pattern) rather than re-fitting (~7× → one fit).
   *Individual distributions still never fan out* — an axis value is a whole pool,
-  so the model-averaging science `dists-simulation-setting` protects is intact;
+  so the model-averaging science `dists-scenario-setting` protects is intact;
   what is new is reuse **within** one union (a wider union still re-fits). The
   subset happens in the shared `hc_data_task_primer()` chokepoint, so baseline,
   shard, and targets paths stay byte-identical by construction; an all-dropped
@@ -2521,7 +2521,7 @@ minimal-rebuild contracts (`step-scenario-slice`, `path-axis-growth`,
 `shard-atomic-rewrite`), the `manifest`, and now `cluster-pipeline`,
 `cloud-upload`, and `task-rng-postcheck` (the last treated as merged for this
 split). Off the DAG, the independent tidy-ups `scalar-ci-flag`,
-`blob-storage-format`, `dists-simulation-setting`, `est-method-setting`,
+`blob-storage-format`, `dists-scenario-setting`, `est-method-setting`,
 `cost-estimation`, and `dual-summary-outputs` are likewise archived (prose
 bullets above, no Mermaid nodes).
 

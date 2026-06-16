@@ -4,8 +4,8 @@
 (`sample`/`fit`/`hc`), shards them by `partition_by`, and runs them as a
 Hive-partitioned `targets` pipeline whose per-task results are byte-identical to
 the single-core baseline (`TARGETS-DESIGN.md` §§1–8). Today `dists` is a single
-fit-level **simulation setting** — one model-averaged `ssd_fit_dists()` call per
-fit task — settled by the `dists-simulation-setting` change precisely so that
+fit-level **scenario setting** — one model-averaged `ssd_fit_dists()` call per
+fit task — settled by the `dists-scenario-setting` change precisely so that
 *individual distributions never fan out* (fanning out per distribution would
 dissolve the model averaging that defines a fit).
 
@@ -32,7 +32,7 @@ cost for results that should share one fit.
 
 **Non-Goals:**
 - Fanning out over *individual* distributions (that dissolves averaging — the
-  `dists-simulation-setting` guard stands; an axis value is always a whole pool).
+  `dists-scenario-setting` guard stands; an axis value is always a whole pool).
 - Surfacing `ssd_gof()` diagnostics (`at_bound`/`computable`/`dropped`/top-dist/
   `delta`) per `(sample × distset)` — a complementary follow-up change.
 - Nested-fit reuse across *different unions* (a wider union still re-fits; only
@@ -110,7 +110,7 @@ statistically equivalent) — the same re-baseline pattern as `est-method-settin
   `ci = TRUE` CI snapshots move, and those re-record like any primer change.
   Document in the proposal Impact; the single-pool *estimates* are preserved,
   not the *bootstrap byte-streams*.
-- **Refining a settled decision** → the `dists-simulation-setting` decision said
+- **Refining a settled decision** → the `dists-scenario-setting` decision said
   "dists is not an axis". Mitigation: this does not contradict it — *individual
   distributions still never fan out*; a named set of *pools* becomes an axis over
   post-fit subsets. The TARGETS-DESIGN decision log and §"No nested reuse" get an

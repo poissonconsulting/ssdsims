@@ -14,7 +14,7 @@
 ## 2. Print and docs
 
 - [x] 2.1 Update `print.ssdsims_scenario()` so `dists` renders among the **fit** scenario options marked as a setting (not an axis), the hc scenario options keep role order (axes then `proportion`/`ci`/`samples`)
-- [x] 2.2 Update the `ssd_define_scenario()` roxygen: document `dists` as a fit-level simulation setting; regenerate `man/`
+- [x] 2.2 Update the `ssd_define_scenario()` roxygen: document `dists` as a fit-level scenario setting; regenerate `man/`
 
 ## 3. Call-site sweep (`canonical-call-sites`)
 
@@ -29,4 +29,4 @@
 
 ## 5. Sync
 
-- [x] 5.1 After implementation, sync the `scenario-definition` delta into `openspec/specs/scenario-definition/spec.md` and resolve the GLOSSARY.md note ("moving `dists` … lands via the `dists-simulation-setting` change")
+- [x] 5.1 After implementation, sync the `scenario-definition` delta into `openspec/specs/scenario-definition/spec.md` and resolve the GLOSSARY.md note ("moving `dists` … lands via the `dists-scenario-setting` change")

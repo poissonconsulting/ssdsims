@@ -47,7 +47,7 @@ identical per-distribution fits and differ only in the analytical re-averaging.
   zero-length subset; the hc task emits no rows for that `(task, distset)` cell
   (the consumer's "estimable pools" filter), rather than aborting.
 - **Sweep docs and the decision log.** This **refines** the settled
-  `dists-simulation-setting` decision (`TARGETS-DESIGN.md` §"No nested reuse" /
+  `dists-scenario-setting` decision (`TARGETS-DESIGN.md` §"No nested reuse" /
   decision log ~L2275): *individual distributions still never fan out* (each axis
   value is a complete averaging pool, so the model-averaging science the prior
   decision protected is intact); what changes is that a **named set of pools** is

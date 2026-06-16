@@ -32,7 +32,7 @@
 #'
 #' # `nrow_max`
 #'
-#' `nrow_max` is the *sample*-level **simulation setting**: the fixed size of
+#' `nrow_max` is the *sample*-level **scenario setting**: the fixed size of
 #' the shared `sample` draw that every `nrow` value sub-truncates
 #' (`head(sample, nrow)`, `TARGETS-DESIGN.md` section 5). The effective
 #' per-dataset draw is `min(nrow_max, nrow(data))` for `replace = FALSE` (the
@@ -71,7 +71,7 @@
 #' **name** - several pools reuse one fit rather than re-fitting. A bare character
 #' vector or plain list aborts loudly, pointing to `ssd_distset()`.
 #'
-#' `est_method` is a **simulation setting**, not a cross-join axis - it is absent
+#' `est_method` is a **scenario setting**, not a cross-join axis - it is absent
 #' from `task_axes("hc")`, so it never multiplies tasks or enters the per-task RNG
 #' primer. It is an *hc*-level setting: every requested method is summarised from
 #' each hc task's **single** bootstrap sample set rather than re-bootstrapping per
@@ -131,8 +131,8 @@
 #'   step's axis vocabulary: `sample` = `dataset`, `sim`, `replace`; `fit` adds
 #'   `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`,
 #'   `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`,
-#'   `parametric`, `distset` (`ci` and `est_method` are hc simulation settings,
-#'   not axes; `dists` is the fit-level simulation setting feeding the union, and
+#'   `parametric`, `distset` (`ci` and `est_method` are hc scenario settings,
+#'   not axes; `dists` is the fit-level scenario setting feeding the union, and
 #'   `distset` - the set *name* - is the hc axis over the union's post-fit
 #'   subsets).
 #'   `"nrow"` is rejected only for `sample` (the
@@ -208,7 +208,7 @@ ssd_define_scenario <- function(
   chk::chk_whole_number(nsim)
   chk::chk_gt(nsim)
 
-  # `nrow_max` is the sample-level simulation setting sizing the shared draw
+  # `nrow_max` is the sample-level scenario setting sizing the shared draw
   # (not an axis): the fixed draw is `nrow_max` rows, so it is the universal
   # ceiling for `nrow` (no `nrow` can sub-truncate a draw it exceeds). Validate
   # it before `nrow` so the `nrow` range check can cite it. It must be at least
@@ -712,7 +712,7 @@ print.ssdsims_scenario <- function(x, ...) {
 }
 
 #' Print a step's argument grid in stored (signature) order, flagging the
-#' simulation settings (the scenario options absent from `task_axes(step)`) with
+#' scenario settings (the scenario options absent from `task_axes(step)`) with
 #' `(setting)`. Stored order mirrors the signature grouping: the non-`ci`-gated
 #' settings (`dists`, `est_method`, `proportion`) come first, then `ci`, then the
 #' scenario options it gates (`nboot`/`ci_method`/`parametric`, `samples`). So
