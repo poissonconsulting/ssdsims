@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provide the purely declarative `ssdsims_scenario` object that roots the targets-based pipeline (`TARGETS-DESIGN.md` §1): its constructor `ssd_define_scenario()`, the `ssd_data()` input normaliser, dataset and `min_pmix` name references, field validation, the scalar `ci` flag (with its bootstrap-knob rejection when `ci = FALSE`), and the `print()` method. The object stores only declarative fields — never data frames, RNG state, or function bodies — so a scenario serialises to a compact manifest and the shard set a pipeline expands to is a pure function of the scenario.
+Provide the purely declarative `ssdsims_scenario` object that roots the targets-based pipeline (`TARGETS-DESIGN.md` §1): its constructor `ssd_define_scenario()`, the `ssd_data()` input normaliser, dataset and `min_pmix` name references, field validation, the scalar `ci` flag (with its bootstrap-only scenario option rejection when `ci = FALSE`), and the `print()` method. The object stores only declarative fields — never data frames, RNG state, or function bodies — so a scenario serialises to a compact manifest and the shard set a pipeline expands to is a pure function of the scenario.
 ## Requirements
 ### Requirement: Declarative scenario constructor
 The package SHALL expose `ssd_define_scenario()` returning an S3 object of class `ssdsims_scenario` that stores only declarative fields and performs no random-number generation, no task expansion, and no `targets` interaction.
@@ -49,7 +49,7 @@ The `ssdsims_scenario` object SHALL store `seed` (a scalar integer), `nsim`, `nr
 - **WHEN** `ssd_define_scenario(..., min_pmix = ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix, strict = my_pmix))` is called
 - **THEN** the object SHALL store the collection's names (`c("ssd_min_pmix", "strict")`) as `fit$min_pmix` and materialise the collection's functions keyed by those names, without reading the argument expression
 
-### Requirement: Configurable, validated partition_by knob with a complementary bundle entry point
+### Requirement: Configurable, validated partition_by argument with a complementary bundle entry point
 `ssd_define_scenario()` SHALL accept an optional `partition_by` argument and a complementary optional `bundle` argument. Each, when supplied, is a named list keyed by task step (`sample`/`fit`/`hc`; `task-list-loop-baseline`, #80, with the `data` truncation folded into `fit`) and MAY be partial (cover a subset of steps). A `partition_by` entry SHALL be a character vector of **path-axis** names; a `bundle` entry SHALL be a character vector of **inner-axis** names; in both cases the vector SHALL be unique, free of missing values, and a subset of that step's vocabulary (`task_axes(step)`). For each step **at most one** of `partition_by`/`bundle` SHALL name it; a step named in **both** SHALL abort. A step named in **neither** SHALL use its documented default. The constructor SHALL normalize the two into a single stored `partition_by` — a complete `sample`/`fit`/`hc` **path** list: a `bundle` entry becomes its path complement `setdiff(task_axes(step), bundle[[step]])`, and defaults fill unnamed steps. The constructor SHALL abort, in the context of the user-facing function, with an informative error naming the offending step and axis when any condition is violated.
 
 #### Scenario: Defaults populated when absent
@@ -105,7 +105,7 @@ The package SHALL define, for each step, the inner (Parquet-column) axes as that
 
 #### Scenario: Per-step vocabularies match #80's task_axes()
 - **WHEN** the axis vocabulary is queried per step
-- **THEN** it SHALL equal `task_axes(step)`: `sample` = `dataset`, `sim`, `replace`; `fit` adds `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`, `parametric` (`ci` and `est_method` are hc simulation settings, not axes — see *"ci is a scalar flag selecting bootstrap confidence intervals"* and *"est_method is an hc simulation setting computed from shared samples"*)
+- **THEN** it SHALL equal `task_axes(step)`: `sample` = `dataset`, `sim`, `replace`; `fit` adds `nrow`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc` adds `nboot`, `ci_method`, `parametric` (`ci` and `est_method` are hc scenario settings, not axes — see *"ci is a scalar flag selecting bootstrap confidence intervals"* and *"est_method is an hc scenario setting computed from shared samples"*)
 
 #### Scenario: Steps partition independently — no cross-step constraint
 - **WHEN** a step's path axes are a valid subset of its own vocabulary but differ arbitrarily from its parent step's path axes (e.g. finer or coarser on a shared axis)
@@ -142,7 +142,7 @@ The package SHALL expose `ssd_scenario_data()` (renamed from `ssd_data()`, which
 - **THEN** names SHALL be derived (`"ccme_boron"`, `"ssd_rlnorm"`) and duplicate names across the collection SHALL abort with an informative error
 
 ### Requirement: ci is a scalar flag selecting bootstrap confidence intervals
-`ssd_define_scenario()` SHALL accept `ci` as a scalar logical flag (a single non-`NA` `TRUE`/`FALSE`; default `FALSE`), validated with `chk::chk_flag`, stored at `scenario$hc$ci`, and passed to `ssdtools::ssd_hc()`. `ci` SHALL NOT be a grid axis and SHALL NOT enter the `hc` task identity (`task_axes("hc")`) or the per-task RNG primer: the point estimate `est` is invariant to `ci` (computed analytically from the fit, independent of the bootstrap and RNG), so a single `ci = TRUE` run is a superset of `ci = FALSE` (same `est`, plus the `se`/`lcl`/`ucl` columns). The choice is scenario-wide and either/or — `ci = FALSE` for cheap, bootstrap-free point estimates, or `ci = TRUE` for estimates plus confidence intervals. When `ci = FALSE`, supplying any bootstrap-only knob (`nboot`, `ci_method`, or `parametric`) SHALL abort in the user-facing frame, directing the user to set `ci = TRUE` or omit the knob. `print.ssdsims_scenario()` SHALL render `ci` among the hc knobs.
+`ssd_define_scenario()` SHALL accept `ci` as a scalar logical flag (a single non-`NA` `TRUE`/`FALSE`; default `FALSE`), validated with `chk::chk_flag`, stored at `scenario$hc$ci`, and passed to `ssdtools::ssd_hc()`. `ci` SHALL NOT be a grid axis and SHALL NOT enter the `hc` task identity (`task_axes("hc")`) or the per-task RNG primer: the point estimate `est` is invariant to `ci` (computed analytically from the fit, independent of the bootstrap and RNG), so a single `ci = TRUE` run is a superset of `ci = FALSE` (same `est`, plus the `se`/`lcl`/`ucl` columns). The choice is scenario-wide and either/or — `ci = FALSE` for cheap, bootstrap-free point estimates, or `ci = TRUE` for estimates plus confidence intervals. When `ci = FALSE`, supplying any bootstrap-only scenario option (`nboot`, `ci_method`, or `parametric`) SHALL abort in the user-facing frame, directing the user to set `ci = TRUE` or omit the option. `print.ssdsims_scenario()` SHALL render `ci` among the hc scenario options.
 
 #### Scenario: ci defaults to FALSE and is a flag
 - **WHEN** `ssd_define_scenario()` is called without `ci`
@@ -152,20 +152,20 @@ The package SHALL expose `ssd_scenario_data()` (renamed from `ssd_data()`, which
 - **WHEN** `ssd_define_scenario(..., ci = c(FALSE, TRUE))` (or any non-flag `ci`) is called
 - **THEN** the constructor SHALL abort in the `ssd_define_scenario()` frame, because `ci` is a scalar flag
 
-#### Scenario: Bootstrap knobs rejected when ci = FALSE
+#### Scenario: Bootstrap axes rejected when ci = FALSE
 - **WHEN** `ssd_define_scenario(..., ci = FALSE, nboot = 1000)` (or with `ci_method`/`parametric`) is called
-- **THEN** the constructor SHALL abort with an informative error stating that bootstrap-only knobs are not allowed when `ci = FALSE`, and directing the user to set `ci = TRUE` or omit the knob(s)
+- **THEN** the constructor SHALL abort with an informative error stating that bootstrap-only scenario options are not allowed when `ci = FALSE`, and directing the user to set `ci = TRUE` or omit the option(s)
 
-#### Scenario: ci = TRUE retains bootstrap knobs
+#### Scenario: ci = TRUE retains bootstrap axes
 - **WHEN** `ssd_define_scenario(..., ci = TRUE, nboot = c(100, 1000), ci_method = "weighted_samples")` is called
-- **THEN** the bootstrap knobs SHALL be retained and no error SHALL be emitted; the hc step fans out over `nboot × ci_method × parametric` (with `est_method` summarised within each task, not fanned out)
+- **THEN** the bootstrap axes SHALL be retained and no error SHALL be emitted; the hc step fans out over `nboot × ci_method × parametric` (with `est_method` summarised within each task, not fanned out)
 
 #### Scenario: ci does not enter the hc task identity
 - **WHEN** the `hc` axis vocabulary (`task_axes("hc")`) is queried
 - **THEN** it SHALL NOT contain `"ci"`, so `ci` is neither a path axis nor an inner axis and does not change the per-task primer; it is applied uniformly to every hc task
 
-### Requirement: est_method is an hc simulation setting computed from shared samples
-`ssd_define_scenario()` SHALL accept `est_method` as an hc-level **simulation
+### Requirement: est_method is an hc scenario setting computed from shared samples
+`ssd_define_scenario()` SHALL accept `est_method` as an hc-level **scenario
 setting** (default `"multi"`), validated as a non-`NA`, unique character vector
 that is a subset of `ssdtools::ssd_est_methods()`, stored at
 `scenario$hc$est_method`, and passed to the hc step. `est_method` SHALL NOT be a
@@ -194,7 +194,7 @@ dimension consumed inside one bootstrap, not a task multiplier.
 (default a reasonably high value, `1000L`), validated with
 `chk::chk_whole_number`, stored on the scenario, and used as the **fixed**
 size of the shared `sample` draw — replacing the previously derived
-`max(scenario$nrow)`. `nrow_max` is a sample-level **simulation setting**: it
+`max(scenario$nrow)`. `nrow_max` is a sample-level **scenario setting**: it
 SHALL NOT be a cross-join axis, SHALL NOT enter any `task_axes(step)` or the
 per-task RNG primer, and SHALL NOT be carried as a task-row column. The
 effective per-dataset draw size SHALL be `min(nrow_max, nrow(data))` for
@@ -223,7 +223,7 @@ happens regardless of `ci`.
 - **WHEN** `ssd_define_scenario(..., nrow = 50, nrow_max = 20)` is called (an `nrow` above the fixed draw size, regardless of `replace`)
 - **THEN** the constructor SHALL abort in the user-facing frame with a message citing `nrow_max`'s value (`= 20`), because no `nrow` can sub-truncate a draw it exceeds; and `ssd_define_scenario(..., nrow = c(10, 10000), nrow_max = 10000, replace = c(TRUE, FALSE))` SHALL instead succeed, since `nrow_max` admits `nrow = 10000`
 
-#### Scenario: nrow_max is a simulation setting, not an axis
+#### Scenario: nrow_max is a scenario setting, not an axis
 - **WHEN** the `sample` axis vocabulary (`task_axes("sample")`) is queried
 - **THEN** it SHALL NOT contain `"nrow_max"`, so `nrow_max` never multiplies tasks, enters a primer, or becomes a task-row column
 
@@ -282,22 +282,22 @@ is left empty by the `replace = FALSE` discard SHALL likewise abort.
   abort in the user-facing frame rather than return an empty scenario
 
 ### Requirement: Constructor arguments are grouped by role
-`ssd_define_scenario()` SHALL order its arguments by role: (1) the required data/`seed`/`nsim` inputs and the dataset `name`; (2) the **structural cross-join axes** (`nrow`, `replace`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`); (3) the **non-`ci`-gated simulation settings** — knobs that are valid and meaningful even when `ci = FALSE`: `nrow_max` (sample-level, the shared draw size), `dists` (fit-level), then `est_method` and `proportion` (hc-level, shaping the analytical point estimate); (4) `ci`, then the knobs it **gates** — the bootstrap **cross-join axes** `nboot`/`ci_method`/`parametric` (which `ci = FALSE` rejects) and the `samples` setting (which only retains bootstrap draws); (5) the **partitioning and remaining arguments** (`partition_by`, `bundle`, `upload`). A simulation setting is any knob absent from `task_axes(step)`: it never multiplies tasks, but is consumed inside each task — setting the shared draw size (`nrow_max`), fanning out within the task's output (`est_method`, `proportion`), or applied uniformly (`ci`, `dists`, `samples`). `nrow_max` is the **sample**-level setting (the fixed shared-draw size, absent from `task_axes("sample")`); `dists` is the **fit**-level setting (a single character vector handed whole to every fit task's `ssd_fit_dists()` call, absent from `task_axes("fit")`); `est_method`/`proportion`/`ci`/`samples` are **hc**-level. `nrow_max`, `dists`, `est_method`, and `proportion` SHALL precede `ci` (none are `ci`-gated — the draw, the fit, and the analytical estimate all happen regardless of `ci`); the bootstrap-only knobs `nboot`/`ci_method`/`parametric` and `samples` SHALL follow `ci`. Storage SHALL remain step-based: `nrow_max` is stored at the sample level, `dists` at `scenario$fit$dists`, and the hc knobs at `scenario$hc` in signature order (`est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, `samples`). `print.ssdsims_scenario()` SHALL render each grid in that stored order (settings flagged), render `nrow_max` among the sample knobs, and render `dists` among the fit knobs, both marked as settings rather than axes.
+`ssd_define_scenario()` SHALL order its arguments by role: (1) the required data/`seed`/`nsim` inputs and the dataset `name`; (2) the **structural cross-join axes** (`nrow`, `replace`, `rescale`, `computable`, `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`); (3) the **non-`ci`-gated scenario settings** — scenario options that are valid and meaningful even when `ci = FALSE`: `nrow_max` (sample-level, the shared draw size), `dists` (fit-level), then `est_method` and `proportion` (hc-level, shaping the analytical point estimate); (4) `ci`, then the scenario options it **gates** — the bootstrap **cross-join axes** `nboot`/`ci_method`/`parametric` (which `ci = FALSE` rejects) and the `samples` setting (which only retains bootstrap draws); (5) the **partitioning and remaining arguments** (`partition_by`, `bundle`, `upload`). A scenario setting is any scenario option absent from `task_axes(step)`: it never multiplies tasks, but is consumed inside each task — setting the shared draw size (`nrow_max`), fanning out within the task's output (`est_method`, `proportion`), or applied uniformly (`ci`, `dists`, `samples`). `nrow_max` is the **sample**-level setting (the fixed shared-draw size, absent from `task_axes("sample")`); `dists` is the **fit**-level setting (a single character vector handed whole to every fit task's `ssd_fit_dists()` call, absent from `task_axes("fit")`); `est_method`/`proportion`/`ci`/`samples` are **hc**-level. `nrow_max`, `dists`, `est_method`, and `proportion` SHALL precede `ci` (none are `ci`-gated — the draw, the fit, and the analytical estimate all happen regardless of `ci`); the bootstrap-only scenario options `nboot`/`ci_method`/`parametric` and `samples` SHALL follow `ci`. Storage SHALL remain step-based: `nrow_max` is stored at the sample level, `dists` at `scenario$fit$dists`, and the hc scenario options at `scenario$hc` in signature order (`est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, `samples`). `print.ssdsims_scenario()` SHALL render each grid in that stored order (settings flagged), render `nrow_max` among the sample scenario options, and render `dists` among the fit scenario options, both marked as settings rather than axes.
 
-#### Scenario: non-ci-gated settings precede ci; gated knobs follow it
+#### Scenario: non-ci-gated settings precede ci; gated scenario options follow it
 - **WHEN** the `ssd_define_scenario()` signature is inspected
-- **THEN** `nrow_max`, `dists`, `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, and `samples` SHALL appear adjacent to one another in that order, after the last structural axis (`range_shape2`) and before the partitioning arguments (`partition_by`, `bundle`, `upload`), so the non-`ci`-gated settings precede `ci` and the knobs it gates follow it
+- **THEN** `nrow_max`, `dists`, `est_method`, `proportion`, `ci`, `nboot`, `ci_method`, `parametric`, and `samples` SHALL appear adjacent to one another in that order, after the last structural axis (`range_shape2`) and before the partitioning arguments (`partition_by`, `bundle`, `upload`), so the non-`ci`-gated settings precede `ci` and the scenario options it gates follow it
 
-#### Scenario: nrow_max is a sample-level simulation setting
+#### Scenario: nrow_max is a sample-level scenario setting
 - **WHEN** the sample-step axis vocabulary (`task_axes("sample")`) is queried
 - **THEN** it SHALL NOT contain `"nrow_max"`, so `nrow_max` is neither a path axis nor an inner axis and does not enter the per-task primer; it sets the shared draw size and is stored at the sample level
 
-#### Scenario: Print groups the knobs by ci-gating
+#### Scenario: Print groups the scenario options by ci-gating
 - **WHEN** an `ssdsims_scenario` is printed
-- **THEN** the hc grid SHALL render `est_method`, `proportion`, `ci`, then the bootstrap axes (`nboot`, `ci_method`, `parametric`), then `samples`, with the non-axis knobs flagged as settings; and the sample/fit knobs SHALL render `nrow_max` and `dists` marked as settings
+- **THEN** the hc grid SHALL render `est_method`, `proportion`, `ci`, then the bootstrap axes (`nboot`, `ci_method`, `parametric`), then `samples`, with the non-axis scenario options flagged as settings; and the sample/fit scenario options SHALL render `nrow_max` and `dists` marked as settings
 
 ### Requirement: samples retains the bootstrap draws (output only)
-`ssd_define_scenario()` SHALL accept a scalar logical `samples` argument (default `FALSE`), validated as a flag (a single non-`NA` `TRUE`/`FALSE`), stored at `scenario$hc$samples`, and passed to `ssdtools::ssd_hc()` so that `samples = TRUE` retains the per-row bootstrap draws in the hc `samples` list-column. `samples` SHALL NOT be a grid axis and SHALL NOT enter the task identity (`task_axes("hc")`) or the per-task RNG primer: it does not change the estimates, so changing it SHALL yield byte-identical `est`/`lcl`/`ucl` while re-running the hc step to populate (or empty) the `samples` column. `print.ssdsims_scenario()` SHALL render `samples` among the hc knobs.
+`ssd_define_scenario()` SHALL accept a scalar logical `samples` argument (default `FALSE`), validated as a flag (a single non-`NA` `TRUE`/`FALSE`), stored at `scenario$hc$samples`, and passed to `ssdtools::ssd_hc()` so that `samples = TRUE` retains the per-row bootstrap draws in the hc `samples` list-column. `samples` SHALL NOT be a grid axis and SHALL NOT enter the task identity (`task_axes("hc")`) or the per-task RNG primer: it does not change the estimates, so changing it SHALL yield byte-identical `est`/`lcl`/`ucl` while re-running the hc step to populate (or empty) the `samples` column. `print.ssdsims_scenario()` SHALL render `samples` among the hc scenario options.
 
 #### Scenario: samples defaults to FALSE and is stored
 - **WHEN** `ssd_define_scenario()` is called without `samples`

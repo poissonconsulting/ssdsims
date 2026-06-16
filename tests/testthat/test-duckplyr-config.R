@@ -51,7 +51,7 @@ test_that("config scope pins one thread, a 1GB default limit, relaxed order", {
   )
 })
 
-test_that("config scope honours the env knobs", {
+test_that("config scope honours the environment variables", {
   withr::local_envvar(
     SSDSIMS_DUCKDB_THREADS = "2",
     SSDSIMS_DUCKDB_MEMORY_LIMIT = "200MB"
@@ -368,7 +368,7 @@ test_that("constrained configuration leaves results byte-identical", {
   }
 
   dir1 <- withr::local_tempdir()
-  default_knobs <- withr::with_envvar(
+  default_config <- withr::with_envvar(
     c(SSDSIMS_DUCKDB_THREADS = NA, SSDSIMS_DUCKDB_MEMORY_LIMIT = NA),
     run_once(dir1)
   )
@@ -379,13 +379,13 @@ test_that("constrained configuration leaves results byte-identical", {
   )
 
   # sample layer: timing-free, so still byte-identical at the file level
-  expect_identical(constrained$sample_files, default_knobs$sample_files)
-  expect_identical(constrained$sample_md5, default_knobs$sample_md5)
+  expect_identical(constrained$sample_files, default_config$sample_files)
+  expect_identical(constrained$sample_md5, default_config$sample_md5)
   # fit/hc/summary: result columns (timing excluded) identical across configs
-  expect_identical(constrained$fit, default_knobs$fit)
-  expect_identical(constrained$hc, default_knobs$hc)
-  expect_identical(constrained$compact, default_knobs$compact)
-  full1 <- drop_timing(default_knobs$full)[order(default_knobs$full$hc_id), ]
+  expect_identical(constrained$fit, default_config$fit)
+  expect_identical(constrained$hc, default_config$hc)
+  expect_identical(constrained$compact, default_config$compact)
+  full1 <- drop_timing(default_config$full)[order(default_config$full$hc_id), ]
   full2 <- drop_timing(constrained$full)[order(constrained$full$hc_id), ]
   rownames(full1) <- rownames(full2) <- NULL
   expect_identical(full2, full1)

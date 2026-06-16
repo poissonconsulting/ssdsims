@@ -1,16 +1,18 @@
-# Experiment: is ROW_GROUP_SIZE_BYTES the right knob for the full-summary
-# write?
+# Experiment: is ROW_GROUP_SIZE_BYTES the right configuration option for the
+# full-summary write?
 #
-# `experiment-summary-union.R` showed both writer knobs rescue the
-# >2048-row nested union: a fixed `ROW_GROUP_SIZE` (order-preserving) and
-# `ROW_GROUP_SIZE_BYTES` (payload-aware, but documented as requiring
-# `preserve_insertion_order = false`). Review preference: accept
-# nondeterministic order; the bytes knob is attractive because it yields
-# LARGE row groups when `samples` cells are small and small groups when they
-# are huge - no scenario-derived arithmetic. Open questions, one per block:
+# `experiment-summary-union.R` showed both writer configuration options
+# rescue the >2048-row nested union: a fixed `ROW_GROUP_SIZE`
+# (order-preserving) and `ROW_GROUP_SIZE_BYTES` (payload-aware, but documented
+# as requiring `preserve_insertion_order = false`). Review preference: accept
+# nondeterministic order; the bytes configuration option is attractive because
+# it yields LARGE row groups when `samples` cells are small and small groups
+# when they are huge - no scenario-derived arithmetic. Open questions, one per
+# block:
 #
-#   A. requirement: is the bytes knob really inert with insertion order
-#      preserved (the documented constraint), or does it work anyway?
+#   A. requirement: is the bytes configuration option really inert with
+#      insertion order preserved (the documented constraint), or does it work
+#      anyway?
 #   B. determinism in practice: with threads = 1 and
 #      preserve_insertion_order = false, do repeated runs produce identical
 #      bytes, and is the input row order preserved anyway?
@@ -38,7 +40,8 @@ if ("--matrix" %in% args) {
   )
   system2("Rscript", script, env = "EXP_BUILD=TRUE")
   cases <- rbind(
-    # A. does the bytes knob need preserve_insertion_order = false?
+    # A. does the bytes configuration option need
+    #    preserve_insertion_order = false?
     data.frame(
       corpus = "big",
       memlim = "1GB",

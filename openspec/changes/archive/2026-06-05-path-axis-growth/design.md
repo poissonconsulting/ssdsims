@@ -14,7 +14,7 @@ The package already ships everything this exercises: `ssd_scenario_targets()` (t
 **Non-Goals:**
 
 - The **inner-axis** rewrite contract (adding a value to an axis *not* in `partition_by`, which atomically rewrites every shard) — that is `shard-atomic-rewrite` (§8.2).
-- The **step-slice** minimal-rebuild contract (a step-irrelevant knob leaving other steps cached) — that is `step-scenario-slice`.
+- The **step-slice** minimal-rebuild contract (a step-irrelevant scenario option leaving other steps cached) — that is `step-scenario-slice`.
 - Pinning shards against *code* changes (`tar_cue(depend = FALSE)`, §8.3) or forced re-run after a fix (`tar_invalidate()`, §8.4).
 - Defining or changing the invalidation model itself — that is `hive-partitioning` (§8); this change consumes whatever model it pins.
 

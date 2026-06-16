@@ -43,7 +43,7 @@ about R-side identity, not writability).
 ## experiment-nested-mitigations.R
 
 The failing case (1000 × 50k nested, threads = 1) under every combination of
-DuckDB's suggested knobs. All 16 cells fail identically; the failed allocation
+DuckDB's suggested configuration options. All 16 cells fail identically; the failed allocation
 is `rows × doubles × 8` bytes — the LIST child array as one buffer.
 
 ```

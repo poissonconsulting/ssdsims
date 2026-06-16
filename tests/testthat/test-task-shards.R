@@ -781,47 +781,48 @@ test_that("shard-atomic-rewrite: growing a fit inner axis rewrites the fit shard
 
 # ---- per-step minimal scenario slice (step-scenario-slice) -----------------
 
-test_that("task-shards: changing an hc-only knob rebuilds only hc and summary", {
+test_that("task-shards: changing an hc-only scenario option rebuilds only hc and summary", {
   skip_targets()
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
   saveRDS(
     list(dists = ssd_distset(lnorm = "lnorm"), samples = FALSE),
-    "knobs.rds"
+    "opts.rds"
   )
   tar_make_local()
   expect_length(tar_outdated_local(), 0L)
 
-  # Flip the hc-only `samples` knob: only the hc slice changes, so only the hc
-  # shard's command moves; the sample/fit slices (and commands) are untouched.
+  # Flip the hc-only `samples` scenario option: only the hc slice changes, so
+  # only the hc shard's command moves; the sample/fit slices (and commands) are
+  # untouched.
   saveRDS(
     list(dists = ssd_distset(lnorm = "lnorm"), samples = TRUE),
-    "knobs.rds"
+    "opts.rds"
   )
   outdated <- tar_outdated_local()
   expect_true(all(c("hc_step_42_d_1", "summary") %in% outdated))
   expect_false(any(c("sample_step_42_d_1", "fit_step_42_d_1") %in% outdated))
 })
 
-test_that("task-shards: changing a fit-only knob leaves sample cached", {
+test_that("task-shards: changing a fit-only scenario option leaves sample cached", {
   skip_targets()
   dir <- withr::local_tempdir()
   setup_targets_fixture(dir, "slice-invalidation-targets.R")
   withr::local_dir(dir)
   saveRDS(
     list(dists = ssd_distset(lnorm = "lnorm"), samples = FALSE),
-    "knobs.rds"
+    "opts.rds"
   )
   tar_make_local()
   expect_length(tar_outdated_local(), 0L)
 
-  # Flip the fit-only `dists` knob: the fit slice changes (and cascades into the
-  # hc shard that reads the fit shard, and summary), but the sample slice does
-  # not, so the sample shard stays cached.
+  # Flip the fit-only `dists` scenario option: the fit slice changes (and
+  # cascades into the hc shard that reads the fit shard, and summary), but the
+  # sample slice does not, so the sample shard stays cached.
   saveRDS(
     list(dists = ssd_distset(set = c("lnorm", "gamma")), samples = FALSE),
-    "knobs.rds"
+    "opts.rds"
   )
   outdated <- tar_outdated_local()
   expect_true(all(
@@ -869,7 +870,7 @@ test_that("task-shards: factory per-task results equal the baseline (slice drops
   withr::local_dir(dir)
   saveRDS(
     list(dists = ssd_distset(lnorm = "lnorm"), samples = FALSE),
-    "knobs.rds"
+    "opts.rds"
   )
   tar_make_local()
 

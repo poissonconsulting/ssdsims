@@ -10,7 +10,7 @@ rlang::expr({ .parents; ssd_run_hc_step(tasks, scenario, !!fit_dir, !!hc_dir) })
 
 (`.parents` is the per-child upstream-edge block `hive-partitioning` splices in; it does not affect the `scenario` coupling this change addresses.)
 
-`targets` tracks `scenario` as a global referenced by every one of these commands, so the **whole scenario object is a dependency of every shard target across all three steps**. Editing *any* scenario field therefore invalidates and rebuilds *all* shards — even a knob that feeds only one step. Concretely, `scenario$hc$samples` is consumed only by `ssd_run_hc_step()`, yet bumping it today rebuilds every `sample` and `fit` shard too. `TARGETS-DESIGN.md` §12 records this as a pre-existing caveat this change closes, and the function's own roxygen states the coupling as if it were necessary ("`scenario` is referenced as a global, so editing it invalidates the dependent shards").
+`targets` tracks `scenario` as a global referenced by every one of these commands, so the **whole scenario object is a dependency of every shard target across all three steps**. Editing *any* scenario field therefore invalidates and rebuilds *all* shards — even a scenario option that feeds only one step. Concretely, `scenario$hc$samples` is consumed only by `ssd_run_hc_step()`, yet bumping it today rebuilds every `sample` and `fit` shard too. `TARGETS-DESIGN.md` §12 records this as a pre-existing caveat this change closes, and the function's own roxygen states the coupling as if it were necessary ("`scenario` is referenced as a global, so editing it invalidates the dependent shards").
 
 The coupling is conservative, not necessary: each runner reads only a small, fixed slice of the scenario. Reading the three runners (`R/targets-runner.R`) and the accessors they call (`R/accessors.R`) pins exactly what each step consumes:
 
@@ -82,7 +82,7 @@ This change owns the *per-step input* dependency edge — which scenario fields 
 ## Risks / Trade-offs
 
 - **Dropping a field a runner reads** → the slice silently produces wrong/aborting shards. *Mitigation:* the slice field set is pinned by reading the runners; the existing byte-identity-vs-baseline assertion (`task-shards`) is the regression guard — if the slice omits a consumed field, baseline equality breaks.
-- **Over-slicing (carrying a step-irrelevant field)** → re-introduces the very over-rebuild this change removes for that field. *Mitigation:* the new requirement's scenarios assert the *negative* (sample/fit stay cached when an hc-only / fit-only knob moves), which fails if a slice is too broad.
+- **Over-slicing (carrying a step-irrelevant field)** → re-introduces the very over-rebuild this change removes for that field. *Mitigation:* the new requirement's scenarios assert the *negative* (sample/fit stay cached when an hc-only / fit-only scenario option moves), which fails if a slice is too broad.
 - **Colliding with other in-flight `task-shards` deltas** → other changes also modify `task-shards`. *Mitigation:* use `## ADDED Requirements` with a new requirement name rather than `## MODIFIED Requirements` on an existing one, so the deltas compose.
 - **Slice hash instability across re-source** → would spuriously rebuild. *Mitigation:* the slice is a pure function of the scenario's already-materialised fields (functions hash by name, datasets by value), so re-sourcing the same scenario yields identical slices.
 

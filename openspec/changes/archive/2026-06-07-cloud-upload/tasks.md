@@ -53,6 +53,6 @@
 ## 6. Docs and design sync
 
 - [x] 6.1 Update `TARGETS-DESIGN.md` §6.1 (destination on the runner, fail-loud creds, explicit `ssd_upload_dryrun()`) and mark §13's `cloud-upload` node realised
-- [x] 6.2 Reconcile with `dists-simulation-setting`: drop the `upload` reference from the "arguments grouped by role" ordering (whichever change lands second)
+- [x] 6.2 Reconcile with `dists-scenario-setting`: drop the `upload` reference from the "arguments grouped by role" ordering (whichever change lands second)
 - [x] 6.3 Add a `NEWS.md` entry for the new upload API and the BREAKING removal of `scenario$upload` (carried by the Conventional-Commit message per the fledge convention — `NEWS.md` is fledge-managed and not hand-edited; see `AGENTS.md`)
 - [x] 6.4 Run `air format`, `devtools::document()`, `devtools::check()`, and `pkgdown` reference + articles build; ensure no cloud credentials are needed for the default test/check/vignette run

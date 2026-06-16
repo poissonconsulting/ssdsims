@@ -1,4 +1,4 @@
-## 1. Knob
+## 1. Scenario option
 
 - [x] 1.1 Add scalar `samples = FALSE` to `ssd_define_scenario()`; validate with `chk::chk_flag()`; store at `scenario$hc$samples`; document `@param samples`; render in `print.ssdsims_scenario()`
 - [x] 1.2 Thread `samples` through `hc_data_task()` / `hc_data_task_primer()` to `ssd_hc(..., samples = samples)` in both ci branches; pass `samples = scenario$hc$samples` from the baseline runner and `ssd_run_hc_step()`

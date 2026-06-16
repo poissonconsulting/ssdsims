@@ -48,7 +48,7 @@ Move `upload` off the scenario onto `ssd_scenario_targets(scenario, ..., root, u
 
 ### Decision: `...` + `check_dots_empty()` to force named arguments
 
-`ssd_scenario_targets()` grows from two to three optional knobs (`root`, `upload`, `cue`). Placing `...` immediately after `scenario` and calling `rlang::check_dots_empty()` forces all three to be passed by name, so a positional `ssd_scenario_targets(scenario, my_upload)` or a misspelled `uplaod =` aborts loudly instead of silently binding to the wrong parameter. This is cheap insurance now that destinations are easy to confuse with roots (both are path-like). *Alternative considered:* leave them positional — rejected; `root` and `upload` are both string/path-shaped and trivially transposable.
+`ssd_scenario_targets()` grows from two to three optional arguments (`root`, `upload`, `cue`). Placing `...` immediately after `scenario` and calling `rlang::check_dots_empty()` forces all three to be passed by name, so a positional `ssd_scenario_targets(scenario, my_upload)` or a misspelled `uplaod =` aborts loudly instead of silently binding to the wrong parameter. This is cheap insurance now that destinations are easy to confuse with roots (both are path-like). *Alternative considered:* leave them positional — rejected; `root` and `upload` are both string/path-shaped and trivially transposable.
 
 ### Decision: `upload = NULL` vs `ssd_upload_dryrun()` are distinct and both supported
 
@@ -76,7 +76,7 @@ The vignette's cluster section is deliberately a *delta on the existing cluster 
 
 - **No Azure in CI.** A real round-trip needs credentials CI lacks → mitigated: `ssd_upload_dryrun()` exercises the full DAG shape and the generics' wiring offline; the live Azure round-trip is a documented manual/lab validation step. The Azure method is thin (put/list/delete) over `AzureStor`.
 - **BREAKING signature changes.** Removing `scenario$upload` and reordering `ssd_scenario_targets()` breaks any caller using the §6.1 sketch → mitigated: the feature is not yet released as code (the sketch lives only in `TARGETS-DESIGN.md`); the change is a clean cutover, and `check_dots_empty()` turns silently-wrong positional calls into loud errors.
-- **Coordination with `dists-simulation-setting`.** That in-progress change's "arguments grouped by role" delta lists `upload` as the last constructor argument → mitigated: whichever change lands second drops the `upload` reference from that ordering (recorded in the proposal's Impact). No code conflict, only a spec reconciliation.
+- **Coordination with `dists-scenario-setting`.** That in-progress change's "arguments grouped by role" delta lists `upload` as the last constructor argument → mitigated: whichever change lands second drops the `upload` reference from that ordering (recorded in the proposal's Impact). No code conflict, only a spec reconciliation.
 - **Suggested-dependency drift.** `AzureStor`/`AzureRMR` and the DuckDB `azure` extension are in `Suggests`; absence must degrade cleanly → mitigated: `rlang::check_installed(c("AzureStor", "AzureRMR"))` guards the Azure methods, and the dry-run/NULL paths need none of them, so the package builds, checks, and runs the local templates without them.
 
 ## Open Questions

@@ -18,11 +18,11 @@ The package SHALL provide `ssd_write_manifest(scenario, dir)` that writes a JSON
 - **THEN** it SHALL record the complete session info present at write time (R version, platform, and all attached/loaded package versions), and SHALL surface `r_version`, `dqrng_version`, and `ssdtools_version` as a flat convenience subset
 
 ### Requirement: Read a manifest back
-The package SHALL provide `ssd_read_manifest(dir)` that reads `<dir>/manifest.json` into an R list, round-tripping the declarative fields and session info written by `ssd_write_manifest()` without lossy coercion of integer or logical knobs.
+The package SHALL provide `ssd_read_manifest(dir)` that reads `<dir>/manifest.json` into an R list, round-tripping the declarative fields and session info written by `ssd_write_manifest()` without lossy coercion of integer or logical scenario options.
 
 #### Scenario: Round-trip preserves manifest contents
 - **WHEN** a manifest is written for a scenario and then read back
-- **THEN** the read fields SHALL equal the written values, with `seed`/`nboot` preserved as whole numbers and logical knobs preserved as logicals
+- **THEN** the read fields SHALL equal the written values, with `seed`/`nboot` preserved as whole numbers and logical scenario options preserved as logicals
 
 ### Requirement: Record a completed shard's sha256 alongside its Parquet
 The package SHALL provide `ssd_record_shard(dir, partition_key, sha256)` that, on a shard's successful write, records that shard's sha256 in a per-shard sidecar (`<dir>/meta.json`) next to the shard's Parquet rather than mutating a shared manifest, so parallel shard targets do not race (`TARGETS-DESIGN.md` §8.5). The shard directory SHALL be supplied by the caller; the manifest SHALL NOT compute Parquet paths itself.

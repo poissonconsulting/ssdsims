@@ -13,12 +13,12 @@
 - [x] 1.2 Scope `DUCKPLYR_FALLBACK_COLLECT = "0"` and
   `DUCKPLYR_FALLBACK_AUTOUPLOAD = "0"` in the same helper via
   `withr::local_envvar(…, .local_envir = .local_envir)` (design D3)
-- [x] 1.3 Validate the env knobs with `chk`-style errors raised in the caller's
+- [x] 1.3 Validate the environment variables with `chk`-style errors raised in the caller's
   context: `SSDSIMS_DUCKDB_THREADS` must parse as a positive whole number,
   `SSDSIMS_DUCKDB_MEMORY_LIMIT` is passed through to DuckDB (its parser is the
   authority) — a malformed value should surface DuckDB's own message, not a
   silent ignore
-- [x] 1.4 Roxygen-document the helper (internal, `@noRd`): the two env knobs and
+- [x] 1.4 Roxygen-document the helper (internal, `@noRd`): the two environment variables and
   their defaults, the restore-on-exit contract, the connection-global caveat
   while a scope is open, and the nested-shard sizing rule (`memory_limit ≳ 5 ×`
   the shard's `samples` payload; engine cannot spill a LIST child array —
@@ -62,7 +62,7 @@
 ## 4. Tests (`tests/testthat/test-duckplyr-config.R`)
 
 - [x] 4.1 Scope behaviour: inside a `local_duckplyr_config()` scope with the
-  knobs unset, `threads` reports `1` and `memory_limit` reports 1 GB (the
+  environment variables unset, `threads` reports `1` and `memory_limit` reports 1 GB (the
   default); with `SSDSIMS_DUCKDB_MEMORY_LIMIT` set (via
   `withr::local_envvar()`), `memory_limit` reports it
 - [x] 4.2 Restore behaviour: set custom `threads`/`memory_limit` first, run a
@@ -76,9 +76,9 @@
   `SSDSIMS_DUCKDB_MEMORY_LIMIT` (e.g. `100MB`), `ssd_write_parquet()` of a
   nested frame sized just above the floor errors with DuckDB's out-of-memory
   message and the session stays usable (spec scenario "Memory limit follows
-  the environment knob")
+  the environment variable")
 - [x] 4.5 Byte-identity: run a small `samples = TRUE` scenario through
-  `ssd_run_scenario_shards()` twice — default knobs vs
+  `ssd_run_scenario_shards()` twice — default environment variables vs
   `SSDSIMS_DUCKDB_THREADS=1` + a sufficient `SSDSIMS_DUCKDB_MEMORY_LIMIT` —
   and compare shard/summary file hashes (spec "Configuration never changes
   results"); keep the scenario tiny per the test-suite speed budget
@@ -104,8 +104,8 @@
   (e.g. `3GB` of a 4 GB job), with the one-line sizing rule and a pointer to
   the helper docs; mention `SSDSIMS_DUCKDB_THREADS` defaults to single-thread
   so `cpus_per_task = 1` is correct as shipped
-- [x] 5.2 `large/` and `small/` templates: a brief comment that the same env
-  knobs apply when running under a local controller
+- [x] 5.2 `large/` and `small/` templates: a brief comment that the same
+  environment variables apply when running under a local controller
 - [x] 5.3 ROADMAP.md: move `duckplyr-config` to Done (this change) and fold the
   `duckplyr-message` Next item into the same Done entry (delivered here);
   remove it from Next

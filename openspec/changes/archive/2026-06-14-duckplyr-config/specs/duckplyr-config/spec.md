@@ -24,7 +24,7 @@ duckplyr/DuckDB settings SHALL be left untouched.
 - **WHEN** a step runner executes with `SSDSIMS_DUCKDB_THREADS` unset
 - **THEN** DuckDB `threads` SHALL be `1` while the runner body executes
 
-#### Scenario: Memory limit follows the environment knob
+#### Scenario: Memory limit follows the environment variable
 - **WHEN** a step runner executes with `SSDSIMS_DUCKDB_MEMORY_LIMIT=500MB`
 - **THEN** DuckDB `memory_limit` SHALL be 500 MB while the runner body
   executes, and a write that exceeds it SHALL fail as a catchable R error
@@ -150,7 +150,7 @@ limit must leave headroom for R's own footprint within the scheduler
 allocation, and a higher limit addresses only the shard-payload floor — the
 full summary's floor follows its row-group byte budget and never needs it.
 
-#### Scenario: The knob is documented where it is set
+#### Scenario: The environment variable is documented where it is set
 - **WHEN** a user reads the cluster template's controller block or the
   helper's documentation
 - **THEN** they SHALL find `SSDSIMS_DUCKDB_MEMORY_LIMIT`, its 1 GB default,

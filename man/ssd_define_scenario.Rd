@@ -80,7 +80,7 @@ upper bounds for the shape2 parameter.}
 
 \item{nrow_max}{A whole number (default \code{1000L}): the fixed size of the
 shared \code{sample} draw that every \code{nrow} value sub-truncates. A sample-level
-simulation setting, not a cross-join axis. The effective per-dataset draw is
+scenario setting, not a cross-join axis. The effective per-dataset draw is
 \code{min(nrow_max, nrow(data))} when \code{replace = FALSE} (the high default draws
 the full permutation) and \code{nrow_max} rows when \code{replace = TRUE}; each \code{nrow}
 must not exceed the effective draw size.}
@@ -141,8 +141,8 @@ columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: \code{sample} = \code{dataset}, \code{sim}, \code{replace}; \code{fit} adds
 \code{nrow}, \code{rescale}, \code{computable}, \code{at_boundary_ok}, \code{min_pmix},
 \code{range_shape1}, \code{range_shape2}; \code{hc} adds \code{nboot}, \code{ci_method},
-\code{parametric}, \code{distset} (\code{ci} and \code{est_method} are hc simulation settings,
-not axes; \code{dists} is the fit-level simulation setting feeding the union, and
+\code{parametric}, \code{distset} (\code{ci} and \code{est_method} are hc scenario settings,
+not axes; \code{dists} is the fit-level scenario setting feeding the union, and
 \code{distset} - the set \emph{name} - is the hc axis over the union's post-fit
 subsets).
 \code{"nrow"} is rejected only for \code{sample} (the
@@ -199,7 +199,7 @@ random-number generation.
 }
 
 \section{\code{nrow_max}}{
-\code{nrow_max} is the \emph{sample}-level \strong{simulation setting}: the fixed size of
+\code{nrow_max} is the \emph{sample}-level \strong{scenario setting}: the fixed size of
 the shared \code{sample} draw that every \code{nrow} value sub-truncates
 (\code{head(sample, nrow)}, \code{TARGETS-DESIGN.md} section 5). The effective
 per-dataset draw is \code{min(nrow_max, nrow(data))} for \code{replace = FALSE} (the
@@ -220,9 +220,9 @@ the bootstrap and RNG - so a single \code{ci = TRUE} run is a strict superset of
 \code{ci = FALSE} (same \code{est}, plus the \code{se}/\code{lcl}/\code{ucl} columns). The choice is
 scenario-wide either/or: \code{ci = FALSE} for cheap, bootstrap-free point
 estimates, or \code{ci = TRUE} for estimates plus confidence intervals. When
-\code{ci = FALSE}, the bootstrap-only knobs \code{nboot}, \code{ci_method}, and \code{parametric}
-are meaningless; passing any of them in that case is an error, so set
-\code{ci = TRUE} to enable bootstrap, or omit the knobs.
+\code{ci = FALSE}, the bootstrap-only scenario options \code{nboot}, \code{ci_method}, and
+\code{parametric} are meaningless; passing any of them in that case is an error,
+so set \code{ci = TRUE} to enable bootstrap, or omit the options.
 }
 
 \section{\code{dists} and \code{est_method}}{
@@ -238,7 +238,7 @@ set's members (\code{subset(fit, set, strict = FALSE)}) and re-averages, so
 \strong{name} - several pools reuse one fit rather than re-fitting. A bare character
 vector or plain list aborts loudly, pointing to \code{ssd_distset()}.
 
-\code{est_method} is a \strong{simulation setting}, not a cross-join axis - it is absent
+\code{est_method} is a \strong{scenario setting}, not a cross-join axis - it is absent
 from \code{task_axes("hc")}, so it never multiplies tasks or enters the per-task RNG
 primer. It is an \emph{hc}-level setting: every requested method is summarised from
 each hc task's \strong{single} bootstrap sample set rather than re-bootstrapping per

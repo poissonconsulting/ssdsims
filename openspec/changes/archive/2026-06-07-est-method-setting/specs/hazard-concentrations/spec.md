@@ -27,7 +27,7 @@ function's factorial expansion; it is a within-cell dimension.
 ## MODIFIED Requirements
 
 ### Requirement: Factorial expansion over HC configurations
-The function SHALL cross-join the input tibble with the cartesian product of the vector-valued bootstrap axes `nboot`, `ci_method`, and `parametric`, producing one row per (simulation × bootstrap-configuration) combination. `est_method` SHALL NOT be part of this factorial expansion: it is an hc simulation setting whose every requested value is summarised from each cell's single bootstrap sample set (see "est_method summaries derived from a single bootstrap sample set").
+The function SHALL cross-join the input tibble with the cartesian product of the vector-valued bootstrap axes `nboot`, `ci_method`, and `parametric`, producing one row per (simulation × bootstrap-configuration) combination. `est_method` SHALL NOT be part of this factorial expansion: it is an hc scenario setting whose every requested value is summarised from each cell's single bootstrap sample set (see "est_method summaries derived from a single bootstrap sample set").
 
 #### Scenario: Multiple CI methods
 - **WHEN** `ssd_hc_sims()` is called with `ci_method = c("multi_fixed", "weighted_samples")` on an input of `N` rows

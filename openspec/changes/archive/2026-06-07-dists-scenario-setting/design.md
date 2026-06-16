@@ -1,4 +1,4 @@
-# Design — `dists` is a fit-level simulation setting
+# Design — `dists` is a fit-level scenario setting
 
 ## Context
 
@@ -9,7 +9,7 @@ the fit step it is handed *whole* to one `ssd_fit_dists()` call per task
 `task_axes("fit")`, so it does not fan out, does not enter the per-task primer,
 and is not partition-eligible.
 
-That makes `dists` a **simulation setting** by the glossary definition. Yet the
+That makes `dists` a **scenario setting** by the glossary definition. Yet the
 `scenario-definition` spec's `Constructor arguments are grouped by role`
 requirement lists `dists` among the cross-join axes and places it in the
 fit-axis block of the signature. This change reconciles the spec and signature
@@ -17,12 +17,12 @@ with the implementation.
 
 ## Two clarifications this change pins down
 
-### 1. "Inner axis" vs "simulation setting" — same cost, different mechanism
+### 1. "Inner axis" vs "scenario setting" — same cost, different mechanism
 
 These are easy to conflate because *adding a value to either* rewrites all
 shards of the step. They are categorically different:
 
-| | **inner axis** (e.g. `nboot`, `est_method`, bundled `rescale`) | **simulation setting** (e.g. `dists`, `ci`, `samples`, `proportion`) |
+| | **inner axis** (e.g. `nboot`, `est_method`, bundled `rescale`) | **scenario setting** (e.g. `dists`, `ci`, `samples`, `proportion`) |
 |---|---|---|
 | In `task_axes(step)`? | **yes** | **no** |
 | Multiplies the task graph? | yes — one new **task** per value | no — same task count |
@@ -34,7 +34,7 @@ shards of the step. They are categorically different:
 So an **inner axis** is still a genuine cross-join axis — it has just been left
 out of `partition_by`, so its fan-out lives as columns *within* a shard rather
 than as Hive directories *across* shards (`path ⊎ inner = task_axes(step)`,
-GLOSSARY). A **simulation setting** is not an axis in either position: it never
+GLOSSARY). A **scenario setting** is not an axis in either position: it never
 multiplies the task graph. `dists` adding a distribution and `nboot` adding a
 value both "rewrite all fit/hc shards", but `nboot`'s rewrite adds a *row per
 shard* (and can be avoided by sharding on `nboot`), whereas `dists`'s rewrite
@@ -85,7 +85,7 @@ and a new fragility (reliance on opaque prefix-stability).
 ## Signature placement
 
 `dists` is a *fit*-level setting while `proportion`/`ci`/`samples` are *hc*-level.
-To honour "simulation settings are contiguous" we place `dists` **first** in the
+To honour "scenario settings are contiguous" we place `dists` **first** in the
 settings block (fit before hc): `… nboot, est_method, ci_method, parametric,`
 **`dists, proportion, ci, samples,`** `partition_by, bundle` (the `cloud-upload`
 change removed `upload` from `ssd_define_scenario()`). Storage is
@@ -102,14 +102,14 @@ colliding edits to the role-grouping requirement and the signature, this
 block and **owns** the signature reorder + the call-site sweep. `est-method-setting`
 is rebased on top — its role-grouping delta already assumes `dists` has moved, so
 the two deltas compose. (Per PR review the non-`ci`-gated settings precede `ci`
-and the knobs `ci` gates follow it:
+and the scenario options `ci` gates follow it:
 `… range_shape2, dists, est_method, proportion, ci, nboot, ci_method,
 parametric, samples, partition_by, …`.) **Archive order:
-`dists-simulation-setting` first, then `est-method-setting`** (the last-synced
+`dists-scenario-setting` first, then `est-method-setting`** (the last-synced
 delta wins the requirement text, and only the rebased `est-method-setting` delta
-carries both knobs moved). From this change's own standpoint the end-state is
-just `dists, proportion, ci, samples` with `est_method` still an axis; the
-`est_method` move is the sibling change's responsibility.
+carries both scenario options moved). From this change's own standpoint the
+end-state is just `dists, proportion, ci, samples` with `est_method` still an
+axis; the `est_method` move is the sibling change's responsibility.
 
 ## Alternatives considered
 

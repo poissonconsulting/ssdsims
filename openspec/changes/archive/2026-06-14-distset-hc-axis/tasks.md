@@ -13,7 +13,7 @@
 ## 3. Axis vocabulary and hc task table
 
 - [x] 3.1 Add `"distset"` to `task_axes("hc")` in `R/task-lists.R` (hc axes become `nboot`, `ci_method`, `parametric`, `distset`).
-- [x] 3.2 Derive the hc task table by crossing each fit-task identity with the hc grid **and** the `distset` names: `ci = FALSE` → `D` rows per fit task (one per set, bootstrap knobs `NA`); `ci = TRUE` → `distset × nboot × ci_method × parametric`. Each hc row carries its `distset` name and parent `fit_id`. A single-set collection (`ssd_distset(BCANZ = ...)`) yields one `distset` value (one hc row per fit task when `ci = FALSE`).
+- [x] 3.2 Derive the hc task table by crossing each fit-task identity with the hc grid **and** the `distset` names: `ci = FALSE` → `D` rows per fit task (one per set, bootstrap scenario options `NA`); `ci = TRUE` → `distset × nboot × ci_method × parametric`. Each hc row carries its `distset` name and parent `fit_id`. A single-set collection (`ssd_distset(BCANZ = ...)`) yields one `distset` value (one hc row per fit task when `ci = FALSE`).
 - [x] 3.3 Confirm `partition_by`/`bundle` validation accepts `"distset"` for the `hc` step (falls out of `task_axes("hc")`); keep the default hc path `c("dataset", "sim")` so `distset` is inner by default.
 
 ## 4. Accessor and scenario slice
@@ -38,7 +38,7 @@
 
 ## 7. Docs, snapshots, decision log
 
-- [x] 7.1 Update `TARGETS-DESIGN.md`: the `dists-simulation-setting` decision log entry and the §"No nested reuse" note get an addendum — *individual distributions still never fan out*; a named set of pools is an hc-level axis over post-fit subsets of one union fit (reuse now holds within one union).
+- [x] 7.1 Update `TARGETS-DESIGN.md`: the `dists-scenario-setting` decision log entry and the §"No nested reuse" note get an addendum — *individual distributions still never fan out*; a named set of pools is an hc-level axis over post-fit subsets of one union fit (reuse now holds within one union).
 - [x] 7.2 Update `GLOSSARY.md` (define "distribution set" / `distset` axis) and `task_axes("hc")` references that list the hc axes.
 - [x] 7.3 Update the `defining-a-scenario` and `sharded-pipeline` vignettes with a multi-set example (and the bundled-vs-path `distset` trade-off); add a worked iwasaki-style snippet.
 - [x] 7.4 Re-record affected snapshots (printed scenarios; hc task-count assertions; `ci = TRUE` CI snapshots re-seeded by the primer change).

@@ -34,15 +34,15 @@ The package SHALL derive a `fit` task table by crossing each data-task identity 
 - **THEN** the fit task table SHALL store the `min_pmix` name (not the function value)
 
 ### Requirement: Derive the hc task table from a scenario honouring the ci = FALSE collapse
-The package SHALL derive an `hc` task table by crossing each fit-task identity with each row of the scenario's `hc` argument grid (e.g. `nboot`, `est_method`, `ci_method`, `parametric`). The expansion SHALL honour the construction-time `ci = FALSE` collapse already recorded on the scenario (`TARGETS-DESIGN.md` §1.2): rows where `ci = FALSE` SHALL NOT be multiplied across the bootstrap-only knobs (`nboot`, `ci_method`, `parametric`).
+The package SHALL derive an `hc` task table by crossing each fit-task identity with each row of the scenario's `hc` argument grid (e.g. `nboot`, `est_method`, `ci_method`, `parametric`). The expansion SHALL honour the construction-time `ci = FALSE` collapse already recorded on the scenario (`TARGETS-DESIGN.md` §1.2): rows where `ci = FALSE` SHALL NOT be multiplied across the bootstrap-only scenario options (`nboot`, `ci_method`, `parametric`).
 
 #### Scenario: hc tasks cross fit identity with the hc grid
 - **WHEN** the hc task table is derived from a fit task table of `K` rows and an `hc` argument grid of `H` rows
 - **THEN** the hc task table SHALL have `K * H` rows, each carrying its parent fit-task identity columns and the hc-grid argument columns
 
-#### Scenario: ci = FALSE collapses the bootstrap-only knobs
+#### Scenario: ci = FALSE collapses the bootstrap-only scenario options
 - **WHEN** the hc grid contains `ci = FALSE` together with multiple `nboot` / `ci_method` / `parametric` values
-- **THEN** the `ci = FALSE` portion of the expansion SHALL collapse to a single row over those bootstrap-only knobs, matching the §1.2 reduced fan-out, rather than the full cross-join
+- **THEN** the `ci = FALSE` portion of the expansion SHALL collapse to a single row over those bootstrap-only scenario options, matching the §1.2 reduced fan-out, rather than the full cross-join
 
 ### Requirement: Tasks carry an explicit id and parent foreign key
 Each task row SHALL carry a path-style `<step>_id` primary key built from the step's cross-join axes (the Hive partition path, `TARGETS-DESIGN.md` §5/§6), and every non-root step SHALL additionally carry its parent step's id as a foreign key column. Dependencies between steps SHALL therefore be encoded explicitly as a single joinable foreign-key column (`sample_id` on data tasks, `data_id` on fit tasks, `fit_id` on hc tasks), not only as the carried identity columns.

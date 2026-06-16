@@ -8,9 +8,9 @@ Terminology used throughout `ssdsims`.
   `seed` argument of `dqrng::dqset.seed()`). Both base R and dqrng
   accept a single integer as the seed. In `ssd_define_scenario()` it is
   the scenario's RNG root — one of the three **required positional**
-  arguments (`data, nsim, seed`), **not** a grid **axis** or a
-  **simulation setting** (below). Its canonical call-site slot is third,
-  immediately after `nsim` and before any `...` knob (e.g. `nrow`).
+  arguments (`data, nsim, seed`), **not** a grid **scenario axis** or a
+  **scenario setting** (below). Its canonical call-site slot is third,
+  immediately after `nsim` and before any `...` scenario option (e.g. `nrow`).
 - **state**: The full internal state of an RNG. For L'Ecuyer-CMRG,
   the state is a length-7 integer vector assignable to
   `.Random.seed` (it cannot be passed to `set.seed()`). For dqrng,
@@ -63,7 +63,17 @@ Terminology used throughout `ssdsims`.
   at that step, and the upstream partition path it depends on.
   Many tasks bundle into one **shard** (below) when they share
   the step's `partition_by` column values.
-- **axis** (cross-join axis): A scenario knob a step *fans out*
+- **scenario option**: The genus term for a declarative
+  `ssd_define_scenario()` parameter that shapes the *results*. Every
+  scenario option is either a **scenario axis** (below — it multiplies
+  tasks) or a **scenario setting** (below — it is consumed within each
+  task), and the two species exhaust the genus. The required inputs
+  `data`/`nsim`/`seed` (and the `name`) are **not** scenario options, nor are
+  the **layout arguments** `partition_by`/`bundle`/`upload` — those relocate
+  shards on disk without changing any task result (the byte-identity
+  invariant, §5/§8). Bare "option" never introduces the term; always
+  qualify it ("scenario option", "scenario axis", "scenario setting").
+- **scenario axis** (cross-join axis): A scenario option a step *fans out*
   over — one task per combination of the step's axis values. The
   `sample` axes are `(dataset, sim, replace)`; `data` adds `nrow`;
   `fit` adds the fit-grid axes (`rescale`, `computable`,
@@ -71,7 +81,7 @@ Terminology used throughout `ssdsims`.
   `hc` adds the hc-grid axes (`nboot`, `ci_method`, `parametric`) and
   `distset` (the **distribution-set** name, below).
   `est_method`, `proportion`, `ci`, and `samples` are **not** hc axes —
-  they are *simulation settings* (below), consumed within each task rather
+  they are *scenario settings* (below), consumed within each task rather
   than multiplying it. A task row carries **only** its identity — the axis
   columns, its `<step>_id`/`<parent>_id` keys, and the per-row `seed`/`primer`
   the shard path attaches; a non-axis value a runner needs (the draw size, the
@@ -79,14 +89,14 @@ Terminology used throughout `ssdsims`.
   `nrow` is deliberately not a `sample` axis because every `nrow` is
   a sub-truncation of one shared draw sized by the `nrow_max` setting
   (TARGETS-DESIGN.md §5), truncated inline at the (RNG-free) `fit` step.
-- **simulation setting**: A scenario knob that is **not** an axis — it is
+- **scenario setting**: A scenario option that is **not** an axis — it is
   absent from `task_axes(step)`, so it never creates a task, enters the
   per-task **primer**, or becomes a **shard**/**partition** level. Its effect
   is realised *inside* each task: it either fans out within the task's own
   output (`est_method`, `proportion` → one HC row per value), is applied
   uniformly to every task (`ci`, `dists`, `samples`), or sets the shared draw
   size (`nrow_max`). Where an **axis**
-  multiplies the *task graph*, a simulation setting only shapes the *contents*
+  multiplies the *task graph*, a scenario setting only shapes the *contents*
   of a task's result. "Scalar" is a near-synonym but a misnomer for `proportion`
   and `est_method` (vector-valued) and for `dists` (a character vector) — all
   non-scalar yet still not axes. Settings attach at different **steps**:
@@ -97,9 +107,9 @@ Terminology used throughout `ssdsims`.
   `ssd_define_scenario()` signature the **non-`ci`-gated** settings (`nrow_max`,
   `dists`, `est_method`, `proportion` — each valid and meaningful when
   `ci = FALSE`) come
-  before `ci`; the knobs `ci` **gates** then follow it — the bootstrap axes
-  `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and `samples`
-  (which only retains bootstrap draws).
+  before `ci`; the scenario options `ci` **gates** then follow it — the
+  bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`)
+  and `samples` (which only retains bootstrap draws).
 - **partition**: A Hive directory level keyed by an axis value
   (e.g. `dataset=boron/sim=1/`). The Hive-partitioned layout is
   a *read-side* concept — query engines (duckplyr / DuckDB)
@@ -115,6 +125,14 @@ Terminology used throughout `ssdsims`.
   results, one row per task, with `task_id` as a column. In our
   design **one shard ≡ one partition leaf** (no `part-N` style
   splitting); the leaf file is always named `part.parquet`.
+
+  > *The on-disk results tree is a separate, configurable hierarchy from
+  > `design → scenario → task` above: it is keyed by `seed=`/`layout=` (and,
+  > within a shard, `partition_by`), with the design root holding the combined
+  > `summary.parquet`. A scenario has no directory of its own — members
+  > sharing a `(seed, layout)` blend into one subtree (common random numbers)
+  > and surface only via the `scenario` identity column. The two hierarchies
+  > meet at the task.*
 - **sidecar**: A small auxiliary metadata file written *beside* the
   data it describes (in the same directory), rather than embedded in
   it — human-readable, diffable JSON kept separate from the bulk
@@ -134,7 +152,7 @@ Terminology used throughout `ssdsims`.
   Parquet columns that vary row-to-row inside a shard. Together
   `path ⊎ inner = task_axes(step)`.
 - **`partition_by`**: The per-step **path axes** — the canonical
-  sharding knob (`scenario$partition_by`, a `sample`/`fit`/`hc` named
+  sharding argument (`scenario$partition_by`, a `sample`/`fit`/`hc` named
   list). `partition_by[[step]]` is a subset of `task_axes(step)` whose
   values become the shard's Hive path, one shard per cell; shard count
   is `Π |path axis|`. More path axes → finer (more, smaller) shards.
@@ -199,11 +217,11 @@ design-runs across infrastructure, time, and software versions.
 - **scenario**: A single, purely declarative `ssdsims_scenario`
   (`ssd_define_scenario()`) — one **regular** cross-join of the **axes** at each
   step (a rectangular sub-grid). It is the construction-time root of one
-  `targets` pipeline (`ssd_scenario_targets()`), carrying a `seed`, the knobs,
-  and the dataset *names*; it draws no random numbers and expands no tasks
-  (TARGETS-DESIGN.md §1). Vignette prose that calls a scenario "the study" is
-  the loose gloss this section tightens: a scenario is one **arm** of a study,
-  not the study.
+  `targets` pipeline (`ssd_scenario_targets()`), carrying a `seed`, the scenario
+  options, and the dataset *names*; it draws no random numbers and expands no
+  tasks (TARGETS-DESIGN.md §1). Vignette prose that calls a scenario "the study"
+  is the loose gloss this section tightens: a scenario is one **arm** of a
+  study, not the study.
 - **design**: A named set of scenarios run as **one pipeline** — one `targets`
   store, one `tar_make()`, one provenance/execution context — built with
   `ssd_design()` and turned into targets by `ssd_design_targets()`. Where a
@@ -228,13 +246,33 @@ design-runs across infrastructure, time, and software versions.
   level; not built by the design machinery. Distinct from **experiment**, which
   in this repo names the proof-of-work `scripts/experiment-*.R`.
 
+### Mapping to design-of-experiments terminology
+
+The vocabulary above maps onto the design-of-experiments / simulation-study
+literature (Morris, White & Crowther 2019, *Statistics in Medicine*
+38:2074–2102). The mapping is a **gloss** for readers coming from that
+literature — "factor", "level", and "study" are not working terms in this repo
+(see the `## Design terms` hierarchy above for the terms we do use):
+
+| ssdsims term       | DoE / Morris-White-Crowther (2019) gloss      |
+| ------------------ | --------------------------------------------- |
+| scenario axis      | factor                                        |
+| axis value         | level                                         |
+| task               | factorial cell (the literature's "scenario")  |
+| scenario setting   | held-constant condition                       |
+| `nsim`             | repetitions per cell                          |
+
+Note the terminology clash the gloss resolves: the literature's **"scenario"**
+is our **task** (one factorial cell), whereas our **scenario** is a whole
+regular grid of cells. "Factor"/"level"/"study" remain glosses only.
+
 ## Simulation terms
 
 - **`sim`**: The index of a simulation replicate.
 - **`nsim`**: The number of simulation replicates to perform.
 - **`nrow`**: The number of rows (species) in each simulated dataset.
 - **`nrow_max`**: The fixed size of the shared `sample` draw (default
-  `1000L`) — a sample-level **simulation setting**, not an axis or a task-row
+  `1000L`) — a sample-level **scenario setting**, not an axis or a task-row
   column. The effective per-dataset draw is `min(nrow_max, nrow(data))` when
   `replace = FALSE` (the high default draws the full permutation) and
   `nrow_max` rows when `replace = TRUE`; every `nrow` is a `head()` prefix of
@@ -253,7 +291,7 @@ design-runs across infrastructure, time, and software versions.
   `ssd_distset()` collection of **distribution sets** (below); the fit step
   fits the **union** of every set's members (`scenario$fit$dists`) — *one*
   model-averaged fit applied uniformly to every fit task, a fit-level
-  **simulation setting** (above), **not** a cross-join **axis**: it is absent
+  **scenario setting** (above), **not** a cross-join **axis**: it is absent
   from `task_axes("fit")`, so it never fans out, enters a **primer**, or becomes
   a **partition** level. (Fanning out per-distribution would dissolve the model
   averaging that defines a fit.)
@@ -274,7 +312,7 @@ design-runs across infrastructure, time, and software versions.
 - **`proportion`**: The proportion of species affected at which the hazard
   concentration is computed.
 - **`ci`**: Scenario-wide scalar flag for whether to compute confidence
-  intervals on hazard concentrations. A *simulation setting*, not a cross-join
+  intervals on hazard concentrations. A *scenario setting*, not a cross-join
   axis — the point estimate is identical whether `ci` is `TRUE` or `FALSE`, so
   `ci = TRUE` is a superset of `ci = FALSE` (TARGETS-DESIGN.md §1.2).
 - **`ci_method`**: The method used to compute confidence intervals (e.g.

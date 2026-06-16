@@ -22,7 +22,7 @@ grid, a design unions scenarios into the full (possibly non-regular) experimenta
 region, and a study is a future read-side aggregate. Because the members of a
 ragged design share most of their cells, the design **computes each shared cell
 once**: the refinement reuses the coarse run's shards rather than recomputing
-them. Comparing simulation settings across members is a **secondary** use the
+them. Comparing scenario settings across members is a **secondary** use the
 same machinery also serves.
 
 ## What Changes

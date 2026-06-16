@@ -125,13 +125,13 @@ ssd_scenario_fit_tasks <- function(scenario) {
 #'   neither is a cross-join axis nor an emitted column; the runners read `ci`
 #'   from the scenario and every requested `est_method` is summarised within each
 #'   task from its single bootstrap sample set. When `ci = FALSE` the
-#'   bootstrap-only knobs (`nboot`, `ci_method`, `parametric`) are canonically
-#'   `NA`, leaving `distset` as the only fan-out, so the grid is exactly `D` hc
-#'   rows per fit task (one per set); when `ci = TRUE` the grid fans out across
-#'   `distset x nboot x ci_method x parametric`. A single-set collection yields
-#'   one `distset` value (one hc row per fit task when `ci = FALSE`). Each row
-#'   carries an `hc_id` primary key, its `distset` name, and a `fit_id` foreign
-#'   key referencing its parent (union) fit task.
+#'   bootstrap-only scenario options (`nboot`, `ci_method`, `parametric`) are
+#'   canonically `NA`, leaving `distset` as the only fan-out, so the grid is
+#'   exactly `D` hc rows per fit task (one per set); when `ci = TRUE` the grid
+#'   fans out across `distset x nboot x ci_method x parametric`. A single-set
+#'   collection yields one `distset` value (one hc row per fit task when
+#'   `ci = FALSE`). Each row carries an `hc_id` primary key, its `distset` name,
+#'   and a `fit_id` foreign key referencing its parent (union) fit task.
 #' @export
 #' @examples
 #' data <- ssd_scenario_data(ssddata::ccme_boron)
@@ -401,13 +401,14 @@ fit_task_table <- function(scenario) {
 hc_grid_tbl <- function(scenario) {
   hc <- scenario$hc
   # Single grid keyed by the scalar `ci` flag (no `c(FALSE, TRUE)` collapse).
-  # `ci` is an hc simulation setting, not an axis or an emitted column: the
+  # `ci` is an hc scenario setting, not an axis or an emitted column: the
   # runners read it from the scenario, so it never enters the per-task primer
   # or the task row.
   if (isFALSE(hc$ci)) {
-    # Bootstrap-only knobs are canonically NA when ci = FALSE so they cannot
-    # enter task identity; with `est_method` now an hc setting (not an axis),
-    # there is no fan-out axis, so this is exactly one hc row per fit task.
+    # Bootstrap-only scenario options are canonically NA when ci = FALSE so they
+    # cannot enter task identity; with `est_method` now an hc setting (not an
+    # axis), there is no fan-out axis, so this is exactly one hc row per fit
+    # task.
     tidyr::expand_grid(
       nboot = NA_integer_,
       ci_method = NA_character_,
@@ -439,7 +440,7 @@ task_axes <- function(step) {
     "range_shape1",
     "range_shape2"
   )
-  # `ci` and `est_method` are hc simulation settings, not axes. `ci` is a scalar
+  # `ci` and `est_method` are hc scenario settings, not axes. `ci` is a scalar
   # flag (the point estimate is invariant to it) and `est_method` is summarised
   # within a task from its single bootstrap sample set (the CI is
   # est_method-invariant, the point `est` analytical), so neither carries
@@ -513,7 +514,7 @@ sample_data_task <- function(data, n_max, replace) {
 }
 
 # The effective draw size for one dataset: the scenario's fixed `nrow_max`
-# simulation setting, capped at the dataset size for `replace = FALSE` (the
+# scenario setting, capped at the dataset size for `replace = FALSE` (the
 # high default thus draws the full permutation - the maximal no-churn draw);
 # `nrow_max` rows for `replace = TRUE`. Resolved at run time by the runners
 # (and mirrored by the constructor's `nrow` validation), never stored on a
@@ -583,7 +584,7 @@ hc_data_task <- function(
 
 # Summarise every requested `est_method` from a SINGLE bootstrap per hc cell.
 #
-# `est_method` is an hc simulation setting, not a bootstrap axis: the bootstrap
+# `est_method` is an hc scenario setting, not a bootstrap axis: the bootstrap
 # CI (`se`/`lcl`/`ucl`, and any retained `samples`) is est_method-invariant and
 # each method's point `est` is analytical and seed-independent (verified in the
 # `est-method-setting` change's `exploration/est-method-invariance.R`). So when
