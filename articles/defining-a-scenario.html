@@ -80,7 +80,7 @@
 </div>
 <section class="level2"><h2 id="why-a-declarative-scenario">Why a declarative scenario?<a class="anchor" aria-label="anchor" href="#why-a-declarative-scenario"></a>
 </h2>
-<p>ssdsims is moving from running a simulation study <em>immediately</em> (the legacy <code><a href="../reference/ssd_run_scenario.html">ssd_run_scenario()</a></code>) to a cluster-friendly <a href="https://docs.ropensci.org/targets/" class="external-link">targets</a> pipeline. The root of that pipeline is a <strong>scenario</strong>: a small, purely declarative description of the study you want to run. It contains only the knobs — a seed, the number of simulations, the sample sizes, the dataset <em>names</em>, and the fit/hc argument grids. It draws <strong>no</strong> random numbers, expands <strong>no</strong> tasks, writes <strong>nothing</strong>, and has <strong>no</strong> dependency on <code>targets</code>.</p>
+<p>ssdsims is moving from running a simulation study <em>immediately</em> (the legacy <code><a href="../reference/ssd_run_scenario.html">ssd_run_scenario()</a></code>) to a cluster-friendly <a href="https://docs.ropensci.org/targets/" class="external-link">targets</a> pipeline. The root of that pipeline is a <strong>scenario</strong>: a small, purely declarative description of the study you want to run. It contains only the scenario options — a seed, the number of simulations, the sample sizes, the dataset <em>names</em>, and the fit/hc argument grids. It draws <strong>no</strong> random numbers, expands <strong>no</strong> tasks, writes <strong>nothing</strong>, and has <strong>no</strong> dependency on <code>targets</code>.</p>
 <p>Keeping the scenario declarative buys two things:</p>
 <ul>
 <li>It <strong>serialises to a compact manifest</strong> — no data frames, no RNG state, no function bodies — so it can be shipped to a cluster and stored alongside results.</li>
@@ -194,7 +194,7 @@
 <p>A materialised generator dataset is a <em>fixture the scenario resamples</em>: once inside the collection it is an ordinary tibble, indistinguishable from a data-frame dataset downstream (the generator code is its provenance).</p>
 </section></section><section class="level2"><h2 id="stage-2-declare-the-scenario">Stage 2: declare the scenario<a class="anchor" aria-label="anchor" href="#stage-2-declare-the-scenario"></a>
 </h2>
-<p><code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> is the constructor. Its required arguments are the dataset input, <code>nsim</code> (the replicate count), and <code>seed</code> (the RNG root — it has no default because changing it fully re-roots every draw). Everything else is a knob with a sensible default.</p>
+<p><code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> is the constructor. Its required arguments are the dataset input, <code>nsim</code> (the replicate count), and <code>seed</code> (the RNG root — it has no default because changing it fully re-roots every draw). Everything else is a scenario option with a sensible default.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
@@ -293,7 +293,7 @@
 </section><section class="level3"><h3 id="min_pmix-is-referenced-by-name">
 <code>min_pmix</code> is referenced by name<a class="anchor" aria-label="anchor" href="#min_pmix-is-referenced-by-name"></a>
 </h3>
-<p>The <code>min_pmix</code> knob is referenced <strong>by name</strong>: the name — not the function body — is what enters the task identity and hashes, so the scenario’s identity stays stable under a recompile or a cosmetic edit. It is supplied as an <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> collection (the only accepted form — a bare function, a plain list, or a character vector of names is rejected, and no name-string is resolved to a function). Names come from the <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> argument names, or by symbol capture for a bare <code>pkg::name</code> (mirroring <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code>). The default <code>ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)</code> is stored as <code>"ssd_min_pmix"</code>:</p>
+<p>The <code>min_pmix</code> scenario option is referenced <strong>by name</strong>: the name — not the function body — is what enters the task identity and hashes, so the scenario’s identity stays stable under a recompile or a cosmetic edit. It is supplied as an <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> collection (the only accepted form — a bare function, a plain list, or a character vector of names is rejected, and no name-string is resolved to a function). Names come from the <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> argument names, or by symbol capture for a bare <code>pkg::name</code> (mirroring <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code>). The default <code>ssd_pmix(ssd_min_pmix = ssdtools::ssd_min_pmix)</code> is stored as <code>"ssd_min_pmix"</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scenario</span><span class="op">$</span><span class="va">fit</span><span class="op">$</span><span class="va">min_pmix</span></span>
@@ -357,13 +357,13 @@
 </section><section class="level3"><h3 id="the-ci-flag">The <code>ci</code> flag<a class="anchor" aria-label="anchor" href="#the-ci-flag"></a>
 </h3>
 <p><code>ci</code> is a scalar flag, not a cross-join axis. The point estimate is computed analytically from the fit and is identical whether <code>ci</code> is <code>TRUE</code> or <code>FALSE</code>, so a <code>ci = TRUE</code> run is a strict superset of <code>ci = FALSE</code> (the same estimate, plus the <code>se</code>/<code>lcl</code>/<code>ucl</code> columns). The choice is a scenario-wide either/or: <code>ci = TRUE</code> for estimates plus bootstrap intervals (as in the scenario above), or <code>ci = FALSE</code> for cheap, bootstrap-free point estimates only.</p>
-<p>When <code>ci = FALSE</code>, the bootstrap-only knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are meaningless, so passing any of them is an error — set <code>ci = TRUE</code> to enable the bootstrap, or omit the knob:</p>
+<p>When <code>ci = FALSE</code>, the bootstrap-only scenario options (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are meaningless, so passing any of them is an error — set <code>ci = TRUE</code> to enable the bootstrap, or omit the option:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span>, ci <span class="op">=</span> <span class="cn">FALSE</span>, nboot <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error in `ssd_define_scenario()`:</span></span>
-<span><span class="co">#&gt; ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.</span></span></code></pre></div>
+<span><span class="co">#&gt; ! Bootstrap-only scenario option ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the option.</span></span></code></pre></div>
 </div>
 </section></section><section class="level2"><h2 id="stage-3-expand-into-task-tables">Stage 3: expand into task tables<a class="anchor" aria-label="anchor" href="#stage-3-expand-into-task-tables"></a>
 </h2>
@@ -395,7 +395,7 @@
 <span><span class="co">#&gt; 5 cadmium     2 TRUE    dataset=cadmium/sim=2/replace=TRUE</span></span>
 <span><span class="co">#&gt; 6 cadmium     3 TRUE    dataset=cadmium/sim=3/replace=TRUE</span></span></code></pre></div>
 </div>
-<p>The scalar <code>ci</code> is applied uniformly to every <code>hc</code> task (it is a setting read from the scenario, not an axis or a table column), as is <code>est_method</code>. With <code>ci = TRUE</code> the bootstrap knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) fan out fully; a <code>ci = FALSE</code> scenario would instead give exactly one <code>hc</code> row per fit task, carrying <code>NA</code> for those bootstrap-only knobs (every requested <code>est_method</code> is summarised within each task from a single bootstrap, so it never fans out into separate tasks).</p>
+<p>The scalar <code>ci</code> is applied uniformly to every <code>hc</code> task (it is a setting read from the scenario, not an axis or a table column), as is <code>est_method</code>. With <code>ci = TRUE</code> the bootstrap axes (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) fan out fully; a <code>ci = FALSE</code> scenario would instead give exactly one <code>hc</code> row per fit task, carrying <code>NA</code> for those bootstrap-only scenario options (every requested <code>est_method</code> is summarised within each task from a single bootstrap, so it never fans out into separate tasks).</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tasks</span><span class="op">$</span><span class="va">hc</span></span>

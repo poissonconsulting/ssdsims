@@ -81,12 +81,12 @@ that step's cross-join.
   uniformly to every hc row - neither is a cross-join axis nor an
   emitted column; the runners read `ci` from the scenario and every
   requested `est_method` is summarised within each task from its single
-  bootstrap sample set. When `ci = FALSE` the bootstrap-only knobs
-  (`nboot`, `ci_method`, `parametric`) are canonically `NA`, leaving
-  `distset` as the only fan-out, so the grid is exactly `D` hc rows per
-  fit task (one per set); when `ci = TRUE` the grid fans out across
-  `distset x nboot x ci_method x parametric`. A single-set collection
-  yields one `distset` value (one hc row per fit task when
+  bootstrap sample set. When `ci = FALSE` the bootstrap-only scenario
+  options (`nboot`, `ci_method`, `parametric`) are canonically `NA`,
+  leaving `distset` as the only fan-out, so the grid is exactly `D` hc
+  rows per fit task (one per set); when `ci = TRUE` the grid fans out
+  across `distset x nboot x ci_method x parametric`. A single-set
+  collection yields one `distset` value (one hc row per fit task when
   `ci = FALSE`). Each row carries an `hc_id` primary key, its `distset`
   name, and a `fit_id` foreign key referencing its parent (union) fit
   task.

@@ -7,8 +7,8 @@ library(ssdsims)
 
 ## Why estimate cost?
 
-A scenario is *declarative*: a few knobs can fan out into a multi-day
-run with no warning. The motivating example in
+A scenario is *declarative*: a few scenario axes can fan out into a
+multi-day run with no warning. The motivating example in
 [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)’s
 docs — 10 simulations × 4 sample sizes × 7 `ci_method`s × 4 `nboot`
 values (up to 50 000), with `ci = TRUE` — was measured at roughly **430

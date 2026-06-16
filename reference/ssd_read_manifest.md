@@ -6,7 +6,7 @@ declarative fields and session-info block written by
 (and the `completed_shards` tail added by
 [`ssd_assemble_manifest()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_assemble_manifest.md))
 without lossy coercion: `seed`/`nboot` are restored as whole numbers and
-logical knobs (`rescale`, `parametric`, ...) as logicals.
+logical scenario options (`rescale`, `parametric`, ...) as logicals.
 
 ## Usage
 
@@ -23,8 +23,8 @@ ssd_read_manifest(dir)
 
 ## Value
 
-The manifest as an R list, with the scalar/vector knob types of the
-written scenario restored.
+The manifest as an R list, with the scalar/vector scenario option types
+of the written scenario restored.
 
 ## See also
 

@@ -80,7 +80,7 @@
 </div>
 <section class="level2"><h2 id="why-estimate-cost">Why estimate cost?<a class="anchor" aria-label="anchor" href="#why-estimate-cost"></a>
 </h2>
-<p>A scenario is <em>declarative</em>: a few knobs can fan out into a multi-day run with no warning. The motivating example in <code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>’s docs — 10 simulations × 4 sample sizes × 7 <code>ci_method</code>s × 4 <code>nboot</code> values (up to 50 000), with <code>ci = TRUE</code> — was measured at roughly <strong>430 single-core hours</strong> (about 18 days), dominated by the hazard-concentration (hc) bootstrap, with a single <code>multi_free</code> + <code>nboot = 50 000</code> task taking about 44 minutes on its own.</p>
+<p>A scenario is <em>declarative</em>: a few scenario axes can fan out into a multi-day run with no warning. The motivating example in <code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>’s docs — 10 simulations × 4 sample sizes × 7 <code>ci_method</code>s × 4 <code>nboot</code> values (up to 50 000), with <code>ci = TRUE</code> — was measured at roughly <strong>430 single-core hours</strong> (about 18 days), dominated by the hazard-concentration (hc) bootstrap, with a single <code>multi_free</code> + <code>nboot = 50 000</code> task taking about 44 minutes on its own.</p>
 <p>Before launching such a run you want two numbers:</p>
 <ul>
 <li>the <strong>total</strong> compute it costs (to size a budget), and</li>

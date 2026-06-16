@@ -128,7 +128,7 @@ ssd_define_scenario(
 
   A whole number (default `1000L`): the fixed size of the shared
   `sample` draw that every `nrow` value sub-truncates. A sample-level
-  simulation setting, not a cross-join axis. The effective per-dataset
+  scenario setting, not a cross-join axis. The effective per-dataset
   draw is `min(nrow_max, nrow(data))` when `replace = FALSE` (the high
   default draws the full permutation) and `nrow_max` rows when
   `replace = TRUE`; each `nrow` must not exceed the effective draw size.
@@ -221,16 +221,16 @@ ssd_define_scenario(
   `replace`; `fit` adds `nrow`, `rescale`, `computable`,
   `at_boundary_ok`, `min_pmix`, `range_shape1`, `range_shape2`; `hc`
   adds `nboot`, `ci_method`, `parametric`, `distset` (`ci` and
-  `est_method` are hc simulation settings, not axes; `dists` is the
-  fit-level simulation setting feeding the union, and `distset` - the
-  set *name* - is the hc axis over the union's post-fit subsets).
-  `"nrow"` is rejected only for `sample` (the shared draw carries no
-  `nrow` axis; the `fit` step truncates it inline), and is a valid path
-  axis for `fit`/`hc`. Steps partition **independently** - there is no
-  cross-step constraint; a step may be finer or coarser than its
-  neighbour on a shared axis (the m:n parent-shard relationship is
-  resolved at the read layer). Steps left unnamed take their documented
-  defaults (`sample = c("dataset", "sim", "replace")`,
+  `est_method` are hc scenario settings, not axes; `dists` is the
+  fit-level scenario setting feeding the union, and `distset` - the set
+  *name* - is the hc axis over the union's post-fit subsets). `"nrow"`
+  is rejected only for `sample` (the shared draw carries no `nrow` axis;
+  the `fit` step truncates it inline), and is a valid path axis for
+  `fit`/`hc`. Steps partition **independently** - there is no cross-step
+  constraint; a step may be finer or coarser than its neighbour on a
+  shared axis (the m:n parent-shard relationship is resolved at the read
+  layer). Steps left unnamed take their documented defaults
+  (`sample = c("dataset", "sim", "replace")`,
   `fit = c("dataset", "sim", "nrow", "rescale")`,
   `hc = c("dataset", "sim")`; these supersede `TARGETS-DESIGN.md`
   section 5's pre-fold table). The split is orthogonal to the per-task
@@ -284,8 +284,8 @@ and composed into the same collection; the constructor itself performs
 
 ## `nrow_max`
 
-`nrow_max` is the *sample*-level **simulation setting**: the fixed size
-of the shared `sample` draw that every `nrow` value sub-truncates
+`nrow_max` is the *sample*-level **scenario setting**: the fixed size of
+the shared `sample` draw that every `nrow` value sub-truncates
 (`head(sample, nrow)`, `TARGETS-DESIGN.md` section 5). The effective
 per-dataset draw is `min(nrow_max, nrow(data))` for `replace = FALSE`
 (the high default thus draws the full permutation) and `nrow_max` rows
@@ -305,10 +305,10 @@ independent of the bootstrap and RNG - so a single `ci = TRUE` run is a
 strict superset of `ci = FALSE` (same `est`, plus the `se`/`lcl`/`ucl`
 columns). The choice is scenario-wide either/or: `ci = FALSE` for cheap,
 bootstrap-free point estimates, or `ci = TRUE` for estimates plus
-confidence intervals. When `ci = FALSE`, the bootstrap-only knobs
-`nboot`, `ci_method`, and `parametric` are meaningless; passing any of
-them in that case is an error, so set `ci = TRUE` to enable bootstrap,
-or omit the knobs.
+confidence intervals. When `ci = FALSE`, the bootstrap-only scenario
+options `nboot`, `ci_method`, and `parametric` are meaningless; passing
+any of them in that case is an error, so set `ci = TRUE` to enable
+bootstrap, or omit the options.
 
 ## `dists` and `est_method`
 
@@ -328,7 +328,7 @@ one union fit down to each set's members
 character vector or plain list aborts loudly, pointing to
 [`ssd_distset()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_distset.md).
 
-`est_method` is a **simulation setting**, not a cross-join axis - it is
+`est_method` is a **scenario setting**, not a cross-join axis - it is
 absent from `task_axes("hc")`, so it never multiplies tasks or enters
 the per-task RNG primer. It is an *hc*-level setting: every requested
 method is summarised from each hc task's **single** bootstrap sample set

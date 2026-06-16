@@ -104,7 +104,7 @@
 
 ### Refactoring
 
-- Reclassify `est_method` and `dists` as hc/fit simulation settings
+- Reclassify `est_method` and `dists` as hc/fit scenario settings
   ([\#127](https://github.com/poissonconsulting/ssdsims/issues/127)).
 
 ### Testing
@@ -149,7 +149,7 @@
 
 ### Documentation
 
-- Reclassify `dists` as fit-level simulation setting
+- Reclassify `dists` as fit-level scenario setting
   ([\#119](https://github.com/poissonconsulting/ssdsims/issues/119)).
 
 #### roadmap

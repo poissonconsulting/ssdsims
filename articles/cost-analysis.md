@@ -128,10 +128,10 @@ from_run <- ssd_calibrate_cost_from_run(scenario, root = run$dir)
 # The run-derived calibration drives the estimator like any other.
 ssd_estimate_cost(scenario, calibration = from_run)
 #> <ssdsims_cost_estimate>  (ballpark, serial)
-#>   total compute:  16.7 s
+#>   total compute:  16.8 s
 #>   longest task:   2.1 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples   nboot   1000     4 tasks  8.5 s
+#>     weighted_samples   nboot   1000     4 tasks  8.4 s
 #>     weighted_samples   nboot    100     4 tasks  8.3 s
 #>   calibration:    AMD EPYC 9V74 80-Core Processor | R 4.6.0 | ssdtools 2.6.0.9002 | 2026-06-16
 #>   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.

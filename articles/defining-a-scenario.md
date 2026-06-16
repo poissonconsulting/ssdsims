@@ -13,10 +13,10 @@ legacy
 to a cluster-friendly [targets](https://docs.ropensci.org/targets/)
 pipeline. The root of that pipeline is a **scenario**: a small, purely
 declarative description of the study you want to run. It contains only
-the knobs — a seed, the number of simulations, the sample sizes, the
-dataset *names*, and the fit/hc argument grids. It draws **no** random
-numbers, expands **no** tasks, writes **nothing**, and has **no**
-dependency on `targets`.
+the scenario options — a seed, the number of simulations, the sample
+sizes, the dataset *names*, and the fit/hc argument grids. It draws
+**no** random numbers, expands **no** tasks, writes **nothing**, and has
+**no** dependency on `targets`.
 
 Keeping the scenario declarative buys two things:
 
@@ -181,7 +181,7 @@ provenance).
 is the constructor. Its required arguments are the dataset input, `nsim`
 (the replicate count), and `seed` (the RNG root — it has no default
 because changing it fully re-roots every draw). Everything else is a
-knob with a sensible default.
+scenario option with a sensible default.
 
 ``` r
 
@@ -294,8 +294,8 @@ ssd_define_scenario(data, nsim = 2L, seed = 1L)
 
 ### `min_pmix` is referenced by name
 
-The `min_pmix` knob is referenced **by name**: the name — not the
-function body — is what enters the task identity and hashes, so the
+The `min_pmix` scenario option is referenced **by name**: the name — not
+the function body — is what enters the task identity and hashes, so the
 scenario’s identity stays stable under a recompile or a cosmetic edit.
 It is supplied as an
 [`ssd_pmix()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_pmix.md)
@@ -420,16 +420,16 @@ choice is a scenario-wide either/or: `ci = TRUE` for estimates plus
 bootstrap intervals (as in the scenario above), or `ci = FALSE` for
 cheap, bootstrap-free point estimates only.
 
-When `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`,
-`parametric`) are meaningless, so passing any of them is an error — set
-`ci = TRUE` to enable the bootstrap, or omit the knob:
+When `ci = FALSE`, the bootstrap-only scenario options (`nboot`,
+`ci_method`, `parametric`) are meaningless, so passing any of them is an
+error — set `ci = TRUE` to enable the bootstrap, or omit the option:
 
 ``` r
 
 data <- ssd_scenario_data(ssddata::ccme_boron)
 ssd_define_scenario(data, nsim = 2L, seed = 1L, ci = FALSE, nboot = 1000)
 #> Error in `ssd_define_scenario()`:
-#> ! Bootstrap-only knob ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the knob.
+#> ! Bootstrap-only scenario option ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the option.
 ```
 
 ## Stage 3: expand into task tables
@@ -485,12 +485,12 @@ tasks$sample
 
 The scalar `ci` is applied uniformly to every `hc` task (it is a setting
 read from the scenario, not an axis or a table column), as is
-`est_method`. With `ci = TRUE` the bootstrap knobs (`nboot`,
-`ci_method`, `parametric`) fan out fully; a `ci = FALSE` scenario would
-instead give exactly one `hc` row per fit task, carrying `NA` for those
-bootstrap-only knobs (every requested `est_method` is summarised within
-each task from a single bootstrap, so it never fans out into separate
-tasks).
+`est_method`. With `ci = TRUE` the bootstrap axes (`nboot`, `ci_method`,
+`parametric`) fan out fully; a `ci = FALSE` scenario would instead give
+exactly one `hc` row per fit task, carrying `NA` for those
+bootstrap-only scenario options (every requested `est_method` is
+summarised within each task from a single bootstrap, so it never fans
+out into separate tasks).
 
 ``` r
 

@@ -303,8 +303,8 @@ execution to a cluster-based targets pipeline. Key shifts:
 
 - **Scenario object**
   ([`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md))
-  — Declarative, construction-time, contains only `seed`, knobs, dataset
-  names, and arg grids.
+  — Declarative, construction-time, contains only `seed`, scenario
+  options, dataset names, and arg grids.
 - **Per-task RNG** — Each task gets a primer derived from
   `rlang::hash(task_params)`, seeded via
   `dqrng::dqset.seed(seed, stream = primer)`.

@@ -146,13 +146,13 @@ flag and the <code>est_method</code> setting are applied uniformly to every hc r
 neither is a cross-join axis nor an emitted column; the runners read <code>ci</code>
 from the scenario and every requested <code>est_method</code> is summarised within each
 task from its single bootstrap sample set. When <code>ci = FALSE</code> the
-bootstrap-only knobs (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are canonically
-<code>NA</code>, leaving <code>distset</code> as the only fan-out, so the grid is exactly <code>D</code> hc
-rows per fit task (one per set); when <code>ci = TRUE</code> the grid fans out across
-<code>distset x nboot x ci_method x parametric</code>. A single-set collection yields
-one <code>distset</code> value (one hc row per fit task when <code>ci = FALSE</code>). Each row
-carries an <code>hc_id</code> primary key, its <code>distset</code> name, and a <code>fit_id</code> foreign
-key referencing its parent (union) fit task.</p></li>
+bootstrap-only scenario options (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are
+canonically <code>NA</code>, leaving <code>distset</code> as the only fan-out, so the grid is
+exactly <code>D</code> hc rows per fit task (one per set); when <code>ci = TRUE</code> the grid
+fans out across <code>distset x nboot x ci_method x parametric</code>. A single-set
+collection yields one <code>distset</code> value (one hc row per fit task when
+<code>ci = FALSE</code>). Each row carries an <code>hc_id</code> primary key, its <code>distset</code> name,
+and a <code>fit_id</code> foreign key referencing its parent (union) fit task.</p></li>
 </ul></div>
 
     <div class="section level2">

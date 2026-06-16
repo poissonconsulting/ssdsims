@@ -45,18 +45,17 @@ artifacts yet is also queued, ready to propose.
 
 - 😀🛠️ \[azure-summary\] Conveniently access the summary Parquet files
   from Azure.
-- 😀⏳ \[scenario-option-vocabulary\] Retire “knob” for the genus
-  **scenario option** (a **scenario axis** fans out into tasks; a
-  **scenario setting**, renamed from “simulation setting”, applies
-  within each task), with always-qualified discipline (bare
-  “option”/“setting” never used as terms) and `crew` config knobs
+- 😀⏳ \[scenario-option-vocabulary\] Retire the old umbrella term for
+  the genus **scenario option** (a **scenario axis** fans out into
+  tasks; a **scenario setting**, the renamed within-task species,
+  applies within each task), with always-qualified discipline (bare
+  “option”/“setting” never used as terms) and `crew` config settings
   becoming **crew option**. Full-repo rename including archives,
-  `NEWS.md`, and file names (e.g. the `knobs.rds` fixture);
-  `GLOSSARY.md` gains the *study* ⊃ *design* ⊃ *scenario* ⊃ *task*
-  hierarchy plus a DoE / Morris-White-Crowther (2019) mapping. BREAKING
-  (cosmetic): the `ci = FALSE` rejection error text. Settles the
-  vocabulary before `scenario-combine`’s collection layer accretes more
-  on it.
+  `NEWS.md`, and file names (e.g. the `opts.rds` fixture); `GLOSSARY.md`
+  gains the *study* ⊃ *design* ⊃ *scenario* ⊃ *task* hierarchy plus a
+  DoE / Morris-White-Crowther (2019) mapping. BREAKING (cosmetic): the
+  `ci = FALSE` rejection error text. Settles the vocabulary before
+  `scenario-combine`’s collection layer accretes more on it.
 - ❗️⏳ \[hc-readout-aggregation\] Per-overlap hc readout aggregation:
   reconcile design members that differ in the non-axis hc settings
   (`union` `proportion`/`est_method`, `any` `ci`/`samples`) into shared
@@ -208,10 +207,10 @@ artifacts yet is also queued, ready to propose.
   [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md),
   and
   [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
-  pins a single thread and a 1GB default `memory_limit` (env knobs
-  `SSDSIMS_DUCKDB_THREADS`/`SSDSIMS_DUCKDB_MEMORY_LIMIT`), relaxes
-  `preserve_insertion_order` (scope-wide; per-write COPY options cannot
-  carry it), and the full summary writes byte-budgeted row groups
+  pins a single thread and a 1GB default `memory_limit` (environment
+  variables `SSDSIMS_DUCKDB_THREADS`/`SSDSIMS_DUCKDB_MEMORY_LIMIT`),
+  relaxes `preserve_insertion_order` (scope-wide; per-write COPY options
+  cannot carry it), and the full summary writes byte-budgeted row groups
   (`samples_row_group_bytes`). Folds in \[duckplyr-message\]: the scope
   silences duckplyr’s fallback telemetry
   (`DUCKPLYR_FALLBACK_COLLECT=0`/`DUCKPLYR_FALLBACK_AUTOUPLOAD=0`)
@@ -221,13 +220,13 @@ artifacts yet is also queued, ready to propose.
   — Benchmark the `fit`-object Parquet encoding; keep the interim
   ASCII-`VARCHAR` `encode_obj()` and tighten the `shard-runner` spec (no
   code change).
-- ✅ 2026-06-07 \[dists-simulation-setting\]
-  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-dists-simulation-setting/)
-  — Reconcile `dists` as a fit-level simulation setting (not a
-  cross-join axis) across spec, signature, and docs.
+- ✅ 2026-06-07 \[dists-scenario-setting\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-dists-scenario-setting/)
+  — Reconcile `dists` as a fit-level scenario setting (not a cross-join
+  axis) across spec, signature, and docs.
 - ✅ 2026-06-07 \[est-method-setting\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-est-method-setting/)
-  — Reclassify `est_method` from an hc axis to an hc-level simulation
+  — Reclassify `est_method` from an hc axis to an hc-level scenario
   setting (~3× hc cost reduction; CIs re-baseline).
 - ✅ 2026-06-07 \[cost-estimation\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-07-cost-estimation/)
@@ -304,8 +303,8 @@ artifacts yet is also queued, ready to propose.
   via accessors (no registry).
 - ✅ 2026-06-04 \[partition-by\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-04-partition-by/)
-  — Scenario `partition_by` knob choosing Hive path levels vs Parquet
-  columns per step.
+  — Scenario `partition_by` argument choosing Hive path levels vs
+  Parquet columns per step.
 - ✅ 2026-06-04 \[task-tables\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-04-task-tables/)
   — Per-step task tables with `(seed, primer)` plus the `*_shards`
@@ -316,8 +315,8 @@ artifacts yet is also queued, ready to propose.
   → filter loop + m:n parent resolution in plain R.
 - ✅ 2026-06-04 \[hc-samples\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-04-hc-samples/)
-  — Opt-in scalar `samples` knob retaining `ssd_hc()`’s per-row
-  bootstrap draws (output retention only, RNG-neutral).
+  — Opt-in scalar `samples` scenario option retaining `ssd_hc()`’s
+  per-row bootstrap draws (output retention only, RNG-neutral).
 - ✅ 2026-06-02 \[ssd-define-scenario\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-02-ssd-define-scenario/)
   — Public S3 scenario constructor (data-frame input only).

@@ -169,7 +169,7 @@ upper bounds for the shape2 parameter.</p></dd>
 <dt id="arg-nrow-max">nrow_max<a class="anchor" aria-label="anchor" href="#arg-nrow-max"></a></dt>
 <dd><p>A whole number (default <code>1000L</code>): the fixed size of the
 shared <code>sample</code> draw that every <code>nrow</code> value sub-truncates. A sample-level
-simulation setting, not a cross-join axis. The effective per-dataset draw is
+scenario setting, not a cross-join axis. The effective per-dataset draw is
 <code>min(nrow_max, nrow(data))</code> when <code>replace = FALSE</code> (the high default draws
 the full permutation) and <code>nrow_max</code> rows when <code>replace = TRUE</code>; each <code>nrow</code>
 must not exceed the effective draw size.</p></dd>
@@ -248,8 +248,8 @@ columns). Each entry must be unique, non-missing, and a subset of that
 step's axis vocabulary: <code>sample</code> = <code>dataset</code>, <code>sim</code>, <code>replace</code>; <code>fit</code> adds
 <code>nrow</code>, <code>rescale</code>, <code>computable</code>, <code>at_boundary_ok</code>, <code>min_pmix</code>,
 <code>range_shape1</code>, <code>range_shape2</code>; <code>hc</code> adds <code>nboot</code>, <code>ci_method</code>,
-<code>parametric</code>, <code>distset</code> (<code>ci</code> and <code>est_method</code> are hc simulation settings,
-not axes; <code>dists</code> is the fit-level simulation setting feeding the union, and
+<code>parametric</code>, <code>distset</code> (<code>ci</code> and <code>est_method</code> are hc scenario settings,
+not axes; <code>dists</code> is the fit-level scenario setting feeding the union, and
 <code>distset</code> - the set <em>name</em> - is the hc axis over the union's post-fit
 subsets).
 <code>"nrow"</code> is rejected only for <code>sample</code> (the
@@ -301,7 +301,7 @@ random-number generation.</p>
     </div>
     <div class="section level2">
     <h2 id="nrow-max"><code>nrow_max</code><a class="anchor" aria-label="anchor" href="#nrow-max"></a></h2>
-    <p><code>nrow_max</code> is the <em>sample</em>-level <strong>simulation setting</strong>: the fixed size of
+    <p><code>nrow_max</code> is the <em>sample</em>-level <strong>scenario setting</strong>: the fixed size of
 the shared <code>sample</code> draw that every <code>nrow</code> value sub-truncates
 (<code>head(sample, nrow)</code>, <code>TARGETS-DESIGN.md</code> section 5). The effective
 per-dataset draw is <code>min(nrow_max, nrow(data))</code> for <code>replace = FALSE</code> (the
@@ -322,9 +322,9 @@ the bootstrap and RNG - so a single <code>ci = TRUE</code> run is a strict super
 <code>ci = FALSE</code> (same <code>est</code>, plus the <code>se</code>/<code>lcl</code>/<code>ucl</code> columns). The choice is
 scenario-wide either/or: <code>ci = FALSE</code> for cheap, bootstrap-free point
 estimates, or <code>ci = TRUE</code> for estimates plus confidence intervals. When
-<code>ci = FALSE</code>, the bootstrap-only knobs <code>nboot</code>, <code>ci_method</code>, and <code>parametric</code>
-are meaningless; passing any of them in that case is an error, so set
-<code>ci = TRUE</code> to enable bootstrap, or omit the knobs.</p>
+<code>ci = FALSE</code>, the bootstrap-only scenario options <code>nboot</code>, <code>ci_method</code>, and
+<code>parametric</code> are meaningless; passing any of them in that case is an error,
+so set <code>ci = TRUE</code> to enable bootstrap, or omit the options.</p>
     </div>
     <div class="section level2">
     <h2 id="dists-and-est-method"><code>dists</code> and <code>est_method</code><a class="anchor" aria-label="anchor" href="#dists-and-est-method"></a></h2>
@@ -339,7 +339,7 @@ set's members (<code>subset(fit, set, strict = FALSE)</code>) and re-averages, s
 <code>"distset"</code> <strong>is</strong> an hc cross-join axis (<code>task_axes("hc")</code>) keyed by the set
 <strong>name</strong> - several pools reuse one fit rather than re-fitting. A bare character
 vector or plain list aborts loudly, pointing to <code><a href="ssd_distset.html">ssd_distset()</a></code>.</p>
-<p><code>est_method</code> is a <strong>simulation setting</strong>, not a cross-join axis - it is absent
+<p><code>est_method</code> is a <strong>scenario setting</strong>, not a cross-join axis - it is absent
 from <code>task_axes("hc")</code>, so it never multiplies tasks or enters the per-task RNG
 primer. It is an <em>hc</em>-level setting: every requested method is summarised from
 each hc task's <strong>single</strong> bootstrap sample set rather than re-bootstrapping per

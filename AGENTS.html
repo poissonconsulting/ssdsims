@@ -234,7 +234,7 @@
 <h3 id="the-targets-redesign">The targets redesign<a class="anchor" aria-label="anchor" href="#the-targets-redesign"></a></h3>
 <p>The package is transitioning from immediate <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> execution to a cluster-based targets pipeline. Key shifts:</p>
 <ul><li>
-<strong>Scenario object</strong> (<code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>) — Declarative, construction-time, contains only <code>seed</code>, knobs, dataset names, and arg grids.</li>
+<strong>Scenario object</strong> (<code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>) — Declarative, construction-time, contains only <code>seed</code>, scenario options, dataset names, and arg grids.</li>
 <li>
 <strong>Per-task RNG</strong> — Each task gets a primer derived from <code>rlang::hash(task_params)</code>, seeded via <code>dqrng::dqset.seed(seed, stream = primer)</code>.</li>
 <li>

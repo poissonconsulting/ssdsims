@@ -384,7 +384,7 @@
 <p>See <code><a href="https://wlandau.github.io/crew.cluster/reference/crew_controller_sge.html" class="external-link">?crew.cluster::crew_controller_sge</a></code> (and the <code>_pbs</code> / <code>_lsf</code> equivalents) for the exact arguments. Everything else in this guide — the preflight, the minimal first job, swapping in your scenario — is unchanged.</p>
 </section><section class="level2"><h2 id="shard-slurm-job-packing">Shard ↔︎ SLURM-job packing<a class="anchor" aria-label="anchor" href="#shard-slurm-job-packing"></a>
 </h2>
-<p>Shards are the <strong>unit of parallelism</strong>: independent shard targets run concurrently across your SLURM jobs. How many shard targets ride in one job is a <code>crew</code> configuration knob (<code>workers</code> caps concurrent jobs; <code>tasks_max</code> on the controller packs several shards into one worker’s lifetime — “many-to-one”; <code>tasks_max = 1L</code> gives one shard per job — “one-to-one”). It is documented in <code>controller.R</code>, not hard-coded as 1:1.</p>
+<p>Shards are the <strong>unit of parallelism</strong>: independent shard targets run concurrently across your SLURM jobs. How many shard targets ride in one job is a <code>crew</code> configuration option (<code>workers</code> caps concurrent jobs; <code>tasks_max</code> on the controller packs several shards into one worker’s lifetime — “many-to-one”; <code>tasks_max = 1L</code> gives one shard per job — “one-to-one”). It is documented in <code>controller.R</code>, not hard-coded as 1:1.</p>
 </section><section class="level2"><h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
 </h2>
 <ul>

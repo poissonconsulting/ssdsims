@@ -86,7 +86,7 @@ identical whether <code>TRUE</code> or <code>FALSE</code>, so <code>ci = TRUE</c
 <dt id="arg-nrow-max">nrow_max<a class="anchor" aria-label="anchor" href="#arg-nrow-max"></a></dt>
 <dd><p>A whole number (default <code>1000L</code>): the fixed size of the
 shared <code>sample</code> draw that every <code>nrow</code> value sub-truncates. A sample-level
-simulation setting, not a cross-join axis. The effective per-dataset draw is
+scenario setting, not a cross-join axis. The effective per-dataset draw is
 <code>min(nrow_max, nrow(data))</code> when <code>replace = FALSE</code> (the high default draws
 the full permutation) and <code>nrow_max</code> rows when <code>replace = TRUE</code>; each <code>nrow</code>
 must not exceed the effective draw size.</p></dd>
