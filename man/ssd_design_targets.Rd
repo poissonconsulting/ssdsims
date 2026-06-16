@@ -58,6 +58,33 @@ master seeds); they land under separate \verb{seed=} trees and share nothing.
 Members sharing a \code{seed} share their coincident cells (common random numbers).
 }
 
+\section{Per-overlap hc readout aggregation}{
+
+Members of a seed group MAY differ in the four \strong{non-axis} hc readout settings
+(\code{proportion}, \code{est_method}, \code{ci}, \code{samples}) and in their fit \code{dists} union;
+only the layout-shaping \code{nrow_max} and \code{partition_by} stay uniform-required.
+Differing readouts are reconciled \strong{per shared hc cell, over only the members
+whose task set contains that cell} - \code{proportion}/\code{est_method} are \code{union}-ed
+and \code{ci}/\code{samples} reduced with \code{any()} - so the cell computes the maximal
+readout set in one shard and each member's summary filters its slice. A cell one
+member reaches keeps that member's (smaller) demand, so the expensive bootstrap
+runs only where a \code{ci = TRUE} member has tasks. The draw-shaping hc axes
+(\code{nboot}/\code{ci_method}/\code{parametric}/\code{distset}) are \strong{not} aggregated - they stay
+cell axes (in the per-task primer), so byte-identity holds: a member's per-task
+results equal its standalone-run results.
+
+Because a \code{ci = FALSE} task collapses \code{nboot}/\code{ci_method}/\code{parametric} to \code{NA},
+its cell never coincides with a \code{ci = TRUE} task's. The point \code{est} is analytical
+and bootstrap-config-invariant, so a \code{ci = FALSE} cell is \strong{served by a
+coincident \code{ci = TRUE} shard} at the same \verb{(fit, distset)} when one exists (the
+computed hc shards are every \code{ci = TRUE} cell plus the \code{ci = FALSE} cells with no
+overlapping \code{ci = TRUE} shard); a \code{ci = TRUE} member's confidence interval still
+uses its own cell's \verb{(nboot, ci_method, parametric)} primer. Differing fit
+\code{dists} unions are reconciled by fitting the \strong{design-wide union} once per fit
+cell, each member subsetting via its \code{distset} axis (distset-subset-invariance),
+so members differing only in \code{distset} coverage share every \code{sample}/\code{fit} shard.
+}
+
 \examples{
 \dontrun{
 # _targets.R

@@ -23,12 +23,23 @@ test_that("ssd_design_targets validates its inputs", {
   expect_error(ssd_design_targets(d, upload = "nope"), "upload")
 })
 
-test_that("members sharing a seed must agree on hc readouts (for now)", {
+test_that("scenario-combine: members differing in hc readouts no longer abort", {
   data <- ssd_scenario_data(d = numeric_dataset())
   a <- ssd_define_scenario(data, nsim = 1L, seed = 42L, ci = FALSE)
   b <- ssd_define_scenario(data, nsim = 1L, seed = 42L, ci = TRUE)
   design <- ssd_design(a = a, b = b)
-  expect_error(ssd_design_targets(design), "ci")
+  targets <- ssd_design_targets(design)
+  expect_type(targets, "list")
+  expect_gt(length(targets), 0L)
+})
+
+test_that("scenario-combine: members sharing a seed must agree on nrow_max", {
+  data <- ssd_scenario_data(d = numeric_dataset())
+  a <- ssd_define_scenario(data, nsim = 1L, seed = 42L, nrow_max = 10L)
+  b <- ssd_define_scenario(data, nsim = 1L, seed = 42L, nrow_max = 12L)
+  expect_snapshot(error = TRUE, {
+    ssd_design_targets(ssd_design(a = a, b = b))
+  })
 })
 
 # ---- upload shape (no pipeline) --------------------------------------------
@@ -258,4 +269,151 @@ test_that("members with distinct seeds land under separate seed= trees", {
 
   summary <- ssd_read_parquet("results/summary.parquet")
   expect_setequal(unique(summary$scenario), c("a", "b"))
+})
+
+# ---- per-overlap hc readout aggregation ------------------------------------
+
+# Unnest a baseline run's hc estimates into one (fit_id, proportion, est) table -
+# the byte-identity oracle for a member's standalone hc results.
+baseline_hc <- function(scenario) {
+  out <- ssd_run_scenario_baseline(scenario)$hc
+  purrr::list_rbind(purrr::map(seq_len(nrow(out)), function(i) {
+    h <- out$hc[[i]]
+    tibble::tibble(
+      fit_id = out$fit_id[[i]],
+      proportion = h$proportion,
+      est = h$est
+    )
+  }))
+}
+
+run_design_fixture <- function(fixture) {
+  dir <- withr::local_tempdir()
+  file.copy(test_path("fixtures", fixture), file.path(dir, "_targets.R"))
+  withr::local_dir(dir)
+  saveRDS(numeric_dataset(), "data.rds")
+  tar_make_local()
+  ssd_read_parquet("results/summary.parquet")
+}
+
+test_that("scenario-combine: readout-only members share the hc cell, filtered", {
+  skip_targets()
+  summary <- run_design_fixture("design-readout-proportion-targets.R")
+
+  lo <- summary[summary$scenario == "lo", ]
+  hi <- summary[summary$scenario == "hi", ]
+  # Each member's summary carries exactly its requested proportion.
+  expect_equal(unique(lo$proportion), 0.05)
+  expect_equal(unique(hi$proportion), 0.1)
+  # ... reading the SAME shared hc cell (proportion is not part of the hc_id).
+  expect_setequal(lo$hc_id, hi$hc_id)
+})
+
+test_that("scenario-combine: a ci mix bootstraps only the overlapping cells", {
+  skip_targets()
+  summary <- run_design_fixture("design-ci-mixed-targets.R")
+
+  slow <- summary[summary$scenario == "slow", ]
+  sim_of <- function(ids) sub(".*sim=([0-9]+).*", "\\1", ids)
+  # Only the overlapping sims (1, 2) carry a bootstrap (nboot == 10); the rest are
+  # computed ci = FALSE (nboot == 0).
+  bootstrapped <- summary$nboot == 10L
+  expect_setequal(sim_of(summary$hc_id[bootstrapped]), c("1", "2"))
+  expect_setequal(sim_of(summary$hc_id[!bootstrapped]), c("3", "4"))
+
+  # The ci = FALSE member's `est` equals its standalone ci = FALSE value, for the
+  # served (overlapping) sims and the un-served ones alike (keyed by the
+  # ci-independent fit_id + proportion).
+  oracle <- baseline_hc(ssd_define_scenario(
+    ssd_scenario_data(a = numeric_dataset()),
+    nsim = 4L,
+    seed = 42L,
+    nrow = 6L,
+    dists = ssd_distset(lnorm = "lnorm"),
+    ci = FALSE,
+    partition_by = design_pb
+  ))
+  m <- merge(
+    slow[, c("fit_id", "proportion", "est")],
+    oracle,
+    by = c("fit_id", "proportion"),
+    suffixes = c("_design", "_alone")
+  )
+  expect_equal(nrow(m), nrow(oracle))
+  expect_equal(m$est_design, m$est_alone)
+})
+
+test_that("scenario-combine: a ci = TRUE member's CI matches its standalone run", {
+  skip_targets()
+  summary <- run_design_fixture("design-ci-mixed-targets.R")
+  fast <- summary[summary$scenario == "fast", ]
+
+  oracle <- ssd_run_scenario_baseline(ssd_define_scenario(
+    ssd_scenario_data(a = numeric_dataset()),
+    nsim = 2L,
+    seed = 42L,
+    nrow = 6L,
+    dists = ssd_distset(lnorm = "lnorm"),
+    ci = TRUE,
+    nboot = 10L,
+    partition_by = design_pb
+  ))$hc
+  orows <- purrr::list_rbind(purrr::map(seq_len(nrow(oracle)), function(i) {
+    h <- oracle$hc[[i]]
+    tibble::tibble(hc_id = oracle$hc_id[[i]], lcl = h$lcl, ucl = h$ucl)
+  }))
+  m <- merge(
+    fast[, c("hc_id", "lcl", "ucl")],
+    orows,
+    by = "hc_id",
+    suffixes = c("_design", "_alone")
+  )
+  expect_gt(nrow(m), 0L)
+  expect_equal(m$lcl_design, m$lcl_alone)
+  expect_equal(m$ucl_design, m$ucl_alone)
+})
+
+test_that("scenario-combine: distset-coverage members share sample and fit", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  file.copy(
+    test_path("fixtures", "design-distset-targets.R"),
+    file.path(dir, "_targets.R")
+  )
+  withr::local_dir(dir)
+  saveRDS(numeric_dataset(), "data.rds")
+  tar_make_local()
+
+  progress <- targets::tar_progress()
+  built <- progress$name[progress$progress %in% c("completed", "built")]
+  # One member-shared cell (a, 1): a single sample and fit shard (the design-wide
+  # union fit), shared by both members.
+  expect_length(grep("^sample_step_", built), 1L)
+  expect_length(grep("^fit_step_", built), 1L)
+
+  summary <- ssd_read_parquet("results/summary.parquet")
+  one <- summary[summary$scenario == "one", ]
+  both <- summary[summary$scenario == "both", ]
+  # `one` covers only its single distset; `both` covers both.
+  expect_setequal(unique(one$distset), "one")
+  expect_setequal(unique(both$distset), c("one", "two"))
+
+  # Each member's hc subset equals its standalone run (distset-subset-invariance:
+  # the union fit subset to a member's distset matches fitting that set alone).
+  oracle <- baseline_hc(ssd_define_scenario(
+    ssd_scenario_data(a = numeric_dataset()),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 10L,
+    dists = ssd_distset(one = "lnorm"),
+    partition_by = design_pb
+  ))
+  m <- merge(
+    one[, c("fit_id", "proportion", "est")],
+    oracle,
+    by = c("fit_id", "proportion"),
+    suffixes = c("_design", "_alone")
+  )
+  expect_equal(nrow(m), nrow(oracle))
+  expect_equal(m$est_design, m$est_alone)
 })

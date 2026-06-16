@@ -77,6 +77,14 @@ scenario options \code{NA} when \code{ci = FALSE}) is tagged with its \code{hc_i
 shard's partition path. A set whose members all dropped from the union fit
 emits no rows for that cell (the survivor model).
 
+The four non-axis hc readout settings (\code{proportion}, \code{est_method}, \code{ci},
+\code{samples}) default to the scenario slice, so the single-scenario and
+standalone paths are byte-identical. When the shard's \code{tasks} carry per-task
+\code{proportion}/\code{est_method}/\code{ci}/\code{samples} columns (the design factory's
+per-overlap aggregated demand, \code{\link[=ssd_design_targets]{ssd_design_targets()}}), each task is
+summarised with its own cell's demand instead - the maximal readout set the
+per-member summary then filters.
+
 }}
 \examples{
 data <- ssd_scenario_data(ssddata::ccme_boron)

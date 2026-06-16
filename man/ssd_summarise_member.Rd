@@ -4,27 +4,43 @@
 \alias{ssd_summarise_member}
 \title{Summarise One Design Member from the Shared hc Shards}
 \usage{
-ssd_summarise_member(dir_hc, hc_ids, path)
+ssd_summarise_member(
+  dir_hc,
+  hc_ids,
+  path,
+  proportion = NULL,
+  est_method = NULL
+)
 }
 \arguments{
 \item{dir_hc}{The (shared) \code{hc} results root of the member's seed group.}
 
-\item{hc_ids}{The member's hc task identities (\code{hc_id}s) to keep.}
+\item{hc_ids}{The member's serving hc task identities (\code{hc_id}s) to keep.}
 
 \item{path}{The output Parquet path for the member's compact summary (the
 \code{format = "file"} contract).}
+
+\item{proportion}{Optional \code{proportion} values to keep (the member's requested
+proportions when the design aggregates a wider union into the shared cell);
+\code{NULL} (the default) keeps every proportion.}
+
+\item{est_method}{Optional \code{est_method} values to keep (the member's requested
+methods when the design aggregates a wider union); \code{NULL} (the default) keeps
+every method.}
 }
 \value{
 \code{path}.
 }
 \description{
 The per-scenario fan-in used by \code{\link[=ssd_design_targets]{ssd_design_targets()}}: reads the (shared) hc
-shards under \code{dir_hc}, filters to the member's hc task identities (\code{hc_ids}),
-projects out the \code{dists}/\code{samples} list-columns at the DuckDB level, and writes
-the member's compact summary at \code{path}. Filtering by \code{hc_id} selects exactly the
-member's rows from the shards it shares with other members of the design. The
-read, filter, projection, and write all happen inside DuckDB (never collecting
-into R), mirroring \code{\link[=ssd_summarise]{ssd_summarise()}}.
+shards under \code{dir_hc}, filters to the member's \strong{serving} hc task identities
+(\code{hc_ids}) - its own cells, plus the coincident \code{ci = TRUE} cell serving each of
+its \code{ci = FALSE} cells under \code{\link[=ssd_design_targets]{ssd_design_targets()}}'s \code{ci} routing - projects out
+the \code{dists}/\code{samples} list-columns at the DuckDB level, and writes the member's
+compact summary at \code{path}. When the design aggregates differing readouts into a
+shared cell, \code{proportion}/\code{est_method} narrow the maximal computed set back to
+the member's requested readout rows. The read, filter, projection, and write all
+happen inside DuckDB (never collecting into R), mirroring \code{\link[=ssd_summarise]{ssd_summarise()}}.
 }
 \seealso{
 \code{\link[=ssd_design_targets]{ssd_design_targets()}}, \code{\link[=ssd_summarise_design]{ssd_summarise_design()}}, \code{\link[=ssd_summarise]{ssd_summarise()}}.
