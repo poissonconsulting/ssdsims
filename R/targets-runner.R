@@ -936,6 +936,7 @@ ssd_scenario_targets <- function(
         names = tidyselect::all_of(
           c("seed", scenario_partition_axes(scenario, step)$path)
         ),
+        descriptions = tidyselect::all_of(character(0)),
         step_target
       ))
     }
@@ -954,6 +955,7 @@ ssd_scenario_targets <- function(
       names = tidyselect::all_of(
         c("seed", scenario_partition_axes(scenario, step)$path)
       ),
+      descriptions = tidyselect::all_of(character(0)),
       step_target,
       upload_target
     )
