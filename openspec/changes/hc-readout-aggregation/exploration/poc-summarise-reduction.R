@@ -152,7 +152,11 @@ assembly_new <- function(members, ref, count_engine = c("duckplyr", "dplyr")) {
       ci_true$.dem_samples[i] <- ci_true$.dem_samples[i] || fold$add_samp[[k]]
     }
   }
-  unserved_false <- ci_false[!(ci_false$hc_id %in% names(route)), , drop = FALSE]
+  unserved_false <- ci_false[
+    !(ci_false$hc_id %in% names(route)),
+    ,
+    drop = FALSE
+  ]
   computed <- dplyr::bind_rows(ci_true, unserved_false)
 
   serving <- lapply(members, function(s) {
@@ -165,8 +169,7 @@ assembly_new <- function(members, ref, count_engine = c("duckplyr", "dplyr")) {
   computed$est_method <- computed$.dem_em
   computed$ci <- computed$.dem_ci
   computed$samples <- computed$.dem_samples
-  computed <- computed[
-    ,
+  computed <- computed[,
     setdiff(names(computed), demand_cols),
     drop = FALSE
   ]
@@ -255,7 +258,9 @@ check_equiv <- function(label, design) {
   ok
 }
 
-data <- ssd_scenario_data(a = data.frame(Conc = exp(seq(-1, 2, length.out = 30))))
+data <- ssd_scenario_data(
+  a = data.frame(Conc = exp(seq(-1, 2, length.out = 30)))
+)
 pb <- list(
   sample = c("dataset", "sim"),
   fit = c("dataset", "sim"),
@@ -397,7 +402,9 @@ bench <- function(label, f, times = 5L) {
   t <- replicate(times, system.time(f())[["elapsed"]])
   cat(sprintf("  %-22s median %.3fs  (min %.3f)\n", label, median(t), min(t)))
 }
-bench("current (split+loop)", function() design_hc_assembly(big_members, big_ref))
+bench("current (split+loop)", function() {
+  design_hc_assembly(big_members, big_ref)
+})
 bench("new (duckplyr count)", function() {
   assembly_new(big_members, big_ref, "duckplyr")
 })
