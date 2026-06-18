@@ -44,7 +44,7 @@
 
 ## 8. Per-layout results root
 
-- [x] 8.1 Add the exported `scenario_results_dir(scenario, root)` helper (`<root>/layout=<hash(partition_by)>`); the shipped `_targets.R` template writes every step's shards and the summary under it, so a changed `partition_by`/`bundle` never mixes shard granularities in one root (Option D). Test that the root differs by `partition_by` and is stable under non-layout knobs
+- [x] 8.1 Add the exported `scenario_results_dir(scenario, root)` helper (`<root>/layout=<hash(partition_by)>`); the shipped `_targets.R` template writes every step's shards and the summary under it, so a changed `partition_by`/`bundle` never mixes shard granularities in one root (Option D). Test that the root differs by `partition_by` and is stable under non-layout arguments
 
 ## 9. Target factory
 

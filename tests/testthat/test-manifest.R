@@ -18,7 +18,7 @@ test_that("manifest: write/read round-trip preserves declarative fields", {
   expect_identical(manifest$fit$dists, scenario$fit$dists)
 })
 
-test_that("manifest: round-trip keeps seed/nboot whole and knobs logical", {
+test_that("manifest: round-trip keeps seed/nboot whole and scenario options logical", {
   scenario <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,

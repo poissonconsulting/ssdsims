@@ -1,9 +1,9 @@
 ## Context
 
-The hc step of a scenario exposes a `ci` knob that flows from `ssd_define_scenario()` (stored at `scenario$hc$ci`) through the hc task table into `ssdtools::ssd_hc(..., ci = ci)`. Two layers treat `ci` as a multi-valued **axis** today:
+The hc step of a scenario exposes a `ci` scenario option that flows from `ssd_define_scenario()` (stored at `scenario$hc$ci`) through the hc task table into `ssdtools::ssd_hc(..., ci = ci)`. Two layers treat `ci` as a multi-valued **axis** today:
 
-- **Constructor** (`R/scenario.R`): `chk_length(ci, upper = 2L)` admits `c(FALSE, TRUE)`; a dedicated guard rejects bootstrap-only knobs *only* when `ci` is the single value `FALSE`, telling the user to "set `ci = c(FALSE, TRUE)` to enable bootstrap."
-- **Task expansion** (`R/task-lists.R`): `task_axes("hc")` includes `"ci"`, and `hc_grid_tbl()` builds the grid in two branches bound together — the `ci = FALSE` branch with bootstrap-only knobs forced to `NA` (the §1.2 *collapse*, so a no-bootstrap row does not fan out across `nboot`/`ci_method`/`parametric`), and the `ci = TRUE` branch fanning out fully.
+- **Constructor** (`R/scenario.R`): `chk_length(ci, upper = 2L)` admits `c(FALSE, TRUE)`; a dedicated guard rejects bootstrap-only scenario options *only* when `ci` is the single value `FALSE`, telling the user to "set `ci = c(FALSE, TRUE)` to enable bootstrap."
+- **Task expansion** (`R/task-lists.R`): `task_axes("hc")` includes `"ci"`, and `hc_grid_tbl()` builds the grid in two branches bound together — the `ci = FALSE` branch with bootstrap-only scenario options forced to `NA` (the §1.2 *collapse*, so a no-bootstrap row does not fan out across `nboot`/`ci_method`/`parametric`), and the `ci = TRUE` branch fanning out fully.
 
 The premise behind the axis treatment — that `ci = FALSE` and `ci = TRUE` produce *different, both-wanted* results — is false for the estimate. Verified against `ssdtools` 2.6.0.9002 (`ssd_fit_dists(ssddata::ccme_boron, dists = ssd_dists_bcanz())`):
 
@@ -11,7 +11,7 @@ The premise behind the axis treatment — that `ci = FALSE` and `ci = TRUE` prod
 - This holds for **all seven** `ssd_ci_methods()`; none recompute `est` from bootstrap draws.
 - The only non-CI column that differs is `nboot` (`0` when `ci = FALSE`, the bootstrap count otherwise) — cosmetic metadata, not a result. `se`/`lcl`/`ucl` are `NA` under `ci = FALSE` and populated under `ci = TRUE`.
 
-So a `ci = TRUE` hc row is a strict superset of the `ci = FALSE` row for the same fit-task. The repo already encodes this exact reasoning for `samples` (the *"a single `TRUE` is a superset of `FALSE`"* requirement), keeping it a scalar, non-axis, non-primer knob. This change brings `ci` into line.
+So a `ci = TRUE` hc row is a strict superset of the `ci = FALSE` row for the same fit-task. The repo already encodes this exact reasoning for `samples` (the *"a single `TRUE` is a superset of `FALSE`"* requirement), keeping it a scalar, non-axis, non-primer scenario option. This change brings `ci` into line.
 
 ## Goals / Non-Goals
 
@@ -20,11 +20,11 @@ So a `ci = TRUE` hc row is a strict superset of the `ci = FALSE` row for the sam
 - Make `ci` a scalar flag (`chk_flag`, default `FALSE`) on `ssd_define_scenario()` and validate it as a flag on `ssd_hc_sims()`.
 - Remove `"ci"` from `task_axes("hc")` so it is neither a path nor an inner axis and does not enter the per-task primer; apply the scalar `ci` uniformly to every hc task.
 - Retire the §1.2 *ci = FALSE collapse*: `hc_grid_tbl()` becomes a single grid keyed by the scalar `ci`.
-- Keep the bootstrap-knob guard (reject `nboot`/`ci_method`/`parametric` when `ci = FALSE`), with `ci = TRUE` as the enablement path.
+- Keep the bootstrap-only scenario option guard (reject `nboot`/`ci_method`/`parametric` when `ci = FALSE`), with `ci = TRUE` as the enablement path.
 
 **Non-Goals:**
 
-- Changing the point-estimate computation, `est_method` (still a genuine axis — it affects the estimate), or any other hc knob.
+- Changing the point-estimate computation, `est_method` (still a genuine axis — it affects the estimate), or any other hc scenario option.
 - Removing `ci = FALSE` as a *mode*. `ci = FALSE` stays the cheap, bootstrap-free, RNG-free point-estimate path — it is simply a scenario-wide scalar choice, not combinable with `TRUE` in one scenario.
 - Touching `migrate-public-api`'s artifacts (see the cross-reference decision).
 
@@ -32,9 +32,9 @@ So a `ci = TRUE` hc row is a strict superset of the `ci = FALSE` row for the sam
 
 ### Decision: `ci` is a scalar flag, modelled on `samples`
 
-`ci` becomes `chk::chk_flag(ci)` (a single non-`NA` `TRUE`/`FALSE`), default `FALSE`, stored at `scenario$hc$ci`. It is **not** a member of `task_axes("hc")` and therefore never enters `path_key()`, the inner-axis complement, or `task_primer()`. It is applied to every hc task uniformly. `print.ssdsims_scenario()` continues to render it among the hc knobs.
+`ci` becomes `chk::chk_flag(ci)` (a single non-`NA` `TRUE`/`FALSE`), default `FALSE`, stored at `scenario$hc$ci`. It is **not** a member of `task_axes("hc")` and therefore never enters `path_key()`, the inner-axis complement, or `task_primer()`. It is applied to every hc task uniformly. `print.ssdsims_scenario()` continues to render it among the hc scenario options.
 
-*Rationale:* the estimate is invariant to `ci`, so `ci` carries no task-distinguishing information; a constant in the primer hash only obscures intent. Excluding it makes the hc task identity depend solely on the knobs that actually change a task's output (`est_method`, and under `ci = TRUE` the bootstrap knobs).
+*Rationale:* the estimate is invariant to `ci`, so `ci` carries no task-distinguishing information; a constant in the primer hash only obscures intent. Excluding it makes the hc task identity depend solely on the scenario options that actually change a task's output (`est_method`, and under `ci = TRUE` the bootstrap axes).
 
 *Alternative considered — keep `ci` an axis but document the redundancy.* Rejected: it preserves the collapse machinery, the length-2 validation, and a user-facing footgun (`c(FALSE, TRUE)` silently doubles hc cost for redundant rows) to no benefit. The maintainer selected the full demotion.
 
@@ -42,14 +42,14 @@ So a `ci = TRUE` hc row is a strict superset of the `ci = FALSE` row for the sam
 
 With a scalar `ci`, `hc_grid_tbl()` no longer needs `any(ci == FALSE)` / `any(ci == TRUE)` branches or `bind_rows`:
 
-- `ci = FALSE` → `expand_grid(ci = FALSE, nboot = NA_integer_, est_method = hc$est_method, ci_method = NA_character_, parametric = NA)` — one row per `est_method`, bootstrap-only knobs canonically `NA` so they cannot enter task identity for a no-bootstrap estimate.
+- `ci = FALSE` → `expand_grid(ci = FALSE, nboot = NA_integer_, est_method = hc$est_method, ci_method = NA_character_, parametric = NA)` — one row per `est_method`, bootstrap-only scenario options canonically `NA` so they cannot enter task identity for a no-bootstrap estimate.
 - `ci = TRUE` → `expand_grid(ci = TRUE, nboot = as.integer(hc$nboot), est_method, ci_method, parametric)` — the full fan-out, unchanged.
 
-The "collapse" as a concept (deciding the `ci = FALSE` *portion* of a mixed grid) disappears; what remains is the simpler, local statement "`ci = FALSE` ⟹ bootstrap-only knobs are `NA`." The `NA`-canonicalisation that keeps `task_primer()` well-defined is retained for the `ci = FALSE` row.
+The "collapse" as a concept (deciding the `ci = FALSE` *portion* of a mixed grid) disappears; what remains is the simpler, local statement "`ci = FALSE` ⟹ bootstrap-only scenario options are `NA`." The `NA`-canonicalisation that keeps `task_primer()` well-defined is retained for the `ci = FALSE` row.
 
-### Decision: keep the bootstrap-knob guard, swap the escape hatch
+### Decision: keep the bootstrap-only scenario option guard, swap the escape hatch
 
-The constructor still aborts when `ci = FALSE` *and* any of `nboot`/`ci_method`/`parametric` is explicitly supplied — those knobs are meaningless without a bootstrap. The guard simplifies from `length(ci) == 1L && isFALSE(ci)` to `isFALSE(ci)`, and the message changes from "Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the knob(s)" to "Set `ci = TRUE` to enable bootstrap, or omit the knob(s)."
+The constructor still aborts when `ci = FALSE` *and* any of `nboot`/`ci_method`/`parametric` is explicitly supplied — those scenario options are meaningless without a bootstrap. The guard simplifies from `length(ci) == 1L && isFALSE(ci)` to `isFALSE(ci)`, and the message changes from "Set `ci = c(FALSE, TRUE)` to enable bootstrap, or omit the scenario option(s)" to "Set `ci = TRUE` to enable bootstrap, or omit the scenario option(s)."
 
 ### Decision: `ci` stays a *carried column* on the hc task table (like `n_max`), not an axis
 
@@ -57,11 +57,11 @@ The constructor still aborts when `ci = FALSE` *and* any of `nboot`/`ci_method`/
 
 *Alternative considered — thread `ci` from the scenario slice* (like `proportion`/`samples`, which are *not* task columns). Rejected as more churn for no gain: it would edit both runners and `hc_grid_tbl()`, whereas the carried-column route matches the existing `n_max` precedent and leaves the runners untouched. (`proportion`/`samples` are scenario-threaded for historical reasons; `ci` follows the closer `n_max` analogue.)
 
-### Decision: regroup the signature so the simulation settings are contiguous
+### Decision: regroup the signature so the scenario settings are contiguous
 
-We name the non-axis category a **simulation setting** (GLOSSARY): a knob absent from `task_axes(step)` that never multiplies tasks but is consumed inside each task — fanning out within its output (`proportion`) or applied uniformly (`ci`, `samples`). "Scalar" is the loose synonym, but a misnomer for `proportion` (vector-valued, yet still not an axis), which is why the precise term is worth introducing.
+We name the non-axis category a **scenario setting** (GLOSSARY): a scenario option absent from `task_axes(step)` that never multiplies tasks but is consumed inside each task — fanning out within its output (`proportion`) or applied uniformly (`ci`, `samples`). "Scalar" is the loose synonym, but a misnomer for `proportion` (vector-valued, yet still not an axis), which is why the precise term is worth introducing.
 
-Today these three are scattered: `proportion` and `ci` sit *inside* the hc axes (`proportion` before `ci`, then `nboot`…), while `samples` trails after them. The constructor signature is reordered by role: data/`seed`/`nsim`/`name`, then the cross-join axes (`nrow` … `nboot`, `est_method`, `ci_method`, `parametric`), then the simulation settings (`proportion`, `ci`, `samples`), then partitioning and the rest (`partition_by`, `bundle`, `upload`). So `proportion` and `ci` both move down to join `samples`. The stored `scenario$hc` list and `print_grid()` order follow the same role grouping (hc axes, then `proportion`/`ci`/`samples`), so the print snapshot reads coherently.
+Today these three are scattered: `proportion` and `ci` sit *inside* the hc axes (`proportion` before `ci`, then `nboot`…), while `samples` trails after them. The constructor signature is reordered by role: data/`seed`/`nsim`/`name`, then the cross-join axes (`nrow` … `nboot`, `est_method`, `ci_method`, `parametric`), then the scenario settings (`proportion`, `ci`, `samples`), then partitioning and the rest (`partition_by`, `bundle`, `upload`). So `proportion` and `ci` both move down to join `samples`. The stored `scenario$hc` list and `print_grid()` order follow the same role grouping (hc axes, then `proportion`/`ci`/`samples`), so the print snapshot reads coherently.
 
 This is a pure argument-reordering: the defaults are unchanged and all call sites in the repo pass these by name, so the move is safe.
 

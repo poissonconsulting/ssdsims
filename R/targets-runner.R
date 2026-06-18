@@ -69,12 +69,18 @@ decode_obj <- function(s) {
   unserialize(charToRaw(s))
 }
 
-#' Layout-keyed Results Root for a Scenario
+#' Seed- and Layout-keyed Results Root for a Scenario
 #'
-#' Returns `<root>/layout=<hash>`, where the hash is derived from the scenario's
-#' `partition_by`. A step's Hive shard path depth and axes are a function of
-#' `partition_by`/`bundle`, so writing two different layouts into one root would
-#' leave shards of *different granularity* side by side - and the depth-agnostic
+#' Returns `<root>/seed=<value>/layout=<hash>`, where the hash is derived from the
+#' scenario's `partition_by`. The leading `seed=<value>` level isolates each
+#' scenario's RNG streams (scenarios that differ only in `seed` share no draws, so
+#' they never mix shards) and - crucially - makes a single-scenario run and a
+#' design-of-one (`ssd_design_targets(ssd_design(scenario))`) address shards
+#' **identically**, so wrapping a scenario into a design reuses its existing shards
+#' rather than recomputing them. A step's Hive shard path depth and axes are a
+#' function of `partition_by`/`bundle`, so writing two different layouts into one
+#' root would leave shards of *different granularity* side by side - and the
+#' depth-agnostic
 #' glob the readers use (`<step>/**/part.parquet`) would then union stale and
 #' current shards, double-counting tasks. Keying the results root on the layout
 #' isolates each `partition_by` into its own subtree: re-running a scenario with
@@ -88,7 +94,8 @@ decode_obj <- function(s) {
 #'
 #' @inheritParams scenario_dataset
 #' @param root The results root directory (default `"results"`).
-#' @return The layout-keyed path `file.path(root, paste0("layout=", <hash>))`.
+#' @return The seed- and layout-keyed path
+#'   `file.path(root, paste0("seed=", <seed>), paste0("layout=", <hash>))`.
 #' @seealso [ssd_run_scenario_shards()], [ssd_summarise()].
 #' @export
 #' @examples
@@ -100,6 +107,7 @@ scenario_results_dir <- function(scenario, root = "results") {
   chk::chk_string(root)
   file.path(
     root,
+    paste0("seed=", scenario$seed),
     paste0("layout=", substr(rlang::hash(scenario$partition_by), 1L, 12L))
   )
 }
@@ -310,6 +318,9 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   local_duckplyr_config()
   local_dqrng_backend()
+  # Per-task timing rides in-band on the shard rows (cost-analysis): the host is
+  # constant for the run, the per-task `.start`/`.end` bracket the task body only.
+  host <- cost_cpu_info()
   # Read each distinct parent `sample` shard once, then isolate each task's draw
   # in memory by `sample_id` (tasks in this shard may span several sample shards).
   sample_tbl <- read_parent_shards(tasks, scenario, "sample", sample_dir)
@@ -328,6 +339,7 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
     draw$.sample_id <- NULL
     draw$.row <- NULL
     data <- utils::head(draw, t$nrow)
+    t_start <- utc_now()
     fit <- fit_data_task_primer(
       data = data,
       scenario = scenario,
@@ -341,7 +353,14 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
       seed = t$seed,
       primer = t$primer[[1L]]
     )
-    rows[[i]] <- tibble::tibble(fit_id = t$fit_id, fit_blob = encode_obj(fit))
+    t_end <- utc_now()
+    rows[[i]] <- tibble::tibble(
+      fit_id = t$fit_id,
+      fit_blob = encode_obj(fit),
+      .start = t_start,
+      .end = t_end,
+      .host = host
+    )
   }
   out <- file.path(out_dir, shard_path(tasks, scenario, "fit"), "part.parquet")
   ssd_write_parquet(dplyr::bind_rows(rows), out)
@@ -356,10 +375,10 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #'   concentration with the per-task `(seed, primer)` through
 #'   `hc_data_task_primer()` (the subset happens in that shared primitive). Each
 #'   task's hc tibble (with the scalar `ci` applied uniformly and bootstrap-only
-#'   knobs `NA` when `ci = FALSE`) is tagged with its `hc_id`, parent `fit_id`, and
-#'   `distset` name, stacked, and written as one Parquet at the shard's partition
-#'   path. A set whose members all dropped from the union fit emits no rows for
-#'   that cell (the survivor model).
+#'   scenario options `NA` when `ci = FALSE`) is tagged with its `hc_id`, parent
+#'   `fit_id`, and `distset` name, stacked, and written as one Parquet at the
+#'   shard's partition path. A set whose members all dropped from the union fit
+#'   emits no rows for that cell (the survivor model).
 #' @export
 #' @examples
 #' \donttest{
@@ -394,6 +413,10 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   chk::chk_s3_class(scenario, "ssdsims_scenario")
   local_duckplyr_config()
   local_dqrng_backend()
+  # Per-task timing rides in-band on the hc rows (cost-analysis): the host is
+  # constant for the run; `.start`/`.end` bracket each task body and repeat
+  # across that task's `proportion` rows.
+  host <- cost_cpu_info()
   # Read each distinct parent `fit` shard once, then isolate each task's fit in
   # memory by `fit_id` (an hc shard typically spans several fit shards).
   fit_tbl <- read_parent_shards(tasks, scenario, "fit", fit_dir)
@@ -423,6 +446,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
   for (i in seq_len(nrow(tasks))) {
     t <- tasks[i, ]
     fits <- decode_fit(t$fit_id)
+    t_start <- utc_now()
     hc <- hc_data_task_primer(
       fits = fits,
       proportion = scenario$hc$proportion,
@@ -438,6 +462,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
       seed = t$seed,
       primer = t$primer[[1L]]
     )
+    t_end <- utc_now()
     hc <- tibble::as_tibble(hc)
     # An empty subset (all members dropped from the union fit) emits no rows for
     # this `(cell, distset)` - the survivor model - so this task contributes
@@ -450,6 +475,10 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
     # The `distset` column disambiguates rows within a bundled shard, mirroring
     # the `distset=<name>` path segment when it is promoted to a path axis.
     hc$distset <- t$distset
+    # Per-task timing, repeated across this task's `proportion` rows.
+    hc$.start <- t_start
+    hc$.end <- t_end
+    hc$.host <- host
     rows[[i]] <- hc
   }
   out <- file.path(out_dir, shard_path(tasks, scenario, "hc"), "part.parquet")
@@ -718,6 +747,20 @@ edge_block <- function(names) {
 #' their Parquet), overriding the pin (section 8.4). The default (`NULL`) is
 #' `targets`' standard cue.
 #'
+#' @section Volatile fit/hc file hashes (cost-analysis timings):
+#' The `fit`/`hc` shards carry per-task `.start`/`.end`/`.host` timing columns
+#' (the `cost-analysis` instrumentation), so a `fit`/`hc` shard's **file hash is
+#' no longer deterministic across recomputes**: a forced recompute that yields
+#' identical *results* still writes different bytes (a fresh wall-clock), so its
+#' dependent `hc`/`summary` targets re-run and any paired `upload_<step>`
+#' re-ships. This is scoped to `fit`/`hc`; `sample` shards carry no timing columns
+#' and stay byte-deterministic. Routine caching is unaffected (a cache hit is not
+#' a recompute, so a cached shard's bytes are unchanged); the cost lands only on a
+#' *forced* refresh (`tar_invalidate()`, a deleted Parquet) or a code-edit
+#' recompute - and the §8.3 `cue = tar_cue(depend = FALSE)` pin covers the latter.
+#' Per-task *results* remain byte-identical to the baseline oracle (the
+#' shard-runner contract narrows to the result columns, timing excluded).
+#'
 #' The `head(sample, nrow)` truncation stays folded into the `fit` step (no
 #' materialised `data` shard): a `fit` shard is keyed by `fit_id`, which includes
 #' `nrow`, so extending `nrow` mints new `fit` shards and caches the rest. The
@@ -760,8 +803,11 @@ edge_block <- function(names) {
 #'   `cue` to be passed **by name** (`rlang::check_dots_empty()` aborts on a
 #'   positional or misspelled argument), since `root` and `upload` are both
 #'   path-shaped and easy to transpose.
-#' @param root The results root the shards and summary are written under;
-#'   defaults to the per-layout [scenario_results_dir()].
+#' @param root The **base** results directory (default `"results"`). The shards
+#'   and summary are written under the seed-/layout-keyed
+#'   [scenario_results_dir()]`(scenario, root)`, so a single-scenario run and a
+#'   design-of-one address shards identically (a cache-free upgrade to
+#'   [ssd_design_targets()]).
 #' @param upload An optional upload destination (the remote-destination sibling
 #'   of `root`) from [ssd_upload_azure()] or [ssd_upload_dryrun()], or `NULL`
 #'   (default) for no upload targets. See the section above.
@@ -789,7 +835,7 @@ edge_block <- function(names) {
 ssd_scenario_targets <- function(
   scenario,
   ...,
-  root = scenario_results_dir(scenario),
+  root = "results",
   upload = NULL,
   cue = NULL
 ) {
@@ -816,16 +862,22 @@ ssd_scenario_targets <- function(
   # before `tar_make()`); a missing credential still fails loud per-shard at
   # `ssd_upload_shard()` time as a backstop (section 6.1).
 
-  sample_dir <- file.path(root, "sample")
-  fit_dir <- file.path(root, "fit")
-  hc_dir <- file.path(root, "hc")
-  summary_path <- file.path(root, "summary.parquet")
+  # `root` is the **base**; the shards and summary live under the seed-/layout-
+  # keyed `scenario_results_dir(scenario, root)`, so a single-scenario run and a
+  # design-of-one (`ssd_design_targets()`, which roots each seed group the same
+  # way) address shards identically - wrapping a scenario into a design reuses its
+  # shards (no recompute).
+  results_dir <- scenario_results_dir(scenario, root)
+  sample_dir <- file.path(results_dir, "sample")
+  fit_dir <- file.path(results_dir, "fit")
+  hc_dir <- file.path(results_dir, "hc")
+  summary_path <- file.path(results_dir, "summary.parquet")
   # When the scenario retains the bootstrap draws (`samples = TRUE`), also fan in
   # a full summary that keeps the `dists`/`samples` list-columns the compact
   # summary projects out; otherwise those draws are empty and the second file
   # would carry nothing extra (TARGETS-DESIGN.md §12 `dual-summary-outputs`).
   summary_samples_path <- if (isTRUE(scenario$hc$samples)) {
-    file.path(root, "summary-samples.parquet")
+    file.path(results_dir, "summary-samples.parquet")
   } else {
     NULL
   }
@@ -833,6 +885,14 @@ ssd_scenario_targets <- function(
   sample_shards <- ssd_scenario_sample_shards(scenario)
   fit_shards <- ssd_scenario_fit_shards(scenario)
   hc_shards <- ssd_scenario_hc_shards(scenario)
+
+  # The `seed` is woven into each step's target names (and the `seed=` results
+  # level via `root`), so a single-scenario run and a design-of-one
+  # (`ssd_design_targets()`) mint byte-identical target names and shard paths -
+  # wrapping a scenario into a design then reuses its shards (no recompute).
+  sample_shards$seed <- scenario$seed
+  fit_shards$seed <- scenario$seed
+  hc_shards$seed <- scenario$seed
 
   # One `tar_map` per step: a named, format="file", error="null" target per
   # `partition_by` path cell. `tar_target_raw()` + `rlang::expr()` injects the
@@ -861,7 +921,7 @@ ssd_scenario_targets <- function(
       return(tarchetypes::tar_map(
         values = shards,
         names = tidyselect::all_of(
-          scenario_partition_axes(scenario, step)$path
+          c("seed", scenario_partition_axes(scenario, step)$path)
         ),
         step_target
       ))
@@ -878,7 +938,9 @@ ssd_scenario_targets <- function(
     )
     tarchetypes::tar_map(
       values = shards,
-      names = tidyselect::all_of(scenario_partition_axes(scenario, step)$path),
+      names = tidyselect::all_of(
+        c("seed", scenario_partition_axes(scenario, step)$path)
+      ),
       step_target,
       upload_target
     )

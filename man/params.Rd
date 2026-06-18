@@ -25,7 +25,7 @@ identical whether \code{TRUE} or \code{FALSE}, so \code{ci = TRUE} is a superset
 
 \item{nrow_max}{A whole number (default \code{1000L}): the fixed size of the
 shared \code{sample} draw that every \code{nrow} value sub-truncates. A sample-level
-simulation setting, not a cross-join axis. The effective per-dataset draw is
+scenario setting, not a cross-join axis. The effective per-dataset draw is
 \code{min(nrow_max, nrow(data))} when \code{replace = FALSE} (the high default draws
 the full permutation) and \code{nrow_max} rows when \code{replace = TRUE}; each \code{nrow}
 must not exceed the effective draw size.}

@@ -61,10 +61,10 @@ duckplyr_memory_limit_restore <- function(rendered) {
   sprintf("%.0fB", bytes)
 }
 
-# The `SSDSIMS_DUCKDB_THREADS` knob: a positive whole number, default 1
-# (the worker has one CPU; `exploration/RESULTS.md` shows a single thread is
-# no slower - 2x faster, even, on the large nested shard). Aborts in the
-# context of `call` (the user-facing runner) on a malformed value.
+# The `SSDSIMS_DUCKDB_THREADS` environment variable: a positive whole number,
+# default 1 (the worker has one CPU; `exploration/RESULTS.md` shows a single
+# thread is no slower - 2x faster, even, on the large nested shard). Aborts in
+# the context of `call` (the user-facing runner) on a malformed value.
 duckplyr_env_threads <- function(call = rlang::caller_env()) {
   value <- Sys.getenv("SSDSIMS_DUCKDB_THREADS", unset = "")
   if (!nzchar(value)) {
@@ -82,10 +82,10 @@ duckplyr_env_threads <- function(call = rlang::caller_env()) {
   threads
 }
 
-# The `SSDSIMS_DUCKDB_MEMORY_LIMIT` knob, default "1GB". The value is passed
-# through to DuckDB's `SET memory_limit`, whose parser is the authority - a
-# malformed value surfaces DuckDB's own error rather than being silently
-# ignored.
+# The `SSDSIMS_DUCKDB_MEMORY_LIMIT` environment variable, default "1GB". The
+# value is passed through to DuckDB's `SET memory_limit`, whose parser is the
+# authority - a malformed value surfaces DuckDB's own error rather than being
+# silently ignored.
 duckplyr_env_memory_limit <- function() {
   value <- Sys.getenv("SSDSIMS_DUCKDB_MEMORY_LIMIT", unset = "")
   if (!nzchar(value)) "1GB" else value

@@ -11,6 +11,8 @@ reference:
   contents:
   - ssd_scenario_data
   - ssd_gen
+  - ssd_pmix
+  - ssd_distset
   - ssd_define_scenario
   - ssd_scenario_tasks
   - ssd_run_scenario_baseline
@@ -39,6 +41,20 @@ reference:
   - ssd_summarise
   - scenario_results_dir
 
+- title: Designs (combining scenarios)
+  desc: >
+    Run several scenarios as one pipeline: a design is the de-duplicated union
+    of its members' grids (the irregular/ragged grid - finer detail over a
+    subset of the axes without the full cross-product), addressed by cell under
+    a `seed=`/`layout=` tree. Build a `ssd_design()`, turn it into one targets
+    pipeline with `ssd_design_targets()`, and fan in per-scenario and combined
+    summaries.
+  contents:
+  - ssd_design
+  - ssd_design_targets
+  - ssd_summarise_member
+  - ssd_summarise_design
+
 - title: Cloud upload
   desc: >
     Typed, self-validating upload destinations (`ssd_upload_azure()`,
@@ -64,6 +80,17 @@ reference:
   - ssd_cost_calibration
   - ssd_cost_calibration_default
 
+- title: Cost analysis
+  desc: >
+    Read a completed run's observed compute back from the per-task timings its
+    fit/hc shards carry: attribute it to the scenario axes, compare it against
+    the prediction, and recalibrate the cost model from the measured durations.
+    All read-only - no pipeline, fit, bootstrap, or RNG.
+  contents:
+  - ssd_analyse_cost
+  - ssd_compare_cost
+  - ssd_calibrate_cost_from_run
+
 - title: Scenario accessors
   desc: >
     A technical detail of the pipelines: isolate an already-materialised value
@@ -73,6 +100,7 @@ reference:
   contents:
   - scenario_dataset
   - scenario_min_pmix
+  - scenario_distset
 
 - title: Reproducible RNG
   desc: >
@@ -98,6 +126,8 @@ articles:
   contents:
   - defining-a-scenario
   - cost-estimation
+  - cost-analysis
   - sharded-pipeline
+  - scenario-to-design
   - cluster-pipeline
   - cloud-upload

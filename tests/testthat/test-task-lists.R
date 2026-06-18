@@ -18,7 +18,7 @@ test_that("task-lists: sample table has D * nsim * R rows with axes populated", 
   expect_identical(unique(tasks$replace), TRUE)
 })
 
-test_that("task-lists: the scenario replace knob is a sample axis", {
+test_that("task-lists: the `replace` scenario option is a sample axis", {
   scenario <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
@@ -124,7 +124,7 @@ test_that("task-lists: ci is not an hc axis", {
   expect_false("ci" %in% task_axes("hc"))
 })
 
-test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
+test_that("task-lists: ci = FALSE leaves bootstrap-only scenario options NA", {
   scenario <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
@@ -140,14 +140,15 @@ test_that("task-lists: ci = FALSE leaves bootstrap-only knobs NA", {
   expect_identical(nrow(hc_tasks), nrow(fit_tasks))
   expect_false("est_method" %in% names(hc_tasks))
   # `ci` is a setting read from the scenario, not an emitted column; the
-  # NA-canonicalisation of the bootstrap-only knobs is keyed off the scalar.
+  # NA-canonicalisation of the bootstrap-only scenario options is keyed off the
+  # scalar.
   expect_false("ci" %in% names(hc_tasks))
   expect_true(all(is.na(hc_tasks$nboot)))
   expect_true(all(is.na(hc_tasks$ci_method)))
   expect_true(all(is.na(hc_tasks$parametric)))
 })
 
-test_that("task-lists: ci = TRUE fans out over the bootstrap knobs", {
+test_that("task-lists: ci = TRUE fans out over the bootstrap axes", {
   scenario <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,

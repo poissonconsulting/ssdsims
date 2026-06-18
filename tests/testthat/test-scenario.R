@@ -222,13 +222,13 @@ test_that("scenario-definition: nrow at the effective draw size is accepted", {
   )
 })
 
-test_that("scenario-definition: non-ci-gated settings precede ci, gated knobs follow", {
+test_that("scenario-definition: non-ci-gated settings precede ci, gated scenario options follow", {
   fmls <- names(formals(ssd_define_scenario))
   # The non-`ci`-gated settings (`nrow_max`, `dists`, `est_method`, `proportion`
   # — all valid and meaningful when `ci = FALSE`, led by the sample-level
-  # `nrow_max`) come first, then `ci`, then the knobs it gates: the bootstrap
-  # axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`) and
-  # `samples` (only retains bootstrap draws). Contiguous, after the last
+  # `nrow_max`) come first, then `ci`, then the scenario options it gates: the
+  # bootstrap axes `nboot`/`ci_method`/`parametric` (rejected when `ci = FALSE`)
+  # and `samples` (only retains bootstrap draws). Contiguous, after the last
   # structural axis (`range_shape2`) and before the partitioning args.
   group <- c(
     "nrow_max",
@@ -271,129 +271,69 @@ test_that("scenario-definition: stores min_pmix by name, not as a function", {
   expect_false(any(vapply(s$fit, is.function, logical(1))))
 })
 
-test_that("scenario-definition: min_pmix accepts names, functions, and lists", {
-  # character names -> stored verbatim, resolved from the caller's environment
+test_that("scenario-definition: min_pmix accepts an ssd_pmix() collection", {
   default <- function(n) 0.05
   strict <- function(n) 0.1
-  s_names <- ssd_define_scenario(
+  s <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
-    min_pmix = c("default", "strict")
+    min_pmix = ssd_pmix(default = default, strict = strict)
   )
-  expect_identical(s_names$fit$min_pmix, c("default", "strict"))
-  expect_identical(
-    s_names$min_pmix_fns,
-    list(default = default, strict = strict)
-  )
-  # bare function -> derived name
-  expect_identical(
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = ssdtools::ssd_min_pmix
-    )$fit$min_pmix,
-    "ssd_min_pmix"
-  )
-  # named list of functions -> list names
-  expect_identical(
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(strict = ssdtools::ssd_min_pmix)
-    )$fit$min_pmix,
-    "strict"
-  )
-  # unnamed list of functions -> derived names
-  expect_identical(
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(ssdtools::ssd_min_pmix)
-    )$fit$min_pmix,
-    "ssd_min_pmix"
-  )
+  expect_identical(s$fit$min_pmix, c("default", "strict"))
+  expect_identical(s$min_pmix_fns, list(default = default, strict = strict))
 })
 
-test_that("scenario-definition: min_pmix rejects non-function list elements", {
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(1)
-    )
-  })
-})
-
-test_that("scenario-definition: min_pmix rejects multi-argument functions", {
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = function(a, b) 0.05
-    )
-  })
-})
-
-test_that("scenario-definition: min_pmix rejects duplicate names", {
-  expect_snapshot(error = TRUE, {
-    ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
-      nsim = 2L,
-      seed = 1L,
-      min_pmix = list(a = ssdtools::ssd_min_pmix, a = ssdtools::ssd_min_pmix)
-    )
-  })
-})
-
-test_that("scenario-accessors: a supplied min_pmix function is materialised under its name", {
+test_that("scenario-definition: a supplied ssd_pmix() function is materialised under its name", {
   my_fun <- function(n) 0.05
   s <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
     seed = 1L,
-    min_pmix = my_fun
+    min_pmix = ssd_pmix(my_fun = my_fun)
   )
   expect_identical(s$fit$min_pmix, "my_fun")
   expect_identical(s$min_pmix_fns, list(my_fun = my_fun))
 })
 
-test_that("scenario-accessors: a min_pmix name-string resolves at construction", {
-  s <- ssd_define_scenario(
-    ssd_scenario_data(ssddata::ccme_boron),
-    nsim = 2L,
-    seed = 1L,
-    min_pmix = "ssd_min_pmix"
-  )
-  expect_identical(s$fit$min_pmix, "ssd_min_pmix")
-  expect_identical(s$min_pmix_fns[["ssd_min_pmix"]], ssdtools::ssd_min_pmix)
-})
-
-test_that("scenario-accessors: an unresolvable min_pmix name fails fast", {
+test_that("scenario-definition: min_pmix rejects a bare function", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
-      min_pmix = "no_such_fun"
+      min_pmix = ssdtools::ssd_min_pmix
     )
   })
 })
 
-test_that("scenario-accessors: a name resolving to a multi-arg function fails fast", {
-  two_arg <- function(a, b) 0.05
+test_that("scenario-definition: min_pmix rejects a plain list", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
   expect_snapshot(error = TRUE, {
     ssd_define_scenario(
-      ssd_scenario_data(ssddata::ccme_boron),
+      data,
       nsim = 2L,
       seed = 1L,
-      min_pmix = "two_arg"
+      min_pmix = list(ssdtools::ssd_min_pmix)
     )
+  })
+})
+
+test_that("scenario-definition: min_pmix rejects a character vector of names", {
+  data <- ssd_scenario_data(ssddata::ccme_boron)
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = "ssd_min_pmix")
+  })
+})
+
+test_that("scenario-definition: an indirectly-supplied list value still aborts cleanly", {
+  # The form the old expression-inference path mishandled; it now aborts with the
+  # same actionable `ssd_pmix()` message, not an obscure internal frame.
+  data <- ssd_scenario_data(ssddata::ccme_boron)
+  fns <- list(ssdtools::ssd_min_pmix)
+  expect_snapshot(error = TRUE, {
+    ssd_define_scenario(data, nsim = 2L, seed = 1L, min_pmix = fns)
   })
 })
 
@@ -406,14 +346,14 @@ test_that("scenario-accessors: materialisation does not change fit-task primers"
     nsim = 1L,
     seed = 1L,
     nrow = 6L,
-    min_pmix = list(shared = f_a)
+    min_pmix = ssd_pmix(shared = f_a)
   )
   s_b <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 1L,
     seed = 1L,
     nrow = 6L,
-    min_pmix = list(shared = f_b)
+    min_pmix = ssd_pmix(shared = f_b)
   )
   # The stored functions differ, but the name (the identity surface) does not.
   expect_false(identical(s_a$min_pmix_fns, s_b$min_pmix_fns))
@@ -785,7 +725,7 @@ test_that("scenario-definition: the dropped name= argument is rejected", {
   })
 })
 
-# ---- ci = FALSE rejects bootstrap-only knobs -------------------------------
+# ---- ci = FALSE rejects bootstrap-only scenario options --------------------
 
 test_that("scenario-definition: ci = FALSE rejects an explicit nboot", {
   expect_snapshot(error = TRUE, {
@@ -820,7 +760,7 @@ test_that("scenario-definition: ci = FALSE rejects ci_method and parametric", {
   })
 })
 
-test_that("scenario-definition: ci = FALSE alone is fine with default knobs", {
+test_that("scenario-definition: ci = FALSE alone is fine with default scenario options", {
   expect_s3_class(
     ssd_define_scenario(
       ssd_scenario_data(ssddata::ccme_boron),
@@ -843,7 +783,7 @@ test_that("scenario-definition: a vector ci is rejected", {
   })
 })
 
-test_that("scenario-definition: scalar ci = TRUE retains bootstrap knobs", {
+test_that("scenario-definition: scalar ci = TRUE retains bootstrap axes", {
   s <- ssd_define_scenario(
     ssd_scenario_data(ssddata::ccme_boron),
     nsim = 2L,
@@ -926,7 +866,7 @@ test_that("scenario-definition: print is stable for a single dataset", {
   )
 })
 
-test_that("scenario-definition: print is stable for multiple datasets and vector knobs", {
+test_that("scenario-definition: print is stable for multiple datasets and vector scenario options", {
   expect_snapshot(
     ssd_define_scenario(
       ssd_scenario_data(

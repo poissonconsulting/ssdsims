@@ -3,9 +3,7 @@
 ## Purpose
 
 Group a scenario's per-step task tables into shards by `partition_by`, run each shard as one Parquet via per-shard step runners, and assemble the static-branching `targets` pipeline that runs a scenario end-to-end (`TARGETS-DESIGN.md` §5/§6). The shard wrappers feed `tar_map()`'s `values`; the per-shard runners reuse the baseline's per-task primitives; a `ssd_scenario_targets()` target factory builds the whole pipeline (one `format = "file"`, `error = "null"` target per path cell, `tar_combine()` barriers, and a `summary` fan-in) under a per-layout results root, validated byte-for-byte against the single-core baseline runner.
-
 ## Requirements
-
 ### Requirement: Group a step's task rows into shards by partition_by
 The package SHALL provide `ssd_scenario_sample_shards()`, `ssd_scenario_fit_shards()`, and `ssd_scenario_hc_shards()` that group the corresponding step's task table into one row per `partition_by` **path** cell, using the path/inner split from `scenario_partition_axes(scenario, step)` (`TARGETS-DESIGN.md` §5/§6). Each shard row SHALL carry the step's path-axis columns (the Hive partition path and the `tar_map` target-name suffix) and a `tasks` list-column containing the task rows whose path-axis values match that shard.
 
@@ -76,14 +74,14 @@ The package SHALL provide `ssd_summarise()` that reads the `sample`, `fit`, and 
 - **THEN** it SHALL read the result directories directly rather than depending on every shard target's in-memory value
 
 ### Requirement: Results written under a per-layout root keyed by partition_by
-Because a step's Hive shard path depth/axes are a function of `partition_by`/`bundle`, the targets pipeline SHALL write each step's shards and the summary under a results root **keyed by the scenario's layout** — `scenario_results_dir(scenario)` = `<root>/layout=<hash of partition_by>`. Re-running a scenario with a changed `partition_by`/`bundle` SHALL therefore write to a *fresh* root and never mix shard granularities (a depth-agnostic glob over one root would otherwise union stale and current shards); re-running the *same* layout SHALL reuse the root (idempotent, cache-friendly). A non-layout knob (e.g. `seed`, a grid value) SHALL NOT change the root.
+Because a step's Hive shard path depth/axes are a function of `partition_by`/`bundle`, the targets pipeline SHALL write each step's shards and the summary under a results root **keyed by the scenario's layout** — `scenario_results_dir(scenario)` = `<root>/layout=<hash of partition_by>`. Re-running a scenario with a changed `partition_by`/`bundle` SHALL therefore write to a *fresh* root and never mix shard granularities (a depth-agnostic glob over one root would otherwise union stale and current shards); re-running the *same* layout SHALL reuse the root (idempotent, cache-friendly). A non-layout argument (e.g. `seed`, a grid value) SHALL NOT change the root.
 
 #### Scenario: Different partition_by yields a different results root
 - **WHEN** `scenario_results_dir()` is computed for two scenarios that differ only in `partition_by`
 - **THEN** the two roots SHALL differ
 
 #### Scenario: Same layout yields the same root
-- **WHEN** `scenario_results_dir()` is computed twice for the same `partition_by` (other knobs may differ)
+- **WHEN** `scenario_results_dir()` is computed twice for the same `partition_by` (other scenario options may differ)
 - **THEN** the root SHALL be identical
 
 ### Requirement: A target factory builds the whole pipeline from a scenario
@@ -160,12 +158,12 @@ Under the pinned content-hash model the deferred `TARGETS-DESIGN.md` §8 decisio
 ### Requirement: Each step target depends only on its minimal scenario slice
 The `ssd_scenario_targets()` factory SHALL make each step's `tar_map()` command depend on only the **minimal slice** of the scenario that step's per-shard runner consumes — the resolved per-step inputs and the fields reaching that step's per-task body and its `shard_path()`/`read_parent_shards()` primer — rather than the bare `scenario` global. A step target's `targets` dependency hash SHALL therefore cover only its slice, so editing a scenario field outside a step's slice SHALL leave that step's shards cached. The package SHALL provide a deterministic, hashable `scenario_step_slice(scenario, step, datasets)` helper that returns this slice (preserving the `ssdsims_scenario` class so the runners' input contract is unchanged): `sample` consumes the datasets, `nrow_max`, and `partition_by$sample`; `fit` consumes `fit$dists`, the `min_pmix` functions, and `partition_by` for `sample` and `fit`; `hc` consumes `hc$proportion`, `hc$samples`, `hc$ci`, and `partition_by` for `fit` and `hc`. Because the `sample` slice carries datasets, the factory SHALL build it **per shard**, carrying only the dataset(s) that shard reads (its `unique(tasks$dataset)`) as a per-shard mapped value, so a sample shard depends on no dataset it does not draw from. The per-task results SHALL be unchanged (byte-identical to `ssd_run_scenario_baseline()`), because the slice carries exactly the fields the runner reads. The precise expected-cached set SHALL follow the invalidation model pinned by `hive-partitioning` (`TARGETS-DESIGN.md` §8).
 
-#### Scenario: Changing an hc-only knob rebuilds only hc and summary
-- **WHEN** a scenario is run to completion with `tar_make()`, an `hc`-only knob (e.g. `hc$samples` or `hc$ci`) is then changed, and `tar_make()` is run again
+#### Scenario: Changing an hc-only scenario option rebuilds only hc and summary
+- **WHEN** a scenario is run to completion with `tar_make()`, an `hc`-only scenario option (e.g. `hc$samples` or `hc$ci`) is then changed, and `tar_make()` is run again
 - **THEN** only the `hc` shards (and `summary`) SHALL rebuild, while every `sample` and `fit` shard SHALL be skipped (cached)
 
-#### Scenario: Changing a fit-only knob leaves sample cached
-- **WHEN** a scenario is run to completion with `tar_make()`, a `fit`-only knob (e.g. `fit$dists`) is then changed, and `tar_make()` is run again
+#### Scenario: Changing a fit-only scenario option leaves sample cached
+- **WHEN** a scenario is run to completion with `tar_make()`, a `fit`-only scenario option (e.g. `fit$dists`) is then changed, and `tar_make()` is run again
 - **THEN** the `sample` shards SHALL be skipped (cached), while the `fit` (and downstream `hc`/`summary`) shards SHALL rebuild
 
 #### Scenario: Appending a dataset caches every existing shard
@@ -174,7 +172,7 @@ The `ssd_scenario_targets()` factory SHALL make each step's `tar_map()` command 
 
 #### Scenario: A step's slice carries only the fields its runner reads
 - **WHEN** `scenario_step_slice(scenario, step, datasets)` is computed for each of `sample`, `fit`, and `hc`
-- **THEN** each slice SHALL be a deterministic, hashable `ssdsims_scenario`-classed object carrying exactly the fields that step's runner consumes (the named `datasets` + `nrow_max` / `fit` grid + `min_pmix` functions / `hc` knobs incl. `ci`, plus the step's own and parent `partition_by` axes) and SHALL omit fields no other-step runner reads, so re-sourcing the same scenario yields a byte-identical slice
+- **THEN** each slice SHALL be a deterministic, hashable `ssdsims_scenario`-classed object carrying exactly the fields that step's runner consumes (the named `datasets` + `nrow_max` / `fit` grid + `min_pmix` functions / `hc` scenario options incl. `ci`, plus the step's own and parent `partition_by` axes) and SHALL omit fields no other-step runner reads, so re-sourcing the same scenario yields a byte-identical slice
 
 ### Requirement: Path-axis growth mints new shards and caches existing ones
 Appending a value to an axis that **is** in a step's `partition_by` (a *path* axis — e.g. a new dataset, or a grown `nsim` adding `sim` values; both are path axes for the `sample`, `fit`, and `hc` steps) creates new partition cells for the affected steps. When such a value is appended to a scenario that has already been `tar_make()`'d into a per-layout results root, re-sourcing the pipeline SHALL mint **new** named `tar_map()` shard targets for the new path cells and `tar_make()` SHALL build **only** those new shards; every shard target that existed before SHALL be reported cached (skipped) by `targets` and its Parquet SHALL stay byte-identical (no in-place rewrite, no recomputation), because its command and `format = "file"` output are unchanged (`TARGETS-DESIGN.md` §8.1; §6 "extension is literally more named targets"). The `summary` fan-in SHALL re-run over the enlarged shard set (its input result layers gained the new shards' Parquets), without any pre-existing shard being recomputed to feed it. Because a path-axis growth keeps `partition_by` fixed, `scenario_results_dir()` SHALL be unchanged so the prior shards' outputs remain in the same root and can satisfy the cache. The precise expected cached-vs-built shard set is finalised against the invalidation model pinned by the `hive-partitioning` change — cache-by-existence over the m:n child↔parent fan-in's per-child upstream edges — together with the per-step minimal scenario slice from the `step-scenario-slice` change: the `sample` slice is built **per dataset**, so an appended dataset is a new path cell rather than a change to an existing shard's command, and `nsim` is in no step's slice, so growing it leaves every existing shard's command byte-identical. With both upstream changes landed, the contract therefore holds on the shipped default factory (no `cue`): an existing shard whose command and `format = "file"` output are unchanged is skipped.
@@ -246,3 +244,37 @@ SHALL be unchanged: the `summary` target writes the single compact
   pipeline
 - **THEN** the `summary` target SHALL write only `summary.parquet` and SHALL NOT
   write `summary-samples.parquet`
+
+### Requirement: distset is a valid hc partition axis, bundled by default
+`"distset"` SHALL be an accepted `hc` axis for both `partition_by` (path) and
+`bundle` (inner), since it is a member of `task_axes("hc")`. The documented
+default hc path SHALL remain `c("dataset", "sim")`, leaving `distset` as an
+**inner** (bundled) hc axis by default: one hc shard then holds every declared
+pool for its `(dataset, sim)` cell, so the shard runner decodes the parent union
+fit once and serves all pools from it. A user MAY promote `distset` to a path
+axis via `partition_by$hc` to obtain one shard per `(…, distset)` cell.
+
+#### Scenario: distset accepted as an hc path axis
+- **WHEN** `ssd_define_scenario(..., dists = list(BCANZ = ..., Iwasaki = ...), partition_by = list(hc = c("dataset", "sim", "distset")))` is called
+- **THEN** the constructor SHALL accept it and the hc shards SHALL be keyed by `dataset`, `sim`, and `distset` (one shard per pool per `(dataset, sim)`)
+
+#### Scenario: distset is bundled by default
+- **WHEN** a distset scenario is constructed without an explicit `hc` `partition_by`
+- **THEN** the hc path SHALL be `c("dataset", "sim")` and `distset` SHALL be an inner axis, so one hc shard carries all declared pools for each `(dataset, sim)` cell
+
+### Requirement: The hc shard runner subsets the union fit per distset, decoding each parent fit once
+The hc shard runner (`ssd_run_hc_step()`) SHALL read each distinct parent `fit`
+shard the shard's tasks reference, decode each union fit **once** per `fit_id`,
+and for each hc task subset that decoded fit to the task's `distset` members
+before estimating the hazard concentration. Multiple `distset` tasks sharing a
+`fit_id` SHALL reuse the one decoded fit (no repeated deserialisation), and each
+output row SHALL be tagged with its `hc_id`, parent `fit_id`, and `distset`.
+
+#### Scenario: One decode per fit serves every pool in the shard
+- **WHEN** an hc shard bundles several `distset` tasks that share a parent `fit_id`
+- **THEN** the runner SHALL decode that union fit once and subset it per `distset`, writing one Parquet for the shard with rows tagged by `hc_id`, `fit_id`, and `distset`
+
+#### Scenario: Adding a distribution set mints only new hc shards
+- **WHEN** a scenario gains an additional distribution set (with `distset` on the hc path) and the pipeline is re-run
+- **THEN** only the new hc shards SHALL be built; every `sample` and `fit` shard, and every pre-existing hc shard, SHALL be served from cache (the fit layer carries no `distset` axis)
+

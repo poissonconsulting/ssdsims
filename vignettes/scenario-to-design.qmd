@@ -1,0 +1,184 @@
+---
+title: "From a Single Scenario to a Design"
+vignette: >
+  %\VignetteIndexEntry{From a Single Scenario to a Design}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: "#>"
+---
+
+```{r}
+#| label: setup
+#| include: false
+evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+  requireNamespace("ssdtools", quietly = TRUE)
+knitr::opts_chunk$set(eval = evaluate)
+```
+
+```{r}
+#| label: library
+library(ssdsims)
+```
+
+A single `ssd_scenario` is one **regular** grid --- a rectangular cross-join of
+the axes. A real study is rarely rectangular: you want a coarse grid everywhere
+*and* a dense refinement in one region (more `nrow` values, but only for one
+dataset, say). Forcing that into one scenario computes a cross-product you never
+wanted; running it as several separate pipelines recomputes the cells they share
+and gives you no single summary.
+
+A **design** is the answer: a named set of scenarios run as **one** pipeline,
+unioned into one possibly-ragged task set. Overlapping cells are computed
+**once**, and the result is a single combined summary with a `scenario` column.
+This vignette shows how to grow a one-off run into a design --- a one-line
+change --- and then refine it.
+
+## Start with a single scenario
+
+A typical one-off run defines a scenario and turns it into a `targets` pipeline
+with `ssd_scenario_targets()`:
+
+```{r}
+#| label: scenario
+data <- ssd_scenario_data(
+  boron = ssddata::ccme_boron,
+  cadmium = ssddata::ccme_cadmium
+)
+# shard on (dataset, sim) so each (dataset, sim) is its own cell
+pb <- list(
+  sample = c("dataset", "sim"),
+  fit = c("dataset", "sim"),
+  hc = c("dataset", "sim")
+)
+coarse <- ssd_define_scenario(
+  data,
+  nsim = 5L,
+  seed = 42L,
+  nrow = c(5L, 10L, 20L),
+  dists = ssd_distset(lnorm = "lnorm"),
+  partition_by = pb
+)
+coarse
+```
+
+This sweeps **both** datasets shallowly: a regular `{boron, cadmium} x sim 1:5 x
+nrow {5, 10, 20}` grid.
+
+```{r}
+#| label: scenario-targets
+#| eval: false
+# _targets.R
+library(targets)
+library(tarchetypes)
+library(ssdsims)
+
+ssd_scenario_targets(coarse, root = "results")
+```
+
+## Migrate: wrap it in a design
+
+To grow this into a study, wrap the scenario with `ssd_design()` and switch the
+factory to `ssd_design_targets()`. That is the entire change:
+
+```{r}
+#| label: design-one
+design <- ssd_design(coarse)
+design
+```
+
+```{r}
+#| label: design-targets-one
+#| eval: false
+# _targets.R
+design <- ssd_design(coarse)
+ssd_design_targets(design, root = "results")
+```
+
+A design of **one** is valid and uniformly shaped --- the recommended starting
+point for a study that may grow. The per-task results are **byte-identical** to
+the standalone run: combining changes only *addressing* (target names and the
+results tree), never a task's reproducible `(seed, primer)`.
+
+::: callout-note
+## Cache-preserving upgrade
+
+The upgrade reuses the standalone run's shards --- it recomputes **nothing**.
+Both factories root shards under the same seed-/layout-keyed tree
+(`results/seed=42/layout=.../...`, from `scenario_results_dir()`) and weave the
+`seed` into the same target names, so a design of one mints byte-identical
+targets and paths to the standalone run. Re-running into the same store is a full
+cache hit; only the per-member and combined `summary` targets are new.
+:::
+
+## Refine: zoom into one region
+
+Now the irregular part. Suppose `boron` deserves a closer look --- more
+replicates *and* a finer `nrow` sweep --- but `cadmium` does not. Define a second
+scenario covering just that **region** (only `boron`, `sim 1:15`, a finer `nrow`)
+and add it to the design:
+
+```{r}
+#| label: design-refine
+dense <- ssd_define_scenario(
+  ssd_scenario_data(boron = ssddata::ccme_boron),
+  nsim = 15L,
+  seed = 42L,
+  nrow = c(8L, 12L, 16L),
+  dists = ssd_distset(lnorm = "lnorm"),
+  partition_by = pb
+)
+study <- ssd_design(coarse = coarse, dense = dense)
+study
+```
+
+```{r}
+#| label: design-targets-refine
+#| eval: false
+# _targets.R
+ssd_design_targets(study, root = "results")
+```
+
+The union is genuinely **ragged** --- neither a rectangle nor a strict nesting.
+Over the `(dataset, sim)` cells:
+
+```
+  sim:    1   2   3   4   5   6  ...  15
+  boron   ■   ■   ■   ■   ■   □  ...  □      ■ shared (coarse + dense)
+  cadmium ◆   ◆   ◆   ◆   ◆                  ◆ coarse-only
+                          └── □ dense-only (boron, sim 6:15) ──┘
+```
+
+- **`boron` sims 1--5 are shared** --- built **once** and read by both members;
+  their `fit`/`hc` tasks merge both `nrow` sweeps (`{5,10,20}` ∪ `{8,12,16}`).
+- **`cadmium` stays coarse-only**; the refinement never touches it.
+- **`boron` sims 6--15 are the dense-only** zoom.
+
+A single scenario could not express this without computing the full
+`{boron, cadmium} x sim 1:15 x {5,8,10,12,16,20}` cross-product --- most of which
+you never wanted. Re-running `tar_make()` builds only the genuinely new cells; the
+shared `boron` 1--5 stay cached.
+
+The combined `results/summary.parquet` carries a `scenario` column (`"coarse"` or
+`"dense"`), and each member's rows are filtered to exactly its own cells --- ready
+to plot the broad sweep and the zoom together.
+
+## Notes
+
+- **Consistency contract.** `ssd_design()` requires that a name means the same
+  thing across members: the same `dataset` name must bind identical data, the
+  same `min_pmix` name the same function, the same `distset` name the same
+  members, and `partition_by` must match. This is what makes sharing a cell
+  across members sound. Inconsistent bindings abort at construction.
+- **Varying the seed.** Members *may* use different `seed`s (e.g. repeating the
+  whole exploration under several master seeds); they land under separate
+  `seed=` trees and share nothing. Members sharing a `seed` share their
+  coincident cells (common random numbers).
+- **Keep `nrow_max` uniform.** `nrow_max` is a sample draw-size guard, not a
+  comparison axis; differing or changing it across members is undefined
+  behaviour for shard sharing.
+
+See ["Running a Sharded Pipeline"](sharded-pipeline.html) for the shard/results
+layout a design builds on.

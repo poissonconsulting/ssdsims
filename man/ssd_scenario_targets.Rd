@@ -7,7 +7,7 @@
 ssd_scenario_targets(
   scenario,
   ...,
-  root = scenario_results_dir(scenario),
+  root = "results",
   upload = NULL,
   cue = NULL
 )
@@ -20,8 +20,11 @@ ssd_scenario_targets(
 positional or misspelled argument), since \code{root} and \code{upload} are both
 path-shaped and easy to transpose.}
 
-\item{root}{The results root the shards and summary are written under;
-defaults to the per-layout \code{\link[=scenario_results_dir]{scenario_results_dir()}}.}
+\item{root}{The \strong{base} results directory (default \code{"results"}). The shards
+and summary are written under the seed-/layout-keyed
+\code{\link[=scenario_results_dir]{scenario_results_dir()}}\verb{(scenario, root)}, so a single-scenario run and a
+design-of-one address shards identically (a cache-free upgrade to
+\code{\link[=ssd_design_targets]{ssd_design_targets()}}).}
 
 \item{upload}{An optional upload destination (the remote-destination sibling
 of \code{root}) from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}, or \code{NULL}
@@ -101,6 +104,22 @@ growth still apply under the pin), or if it previously errored. Force a
 refresh of chosen shards with \code{targets::tar_invalidate()} (or by deleting
 their Parquet), overriding the pin (section 8.4). The default (\code{NULL}) is
 \code{targets}' standard cue.
+}
+
+\section{Volatile fit/hc file hashes (cost-analysis timings)}{
+
+The \code{fit}/\code{hc} shards carry per-task \code{.start}/\code{.end}/\code{.host} timing columns
+(the \code{cost-analysis} instrumentation), so a \code{fit}/\code{hc} shard's \strong{file hash is
+no longer deterministic across recomputes}: a forced recompute that yields
+identical \emph{results} still writes different bytes (a fresh wall-clock), so its
+dependent \code{hc}/\code{summary} targets re-run and any paired \verb{upload_<step>}
+re-ships. This is scoped to \code{fit}/\code{hc}; \code{sample} shards carry no timing columns
+and stay byte-deterministic. Routine caching is unaffected (a cache hit is not
+a recompute, so a cached shard's bytes are unchanged); the cost lands only on a
+\emph{forced} refresh (\code{tar_invalidate()}, a deleted Parquet) or a code-edit
+recompute - and the §8.3 \code{cue = tar_cue(depend = FALSE)} pin covers the latter.
+Per-task \emph{results} remain byte-identical to the baseline oracle (the
+shard-runner contract narrows to the result columns, timing excluded).
 
 The \code{head(sample, nrow)} truncation stays folded into the \code{fit} step (no
 materialised \code{data} shard): a \code{fit} shard is keyed by \code{fit_id}, which includes

@@ -72,10 +72,10 @@ union fit to that pool (\code{strict = FALSE}), and estimate the hazard
 concentration with the per-task \verb{(seed, primer)} through
 \code{hc_data_task_primer()} (the subset happens in that shared primitive). Each
 task's hc tibble (with the scalar \code{ci} applied uniformly and bootstrap-only
-knobs \code{NA} when \code{ci = FALSE}) is tagged with its \code{hc_id}, parent \code{fit_id}, and
-\code{distset} name, stacked, and written as one Parquet at the shard's partition
-path. A set whose members all dropped from the union fit emits no rows for
-that cell (the survivor model).
+scenario options \code{NA} when \code{ci = FALSE}) is tagged with its \code{hc_id}, parent
+\code{fit_id}, and \code{distset} name, stacked, and written as one Parquet at the
+shard's partition path. A set whose members all dropped from the union fit
+emits no rows for that cell (the survivor model).
 
 }}
 \examples{

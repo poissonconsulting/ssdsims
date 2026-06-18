@@ -1,10 +1,10 @@
 # Experiment: is NESTING the culprit, or just the payload size?
 #
 # `experiment-nested-mitigations.R` showed that none of DuckDB's recommended
-# knobs (preserve_insertion_order, temp_directory spill, ROW_GROUP_SIZE) move
-# the OOM point of the nested write at all, and that the failing allocation is
-# exactly `rows * doubles * 8` bytes - the LIST column's entire child array as
-# ONE buffer. Three questions follow:
+# configuration options (preserve_insertion_order, temp_directory spill,
+# ROW_GROUP_SIZE) move the OOM point of the nested write at all, and that the
+# failing allocation is exactly `rows * doubles * 8` bytes - the LIST column's
+# entire child array as ONE buffer. Three questions follow:
 #
 #   1. floor: what memory_limit does the 1000 x 50k nested shard need?
 #   2. flat:  does the SAME payload as a flat long table (50M rows of

@@ -45,7 +45,7 @@
 
 ## 7b. Scenario extensions (reviewer-driven, #80)
 
-- [x] 7b.1 Add a validated `replace` knob to `ssd_define_scenario()`; the `sample` axis reads `scenario$replace`
+- [x] 7b.1 Add a validated `replace` scenario option to `ssd_define_scenario()`; the `sample` axis reads `scenario$replace`
 - [x] 7b.2 Retain the validated `ssd_data()` collection on the scenario (`$data`); `ssd_run_scenario_baseline(scenario)` reads it and drops its `data` argument
 - [x] 7b.3 Prefer purrr/rlang over base (recorded in CLAUDE.md); build the task tibble with `tibble::new_tibble()`; define "axis" in GLOSSARY.md
 

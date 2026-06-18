@@ -29,7 +29,7 @@ A registry only earns its keep when a name must be resolved to a value that is *
 
 ### Decision: the scenario stores names *and* functions; hashing/path use names only
 
-The scenario keeps the `min_pmix` **names** where it does today (`$fit$min_pmix`, feeding `task_axes("fit")`, the primer, and the Hive path) and adds the **functions** in a parallel name-keyed store (e.g. `$min_pmix_fns`). The task table's `min_pmix` column stays the name. `scenario_min_pmix(scenario, name)` returns the function. This keeps the identity surface (names) exactly as `task-lists`/`partition-by` already rely on, while making the value reachable. *Trade-off:* the scenario is no longer "names + numeric knobs only" — it now carries closures, as it already carries dataset tibbles. For tiny single-argument `min_pmix` functions this is negligible, and it is the same trade already accepted for inline datasets.
+The scenario keeps the `min_pmix` **names** where it does today (`$fit$min_pmix`, feeding `task_axes("fit")`, the primer, and the Hive path) and adds the **functions** in a parallel name-keyed store (e.g. `$min_pmix_fns`). The task table's `min_pmix` column stays the name. `scenario_min_pmix(scenario, name)` returns the function. This keeps the identity surface (names) exactly as `task-lists`/`partition-by` already rely on, while making the value reachable. *Trade-off:* the scenario is no longer "names + numeric scenario options only" — it now carries closures, as it already carries dataset tibbles. For tiny single-argument `min_pmix` functions this is negligible, and it is the same trade already accepted for inline datasets.
 
 ### Decision: `resolve_min_pmix()` becomes the accessor
 

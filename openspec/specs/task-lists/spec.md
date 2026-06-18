@@ -3,9 +3,7 @@
 ## Purpose
 
 Derive the three per-step task tables (`sample`, `fit`, `hc`) from an `ssdsims_scenario` — the flat per-task data shape the rest of the targets-based pipeline builds on (`TARGETS-DESIGN.md` §1–§2, §5). Keeping the random draw (`sample`) its own step, keyed only by `(dataset, sim, replace)`, keeps the §5 sub-truncation property structural (one draw shared across every `nrow`) while letting `nrow` be a clean `fit` cross-join axis: the `fit` step truncates its parent sample inline (`head(sample, nrow)`, RNG-free) before fitting, so no separate `data` step or shard is needed. Each table carries a path-style `<step>_id` primary key and its parent's id as a foreign key, is a printable `ssdsims_tasks` classed tibble, and is bundled by the canonical `ssd_scenario_tasks()` expansion. A `purrr::pmap()` baseline runner executes the tables in dependency order with no RNG seeding, no `targets`, no shards, and no Parquet I/O.
-
 ## Requirements
-
 ### Requirement: Derive the sample task table from a scenario
 The package SHALL derive a `sample` task table from an `ssdsims_scenario` containing one row per cell of the cross-join of the scenario's dataset names, replicate index (`1:nsim`), and `replace` values — the single random draw that every `nrow` value sub-truncates (`TARGETS-DESIGN.md` §5). Each row SHALL carry one column per cross-join axis (`dataset`, `sim`, `replace`) and SHALL carry **no** non-identity columns: the draw size is the scenario's `nrow_max` setting (resolved by the runner to `min(nrow_max, nrow(data))` for `replace = FALSE` and `nrow_max` for `replace = TRUE`), not a `n_max` row column. `nrow` SHALL NOT be a sample axis. The derivation SHALL perform no RNG draws and SHALL NOT add any `seed`, `primer`, or `stream` columns.
 
@@ -37,19 +35,23 @@ The package SHALL derive a `fit` task table by crossing each **sample-task** ide
 - **THEN** the fit task table SHALL store the `min_pmix` name (not the function value)
 
 ### Requirement: Derive the hc task table from a scenario
-The package SHALL derive an `hc` task table by crossing each fit-task identity with each row of the scenario's `hc` argument grid (`nboot`, `ci_method`, `parametric`). The scenario's scalar `ci` flag SHALL be applied uniformly to every hc task from the scenario (read by the runner) and SHALL NOT be emitted as a task-row column — it is not a cross-join axis and is absent from `task_axes("hc")`. `est_method` SHALL likewise NOT be a cross-join axis: it is an hc simulation setting (a within-task dimension), absent from `task_axes("hc")`, and every requested `est_method` is summarised from the single bootstrap sample set of its hc task rather than fanning out into separate tasks. When `ci = FALSE`, the bootstrap-only knobs (`nboot`, `ci_method`, `parametric`) SHALL be canonically `NA` on every hc row (so they do not enter task identity for a no-bootstrap estimate), leaving **no** cross-join axis — exactly one hc row per fit task; this canonicalisation is keyed off the scenario's scalar `ci`, not an emitted `ci` column. When `ci = TRUE`, the grid SHALL fan out over `nboot × ci_method × parametric`.
+The package SHALL derive an `hc` task table by crossing each fit-task identity with each row of the scenario's `hc` argument grid (`nboot`, `ci_method`, `parametric`) **and with the scenario's declared distribution sets** (`distset`, the set *names* from `scenario$hc$distsets`). `"distset"` SHALL be a member of `task_axes("hc")` so it enters the per-task primer and the partition/path split. When the scenario declares a single-set collection (`ssd_distset(BCANZ = ...)`), the `distset` axis SHALL have one value and SHALL NOT multiply the table. The scenario's scalar `ci` flag SHALL be applied uniformly to every hc row — it is not a cross-join axis and is absent from `task_axes("hc")`. `est_method` SHALL likewise NOT be a cross-join axis: it is an hc scenario setting (a within-task dimension), absent from `task_axes("hc")`, and every requested `est_method` is summarised from the single bootstrap sample set of its hc task rather than fanning out into separate tasks. When `ci = FALSE`, the bootstrap-only scenario options (`nboot`, `ci_method`, `parametric`) SHALL be canonically `NA` on every hc row (so they do not enter task identity for a no-bootstrap estimate), leaving the `distset` axis as the only fan-out — one hc row per (fit task × distset); when `ci = TRUE`, the grid SHALL fan out over `distset × nboot × ci_method × parametric`. Each hc task row SHALL carry its `distset` name and its parent `fit_id` (the union fit it subsets).
 
-#### Scenario: hc tasks cross fit identity with the hc grid
-- **WHEN** the hc task table is derived from a fit task table of `K` rows and an `hc` argument grid of `H` rows (over `nboot × ci_method × parametric`)
-- **THEN** the hc task table SHALL have `K * H` rows, each carrying its parent fit-task identity columns and the hc-grid argument columns, SHALL NOT be multiplied by the number of `est_method` values, and SHALL NOT carry a `ci` column
+#### Scenario: hc tasks cross fit identity with the hc grid and the distribution sets
+- **WHEN** the hc task table is derived from a fit task table of `K` rows, an `hc` argument grid of `H` rows (over `nboot × ci_method × parametric`), and `D` declared distribution sets
+- **THEN** the hc task table SHALL have `K * H * D` rows, each carrying its parent fit-task identity columns, the hc-grid argument columns, and its `distset` name, and SHALL NOT be multiplied by the number of `est_method` values
 
-#### Scenario: ci = FALSE yields one hc row per fit task
-- **WHEN** the hc task table is derived from a scenario with the scalar `ci = FALSE` and multiple `est_method` values
-- **THEN** the expansion SHALL produce exactly one hc row per fit task with `nboot`/`ci_method`/`parametric` set to `NA`, SHALL NOT fan out across `est_method` (all requested methods are summarised within that single task), and SHALL NOT emit a `ci` column
+#### Scenario: A single-set collection does not multiply the table
+- **WHEN** the hc task table is derived from a scenario whose `dists` is a single-set `ssd_distset(BCANZ = ...)` collection
+- **THEN** the `distset` axis SHALL have exactly one value and the table SHALL have one hc row per fit task when `ci = FALSE`
 
-#### Scenario: ci = TRUE fans out over the bootstrap knobs
-- **WHEN** the hc task table is derived from a scenario with the scalar `ci = TRUE` and multiple `nboot`/`ci_method`/`parametric` values
-- **THEN** the expansion SHALL fan out over `nboot × ci_method × parametric`, and neither `ci` nor `est_method` SHALL appear among the per-task identity axes (`task_axes("hc")`) or as an emitted `ci` column
+#### Scenario: ci = FALSE yields one hc row per fit task per distset
+- **WHEN** the hc task table is derived from a scenario with the scalar `ci = FALSE`, `D` distribution sets, and multiple `est_method` values
+- **THEN** the expansion SHALL produce exactly `D` hc rows per fit task (one per `distset`) with `nboot`/`ci_method`/`parametric` set to `NA`, and SHALL NOT fan out across `est_method`
+
+#### Scenario: ci = TRUE fans out over the distset and bootstrap axes
+- **WHEN** the hc task table is derived from a scenario with the scalar `ci = TRUE`, `D` distribution sets, and multiple `nboot`/`ci_method`/`parametric` values
+- **THEN** the expansion SHALL fan out over `distset × nboot × ci_method × parametric`, `"distset"` SHALL appear among the per-task identity axes (`task_axes("hc")`), and neither `ci` nor `est_method` SHALL
 
 ### Requirement: Tasks carry an explicit id and parent foreign key
 Each task row SHALL carry a path-style `<step>_id` primary key built from the step's cross-join axes (the Hive partition path, `TARGETS-DESIGN.md` §5/§6), and every non-root step SHALL additionally carry its parent step's id as a foreign key column. The step chain is `sample ← fit ← hc`. Dependencies between steps SHALL therefore be encoded explicitly as a single joinable foreign-key column (`sample_id` on fit tasks, `fit_id` on hc tasks), not only as the carried identity columns.
@@ -90,3 +92,4 @@ The package SHALL provide a baseline runner that executes the task tables in dep
 #### Scenario: Runner has no targets or shard machinery
 - **WHEN** the baseline runner executes
 - **THEN** it SHALL NOT load `targets`, SHALL NOT group rows into shards or apply `partition_by`, and SHALL NOT write Parquet files
+
