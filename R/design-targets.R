@@ -167,43 +167,95 @@ design_hc_assembly <- function(members, ref) {
   }
   all_hc <- dplyr::bind_rows(flat)
 
-  # Reduce the demand per hc cell (one representative row per `hc_id`; every other
-  # axis column is constant within an `hc_id`, so only the demand is aggregated).
-  grouped <- dplyr::group_by(all_hc, dplyr::across(dplyr::all_of("hc_id")))
-  splits <- dplyr::group_split(grouped)
-  cells <- lapply(splits, function(g) {
-    rep <- g[1L, , drop = FALSE]
-    rep$.dem_prop <- list(sort(unique(unlist(g$.dem_prop))))
-    rep$.dem_em <- list(unique(unlist(g$.dem_em)))
-    rep$.dem_ci <- any(unlist(g$.dem_ci))
-    rep$.dem_samples <- any(unlist(g$.dem_samples))
-    rep
-  })
-  cells <- dplyr::bind_rows(cells)
+  # Reduce the demand per hc cell. The expected shape is **most cells touched by
+  # one member** (a singleton `hc_id`): such a cell needs no reduction - its row
+  # *is* the cell, its demand already final - so only the multi-member cells go
+  # through the grouped set-union, optimising the common case. (`all_hc` is
+  # R-resident - it carries list-columns like `primer` that cannot originate in
+  # DuckDB - so the cheap count stays in dplyr; see this change's
+  # `exploration/FINDINGS.md`.)
+  demand_cols <- c(".dem_prop", ".dem_em", ".dem_ci", ".dem_samples")
+  sizes <- dplyr::summarise(
+    dplyr::group_by(all_hc, dplyr::across(dplyr::all_of("hc_id"))),
+    .n = dplyr::n(),
+    .groups = "drop"
+  )
+  multi_ids <- sizes$hc_id[sizes$.n > 1L]
+  is_multi <- all_hc$hc_id %in% multi_ids
+  single_cells <- all_hc[!is_multi, , drop = FALSE]
+  multi_rows <- all_hc[is_multi, , drop = FALSE]
+  if (nrow(multi_rows)) {
+    # One grouped summarise does every multi-member set-union; the constant
+    # axis/primer columns rejoin from the first row of each `hc_id`.
+    reduced <- dplyr::summarise(
+      dplyr::group_by(multi_rows, dplyr::across(dplyr::all_of("hc_id"))),
+      .dem_prop = list(sort(unique(unlist(.data[[".dem_prop"]])))),
+      .dem_em = list(unique(unlist(.data[[".dem_em"]]))),
+      .dem_ci = any(.data[[".dem_ci"]]),
+      .dem_samples = any(.data[[".dem_samples"]]),
+      .groups = "drop"
+    )
+    skel <- multi_rows[
+      !duplicated(multi_rows$hc_id),
+      setdiff(names(multi_rows), demand_cols),
+      drop = FALSE
+    ]
+    multi_cells <- dplyr::left_join(skel, reduced, by = "hc_id")
+  } else {
+    multi_cells <- single_cells[0L, , drop = FALSE]
+  }
+  cells <- dplyr::bind_rows(single_cells, multi_cells)
 
   # `ci` routing: fold each `ci = FALSE` cell's demand into a coincident
-  # `ci = TRUE` cell (same `fit_id`, `distset`) when one exists.
+  # `ci = TRUE` cell (same `fit_id`, `distset`) when one exists. Expressed as a
+  # join - each `ci = FALSE` cell maps to the `first()` matching `ci = TRUE` cell
+  # - rather than a per-cell scan over the `ci = TRUE` cells.
   ci_true <- cells[cells$.dem_ci, , drop = FALSE]
   ci_false <- cells[!cells$.dem_ci, , drop = FALSE]
   route <- character(0L) # served `ci = FALSE` hc_id -> serving `ci = TRUE` hc_id
   if (nrow(ci_true) && nrow(ci_false)) {
-    for (j in seq_len(nrow(ci_false))) {
-      cf <- ci_false[j, , drop = FALSE]
-      hit <- which(
-        ci_true$fit_id == cf$fit_id & ci_true$distset == cf$distset
+    serving_lookup <- dplyr::summarise(
+      dplyr::group_by(
+        ci_true,
+        dplyr::across(dplyr::all_of(c(
+          "fit_id",
+          "distset"
+        )))
+      ),
+      serving = dplyr::first(.data[["hc_id"]]),
+      .groups = "drop"
+    )
+    routed <- dplyr::left_join(
+      ci_false[c("hc_id", "fit_id", "distset", demand_cols)],
+      serving_lookup,
+      by = c("fit_id", "distset")
+    )
+    served <- routed[!is.na(routed$serving), , drop = FALSE]
+    route <- rlang::set_names(served$serving, served$hc_id)
+    if (nrow(served)) {
+      # Fold each served cell's demand into its serving `ci = TRUE` cell, grouped
+      # by the serving hc_id so a cell served by several `ci = FALSE` members is
+      # folded once.
+      fold <- dplyr::summarise(
+        dplyr::group_by(served, dplyr::across(dplyr::all_of("serving"))),
+        add_prop = list(unique(unlist(.data[[".dem_prop"]]))),
+        add_em = list(unique(unlist(.data[[".dem_em"]]))),
+        add_samples = any(.data[[".dem_samples"]]),
+        .groups = "drop"
       )
-      if (length(hit)) {
-        i <- hit[[1L]]
-        route[cf$hc_id] <- ci_true$hc_id[[i]]
+      pos <- match(fold$serving, ci_true$hc_id)
+      for (k in seq_len(nrow(fold))) {
+        i <- pos[[k]]
         ci_true$.dem_prop[[i]] <- sort(unique(c(
           ci_true$.dem_prop[[i]],
-          cf$.dem_prop[[1L]]
+          fold$add_prop[[k]]
         )))
         ci_true$.dem_em[[i]] <- unique(c(
           ci_true$.dem_em[[i]],
-          cf$.dem_em[[1L]]
+          fold$add_em[[k]]
         ))
-        ci_true$.dem_samples[i] <- ci_true$.dem_samples[i] || cf$.dem_samples
+        ci_true$.dem_samples[i] <- ci_true$.dem_samples[i] ||
+          fold$add_samples[[k]]
       }
     }
   }
@@ -228,10 +280,7 @@ design_hc_assembly <- function(members, ref) {
   computed$ci <- computed$.dem_ci
   computed$samples <- computed$.dem_samples
   computed <- computed[,
-    setdiff(
-      names(computed),
-      c(".dem_prop", ".dem_em", ".dem_ci", ".dem_samples")
-    ),
+    setdiff(names(computed), demand_cols),
     drop = FALSE
   ]
   path_axes <- scenario_partition_axes(ref, "hc")$path
