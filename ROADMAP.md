@@ -43,24 +43,6 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- 😀🛠️ \[azure-summary\] Conveniently access the summary Parquet files
-  from Azure.
-- 😀⏳ \[scenario-option-vocabulary\] Retire the old umbrella term for
-  the genus **scenario option** (a **scenario axis** fans out into
-  tasks; a **scenario setting**, the renamed within-task species,
-  applies within each task), with always-qualified discipline (bare
-  “option”/“setting” never used as terms) and `crew` config settings
-  becoming **crew option**. Full-repo rename including archives,
-  `NEWS.md`, and file names (e.g. the `opts.rds` fixture); `GLOSSARY.md`
-  gains the *study* ⊃ *design* ⊃ *scenario* ⊃ *task* hierarchy plus a
-  DoE / Morris-White-Crowther (2019) mapping. BREAKING (cosmetic): the
-  `ci = FALSE` rejection error text. Settles the vocabulary before
-  `scenario-combine`’s collection layer accretes more on it.
-- ❗️⏳ \[hc-readout-aggregation\] Per-overlap hc readout aggregation:
-  reconcile design members that differ in the non-axis hc settings
-  (`union` `proportion`/`est_method`, `any` `ci`/`samples`) into shared
-  hc shards via per-cell demand reduction and `ci`-routing, instead of
-  aborting. No ssdtools refactor.
 - ❗️⏳ \[migrate-public-api\] Changed scope: retire legacy API; gates
   `cleanup-lecuyer`.
 - 📚⏳ \[readme\] **Blocked by migrate-public-api**. Update README and
@@ -144,6 +126,28 @@ artifacts yet is also queued, ready to propose.
 
 ## Done
 
+- ✅ 2026-06-19 \[azure-summary\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-19-azure-summary/)
+  — Conveniently access the summary Parquet files from Azure.
+- ✅ 2026-06-19 \[scenario-option-vocabulary\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-19-scenario-option-vocabulary/)
+  — Retire the old umbrella term for the genus **scenario option** (a
+  **scenario axis** fans out into tasks; a **scenario setting**, the
+  renamed within-task species, applies within each task), with
+  always-qualified discipline (bare “option”/“setting” never used as
+  terms) and `crew` config settings becoming **crew option**. Full-repo
+  rename including archives, `NEWS.md`, and file names (e.g. the
+  `opts.rds` fixture); `GLOSSARY.md` gains the *study* ⊃ *design* ⊃
+  *scenario* ⊃ *task* hierarchy plus a DoE /
+  Morris-White-Crowther (2019) mapping. BREAKING (cosmetic): the
+  `ci = FALSE` rejection error text. Settles the vocabulary before
+  `scenario-combine`’s collection layer accretes more on it.
+- ✅ 2026-06-19 \[hc-readout-aggregation\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-19-hc-readout-aggregation/)
+  — Per-overlap hc readout aggregation: reconcile design members that
+  differ in the non-axis hc settings (`union` `proportion`/`est_method`,
+  `any` `ci`/`samples`) into shared hc shards via per-cell demand
+  reduction and `ci`-routing, instead of aborting. No ssdtools refactor.
 - ✅ 2026-06-14 \[scenario-input-types\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-scenario-input-types/)
   — Accept the generator inputs
