@@ -84,6 +84,8 @@
 
 ## 4. PR
 
-- [x] 4.1 Force-push `claude/happy-curie-8te0ci` (rebased onto current `main`)
-      and update PR #154 (base now current `main`; description reflects the
-      reconciled scope)
+- [x] 4.1 ~~Force-push `claude/happy-curie-8te0ci` (rebased onto current
+      `main`) and update PR #154 (base now current `main`; description reflects
+      the reconciled scope)~~ **Superseded:** the change was archived on
+      `claude/epic-gauss-q2d25i` instead, so the original `claude/happy-curie-8te0ci` /
+      PR #154 reconciliation is moot.
