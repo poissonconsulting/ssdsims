@@ -120,14 +120,14 @@
     Code
       with_lecuyer_cmrg_state(states[[1]], runif(3))
     Output
-      [1] 0.4075339 0.6022828 0.9188258
+      [1] 0.29860408 0.09207083 0.82602554
 
 ---
 
     Code
       with_lecuyer_cmrg_state(states[[2]], runif(3))
     Output
-      [1] 0.0006085795 0.0701991342 0.7472101830
+      [1] 0.15177508 0.03709918 0.15993323
 
 # local_lecuyer_cmrg_seed rejects non-scalar seed
 

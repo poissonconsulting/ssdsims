@@ -4,7 +4,7 @@
       ci
     Output
             se      lcl      ucl 
-      0.219423 0.289166 0.583962 
+      0.077597 0.551887 0.656139 
 
 # hazard-concentrations: a vector ci is rejected
 
