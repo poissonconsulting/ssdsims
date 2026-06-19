@@ -579,7 +579,12 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
       cue = cue
     )
     if (is.null(upload)) {
-      return(tarchetypes::tar_map(values = shards, names = nms, step_target))
+      return(tarchetypes::tar_map(
+        values = shards,
+        names = nms,
+        descriptions = tidyselect::all_of(character(0)),
+        step_target
+      ))
     }
     upload_target <- targets::tar_target_raw(
       paste0("upload_", step),
@@ -594,6 +599,7 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
     tarchetypes::tar_map(
       values = shards,
       names = nms,
+      descriptions = tidyselect::all_of(character(0)),
       step_target,
       upload_target
     )

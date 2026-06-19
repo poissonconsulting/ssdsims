@@ -320,9 +320,29 @@ ssd_run_scenario_baseline <- function(scenario) {
 # (CLAUDE.md error-call-origin rule).
 task_primers <- function(tbl, step) {
   axes <- task_axes(step)
-  primers <- vector("list", nrow(tbl))
-  for (i in seq_len(nrow(tbl))) {
-    primers[[i]] <- task_primer(tbl[i, axes])
+  n <- nrow(tbl)
+  cols <- lapply(axes, function(a) tbl[[a]])
+  is_df <- vapply(cols, is.data.frame, logical(1L))
+  is_lst <- vapply(
+    cols,
+    function(v) is.list(v) && !is.data.frame(v),
+    logical(1L)
+  )
+  primers <- vector("list", n)
+  for (i in seq_len(n)) {
+    row <- vector("list", length(axes))
+    names(row) <- axes
+    for (j in seq_along(cols)) {
+      v <- cols[[j]]
+      row[[j]] <- if (is_df[[j]]) {
+        v[i, , drop = FALSE]
+      } else if (is_lst[[j]]) {
+        v[[i]]
+      } else {
+        v[[i]]
+      }
+    }
+    primers[[i]] <- task_primer(row)
   }
   primers
 }
