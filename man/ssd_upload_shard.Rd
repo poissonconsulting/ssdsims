@@ -2,31 +2,39 @@
 % Please edit documentation in R/upload.R
 \name{ssd_upload_shard}
 \alias{ssd_upload_shard}
-\title{Ship One Shard to an Upload Destination}
+\title{Ship Shard (or Summary) Parquet Files to an Upload Destination}
 \usage{
 ssd_upload_shard(path, upload)
 }
 \arguments{
-\item{path}{The local shard Parquet path (the \verb{<step>_step} target's value).}
+\item{path}{The local Parquet path(s) - a character vector of one or more
+files (a \verb{<step>_step} target's single shard path, or the \code{summary}
+target's path(s)).}
 
 \item{upload}{An upload destination from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or
 \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}.}
 }
 \value{
-The local \code{path} (a string), so the \verb{upload_<step>} target stays
-\code{format = "file"}.
+The local \code{path} (a character vector), unchanged, so the paired
+upload target stays \code{format = "file"}.
 }
 \description{
-A generic, dispatched on the upload object's class, that ships one shard
-Parquet to the destination and returns the \strong{local} \code{path} (so the paired
-\verb{upload_<step>} target stays \code{format = "file"}). For an Azure destination it
-uploads the file at \code{path} to
-\verb{<url>/<container>[/<prefix>]/<step>/<partition-path>/part.parquet} (the
-optional \code{prefix} subdirectory from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}});
-when the required credentials are \strong{absent} it aborts with a loud error -
-never a silent no-op - so intent to skip the network is only ever expressed
-by passing \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}. For a dry-run destination it performs no
-network I/O, records a skip, and returns the local \code{path}.
+A generic, dispatched on the upload object's class, that ships the local
+Parquet file(s) at \code{path} to the destination and returns the \strong{local}
+\code{path} unchanged (so the paired upload target stays \code{format = "file"}).
+The per-shard \verb{upload_<step>} targets pass one path; the \code{upload_summary}
+target passes the summary Parquet path(s) - \code{summary.parquet} plus, when the
+scenario retains the bootstrap draws, \code{summary-samples.parquet}. For an
+Azure destination it resolves the credentials \strong{once per call} and uploads
+each file to \verb{<url>/<container>[/<prefix>]/<key>}, where the key is the
+file's path below the layout-keyed results root (a shard's
+\verb{<step>/<partition-path>/part.parquet}, the summary's \code{summary.parquet} /
+\code{summary-samples.parquet}; the optional \code{prefix} subdirectory comes from
+\code{\link[=ssd_upload_azure]{ssd_upload_azure()}}); when the required credentials are \strong{absent} it
+aborts with a loud error - never a silent no-op - so intent to skip the
+network is only ever expressed by passing \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}. For a
+dry-run destination it performs no network I/O, records a skip per file,
+and returns the local \code{path}.
 }
 \section{Adding a backend}{
 

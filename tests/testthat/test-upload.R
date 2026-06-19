@@ -92,6 +92,10 @@ test_that("cloud-upload: a prefix routes the blob key and the read-back glob", {
     azure_glob(pre, "summary"),
     "az://results/study-2026/run-3/summary.parquet"
   )
+  expect_identical(
+    azure_glob(pre, "summary_samples"),
+    "az://results/study-2026/run-3/summary-samples.parquet"
+  )
 })
 
 test_that("cloud-upload: ssd_upload_dryrun() is classed and empty", {
@@ -187,6 +191,33 @@ test_that("cloud-upload: dry-run ssd_upload_shard() records a skip and returns t
   expect_identical(out, path)
 })
 
+test_that("cloud-upload: dry-run ssd_upload_shard() ships a vector of paths", {
+  paths <- c(tempfile(fileext = ".parquet"), tempfile(fileext = ".parquet"))
+  file.create(paths)
+  skips <- character(0L)
+  out <- withCallingHandlers(
+    ssd_upload_shard(paths, ssd_upload_dryrun()),
+    ssdsims_upload_skip = function(cnd) {
+      skips <<- c(skips, conditionMessage(cnd))
+      invokeRestart("muffleMessage")
+    }
+  )
+  # one skip per file, in order, and the input vector returned unchanged
+  expect_identical(out, paths)
+  expect_length(skips, 2L)
+  expect_match(skips[[1L]], paths[[1L]], fixed = TRUE)
+  expect_match(skips[[2L]], paths[[2L]], fixed = TRUE)
+})
+
+test_that("cloud-upload: ssd_upload_shard() validates path as a character vector", {
+  expect_snapshot(error = TRUE, {
+    ssd_upload_shard(character(0L), ssd_upload_dryrun())
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_upload_shard(1L, ssd_upload_dryrun())
+  })
+})
+
 test_that("cloud-upload: Azure ssd_upload_shard() with absent credentials fails loud", {
   local_mocked_bindings(azure_check_installed = function() invisible(NULL))
   path <- tempfile(fileext = ".parquet")
@@ -202,6 +233,12 @@ test_that("cloud-upload: Azure ssd_upload_shard() with absent credentials fails 
   expect_snapshot(error = TRUE, {
     ssd_upload_shard(path, upload)
   })
+  # a vector of paths aborts the same way, before any file is shipped (the
+  # credentials are resolved once per call, ahead of the loop)
+  expect_error(
+    ssd_upload_shard(c(path, path), upload),
+    "Azure credentials are incomplete"
+  )
 })
 
 test_that("cloud-upload: unknown upload object aborts on every generic", {
@@ -237,6 +274,10 @@ test_that("cloud-upload: ssd_open_uploaded() builds the expected Hive glob", {
   expect_identical(
     azure_glob(upload, "summary"),
     "az://results/summary.parquet"
+  )
+  expect_identical(
+    azure_glob(upload, "summary_samples"),
+    "az://results/summary-samples.parquet"
   )
 })
 
@@ -280,6 +321,52 @@ test_that("cloud-upload: ssd_summarise_uploaded() validates step and drop_sample
   })
   expect_snapshot(error = TRUE, {
     ssd_summarise_uploaded(upload, drop_samples = "yes")
+  })
+})
+
+test_that("cloud-upload: the summary steps pass validation on the read path", {
+  skip_if_not_installed("duckplyr")
+  upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+  withr::local_envvar(
+    SSDSIMS_AZURE_STORAGE_KEY = NA,
+    SSDSIMS_AZURE_STORAGE_SAS = NA,
+    SSDSIMS_AZURE_TENANT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_SECRET = NA
+  )
+  # the steps are accepted: the failure is the absent credentials (the live
+  # in-place read is a manual/lab step), not the step domain
+  expect_error(
+    ssd_open_uploaded(upload, step = "summary_samples"),
+    "Azure credentials are incomplete"
+  )
+  expect_error(
+    ssd_summarise_uploaded(
+      upload,
+      step = "summary_samples",
+      drop_samples = FALSE
+    ),
+    "Azure credentials are incomplete"
+  )
+  expect_error(
+    ssd_summarise_uploaded(upload, step = "summary"),
+    "Azure credentials are incomplete"
+  )
+})
+
+test_that("cloud-upload: the compact summary cannot pretend to carry samples", {
+  upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+  # no credentials set: the abort precedes any credential/extension work, so
+  # the message is the summary_samples pointer, not a credentials error
+  withr::local_envvar(
+    SSDSIMS_AZURE_STORAGE_KEY = NA,
+    SSDSIMS_AZURE_STORAGE_SAS = NA,
+    SSDSIMS_AZURE_TENANT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_ID = NA,
+    SSDSIMS_AZURE_CLIENT_SECRET = NA
+  )
+  expect_snapshot(error = TRUE, {
+    ssd_summarise_uploaded(upload, step = "summary", drop_samples = FALSE)
   })
 })
 
@@ -330,6 +417,49 @@ test_that("cloud-upload: a dry-run upload pairs one upload target per shard", {
     )
     expect_length(grep(paste0("^", step, "_step_"), names), nrow(shards))
     expect_length(grep(paste0("^upload_", step, "_"), names), nrow(shards))
+  }
+})
+
+find_target <- function(x, name) {
+  if (inherits(x, "tar_target")) {
+    if (identical(x$settings$name, name)) {
+      return(x)
+    }
+    return(NULL)
+  }
+  if (is.list(x)) {
+    for (el in x) {
+      hit <- find_target(el, name)
+      if (!is.null(hit)) {
+        return(hit)
+      }
+    }
+  }
+  NULL
+}
+
+test_that("cloud-upload: a non-NULL upload pairs the summary with one upload_summary", {
+  skip_if_not_installed("targets")
+  skip_if_not_installed("tarchetypes")
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 2L,
+    seed = 42L,
+    nrow = 6L,
+    dists = ssd_distset(lnorm = "lnorm")
+  )
+  # upload = NULL: no summary upload node
+  expect_false(
+    "upload_summary" %in% all_target_names(ssd_scenario_targets(scenario))
+  )
+  az <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+  for (upload in list(ssd_upload_dryrun(), az)) {
+    tg <- ssd_scenario_targets(scenario, upload = upload)
+    names <- all_target_names(tg)
+    expect_length(which(names == "upload_summary"), 1L)
+    target <- find_target(tg, "upload_summary")
+    expect_identical(target$settings$format, "file")
+    expect_identical(target$settings$error, "null")
   }
 })
 
@@ -412,6 +542,12 @@ test_that("cloud-upload: the step shard commands are identical across upload mod
     expect_identical(step_command(tg_null, step), step_command(tg_dry, step))
     expect_identical(step_command(tg_null, step), step_command(tg_az, step))
   }
+  # the summary fan-in's command is identical too: the upload mode adds the
+  # `upload_summary` pairing but never alters what (or where) the summary writes,
+  # so the summary file bytes are identical across the three modes
+  summary_command <- function(tg) find_target(tg, "summary")$command$expr
+  expect_identical(summary_command(tg_null), summary_command(tg_dry))
+  expect_identical(summary_command(tg_null), summary_command(tg_az))
 })
 
 # ---- content-hash skip on re-drive (task 4.6) ------------------------------
@@ -427,10 +563,11 @@ test_that("cloud-upload: a re-driven dry-run re-uploads no unchanged shard", {
   )
   withr::local_dir(dir)
   tar_make_local()
-  # the no-op upload targets ran the first time
+  # the no-op upload targets - the summary's included - ran the first time
   meta <- targets::tar_meta(fields = "error")
   upload_meta <- meta[grepl("^upload_", meta$name), ]
   expect_gt(nrow(upload_meta), 0L)
+  expect_true("upload_summary" %in% upload_meta$name)
   expect_true(all(is.na(upload_meta$error)))
 
   # re-drive with nothing changed: no upload target re-runs
@@ -458,7 +595,38 @@ test_that("cloud-upload: extending nsim uploads only the new shard", {
   progress <- targets::tar_progress()
   completed <- progress$name[progress$progress == "completed"]
   new_uploads <- grep("^upload_", completed, value = TRUE)
-  expect_gt(length(new_uploads), 0L)
-  # every re-run upload target is for the newly added sim (sim=2), not sim=1
-  expect_true(all(grepl("_2(_|$)", new_uploads)))
+  # the summary grew (its bytes changed), so it re-shipped
+  expect_true("upload_summary" %in% new_uploads)
+  # every re-run *shard* upload is for the newly added sim (sim=2), not sim=1
+  new_shard_uploads <- setdiff(new_uploads, "upload_summary")
+  expect_gt(length(new_shard_uploads), 0L)
+  expect_true(all(grepl("_2(_|$)", new_shard_uploads)))
+})
+
+test_that("cloud-upload: the summary ships and re-ships only when its bytes change", {
+  skip_targets()
+  dir <- withr::local_tempdir()
+  saveRDS(numeric_dataset(), file.path(dir, "data.rds"))
+  saveRDS(1L, file.path(dir, "nsim.rds"))
+  saveRDS(TRUE, file.path(dir, "samples.rds"))
+  file.copy(
+    test_path("fixtures", "cloud-upload-summary-targets.R"),
+    file.path(dir, "_targets.R")
+  )
+  withr::local_dir(dir)
+  tar_make_local()
+  # with samples = TRUE the summary target emits both files and upload_summary
+  # ships (dry-run: skip-records) the pair, returning the local paths unchanged
+  uploaded <- targets::tar_read(upload_summary)
+  expect_identical(
+    basename(uploaded),
+    c("summary.parquet", "summary-samples.parquet")
+  )
+  expect_true(all(file.exists(uploaded)))
+
+  # re-drive with nothing changed: the summary is not re-shipped
+  tar_make_local()
+  progress <- targets::tar_progress()
+  reran <- progress$name[progress$progress %in% c("completed", "started")]
+  expect_false("upload_summary" %in% reran)
 })

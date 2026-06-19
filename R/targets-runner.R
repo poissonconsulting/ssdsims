@@ -776,12 +776,17 @@ edge_block <- function(names) {
 #'
 #' @section Uploading shards to cloud storage (`upload`):
 #' `upload` is the **remote-destination sibling of `root`** (default `NULL`).
-#' With `upload = NULL` the pipeline contains **no** `upload_<step>` targets -
+#' With `upload = NULL` the pipeline contains **no** upload targets -
 #' the clean default DAG for a non-uploader. With a non-`NULL` upload object the
 #' factory pairs each step shard with an `upload_<step>` target in the same
 #' `tar_map` (`format = "file"`, `error = "null"`), so an unchanged shard is
 #' never re-uploaded (content-hash skip) and a per-shard upload failure isolates
-#' to its own branch. Pass [ssd_upload_dryrun()] for no-op upload targets that
+#' to its own branch; it also pairs the `summary` fan-in with a single
+#' `upload_summary` target (same `format = "file"`, `error = "null"` contract)
+#' that ships the combined summary Parquet - and, when the scenario sets
+#' `samples = TRUE`, the full `summary-samples.parquet` alongside it - with the
+#' same content-hash skip, so the summary re-ships only when its bytes change.
+#' Pass [ssd_upload_dryrun()] for no-op upload targets that
 #' reach no network (exercising the DAG shape offline / in CI) or
 #' [ssd_upload_azure()] to ship to Azure. The factory performs **no** network
 #' I/O and never runs the [ssd_test_upload()] probe: it only assembles the
@@ -791,7 +796,7 @@ edge_block <- function(names) {
 #' preflight before `tar_make()` to confirm credentials and connectivity up
 #' front; a missing credential still fails loud per-shard at upload time as a
 #' backstop. The per-task results are byte-identical across all three `upload`
-#' modes; only the presence and behaviour of the `upload_<step>` targets differ.
+#' modes; only the presence and behaviour of the upload targets differ.
 #'
 #' @inheritParams scenario_dataset
 #' @param ... Unused; must be empty. Its presence forces `root`, `upload`, and
@@ -1032,5 +1037,29 @@ ssd_scenario_targets <- function(
     format = "file"
   )
 
-  list(sample_targets, fit_targets, hc_targets, summary_target)
+  if (is.null(upload)) {
+    return(list(sample_targets, fit_targets, hc_targets, summary_target))
+  }
+
+  # The summary fan-in ships too: one `upload_summary` target (format = "file",
+  # error = "null") takes the `summary` target's value - `summary_path` or
+  # `c(summary_path, summary_samples_path)` - and ships the file(s) via
+  # `ssd_upload_shard()`. Depending on the `summary` *symbol* gives the
+  # content-hash skip for free: the summary is re-shipped only when its bytes
+  # change, mirroring the per-shard upload targets.
+  upload_summary_target <- targets::tar_target_raw(
+    "upload_summary",
+    rlang::expr(ssd_upload_shard(summary, !!upload)),
+    format = "file",
+    error = "null",
+    cue = cue
+  )
+
+  list(
+    sample_targets,
+    fit_targets,
+    hc_targets,
+    summary_target,
+    upload_summary_target
+  )
 }

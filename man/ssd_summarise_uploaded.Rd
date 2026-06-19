@@ -10,8 +10,10 @@ ssd_summarise_uploaded(upload, step = "hc", drop_samples = TRUE)
 \item{upload}{An upload destination from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or
 \code{\link[=ssd_upload_dryrun]{ssd_upload_dryrun()}}.}
 
-\item{step}{One of \code{"sample"}, \code{"fit"}, \code{"hc"} (the step layer to read), or
-\code{"summary"} (the uploaded combined summary).}
+\item{step}{One of \code{"sample"}, \code{"fit"}, \code{"hc"} (the step layer to read),
+\code{"summary"} (the uploaded compact summary), or \code{"summary_samples"} (the
+uploaded full summary retaining the \code{dists}/\code{samples} list-columns,
+shipped only when the scenario set \code{samples = TRUE}).}
 
 \item{drop_samples}{Flag (default \code{TRUE}): project away the heavy
 \code{dists}/\code{samples} list-columns for the analysis-ready summary. Pass \code{FALSE}
@@ -28,14 +30,20 @@ The cloud counterpart of \code{\link[=ssd_summarise]{ssd_summarise()}}: a generi
 upload object's class, that fans a step's \strong{uploaded} shards into a single
 \strong{lazy} \code{duckplyr} table read \strong{in place} (no download). For an Azure
 destination it reads the \verb{<container>[/<prefix>]/<step>/**/part.parquet} Hive
-glob via DuckDB's \code{azure} extension - resolving the \strong{same} front-end
+glob - or, for the combined summaries, the single blob \code{summary.parquet}
+(\code{step = "summary"}) / \code{summary-samples.parquet} (\code{step = "summary_samples"},
+shipped only when the scenario set \code{samples = TRUE}) - via DuckDB's \code{azure}
+extension - resolving the \strong{same} front-end
 secret as the write path and remapping it (with the account derived from
 \code{url}) into a DuckDB \code{azure} secret - and returns the union as a lazy
 \code{duckplyr} tibble (not collected, so the read and projection stay in DuckDB).
 By default it projects away the heavy \code{dists}/\code{samples} list-columns (the
 analysis-ready summary, mirroring \code{\link[=ssd_summarise]{ssd_summarise()}}); pass
 \code{drop_samples = FALSE} to keep them when the in-flight bootstrap \code{samples}
-are needed. The default method
+are needed. Because the uploaded compact summary physically lacks those
+columns, \code{step = "summary"} with \code{drop_samples = FALSE} aborts pointing at
+\code{step = "summary_samples"} rather than silently returning a sample-less
+table. The default method
 (an unknown destination) and the dry-run method both abort.
 }
 \examples{
