@@ -84,6 +84,6 @@
 
 ## 4. PR
 
-- [ ] 4.1 Force-push `claude/happy-curie-8te0ci` (rebased onto current `main`)
+- [x] 4.1 Force-push `claude/happy-curie-8te0ci` (rebased onto current `main`)
       and update PR #154 (base now current `main`; description reflects the
       reconciled scope)
