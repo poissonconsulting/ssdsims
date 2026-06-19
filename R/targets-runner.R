@@ -379,6 +379,14 @@ ssd_run_fit_step <- function(tasks, scenario, sample_dir, out_dir) {
 #'   `fit_id`, and `distset` name, stacked, and written as one Parquet at the
 #'   shard's partition path. A set whose members all dropped from the union fit
 #'   emits no rows for that cell (the survivor model).
+#'
+#'   The four non-axis hc readout settings (`proportion`, `est_method`, `ci`,
+#'   `samples`) default to the scenario slice, so the single-scenario and
+#'   standalone paths are byte-identical. When the shard's `tasks` carry per-task
+#'   `proportion`/`est_method`/`ci`/`samples` columns (the design factory's
+#'   per-overlap aggregated demand, [ssd_design_targets()]), each task is
+#'   summarised with its own cell's demand instead - the maximal readout set the
+#'   per-member summary then filters.
 #' @export
 #' @examples
 #' \donttest{
@@ -442,23 +450,33 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
     fit_cache[[fit_id]] <- decode_obj(blob)
     fit_cache[[fit_id]]
   }
+  # The four non-axis readouts default to the scenario slice (single-scenario /
+  # standalone paths, byte-identical) but are read per task when the shard's
+  # `tasks` carry them (the design factory's per-overlap aggregated demand).
+  has_demand <- all(
+    c("proportion", "est_method", "ci", "samples") %in% names(tasks)
+  )
   rows <- vector("list", nrow(tasks))
   for (i in seq_len(nrow(tasks))) {
     t <- tasks[i, ]
     fits <- decode_fit(t$fit_id)
+    proportion <- if (has_demand) t$proportion[[1L]] else scenario$hc$proportion
+    est_method <- if (has_demand) t$est_method[[1L]] else scenario$hc$est_method
+    ci <- if (has_demand) t$ci else scenario$hc$ci
+    samples <- if (has_demand) t$samples else scenario$hc$samples
     t_start <- utc_now()
     hc <- hc_data_task_primer(
       fits = fits,
-      proportion = scenario$hc$proportion,
-      ci = scenario$hc$ci,
+      proportion = proportion,
+      ci = ci,
       nboot = t$nboot,
-      est_method = scenario$hc$est_method,
+      est_method = est_method,
       ci_method = t$ci_method,
       parametric = t$parametric,
       # Resolve this task's `distset` name to its members and subset the union
       # fit to that pool (the subset happens in the shared primer chokepoint).
       dists = scenario_distset(scenario, t$distset),
-      samples = scenario$hc$samples,
+      samples = samples,
       seed = t$seed,
       primer = t$primer[[1L]]
     )
@@ -923,6 +941,7 @@ ssd_scenario_targets <- function(
         names = tidyselect::all_of(
           c("seed", scenario_partition_axes(scenario, step)$path)
         ),
+        descriptions = tidyselect::all_of(character(0)),
         step_target
       ))
     }
@@ -941,6 +960,7 @@ ssd_scenario_targets <- function(
       names = tidyselect::all_of(
         c("seed", scenario_partition_axes(scenario, step)$path)
       ),
+      descriptions = tidyselect::all_of(character(0)),
       step_target,
       upload_target
     )

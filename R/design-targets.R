@@ -40,40 +40,32 @@ union_shards <- function(members, step) {
 # Build the synthetic reference scenario that drives the slice/partition machinery
 # for a seed group. `data`, `min_pmix_fns`, and `distsets` may differ in
 # *coverage* across members (the ragged grid) and are unioned (consistent values
-# by the `ssd_design()` contract). The slice-determining *settings* - `nrow_max`,
-# the fit `dists` union, and the hc readouts - must be uniform within the group in
-# this (irregular-grid) build: a shared cell then has byte-identical content under
-# pure cell-union. (Per-overlap readout aggregation, which relaxes the hc-readout
-# requirement, is layered on separately.)
+# by the `ssd_design()` contract). The fit `dists` union is reconciled by fitting
+# the **design-wide union** of the members' `dists` once per fit cell, each member
+# subsetting via its `distset` hc axis (sound by distset-subset-invariance:
+# per-dist fits are independent, so fitting extra dists does not change a member's
+# subset hc). The four non-axis hc readouts (`proportion`, `est_method`, `ci`,
+# `samples`) MAY differ too and are reconciled by the per-overlap aggregation
+# (`design_hc_assembly()`); only the layout-shaping `nrow_max` (and `partition_by`,
+# enforced by `ssd_design()`) remain uniform-required here.
 design_reference_scenario <- function(members, call = rlang::caller_env()) {
   ref <- members[[1L]]
   for (i in seq_along(members)[-1L]) {
     s <- members[[i]]
     require_uniform(ref, s, "nrow_max", ref$nrow_max, s$nrow_max, call)
-    require_uniform(ref, s, "dists", ref$fit$dists, s$fit$dists, call)
-    require_uniform(ref, s, "ci", ref$hc$ci, s$hc$ci, call)
-    require_uniform(
-      ref,
-      s,
-      "proportion",
-      ref$hc$proportion,
-      s$hc$proportion,
-      call
-    )
-    require_uniform(
-      ref,
-      s,
-      "est_method",
-      ref$hc$est_method,
-      s$hc$est_method,
-      call
-    )
-    require_uniform(ref, s, "samples", ref$hc$samples, s$hc$samples, call)
   }
   ref$data <- union_named(lapply(members, function(s) s$data))
   ref$datasets <- names(ref$data)
   ref$min_pmix_fns <- union_named(lapply(members, function(s) s$min_pmix_fns))
   ref$hc$distsets <- union_named(lapply(members, function(s) s$hc$distsets))
+  # Fit the design-wide union of the members' `dists` once per fit cell; each
+  # member subsets it to its own `distset` members at the hc step. (The fit `dists`
+  # do not enter the `fit_id`, so a wider union shares the fit cells; the hc
+  # `distset` axis isolates each member's subset.)
+  ref$fit$dists <- sort(unique(unlist(
+    lapply(members, function(s) s$fit$dists),
+    use.names = FALSE
+  )))
   ref
 }
 
@@ -82,9 +74,7 @@ require_uniform <- function(ref, s, what, a, b, call = rlang::caller_env()) {
     chk::abort_chk(
       "Members sharing a seed must agree on `",
       what,
-      "` (per-overlap aggregation of differing hc readouts across members is ",
-      "not yet supported in `ssd_design_targets()` - see the ",
-      "`hc-readout-aggregation` change); scenario seed ",
+      "`; scenario seed ",
       ref$seed,
       " has divergent `",
       what,
@@ -107,6 +97,207 @@ union_named <- function(lists) {
     }
   }
   out
+}
+
+# Assemble the hc shard table for a seed group with per-overlap readout
+# aggregation, returning the shards plus, per member, the serving `hc_id`s and the
+# `proportion`/`est_method` row filters its summary applies.
+#
+# When every member shares the four non-axis hc settings
+# (`proportion`/`est_method`/`ci`/`samples`) the plain cell-union (`union_shards()`)
+# is byte-identical to a standalone run and cache-compatible with it, so it is
+# taken unchanged (no per-task demand columns, no filtering). Otherwise the
+# members' hc tasks are unioned, **tagged with each member's readout demand**, and
+# grouped by hc **cell** (`hc_id` = fit identity + `nboot`/`ci_method`/`parametric`
+# /`distset`). For each cell the demand is reduced - `union` `proportion`/
+# `est_method`, `any` `ci`/`samples` - and attached to the shard's tasks so the
+# runner computes the maximal readout set; the per-member summary then filters its
+# slice.
+#
+# `ci` NA-collapse routing: a `ci = FALSE` task collapses `nboot`/`ci_method`/
+# `parametric` to `NA`, so its cell never coincides with a `ci = TRUE` task's. The
+# point `est` is analytical and bootstrap-config-invariant, so a `ci = FALSE`
+# cell's demand is folded into a coincident `ci = TRUE` cell at the same
+# `(fit_id, distset)` when one exists (the `ci = FALSE` member then reads its
+# served `est` from that `ci = TRUE` shard); only otherwise is a standalone
+# `ci = FALSE` cell minted. The computed cells are therefore every `ci = TRUE`
+# cell plus the `ci = FALSE` cells with no overlapping `ci = TRUE` cell.
+design_hc_assembly <- function(members, ref) {
+  nms <- names(members)
+  readout_key <- function(s) {
+    list(s$hc$proportion, s$hc$est_method, s$hc$ci, s$hc$samples)
+  }
+  uniform <- all(vapply(
+    members[-1L],
+    function(s) identical(readout_key(s), readout_key(members[[1L]])),
+    logical(1L)
+  ))
+  est_method_varies <- !all(vapply(
+    members[-1L],
+    function(s) identical(s$hc$est_method, members[[1L]]$hc$est_method),
+    logical(1L)
+  ))
+  no_filter <- rlang::set_names(vector("list", length(nms)), nms)
+
+  if (uniform) {
+    # The slice carries the (uniform) readouts; the runner reads them - no
+    # per-task demand columns, byte-identical to the cell-union path.
+    return(list(
+      shards = union_shards(members, "hc"),
+      serving = lapply(members, function(s) ssd_scenario_hc_tasks(s)$hc_id),
+      proportion = no_filter,
+      est_method = no_filter
+    ))
+  }
+
+  # Flat, demand-tagged hc tasks across all members (the `(seed, primer)`
+  # decoration mirrors `scenario_shards()`; the readout demand is the same for
+  # every row of a member, as those are scenario-level settings).
+  flat <- list()
+  for (nm in nms) {
+    s <- members[[nm]]
+    tbl <- tibble::as_tibble(ssd_scenario_hc_tasks(s))
+    tbl$seed <- s$seed
+    tbl$primer <- task_primers(tbl, "hc")
+    tbl$.dem_prop <- rep(list(s$hc$proportion), nrow(tbl))
+    tbl$.dem_em <- rep(list(s$hc$est_method), nrow(tbl))
+    tbl$.dem_ci <- s$hc$ci
+    tbl$.dem_samples <- s$hc$samples
+    flat[[nm]] <- tbl
+  }
+  all_hc <- dplyr::bind_rows(flat)
+
+  # Reduce the demand per hc cell. The expected shape is **most cells touched by
+  # one member** (a singleton `hc_id`): such a cell needs no reduction - its row
+  # *is* the cell, its demand already final - so only the multi-member cells go
+  # through the grouped set-union, optimising the common case. (`all_hc` is
+  # R-resident - it carries list-columns like `primer` that cannot originate in
+  # DuckDB - so the cheap count stays in dplyr; see this change's
+  # `exploration/FINDINGS.md`.)
+  demand_cols <- c(".dem_prop", ".dem_em", ".dem_ci", ".dem_samples")
+  sizes <- dplyr::summarise(
+    dplyr::group_by(all_hc, dplyr::across(dplyr::all_of("hc_id"))),
+    .n = dplyr::n(),
+    .groups = "drop"
+  )
+  multi_ids <- sizes$hc_id[sizes$.n > 1L]
+  is_multi <- all_hc$hc_id %in% multi_ids
+  single_cells <- all_hc[!is_multi, , drop = FALSE]
+  multi_rows <- all_hc[is_multi, , drop = FALSE]
+  if (nrow(multi_rows)) {
+    # One grouped summarise does every multi-member set-union; the constant
+    # axis/primer columns rejoin from the first row of each `hc_id`.
+    reduced <- dplyr::summarise(
+      dplyr::group_by(multi_rows, dplyr::across(dplyr::all_of("hc_id"))),
+      .dem_prop = list(sort(unique(unlist(.data[[".dem_prop"]])))),
+      .dem_em = list(unique(unlist(.data[[".dem_em"]]))),
+      .dem_ci = any(.data[[".dem_ci"]]),
+      .dem_samples = any(.data[[".dem_samples"]]),
+      .groups = "drop"
+    )
+    skel <- multi_rows[
+      !duplicated(multi_rows$hc_id),
+      setdiff(names(multi_rows), demand_cols),
+      drop = FALSE
+    ]
+    multi_cells <- dplyr::left_join(skel, reduced, by = "hc_id")
+  } else {
+    multi_cells <- single_cells[0L, , drop = FALSE]
+  }
+  cells <- dplyr::bind_rows(single_cells, multi_cells)
+
+  # `ci` routing: fold each `ci = FALSE` cell's demand into a coincident
+  # `ci = TRUE` cell (same `fit_id`, `distset`) when one exists. Expressed as a
+  # join - each `ci = FALSE` cell maps to the `first()` matching `ci = TRUE` cell
+  # - rather than a per-cell scan over the `ci = TRUE` cells.
+  ci_true <- cells[cells$.dem_ci, , drop = FALSE]
+  ci_false <- cells[!cells$.dem_ci, , drop = FALSE]
+  route <- character(0L) # served `ci = FALSE` hc_id -> serving `ci = TRUE` hc_id
+  if (nrow(ci_true) && nrow(ci_false)) {
+    serving_lookup <- dplyr::summarise(
+      dplyr::group_by(
+        ci_true,
+        dplyr::across(dplyr::all_of(c(
+          "fit_id",
+          "distset"
+        )))
+      ),
+      serving = dplyr::first(.data[["hc_id"]]),
+      .groups = "drop"
+    )
+    routed <- dplyr::left_join(
+      ci_false[c("hc_id", "fit_id", "distset", demand_cols)],
+      serving_lookup,
+      by = c("fit_id", "distset")
+    )
+    served <- routed[!is.na(routed$serving), , drop = FALSE]
+    route <- rlang::set_names(served$serving, served$hc_id)
+    if (nrow(served)) {
+      # Fold each served cell's demand into its serving `ci = TRUE` cell, grouped
+      # by the serving hc_id so a cell served by several `ci = FALSE` members is
+      # folded once.
+      fold <- dplyr::summarise(
+        dplyr::group_by(served, dplyr::across(dplyr::all_of("serving"))),
+        add_prop = list(unique(unlist(.data[[".dem_prop"]]))),
+        add_em = list(unique(unlist(.data[[".dem_em"]]))),
+        add_samples = any(.data[[".dem_samples"]]),
+        .groups = "drop"
+      )
+      pos <- match(fold$serving, ci_true$hc_id)
+      for (k in seq_len(nrow(fold))) {
+        i <- pos[[k]]
+        ci_true$.dem_prop[[i]] <- sort(unique(c(
+          ci_true$.dem_prop[[i]],
+          fold$add_prop[[k]]
+        )))
+        ci_true$.dem_em[[i]] <- unique(c(
+          ci_true$.dem_em[[i]],
+          fold$add_em[[k]]
+        ))
+        ci_true$.dem_samples[i] <- ci_true$.dem_samples[i] ||
+          fold$add_samples[[k]]
+      }
+    }
+  }
+  unserved_false <- ci_false[
+    !(ci_false$hc_id %in% names(route)),
+    ,
+    drop = FALSE
+  ]
+  computed <- dplyr::bind_rows(ci_true, unserved_false)
+
+  # Per member: the serving hc_id of each of its tasks (own cell, or the routed
+  # `ci = TRUE` cell for a served `ci = FALSE` task), and its readout filters.
+  serving <- lapply(members, function(s) {
+    ids <- ssd_scenario_hc_tasks(s)$hc_id
+    mapped <- route[ids]
+    ifelse(is.na(mapped), ids, unname(mapped))
+  })
+
+  # Expose the per-task demand under the runner's argument names and shard it.
+  computed$proportion <- computed$.dem_prop
+  computed$est_method <- computed$.dem_em
+  computed$ci <- computed$.dem_ci
+  computed$samples <- computed$.dem_samples
+  computed <- computed[,
+    setdiff(names(computed), demand_cols),
+    drop = FALSE
+  ]
+  path_axes <- scenario_partition_axes(ref, "hc")$path
+  grp <- dplyr::group_by(computed, dplyr::across(dplyr::all_of(path_axes)))
+  shards <- dplyr::group_keys(grp)
+  shards$tasks <- dplyr::group_split(grp, .keep = TRUE)
+
+  list(
+    shards = tibble::as_tibble(shards),
+    serving = serving,
+    proportion = lapply(members, function(s) s$hc$proportion),
+    est_method = if (est_method_varies) {
+      lapply(members, function(s) s$hc$est_method)
+    } else {
+      no_filter
+    }
+  )
 }
 
 #' Combine Per-scenario Summaries into One Design Summary
@@ -149,22 +340,36 @@ ssd_summarise_design <- function(summaries, path) {
 #' Summarise One Design Member from the Shared hc Shards
 #'
 #' The per-scenario fan-in used by [ssd_design_targets()]: reads the (shared) hc
-#' shards under `dir_hc`, filters to the member's hc task identities (`hc_ids`),
-#' projects out the `dists`/`samples` list-columns at the DuckDB level, and writes
-#' the member's compact summary at `path`. Filtering by `hc_id` selects exactly the
-#' member's rows from the shards it shares with other members of the design. The
-#' read, filter, projection, and write all happen inside DuckDB (never collecting
-#' into R), mirroring [ssd_summarise()].
+#' shards under `dir_hc`, filters to the member's **serving** hc task identities
+#' (`hc_ids`) - its own cells, plus the coincident `ci = TRUE` cell serving each of
+#' its `ci = FALSE` cells under [ssd_design_targets()]'s `ci` routing - projects out
+#' the `dists`/`samples` list-columns at the DuckDB level, and writes the member's
+#' compact summary at `path`. When the design aggregates differing readouts into a
+#' shared cell, `proportion`/`est_method` narrow the maximal computed set back to
+#' the member's requested readout rows. The read, filter, projection, and write all
+#' happen inside DuckDB (never collecting into R), mirroring [ssd_summarise()].
 #'
 #' @param dir_hc The (shared) `hc` results root of the member's seed group.
-#' @param hc_ids The member's hc task identities (`hc_id`s) to keep.
+#' @param hc_ids The member's serving hc task identities (`hc_id`s) to keep.
 #' @param path The output Parquet path for the member's compact summary (the
 #'   `format = "file"` contract).
+#' @param proportion Optional `proportion` values to keep (the member's requested
+#'   proportions when the design aggregates a wider union into the shared cell);
+#'   `NULL` (the default) keeps every proportion.
+#' @param est_method Optional `est_method` values to keep (the member's requested
+#'   methods when the design aggregates a wider union); `NULL` (the default) keeps
+#'   every method.
 #' @return `path`.
 #' @seealso [ssd_design_targets()], [ssd_summarise_design()], [ssd_summarise()].
 #' @export
 #' @autoglobal
-ssd_summarise_member <- function(dir_hc, hc_ids, path) {
+ssd_summarise_member <- function(
+  dir_hc,
+  hc_ids,
+  path,
+  proportion = NULL,
+  est_method = NULL
+) {
   local_duckplyr_config()
   glob <- file.path(dir_hc, "**", "part.parquet")
   hc_shards <- duckplyr::read_parquet_duckdb(
@@ -172,6 +377,14 @@ ssd_summarise_member <- function(dir_hc, hc_ids, path) {
     options = list(hive_partitioning = FALSE)
   )
   hc <- dplyr::filter(hc_shards, hc_id %in% hc_ids)
+  keep_prop <- proportion
+  keep_em <- est_method
+  if (!is.null(keep_prop)) {
+    hc <- dplyr::filter(hc, proportion %in% keep_prop)
+  }
+  if (!is.null(keep_em)) {
+    hc <- dplyr::filter(hc, est_method %in% keep_em)
+  }
   hc <- dplyr::select(hc, -dplyr::any_of(c("dists", "samples")))
   ssd_write_parquet(hc, path)
   path
@@ -209,6 +422,31 @@ ssd_summarise_member <- function(dir_hc, hc_ids, path) {
 #' Members may use different `seed`s (e.g. repeating the exploration under several
 #' master seeds); they land under separate `seed=` trees and share nothing.
 #' Members sharing a `seed` share their coincident cells (common random numbers).
+#'
+#' @section Per-overlap hc readout aggregation:
+#' Members of a seed group MAY differ in the four **non-axis** hc readout settings
+#' (`proportion`, `est_method`, `ci`, `samples`) and in their fit `dists` union;
+#' only the layout-shaping `nrow_max` and `partition_by` stay uniform-required.
+#' Differing readouts are reconciled **per shared hc cell, over only the members
+#' whose task set contains that cell** - `proportion`/`est_method` are `union`-ed
+#' and `ci`/`samples` reduced with `any()` - so the cell computes the maximal
+#' readout set in one shard and each member's summary filters its slice. A cell one
+#' member reaches keeps that member's (smaller) demand, so the expensive bootstrap
+#' runs only where a `ci = TRUE` member has tasks. The draw-shaping hc axes
+#' (`nboot`/`ci_method`/`parametric`/`distset`) are **not** aggregated - they stay
+#' cell axes (in the per-task primer), so byte-identity holds: a member's per-task
+#' results equal its standalone-run results.
+#'
+#' Because a `ci = FALSE` task collapses `nboot`/`ci_method`/`parametric` to `NA`,
+#' its cell never coincides with a `ci = TRUE` task's. The point `est` is analytical
+#' and bootstrap-config-invariant, so a `ci = FALSE` cell is **served by a
+#' coincident `ci = TRUE` shard** at the same `(fit, distset)` when one exists (the
+#' computed hc shards are every `ci = TRUE` cell plus the `ci = FALSE` cells with no
+#' overlapping `ci = TRUE` shard); a `ci = TRUE` member's confidence interval still
+#' uses its own cell's `(nboot, ci_method, parametric)` primer. Differing fit
+#' `dists` unions are reconciled by fitting the **design-wide union** once per fit
+#' cell, each member subsetting via its `distset` axis (distset-subset-invariance),
+#' so members differing only in `distset` coverage share every `sample`/`fit` shard.
 #'
 #' @param design An `ssdsims_design` from [ssd_design()].
 #' @param ... Unused; must be empty (forces `root`/`upload`/`cue` to be named).
@@ -270,7 +508,9 @@ ssd_design_targets <- function(
       member_info[[nm]] <- list(
         hc_dir = group$hc_dir,
         hc_names = group$hc_names,
-        hc_ids = ssd_scenario_hc_tasks(members[[nm]])$hc_id,
+        hc_ids = group$serving[[nm]],
+        proportion = group$proportion[[nm]],
+        est_method = group$est_method[[nm]],
         summary_path = file.path(root, paste0("summary-", nm, ".parquet"))
       )
     }
@@ -283,7 +523,13 @@ ssd_design_targets <- function(
       paste0("summary_", nm),
       rlang::expr({
         !!edge_block(unname(info$hc_names))
-        ssd_summarise_member(!!info$hc_dir, !!info$hc_ids, !!info$summary_path)
+        ssd_summarise_member(
+          !!info$hc_dir,
+          !!info$hc_ids,
+          !!info$summary_path,
+          proportion = !!info$proportion,
+          est_method = !!info$est_method
+        )
       }),
       format = "file"
     )
@@ -333,7 +579,12 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
       cue = cue
     )
     if (is.null(upload)) {
-      return(tarchetypes::tar_map(values = shards, names = nms, step_target))
+      return(tarchetypes::tar_map(
+        values = shards,
+        names = nms,
+        descriptions = tidyselect::all_of(character(0)),
+        step_target
+      ))
     }
     upload_target <- targets::tar_target_raw(
       paste0("upload_", step),
@@ -348,6 +599,7 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
     tarchetypes::tar_map(
       values = shards,
       names = nms,
+      descriptions = tidyselect::all_of(character(0)),
       step_target,
       upload_target
     )
@@ -385,7 +637,12 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
   )
   fit_names <- shard_cell_names(fit_targets, fit_shards, ref, "fit")
 
-  hc_shards <- union_shards(members, "hc")
+  # The hc step reconciles members that differ in the four non-axis readouts
+  # (`proportion`/`est_method`/`ci`/`samples`) by per-overlap aggregation, so its
+  # shard build (and the per-member serving ids / readout filters) come from
+  # `design_hc_assembly()` rather than the plain cell-union.
+  hc <- design_hc_assembly(members, ref)
+  hc_shards <- hc$shards
   hc_shards$seed <- ref$seed
   hc_shards$.parents <- child_parent_edges(hc_shards, ref, "fit", fit_names)
   hc_shards$.slice <- purrr::map(hc_shards$tasks, function(tasks) {
@@ -404,6 +661,9 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
   list(
     targets = list(sample_targets, fit_targets, hc_targets),
     hc_dir = hc_dir,
-    hc_names = hc_names
+    hc_names = hc_names,
+    serving = hc$serving,
+    proportion = hc$proportion,
+    est_method = hc$est_method
   )
 }
