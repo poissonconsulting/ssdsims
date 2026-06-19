@@ -111,7 +111,7 @@ remote-destination sibling of `root` on
   : Probe an Upload Destination's Credentials and Connectivity
 
 - [`ssd_upload_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_shard.md)
-  : Ship One Shard to an Upload Destination
+  : Ship Shard (or Summary) Parquet Files to an Upload Destination
 
 - [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md)
   : Open Uploaded Results for Querying, In Place

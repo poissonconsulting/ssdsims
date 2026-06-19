@@ -142,8 +142,16 @@ names_dry <- target_names(targets_dry)
 grep("^upload_", names_dry, value = TRUE)
 #> [1] "upload_sample_42_ccme_boron_1_TRUE" "upload_sample_42_ccme_boron_2_TRUE"
 #> [3] "upload_fit_42_ccme_boron_1_6_FALSE" "upload_fit_42_ccme_boron_2_6_FALSE"
-#> [5] "upload_hc_42_ccme_boron_1"          "upload_hc_42_ccme_boron_2"
+#> [5] "upload_hc_42_ccme_boron_1"          "upload_hc_42_ccme_boron_2"         
+#> [7] "upload_summary"
 ```
+
+The **summary ships too**: alongside the per-shard pairs, the single
+`upload_summary` target (visible above) takes the `summary` fan-in’s
+output and ships the combined `summary.parquet` — and, when the scenario
+sets `samples = TRUE`, the full `summary-samples.parquet` alongside it.
+Like the shard pairs it is content-hashed, so the summary re-ships only
+when its bytes change.
 
 Contrast `upload = NULL` — the default — which emits **no** upload nodes
 at all:
@@ -170,7 +178,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/RtmpiGq5gX/ssdsims-shards-41ec6ed672a5/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/RtmpQNG9FR/ssdsims-shards-4147153e5599/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 
@@ -249,6 +257,23 @@ ssd_summarise_uploaded(upload, step = "hc") # analysis-ready summary tibble
 ssd_summarise_uploaded(upload, step = "hc", drop_samples = FALSE) # keep samples
 ```
 
+The **uploaded summaries** are addressable the same way:
+`step = "summary"` is the combined compact summary the `upload_summary`
+target shipped, and `step = "summary_samples"` the full summary
+retaining the `dists`/`samples` list-columns (uploaded only when the
+scenario set `samples = TRUE`). Because the compact blob physically
+lacks those columns,
+`ssd_summarise_uploaded(upload, "summary", drop_samples = FALSE)` aborts
+and points you at `step = "summary_samples"` instead of silently
+returning a sample-less table:
+
+``` r
+
+ssd_open_uploaded(upload, step = "summary") |> dplyr::count()
+ssd_summarise_uploaded(upload, step = "summary") # the uploaded compact summary
+ssd_summarise_uploaded(upload, step = "summary_samples", drop_samples = FALSE)
+```
+
 ## What to pay attention to
 
 > **Important**
@@ -277,7 +302,10 @@ ssd_summarise_uploaded(upload, step = "hc", drop_samples = FALSE) # keep samples
 >   re-driven
 >   [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
 >   that rebuilt nothing uploads nothing; a partial extension uploads
->   only the new shards.
+>   only the new shards. The same holds for `upload_summary`: the
+>   summary re-ships only when its bytes change (e.g. after a grown
+>   run), and `summary-samples.parquet` exists at the destination only
+>   when the scenario set `samples = TRUE`.
 > - **The read-back is in place.**
 >   [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md)
 >   predicate-pushes straight against blob storage — it does **not**

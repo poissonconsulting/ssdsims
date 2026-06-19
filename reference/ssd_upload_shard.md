@@ -1,18 +1,25 @@
-# Ship One Shard to an Upload Destination
+# Ship Shard (or Summary) Parquet Files to an Upload Destination
 
-A generic, dispatched on the upload object's class, that ships one shard
-Parquet to the destination and returns the **local** `path` (so the
-paired `upload_<step>` target stays `format = "file"`). For an Azure
-destination it uploads the file at `path` to
-`<url>/<container>[/<prefix>]/<step>/<partition-path>/part.parquet` (the
-optional `prefix` subdirectory from
+A generic, dispatched on the upload object's class, that ships the local
+Parquet file(s) at `path` to the destination and returns the **local**
+`path` unchanged (so the paired upload target stays `format = "file"`).
+The per-shard `upload_<step>` targets pass one path; the
+`upload_summary` target passes the summary Parquet path(s) -
+`summary.parquet` plus, when the scenario retains the bootstrap draws,
+`summary-samples.parquet`. For an Azure destination it resolves the
+credentials **once per call** and uploads each file to
+`<url>/<container>[/<prefix>]/<key>`, where the key is the file's path
+below the layout-keyed results root (a shard's
+`<step>/<partition-path>/part.parquet`, the summary's `summary.parquet`
+/ `summary-samples.parquet`; the optional `prefix` subdirectory comes
+from
 [`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md));
 when the required credentials are **absent** it aborts with a loud
 error - never a silent no-op - so intent to skip the network is only
 ever expressed by passing
 [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md).
-For a dry-run destination it performs no network I/O, records a skip,
-and returns the local `path`.
+For a dry-run destination it performs no network I/O, records a skip per
+file, and returns the local `path`.
 
 ## Usage
 
@@ -24,7 +31,9 @@ ssd_upload_shard(path, upload)
 
 - path:
 
-  The local shard Parquet path (the `<step>_step` target's value).
+  The local Parquet path(s) - a character vector of one or more files (a
+  `<step>_step` target's single shard path, or the `summary` target's
+  path(s)).
 
 - upload:
 
@@ -35,8 +44,8 @@ ssd_upload_shard(path, upload)
 
 ## Value
 
-The local `path` (a string), so the `upload_<step>` target stays
-`format = "file"`.
+The local `path` (a character vector), unchanged, so the paired upload
+target stays `format = "file"`.
 
 ## Adding a backend
 
@@ -76,6 +85,6 @@ path <- tempfile(fileext = ".parquet")
 file.create(path)
 #> [1] TRUE
 ssd_upload_shard(path, ssd_upload_dryrun())
-#> Dry-run upload: skipped "/tmp/Rtmp0oqbZJ/file3c6230536323.parquet".
-#> [1] "/tmp/Rtmp0oqbZJ/file3c6230536323.parquet"
+#> Dry-run upload: skipped "/tmp/RtmpVMnDel/file3bb33d4a9d2d.parquet".
+#> [1] "/tmp/RtmpVMnDel/file3bb33d4a9d2d.parquet"
 ```

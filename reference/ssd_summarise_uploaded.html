@@ -3,26 +3,38 @@
 upload object's class, that fans a step's uploaded shards into a single
 lazy duckplyr table read in place (no download). For an Azure
 destination it reads the &amp;lt;container&amp;gt;[/&amp;lt;prefix&amp;gt;]/&amp;lt;step&amp;gt;/**/part.parquet Hive
-glob via DuckDB's azure extension - resolving the same front-end
+glob - or, for the combined summaries, the single blob summary.parquet
+(step = &quot;summary&quot;) / summary-samples.parquet (step = &quot;summary_samples&quot;,
+shipped only when the scenario set samples = TRUE) - via DuckDB's azure
+extension - resolving the same front-end
 secret as the write path and remapping it (with the account derived from
 url) into a DuckDB azure secret - and returns the union as a lazy
 duckplyr tibble (not collected, so the read and projection stay in DuckDB).
 By default it projects away the heavy dists/samples list-columns (the
 analysis-ready summary, mirroring ssd_summarise()); pass
 drop_samples = FALSE to keep them when the in-flight bootstrap samples
-are needed. The default method
+are needed. Because the uploaded compact summary physically lacks those
+columns, step = &quot;summary&quot; with drop_samples = FALSE aborts pointing at
+step = &quot;summary_samples&quot; rather than silently returning a sample-less
+table. The default method
 (an unknown destination) and the dry-run method both abort."><meta property="og:description" content="The cloud counterpart of ssd_summarise(): a generic, dispatched on the
 upload object's class, that fans a step's uploaded shards into a single
 lazy duckplyr table read in place (no download). For an Azure
 destination it reads the &amp;lt;container&amp;gt;[/&amp;lt;prefix&amp;gt;]/&amp;lt;step&amp;gt;/**/part.parquet Hive
-glob via DuckDB's azure extension - resolving the same front-end
+glob - or, for the combined summaries, the single blob summary.parquet
+(step = &quot;summary&quot;) / summary-samples.parquet (step = &quot;summary_samples&quot;,
+shipped only when the scenario set samples = TRUE) - via DuckDB's azure
+extension - resolving the same front-end
 secret as the write path and remapping it (with the account derived from
 url) into a DuckDB azure secret - and returns the union as a lazy
 duckplyr tibble (not collected, so the read and projection stay in DuckDB).
 By default it projects away the heavy dists/samples list-columns (the
 analysis-ready summary, mirroring ssd_summarise()); pass
 drop_samples = FALSE to keep them when the in-flight bootstrap samples
-are needed. The default method
+are needed. Because the uploaded compact summary physically lacks those
+columns, step = &quot;summary&quot; with drop_samples = FALSE aborts pointing at
+step = &quot;summary_samples&quot; rather than silently returning a sample-less
+table. The default method
 (an unknown destination) and the dry-run method both abort."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
@@ -72,14 +84,20 @@ are needed. The default method
 upload object's class, that fans a step's <strong>uploaded</strong> shards into a single
 <strong>lazy</strong> <code>duckplyr</code> table read <strong>in place</strong> (no download). For an Azure
 destination it reads the <code>&lt;container&gt;[/&lt;prefix&gt;]/&lt;step&gt;/**/part.parquet</code> Hive
-glob via DuckDB's <code>azure</code> extension - resolving the <strong>same</strong> front-end
+glob - or, for the combined summaries, the single blob <code>summary.parquet</code>
+(<code>step = "summary"</code>) / <code>summary-samples.parquet</code> (<code>step = "summary_samples"</code>,
+shipped only when the scenario set <code>samples = TRUE</code>) - via DuckDB's <code>azure</code>
+extension - resolving the <strong>same</strong> front-end
 secret as the write path and remapping it (with the account derived from
 <code>url</code>) into a DuckDB <code>azure</code> secret - and returns the union as a lazy
 <code>duckplyr</code> tibble (not collected, so the read and projection stay in DuckDB).
 By default it projects away the heavy <code>dists</code>/<code>samples</code> list-columns (the
 analysis-ready summary, mirroring <code><a href="ssd_summarise.html">ssd_summarise()</a></code>); pass
 <code>drop_samples = FALSE</code> to keep them when the in-flight bootstrap <code>samples</code>
-are needed. The default method
+are needed. Because the uploaded compact summary physically lacks those
+columns, <code>step = "summary"</code> with <code>drop_samples = FALSE</code> aborts pointing at
+<code>step = "summary_samples"</code> rather than silently returning a sample-less
+table. The default method
 (an unknown destination) and the dry-run method both abort.</p>
     </div>
 
@@ -98,8 +116,10 @@ are needed. The default method
 
 
 <dt id="arg-step">step<a class="anchor" aria-label="anchor" href="#arg-step"></a></dt>
-<dd><p>One of <code>"sample"</code>, <code>"fit"</code>, <code>"hc"</code> (the step layer to read), or
-<code>"summary"</code> (the uploaded combined summary).</p></dd>
+<dd><p>One of <code>"sample"</code>, <code>"fit"</code>, <code>"hc"</code> (the step layer to read),
+<code>"summary"</code> (the uploaded compact summary), or <code>"summary_samples"</code> (the
+uploaded full summary retaining the <code>dists</code>/<code>samples</code> list-columns,
+shipped only when the scenario set <code>samples = TRUE</code>).</p></dd>
 
 
 <dt id="arg-drop-samples">drop_samples<a class="anchor" aria-label="anchor" href="#arg-drop-samples"></a></dt>

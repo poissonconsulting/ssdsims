@@ -173,13 +173,17 @@ in `_targets.R` before calling this - the target set is unchanged.
 ## Uploading shards to cloud storage (`upload`)
 
 `upload` is the **remote-destination sibling of `root`** (default
-`NULL`). With `upload = NULL` the pipeline contains **no**
-`upload_<step>` targets - the clean default DAG for a non-uploader. With
-a non-`NULL` upload object the factory pairs each step shard with an
-`upload_<step>` target in the same `tar_map` (`format = "file"`,
-`error = "null"`), so an unchanged shard is never re-uploaded
-(content-hash skip) and a per-shard upload failure isolates to its own
-branch. Pass
+`NULL`). With `upload = NULL` the pipeline contains **no** upload
+targets - the clean default DAG for a non-uploader. With a non-`NULL`
+upload object the factory pairs each step shard with an `upload_<step>`
+target in the same `tar_map` (`format = "file"`, `error = "null"`), so
+an unchanged shard is never re-uploaded (content-hash skip) and a
+per-shard upload failure isolates to its own branch; it also pairs the
+`summary` fan-in with a single `upload_summary` target (same
+`format = "file"`, `error = "null"` contract) that ships the combined
+summary Parquet - and, when the scenario sets `samples = TRUE`, the full
+`summary-samples.parquet` alongside it - with the same content-hash
+skip, so the summary re-ships only when its bytes change. Pass
 [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
 for no-op upload targets that reach no network (exercising the DAG shape
 offline / in CI) or
@@ -198,7 +202,7 @@ and on each worker) stays side-effect free. Run
 to confirm credentials and connectivity up front; a missing credential
 still fails loud per-shard at upload time as a backstop. The per-task
 results are byte-identical across all three `upload` modes; only the
-presence and behaviour of the `upload_<step>` targets differ.
+presence and behaviour of the upload targets differ.
 
 ## See also
 

@@ -4,7 +4,10 @@ uploaded results so a user can read them back and confirm they landed
 right after an upload (TARGETS-DESIGN.md section 6.1). For an Azure
 destination it returns a lazy duckplyr/DuckDB table over the Hive glob
 &amp;lt;container&amp;gt;[/&amp;lt;prefix&amp;gt;]/&amp;lt;step&amp;gt;/**/part.parquet (honouring the destination's
-optional prefix subdirectory), read in place via DuckDB's azure
+optional prefix subdirectory) - or, for the combined summaries, the single
+blob summary.parquet (step = &quot;summary&quot;) / summary-samples.parquet
+(step = &quot;summary_samples&quot;, shipped only when the scenario set
+samples = TRUE) - read in place via DuckDB's azure
 extension (predicate pushdown straight against blob storage - no
 download), composable with dplyr verbs so a one-line
 ssd_open_uploaded(upload, step) |&amp;gt; dplyr::count() is the immediate
@@ -18,7 +21,10 @@ uploaded results so a user can read them back and confirm they landed
 right after an upload (TARGETS-DESIGN.md section 6.1). For an Azure
 destination it returns a lazy duckplyr/DuckDB table over the Hive glob
 &amp;lt;container&amp;gt;[/&amp;lt;prefix&amp;gt;]/&amp;lt;step&amp;gt;/**/part.parquet (honouring the destination's
-optional prefix subdirectory), read in place via DuckDB's azure
+optional prefix subdirectory) - or, for the combined summaries, the single
+blob summary.parquet (step = &quot;summary&quot;) / summary-samples.parquet
+(step = &quot;summary_samples&quot;, shipped only when the scenario set
+samples = TRUE) - read in place via DuckDB's azure
 extension (predicate pushdown straight against blob storage - no
 download), composable with dplyr verbs so a one-line
 ssd_open_uploaded(upload, step) |&amp;gt; dplyr::count() is the immediate
@@ -77,7 +83,10 @@ be read directly."></head><body>
 right after an upload (<code>TARGETS-DESIGN.md</code> section 6.1). For an Azure
 destination it returns a <strong>lazy</strong> <code>duckplyr</code>/DuckDB table over the Hive glob
 <code>&lt;container&gt;[/&lt;prefix&gt;]/&lt;step&gt;/**/part.parquet</code> (honouring the destination's
-optional <code>prefix</code> subdirectory), read <strong>in place</strong> via DuckDB's <code>azure</code>
+optional <code>prefix</code> subdirectory) - or, for the combined summaries, the single
+blob <code>summary.parquet</code> (<code>step = "summary"</code>) / <code>summary-samples.parquet</code>
+(<code>step = "summary_samples"</code>, shipped only when the scenario set
+<code>samples = TRUE</code>) - read <strong>in place</strong> via DuckDB's <code>azure</code>
 extension (predicate pushdown straight against blob storage - <strong>no
 download</strong>), composable with <code>dplyr</code> verbs so a one-line
 <code>ssd_open_uploaded(upload, step) |&gt; dplyr::count()</code> is the immediate
@@ -104,8 +113,10 @@ be read directly.</p>
 
 
 <dt id="arg-step">step<a class="anchor" aria-label="anchor" href="#arg-step"></a></dt>
-<dd><p>One of <code>"sample"</code>, <code>"fit"</code>, <code>"hc"</code> (the step layer to read), or
-<code>"summary"</code> (the uploaded combined summary).</p></dd>
+<dd><p>One of <code>"sample"</code>, <code>"fit"</code>, <code>"hc"</code> (the step layer to read),
+<code>"summary"</code> (the uploaded compact summary), or <code>"summary_samples"</code> (the
+uploaded full summary retaining the <code>dists</code>/<code>samples</code> list-columns,
+shipped only when the scenario set <code>samples = TRUE</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">
