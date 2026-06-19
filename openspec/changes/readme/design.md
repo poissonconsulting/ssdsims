@@ -1,85 +1,114 @@
 ## Context
 
 The README is the first thing a visitor sees on GitHub and the body of the
-pkgdown home page (rendered from `README.md`). The current `README.Rmd` is
-~40 lines: badges, a one-line goal, and a single "Installation" block that is
-actually a usage example chaining `ssd_sim_data()` → `ssd_fit_dists_sims()` →
-`ssd_hc_sims()` plus an `ssd_run_scenario()` one-liner. It predates the
-declarative-scenario + `targets` shard pipeline (and the designs that combine
-scenarios) that is now the package's centre of gravity (see `DESCRIPTION`,
-`_pkgdown.yml`, `TARGETS-DESIGN.md`, and the vignettes). The build contract is the standard `usethis` one:
-`README.md` is generated from `README.Rmd` and must be re-knit after edits.
+pkgdown home page (rendered from `README.md`). `README.md` is generated from
+`README.Rmd` (the standard `usethis` contract; provenance comment retained).
+The package ships seven vignettes — `defining-a-scenario`, `sharded-pipeline`,
+`scenario-to-design`, `cluster-pipeline`, `cloud-upload`, `cost-estimation`,
+`cost-analysis` — rendered to the `gh-pages` branch.
 
-Constraints from `AGENTS.md`: Commonwealth (UK/AU) English in prose; minimal
-diffs; keep the badges and provenance comment; only use already-exported
-functions and packages the package already depends on or suggests.
+A comprehensive review (cross-cutting skim of the rendered site + a per-vignette
+deep read against `R/` and `man/`) established the current state:
+
+- Vignettes are individually accurate and current — all on the declarative
+  `ssd_scenario_data()` path, no stale `ssd_data(`, signatures match code,
+  reference coverage complete, rendered HTML clean (the one "error" is an
+  intentional validation demo in `defining-a-scenario`).
+- The gaps are structural: no get-started overview; no `vignette()`-style links
+  anywhere; `cost-estimation` is a dead-end; missing "See also" sections; a
+  handful of accuracy/style nits.
+- The README alone still leads with the **legacy step functions**.
+
+Decision input from the change's scoping: **assume the legacy API is gone** —
+document only the declarative + `targets` path. The legacy step functions
+(`ssd_sim_data`/`ssd_fit_dists_sims`/`ssd_hc_sims`/`ssd_run_scenario`) are the
+"Simulation pipeline" reference group that `migrate-public-api` /
+`cleanup-lecuyer` retire; the docs should read as if that has happened.
+
+Constraints (`AGENTS.md`): Commonwealth (UK/AU) English; minimal diffs; only
+already-exported functions and existing deps in examples.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Make the README accurately convey what `ssdsims` is for and where to start.
-- Fix the mislabelled "Installation" block (add a real install section).
-- Surface the declarative scenario and `targets` pipeline, with links to the
-  existing vignettes, without duplicating their content.
-- Keep examples minimal, evaluated, and reproducible so `README.md` regenerates
-  cleanly.
+- A coherent, navigable documentation set with a clear on-ramp and reading
+  order.
+- A README and a `vignette("ssdsims")` that present the package on the
+  declarative + `targets` path.
+- `vignette()`-style cross-links package-wide; function links to the reference.
+- Close the review findings (dead-end, See-also, accuracy/style nits).
 
 **Non-Goals:**
-- No changes to R source, exported API, tests, or dependencies.
-- No new vignettes or `_pkgdown.yml` changes.
-- Not a full tutorial — the README teases and links; the articles teach.
-- No new figures/plots in `man/figures/` (keeps the diff and build light).
+- No changes to R behaviour, exported API, tests, or dependencies (the only
+  `R/` edit is a roxygen wording fix in `cost-estimate.R`).
+- Not rewriting the (correct) technical content of the existing vignettes —
+  only navigation, links, framing, and the specific nits.
+- Not removing the legacy functions themselves (that is
+  `migrate-public-api`/`cleanup-lecuyer`); this change stops *documenting* them.
+- No new figures/plots.
 
 ## Decisions
 
-- **Keep `README.Rmd` as the single source, re-knit `README.md`.** Matches the
-  repo's existing provenance comment and `usethis` convention. Alternative —
-  hand-editing `README.md` — was rejected because it would drift from
-  `README.Rmd` and break the documented contract. Regenerate with
-  `devtools::build_readme()`.
-- **Reframe the overview around the declarative scenario + `targets` pipeline,
-  with the immediate pipeline as a quick start.** The immediate pipeline is the
-  easiest to show in a few lines, so it stays as the runnable example; the
-  scenario path is introduced as a short, possibly `eval=FALSE` teaser (using
-  `ssd_scenario_data()` / `ssd_define_scenario()` / `ssd_scenario_tasks()`) plus
-  a link to `defining-a-scenario`. Alternative — leading with a full scenario →
-  shards → `targets` example — was rejected as too heavy for a README and
-  redundant with the vignettes.
-- **Add a compact capability map with article links rather than prose
-  paragraphs per area.** A short bulleted map mirrors the `_pkgdown.yml`
-  reference sections (immediate pipeline; scenarios & task expansion; targets
-  pipeline; designs that combine scenarios; cloud upload; cost
-  estimation/analysis; reproducible RNG) and routes readers to the right
-  vignette (`defining-a-scenario`, `sharded-pipeline`, `scenario-to-design`,
-  `cluster-pipeline`, `cloud-upload`, `cost-estimation`, `cost-analysis`). Keeps
-  the README scannable.
-- **Replace the fake "Installation" heading with a genuine one** showing
-  `pak::pak("poissonconsulting/ssdsims")` (and a `remotes` alternative), then
-  move usage under a separate "Usage"/"Quick start" heading.
-- **Keep examples deterministic.** Retain the `withr::with_seed(42, ...)`
-  wrapper already used so printed output is stable across re-knits.
+- **Document only the declarative + `targets` path; treat legacy as gone.**
+  Eliminates the README's exposure to `migrate-public-api`'s numeric churn (the
+  declarative path is already on dqrng) and makes the README consistent with the
+  vignettes, which already use it. Alternative — keep a legacy quick-start and
+  re-knit after the engine swap — was rejected as documenting a doomed surface
+  and inviting a second pass.
+- **`vignettes/ssdsims.qmd` as the get-started article.** pkgdown treats a
+  vignette named after the package as the navbar "Get started" link, so
+  `vignette("ssdsims")` becomes the natural entry point. It is an *overview/map*,
+  not a tutorial: problem statement, the two-track map (build-and-run vs.
+  predict-and-measure cost), recommended reading order, and a short declarative
+  on-ramp that then points into `defining-a-scenario`. Slots first in
+  `_pkgdown.yml` `articles:`.
+- **Bidirectional README ↔ get-started, with the overview as the spine.** The
+  README's quick-start is the 30-second on-ramp and links to `vignette("ssdsims")`;
+  the overview carries the map and reading order and links back out to each
+  track. Neither is the sole source; the overview is the hub.
+- **`vignette()`-style links package-wide.** Convert every vignette→vignette
+  link to `vignette("name")` and every function mention to its reference page.
+  This satisfies the roadmap and (unlike hardcoded `.html`/absolute URLs)
+  resolves in local builds and installed-package help. Done across all seven
+  vignettes, the overview, and the README.
+- **Re-knit/re-render as the build step.** `devtools::build_readme()` for
+  `README.md`; `pkgdown`/`quarto` for the site. Output is generated, not
+  hand-edited.
 
 ## Risks / Trade-offs
 
-- **Example drift / build failure** (an example stops running as the API
-  evolves) → keep examples minimal and use only stable exported functions;
-  re-knit and skim the output before committing so failures surface at build
-  time, not for a visitor.
-- **README and vignettes diverge** (the README re-explains scenario mechanics
-  that the articles own) → the README only links to articles for depth; it does
-  not restate their content.
-- **Heavier knit / longer CI** if examples fit many distributions → keep
-  `nsim`/`nrow` small (as today) so the knit stays fast.
+- **Legacy functions still exist when this lands** (migrate/cleanup not yet
+  archived) → dropping the "Simulation pipeline" reference group from
+  `_pkgdown.yml` while the functions are still exported would trip
+  `pkgdown::check_pkgdown()` (undocumented exports). Mitigation: keep the
+  reference *index* complete until the functions are removed; this change only
+  stops *featuring* legacy in narrative/examples. Final removal of the reference
+  group is coordinated with `cleanup-lecuyer`.
+- **Roadmap "blocked by migrate-public-api"** → with legacy undocumented, the
+  README no longer depends on the engine swap's numerics. The residual coupling
+  is conceptual (legacy should be gone), so the block can be relaxed to a soft
+  ordering note. Mitigation: flag in the roadmap thread rather than silently
+  diverging.
+- **Cross-link conversion churns all seven vignettes** → larger diff, but
+  mechanical and low-risk; verify with a full site render that every
+  `vignette()`/reference link resolves.
+- **Re-render drift** (machine-specific timings in cost vignettes won't
+  byte-match) → expected for live-run vignettes; not introduced by this change.
 
 ## Migration Plan
 
-Not applicable — documentation-only change. The deploy step is re-knitting
-`README.md` from `README.Rmd`; rollback is reverting both files. No data,
-schema, or API migration.
+Documentation-only. Deploy = re-knit `README.md` and re-render the site;
+rollback = revert the touched files. No data/schema/API migration. Sequence:
+README + overview first (they define the framing), then the package-wide
+cross-link conversion, then the per-vignette nit fixes, then a full render to
+verify links and output.
 
 ## Open Questions
 
-- Whether to show the scenario teaser as evaluated output or `eval = FALSE`.
-  Default: evaluate it if it stays fast and deterministic; otherwise mark
-  `eval = FALSE` and link to `defining-a-scenario`. Resolve during
-  implementation by knitting and checking timing.
+- **When to drop the legacy "Simulation pipeline" reference group from
+  `_pkgdown.yml`** — now (risking `check_pkgdown()` while functions still exist)
+  or deferred to `cleanup-lecuyer`. Leaning deferred; this change stops
+  featuring legacy but leaves the reference index intact until removal.
+- **Whether to update `ROADMAP.md` line 44** to relax the
+  `migrate-public-api` block given the legacy-gone framing. Offer to the user;
+  not done unilaterally.
