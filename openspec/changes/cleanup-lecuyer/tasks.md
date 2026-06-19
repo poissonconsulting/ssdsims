@@ -1,6 +1,6 @@
 ## 1. Prerequisites and inventory
 
-- [ ] 1.1 Confirm `mixed-code-lockin` is in place and that the replacement public surface is shipped (`ssd_define_scenario()` / `ssd_scenario_data()` / `ssd_gen()` / `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`); spot-check that `ssd_gen()` covers each generator input the monolith accepted (`fitdists`, `tmbfit`, function, function-name string) so retirement leaves no capability gap.
+- [ ] 1.1 Confirm the replacement public surface is shipped (`ssd_define_scenario()` / `ssd_scenario_data()` / `ssd_gen()` / `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`); spot-check that `ssd_gen()` covers each generator input the monolith accepted (`fitdists`, `tmbfit`, function, function-name string) so retirement leaves no capability gap.
 - [ ] 1.2 Repo-wide search recording every reference to the removal targets (`ssd_run_scenario`, `ssd_sim_data`, `ssd_fit_dists_sims`, `ssd_hc_sims`, `run_scenario`, `slice_sample_state`, `do_call_seed`, `fit_dists_state`, `fit_dists_seed`, `hc_state`, `hc_seed`, `*_lecuyer_cmrg_*`, `get_lecuyer_cmrg_stream_state(s)`, `parallel::nextRNGStream`/`nextRNGSubStream`) across `R/`, `tests/`, `vignettes/`, `scripts/`, `man/`, `GLOSSARY.md`, `TARGETS-DESIGN.md` — this is the gate for §6.
 
 ## 2. Drop the monolith runners (callers → callees)

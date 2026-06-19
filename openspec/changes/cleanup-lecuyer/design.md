@@ -22,7 +22,6 @@ The original plan retired the legacy surface in two steps: `migrate-public-api` 
 - The comprehensive README / vignette overhaul — that stays the separate `readme` change (now gated on this one rather than on `migrate-public-api`). This change only ensures docs do not reference removed functions and point at the canonical surface.
 - Any change to the dqrng path's behaviour, the task tables, the step runners, or the sharded pipeline — they are untouched.
 - Providing a deprecation shim — there is no shim; the functions are removed outright (acceptable pre-1.0).
-- The `mixed-code-lockin` shard-pinning recipe itself (a separate prerequisite); this change only relies on it so that deleting source does not force a wholesale shard rebuild.
 
 ## Decisions
 
@@ -49,14 +48,14 @@ Folding in is reflected in the backlog: the `migrate-public-api` change director
 
 - **A live caller of a "dead" symbol is missed, breaking the build** → The D2 repo-wide symbol search (across `R/`, `tests/`, `vignettes/`, `scripts/` kept after D5) is a hard gate; `R CMD check` must pass clean before push.
 - **A monolith capability turns out not to be fully covered by the declarative surface** → Verified: `ssd_gen()` (`scenario-input-types`) covers the `fitdists`/`tmbfit`/function/character generators, `ssd_scenario_data()` covers data frames, and the step runners cover sample/fit/hc; if a gap surfaces during apply, stop and raise it rather than deleting a still-needed capability.
-- **Deleting source invalidates cached `targets` shards on existing runs** → Mitigated by the `mixed-code-lockin` prerequisite (the `tar_cue(depend = FALSE)` shard-pinning recipe): the removed code is not part of any shard's command closure, so pinned shards stay valid; unpinned stores would rebuild, which is acceptable for a source-only cleanup.
+- **Deleting source invalidates cached `targets` shards on existing runs** → Not a risk: the removed code is not part of any shard's command closure (the step runners `ssd_run_sample_step()` / `ssd_run_fit_step()` / `ssd_run_hc_step()` never reference the monolith or L'Ecuyer functions), so it never enters a step target's dependency hash and its deletion cannot invalidate cached shards. This is why no `mixed-code-lockin` shard-pin is required — the change was originally gated on it out of caution, but the closure analysis shows the gate is unnecessary.
 - **External user scripts still call `ssd_run_scenario()` / `ssd_sim_data()`** → Accepted pre-1.0 BREAKING; the `NEWS.md` entry and each spec delta's `Migration` note point at the replacement runners.
 - **`R/internal.R` left as an empty stub** → D2 deletes the file if pruning empties it, avoiding a dangling collation entry.
 - **Removing `migrate-public-api` orphans incidental references** → `scenario-option-vocabulary` names it only in a non-normative "concurrent changes that may conflict" list; left as-is (another in-flight change owns those files). The normative roadmap / design references are corrected (D6).
 
 ## Migration Plan
 
-1. Confirm the prerequisite landed: `mixed-code-lockin` (shard pinning), and that the replacement surface (`ssd_define_scenario()` / `ssd_scenario_data()` / `ssd_gen()` / `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`) is shipped (it is — archived).
+1. Confirm the replacement surface (`ssd_define_scenario()` / `ssd_scenario_data()` / `ssd_gen()` / `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`) is shipped (it is — archived). No other prerequisite.
 2. Delete in D2 order; regenerate `NAMESPACE` and `man/` with `devtools::document()`.
 3. Delete the D4 test suites; rewrite any incidental L'Ecuyer test-setup onto dqrng.
 4. Remove the D5 scripts; strip L'Ecuyer prose from `GLOSSARY.md` / vignettes / `TARGETS-DESIGN.md` and re-point docs at the replacement surface.

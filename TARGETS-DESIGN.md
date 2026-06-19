@@ -2533,5 +2533,7 @@ shape: `shard-failure-survival` is unblocked by `cluster-pipeline`, and
 (`task-tables` + `manifest` archived); `shard-completeness-assert` waits on
 `shard-failure-survival`, and `cleanup-lecuyer` — which retires the legacy
 public API and folds in the former `migrate-public-api` — carries artifacts
-and waits only on `mixed-code-lockin`. Priorities and queue position for all
-of these live in [`ROADMAP.md`](ROADMAP.md).
+and is unblocked (the replacement surface is shipped; the removed code is in
+no shard's command closure, so no `mixed-code-lockin` pin is needed).
+Priorities and queue position for all of these live in
+[`ROADMAP.md`](ROADMAP.md).
