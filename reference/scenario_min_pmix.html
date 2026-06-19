@@ -101,12 +101,13 @@ captured environments).</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">1L</span>, seed <span class="op">=</span> <span class="fl">42L</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">scenario_min_pmix</span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"ssd_min_pmix"</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> function(n) {</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   chk_whole_number(n)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   chk_gt(n)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   max(min(3 / n, 0.5), 0.1)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> function (n) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> {</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     chk_whole_number(n)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     chk_gt(n)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     max(min(3/n, 0.5), 0.1)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x55d18b3b74c0&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x56482e3528e8&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: namespace:ssdtools&gt;</span>
 </code></pre></div>
     </div>
@@ -119,7 +120,7 @@ captured environments).</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.9000.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>
