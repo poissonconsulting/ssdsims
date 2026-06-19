@@ -1,6 +1,6 @@
 ## 1. Prerequisites and inventory
 
-- [ ] 1.1 Confirm `migrate-public-api` has landed (declarative + sharded surface is canonical) and `mixed-code-lockin` is in place; read the landed `migrate-public-api` to see whether the monolith functions were un-exported or already deleted (resolves the design Open Question).
+- [ ] 1.1 Confirm `mixed-code-lockin` is in place and that the replacement public surface is shipped (`ssd_define_scenario()` / `ssd_scenario_data()` / `ssd_gen()` / `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`); spot-check that `ssd_gen()` covers each generator input the monolith accepted (`fitdists`, `tmbfit`, function, function-name string) so retirement leaves no capability gap.
 - [ ] 1.2 Repo-wide search recording every reference to the removal targets (`ssd_run_scenario`, `ssd_sim_data`, `ssd_fit_dists_sims`, `ssd_hc_sims`, `run_scenario`, `slice_sample_state`, `do_call_seed`, `fit_dists_state`, `fit_dists_seed`, `hc_state`, `hc_seed`, `*_lecuyer_cmrg_*`, `get_lecuyer_cmrg_stream_state(s)`, `parallel::nextRNGStream`/`nextRNGSubStream`) across `R/`, `tests/`, `vignettes/`, `scripts/`, `man/`, `GLOSSARY.md`, `TARGETS-DESIGN.md` — this is the gate for §6.
 
 ## 2. Drop the monolith runners (callers → callees)
@@ -27,7 +27,8 @@
 
 - [ ] 5.1 Remove the monolith-only reference/exploration scripts: `scripts/example.R`, `example2.R`, `example-expanded.R`, `example-expanded-grids.R`, `example-expanded-grids-independent.R`, `experiment-substream-restart.R`, `reprex-trace.R`, `reprex-trace_reprex.md`.
 - [ ] 5.2 Strip residual L'Ecuyer prose from `GLOSSARY.md` (the `_state`/`state =` misnomer notes), the vignettes, and `TARGETS-DESIGN.md` cross-references; keep the dqrng / primer terminology.
-- [ ] 5.3 Add a `NEWS.md` entry flagging the BREAKING removal of `ssd_run_scenario()`, `ssd_sim_data()`, `ssd_fit_dists_sims()`, `ssd_hc_sims()`, and the four `*_lecuyer_cmrg_*` helpers, pointing at `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`.
+- [ ] 5.3 Re-point any vignette / docs prose that references the removed functions at the canonical surface (`ssd_define_scenario()` + `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`); leave the comprehensive README/vignette overhaul to the `readme` change.
+- [ ] 5.4 Add a `NEWS.md` entry flagging the BREAKING removal of `ssd_run_scenario()`, `ssd_sim_data()`, `ssd_fit_dists_sims()`, `ssd_hc_sims()`, and the four `*_lecuyer_cmrg_*` helpers, pointing at `ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`.
 
 ## 6. Verify and finalize
 

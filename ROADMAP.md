@@ -40,8 +40,7 @@ is also queued, ready to propose.
 - 😀🛠️ [azure-summary] Conveniently access the summary Parquet files from Azure.
 - 😀⏳ [scenario-option-vocabulary] Retire the old umbrella term for the genus **scenario option** (a **scenario axis** fans out into tasks; a **scenario setting**, the renamed within-task species, applies within each task), with always-qualified discipline (bare "option"/"setting" never used as terms) and `crew` config settings becoming **crew option**. Full-repo rename including archives, `NEWS.md`, and file names (e.g. the `opts.rds` fixture); `GLOSSARY.md` gains the *study* ⊃ *design* ⊃ *scenario* ⊃ *task* hierarchy plus a DoE / Morris-White-Crowther (2019) mapping. BREAKING (cosmetic): the `ci = FALSE` rejection error text. Settles the vocabulary before `scenario-combine`'s collection layer accretes more on it.
 - ❗️⏳ [hc-readout-aggregation] Per-overlap hc readout aggregation: reconcile design members that differ in the non-axis hc settings (`union` `proportion`/`est_method`, `any` `ci`/`samples`) into shared hc shards via per-cell demand reduction and `ci`-routing, instead of aborting. No ssdtools refactor.
-- ❗️⏳ [migrate-public-api] Changed scope: retire legacy API; gates `cleanup-lecuyer`.
-- 📚⏳ [readme] **Blocked by migrate-public-api**. Update README and integrate in the rest of the documentation. Create vignette("ssdsims") . Perform comprehensive review of all vignettes for content, output artifacts, and style. Use vignette(...) style links everywhere.
+- 📚⏳ [readme] **Blocked by cleanup-lecuyer**. Update README and integrate in the rest of the documentation. Create vignette("ssdsims") . Perform comprehensive review of all vignettes for content, output artifacts, and style. Use vignette(...) style links everywhere.
 
 ## Next
 
@@ -51,6 +50,7 @@ is also queued, ready to propose.
 - ❗️ [shard-failure-survival] §6.2 partial-failure survival: a bad task yields a shorter shard (not an abort), `summary` unions the survivors. Ready to propose (prereq `cluster-pipeline` landed).
 - 📚 [cluster-controller] Run the controller on a long-running SLURM job.
 - 😀 [azure-open-performance] Analyze performance of `ssd_open_uploaded()` for many files.
+- ❗️⏳ [cleanup-lecuyer] Retire the legacy public API and remove the dead code behind it: drop the monolith runners (`ssd_run_scenario()` / `ssd_sim_data()` families, `ssd_fit_dists_sims()`, `ssd_hc_sims()`) and the L'Ecuyer-CMRG RNG (`lecuyer-cmrg-seed.R` + the `*_state`/`*_seed` shims), leaving one RNG path (dqrng) and one runner family (`ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`). **Folds in the former `migrate-public-api`** (migration is moot once the monolith is deleted, not ported). Proposed; blocked only on `mixed-code-lockin`. Gates `readme`.
 
 ## Later
 
@@ -58,7 +58,6 @@ is also queued, ready to propose.
 
 - ❗️ [shard-completeness-assert] §6.2 / §8.4 — a downstream `assert_<step>` target per shard comparing actual vs expected row counts, driving the fix-and-refresh loop. Blocked on `shard-failure-survival`.
 - 😀 [mixed-code-lockin] §8.3 — document and runtime-test `tar_cue(depend = FALSE)` as a shard-pinning recipe plus the §8.4 forced-refresh loop. Ready (prereq `shard-atomic-rewrite` landed).
-- 🐢 [cleanup-lecuyer] Remove the L'Ecuyer-CMRG helpers and `_seed` shims once the public step functions are off the L'Ecuyer path. Blocked on `migrate-public-api` + `mixed-code-lockin`.
 - 😀⏳ [error-call-origin] Audit user-facing functions so validation errors report the calling function as the origin, never an internal frame. Proposed; independent.
 - 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Also establish `print()` methods for all objects. Independent.
 - 😀 [canonical-call-sites] Sweep the remaining public constructors (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments are passed in signature order, as the `ssd_define_scenario()` pass already did. Independent.

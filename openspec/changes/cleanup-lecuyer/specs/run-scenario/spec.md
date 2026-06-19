@@ -1,7 +1,7 @@
 ## REMOVED Requirements
 
 ### Requirement: Unified scenario dispatch
-**Reason**: The monolith `ssd_run_scenario()` in-memory runner is retired by the targets redesign; once `migrate-public-api` makes the declarative + sharded surface canonical, the generic and its five S3 methods are unreachable and are deleted with the rest of the monolith path.
+**Reason**: The monolith `ssd_run_scenario()` in-memory runner is retired by the targets redesign. The declarative + sharded surface is already canonical and covers every input source, so the generic and its five S3 methods are redundant and are deleted with the rest of the monolith path.
 **Migration**: Define a scenario with `ssd_define_scenario()` (or `ssd_scenario_data()` / `ssd_gen()` for the generator inputs this dispatch previously accepted) and run it with `ssd_run_scenario_baseline()` (in-memory) or `ssd_run_scenario_shards()` (Hive-Parquet sharded).
 
 ### Requirement: End-to-end pipeline semantics
