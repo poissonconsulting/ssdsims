@@ -169,7 +169,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmphGsx1l/ssdsims-shards-420f16bd4736
+#>   dir: /tmp/RtmpVaX64x/ssdsims-shards-42465c3a58be
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -344,6 +344,40 @@ and the design fans in one combined `summary.parquet` with a `scenario`
 identity column. Growing a one-off run into a design is a one-line
 switch; see [“From a Single Scenario to a
 Design”](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md).
+
+### Comparing settings in one design
+
+A design also serves the *secondary* use of comparing **settings** at
+the same cells. Members of a seed group may differ in the four non-axis
+hc readouts (`proportion`, `est_method`, `ci`, `samples`) and in their
+fit `dists` union — only the layout-shaping `nrow_max` and
+`partition_by` must agree. Differing readouts are reconciled **per
+shared hc cell**: `proportion`/`est_method` are unioned and
+`ci`/`samples` reduced with [`any()`](https://rdrr.io/r/base/any.html),
+so the cell computes the maximal readout set in one shard and each
+member’s summary filters its own slice.
+
+This is what makes a cheap-versus-expensive comparison economical. Put a
+broad `ci = FALSE` member beside a narrow `ci = TRUE` one — say a
+point-estimate sweep over many sims and a confidence-interval check over
+a handful:
+
+``` r
+
+broad  <- ssd_define_scenario(data, nsim = 1000L, seed = 42L, ci = FALSE)
+narrow <- ssd_define_scenario(data, nsim = 10L,  seed = 42L, ci = TRUE, nboot = 1000L)
+ssd_design_targets(ssd_design(broad = broad, narrow = narrow))
+```
+
+The expensive bootstrap runs **only** on the 10 overlapping sims (where
+`narrow` has tasks); the other 990 stay `ci = FALSE`. The `ci = FALSE`
+member reads its (analytical, ci-invariant) point `est` for the
+overlapping sims straight from the `ci = TRUE` shards rather than
+recomputing them. Members differing only in their `distset` coverage
+likewise share every `sample`/`fit` shard (one design-wide union fit,
+each member subsetting via its `distset` axis) and differ only in their
+`distset` hc cells. In every case a member’s per-task results are
+byte-identical to its standalone run.
 
 ## See also
 

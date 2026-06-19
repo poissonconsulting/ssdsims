@@ -125,6 +125,33 @@ master seeds); they land under separate <code>seed=</code> trees and share nothi
 Members sharing a <code>seed</code> share their coincident cells (common random numbers).</p>
     </div>
     <div class="section level2">
+    <h2 id="per-overlap-hc-readout-aggregation">Per-overlap hc readout aggregation<a class="anchor" aria-label="anchor" href="#per-overlap-hc-readout-aggregation"></a></h2>
+
+
+<p>Members of a seed group MAY differ in the four <strong>non-axis</strong> hc readout settings
+(<code>proportion</code>, <code>est_method</code>, <code>ci</code>, <code>samples</code>) and in their fit <code>dists</code> union;
+only the layout-shaping <code>nrow_max</code> and <code>partition_by</code> stay uniform-required.
+Differing readouts are reconciled <strong>per shared hc cell, over only the members
+whose task set contains that cell</strong> - <code>proportion</code>/<code>est_method</code> are <code>union</code>-ed
+and <code>ci</code>/<code>samples</code> reduced with <code><a href="https://rdrr.io/r/base/any.html" class="external-link">any()</a></code> - so the cell computes the maximal
+readout set in one shard and each member's summary filters its slice. A cell one
+member reaches keeps that member's (smaller) demand, so the expensive bootstrap
+runs only where a <code>ci = TRUE</code> member has tasks. The draw-shaping hc axes
+(<code>nboot</code>/<code>ci_method</code>/<code>parametric</code>/<code>distset</code>) are <strong>not</strong> aggregated - they stay
+cell axes (in the per-task primer), so byte-identity holds: a member's per-task
+results equal its standalone-run results.</p>
+<p>Because a <code>ci = FALSE</code> task collapses <code>nboot</code>/<code>ci_method</code>/<code>parametric</code> to <code>NA</code>,
+its cell never coincides with a <code>ci = TRUE</code> task's. The point <code>est</code> is analytical
+and bootstrap-config-invariant, so a <code>ci = FALSE</code> cell is <strong>served by a
+coincident <code>ci = TRUE</code> shard</strong> at the same <code>(fit, distset)</code> when one exists (the
+computed hc shards are every <code>ci = TRUE</code> cell plus the <code>ci = FALSE</code> cells with no
+overlapping <code>ci = TRUE</code> shard); a <code>ci = TRUE</code> member's confidence interval still
+uses its own cell's <code>(nboot, ci_method, parametric)</code> primer. Differing fit
+<code>dists</code> unions are reconciled by fitting the <strong>design-wide union</strong> once per fit
+cell, each member subsetting via its <code>distset</code> axis (distset-subset-invariance),
+so members differing only in <code>distset</code> coverage share every <code>sample</code>/<code>fit</code> shard.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="ssd_design.html">ssd_design()</a></code>, <code><a href="ssd_scenario_targets.html">ssd_scenario_targets()</a></code>, <code><a href="ssd_summarise_design.html">ssd_summarise_design()</a></code>.</p></div>
     </div>

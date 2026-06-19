@@ -84,6 +84,36 @@ several master seeds); they land under separate `seed=` trees and share
 nothing. Members sharing a `seed` share their coincident cells (common
 random numbers).
 
+## Per-overlap hc readout aggregation
+
+Members of a seed group MAY differ in the four **non-axis** hc readout
+settings (`proportion`, `est_method`, `ci`, `samples`) and in their fit
+`dists` union; only the layout-shaping `nrow_max` and `partition_by`
+stay uniform-required. Differing readouts are reconciled **per shared hc
+cell, over only the members whose task set contains that cell** -
+`proportion`/`est_method` are `union`-ed and `ci`/`samples` reduced with
+[`any()`](https://rdrr.io/r/base/any.html) - so the cell computes the
+maximal readout set in one shard and each member's summary filters its
+slice. A cell one member reaches keeps that member's (smaller) demand,
+so the expensive bootstrap runs only where a `ci = TRUE` member has
+tasks. The draw-shaping hc axes
+(`nboot`/`ci_method`/`parametric`/`distset`) are **not** aggregated -
+they stay cell axes (in the per-task primer), so byte-identity holds: a
+member's per-task results equal its standalone-run results.
+
+Because a `ci = FALSE` task collapses `nboot`/`ci_method`/`parametric`
+to `NA`, its cell never coincides with a `ci = TRUE` task's. The point
+`est` is analytical and bootstrap-config-invariant, so a `ci = FALSE`
+cell is **served by a coincident `ci = TRUE` shard** at the same
+`(fit, distset)` when one exists (the computed hc shards are every
+`ci = TRUE` cell plus the `ci = FALSE` cells with no overlapping
+`ci = TRUE` shard); a `ci = TRUE` member's confidence interval still
+uses its own cell's `(nboot, ci_method, parametric)` primer. Differing
+fit `dists` unions are reconciled by fitting the **design-wide union**
+once per fit cell, each member subsetting via its `distset` axis
+(distset-subset-invariance), so members differing only in `distset`
+coverage share every `sample`/`fit` shard.
+
 ## See also
 
 [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md),
