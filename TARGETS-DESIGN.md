@@ -144,10 +144,11 @@ The most consequential design choices, with section refs:
   a Mermaid DAG showing where branches open. Two ground-up entries —
   `ssd-define-scenario` and the `task-list-loop-baseline` runner — land
   before any RNG / dqrng machinery so the data shape is settled first.
-  `migrate-public-api` is a cosmetic rename that the targets-only
-  plumbing no longer waits on (trusting the design), and datasets /
-  `min_pmix` are materialised on the scenario and reached by name
-  through `scenario-accessors` — no registry.
+  Retiring the legacy public API is the terminal `cleanup-lecuyer` step
+  (which folds in the former `migrate-public-api`): the targets-only
+  plumbing never waited on it, and datasets / `min_pmix` are
+  materialised on the scenario and reached by name through
+  `scenario-accessors` — no registry.
 
 ------------------------------------------------------------------------
 
@@ -2413,10 +2414,12 @@ implemented; the Mermaid graph below colours these nodes green inside
   bootstrap-free, point-estimate mode — a scenario-wide either/or, not
   combinable with `TRUE`. Removing `ci` from the primer shifts the hc
   bootstrap stream, so CIs re-baseline (estimates unchanged); acceptable
-  pre-release. Cross-references `migrate-public-api` (whichever lands
-  second drops `ci` from the hc primer-identity enumeration). Surfaced
-  verifying the `ci` axis against `ssdtools`. Independent tidy-up with
-  no dependants; not on the dependency DAG.
+  pre-release. The legacy public
+  [`ssd_hc_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md)
+  primer this once had to reconcile against is removed outright by
+  `cleanup-lecuyer` (which folds in the former `migrate-public-api`).
+  Surfaced verifying the `ci` axis against `ssdtools`. Independent
+  tidy-up with no dependants; not on the dependency DAG.
 
 - **`blob-storage-format`** — Evaluated how the `fit` step’s non-tabular
   per-task result (a `fitdists` object) is stored in its shard Parquet.
@@ -2720,9 +2723,10 @@ The **not-yet-landed** steps are no longer drawn in this DAG. Their
 dependency shape: `shard-failure-survival` is unblocked by
 `cluster-pipeline`, and `mixed-code-lockin` by `shard-atomic-rewrite`;
 `replay-helper` is unblocked (`task-tables` + `manifest` archived);
-`scenario-input-types` and `migrate-public-api` carry artifacts but are
-unimplemented; `shard-completeness-assert` waits on
-`shard-failure-survival`, and `cleanup-lecuyer` on
-`migrate-public-api` + `mixed-code-lockin`. Priorities and queue
-position for all of these live in
+`shard-completeness-assert` waits on `shard-failure-survival`, and
+`cleanup-lecuyer` — which retires the legacy public API and folds in the
+former `migrate-public-api` — carries artifacts and is unblocked (the
+replacement surface is shipped; the removed code is in no shard’s
+command closure, so no `mixed-code-lockin` pin is needed). Priorities
+and queue position for all of these live in
 [`ROADMAP.md`](https://poissonconsulting.github.io/ssdsims/ROADMAP.md).

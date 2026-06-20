@@ -43,9 +43,24 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- ❗️⏳ \[migrate-public-api\] Changed scope: retire legacy API; gates
-  `cleanup-lecuyer`.
-- 📚⏳ \[readme\] **Blocked by migrate-public-api**. Update README and
+- ❗️⏳ \[cleanup-lecuyer\] Retire the legacy public API and remove the
+  dead code behind it: drop the monolith runners
+  ([`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
+  /
+  [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
+  families,
+  [`ssd_fit_dists_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.md),
+  [`ssd_hc_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md))
+  and the L’Ecuyer-CMRG RNG (`lecuyer-cmrg-seed.R` + the
+  `*_state`/`*_seed` shims), leaving one RNG path (dqrng) and one runner
+  family
+  ([`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
+  /
+  [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)).
+  **Folds in the former `migrate-public-api`** (migration is moot once
+  the monolith is deleted, not ported). Proposed; independent — the
+  replacement surface is already shipped. Gates `readme`.
+- 📚⏳ \[readme\] **Blocked by cleanup-lecuyer**. Update README and
   integrate in the rest of the documentation. Create vignette(“ssdsims”)
   . Perform comprehensive review of all vignettes for content, output
   artifacts, and style. Use vignette(…) style links everywhere.
@@ -74,9 +89,6 @@ artifacts yet is also queued, ready to propose.
 - 😀 \[mixed-code-lockin\] §8.3 — document and runtime-test
   `tar_cue(depend = FALSE)` as a shard-pinning recipe plus the §8.4
   forced-refresh loop. Ready (prereq `shard-atomic-rewrite` landed).
-- 🐢 \[cleanup-lecuyer\] Remove the L’Ecuyer-CMRG helpers and `_seed`
-  shims once the public step functions are off the L’Ecuyer path.
-  Blocked on `migrate-public-api` + `mixed-code-lockin`.
 - 😀⏳ \[error-call-origin\] Audit user-facing functions so validation
   errors report the calling function as the origin, never an internal
   frame. Proposed; independent.

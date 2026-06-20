@@ -85,6 +85,6 @@ path <- tempfile(fileext = ".parquet")
 file.create(path)
 #> [1] TRUE
 ssd_upload_shard(path, ssd_upload_dryrun())
-#> Dry-run upload: skipped "/tmp/Rtmp6DqlD0/file1d1943853a3d.parquet".
-#> [1] "/tmp/Rtmp6DqlD0/file1d1943853a3d.parquet"
+#> Dry-run upload: skipped "/tmp/RtmpjKF9Qh/file1b342c3b0c3f.parquet".
+#> [1] "/tmp/RtmpjKF9Qh/file1b342c3b0c3f.parquet"
 ```
