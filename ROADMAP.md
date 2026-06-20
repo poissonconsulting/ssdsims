@@ -37,8 +37,8 @@ is also queued, ready to propose.
 
 <!-- What is actively being worked on this cycle. -->
 
-- ❗️⏳ [migrate-public-api] Changed scope: retire legacy API; gates `cleanup-lecuyer`.
-- 📚⏳ [readme] **Blocked by migrate-public-api**. Update README and integrate in the rest of the documentation. Create vignette("ssdsims") . Perform comprehensive review of all vignettes for content, output artifacts, and style. Use vignette(...) style links everywhere.
+- ❗️⏳ [cleanup-lecuyer] Retire the legacy public API and remove the dead code behind it: drop the monolith runners (`ssd_run_scenario()` / `ssd_sim_data()` families, `ssd_fit_dists_sims()`, `ssd_hc_sims()`) and the L'Ecuyer-CMRG RNG (`lecuyer-cmrg-seed.R` + the `*_state`/`*_seed` shims), leaving one RNG path (dqrng) and one runner family (`ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`). **Folds in the former `migrate-public-api`** (migration is moot once the monolith is deleted, not ported). Proposed; independent — the replacement surface is already shipped. Gates `readme`.
+- 📚⏳ [readme] **Blocked by cleanup-lecuyer**. Update README and integrate in the rest of the documentation. Create vignette("ssdsims") . Perform comprehensive review of all vignettes for content, output artifacts, and style. Use vignette(...) style links everywhere.
 
 ## Next
 
@@ -55,7 +55,6 @@ is also queued, ready to propose.
 
 - ❗️ [shard-completeness-assert] §6.2 / §8.4 — a downstream `assert_<step>` target per shard comparing actual vs expected row counts, driving the fix-and-refresh loop. Blocked on `shard-failure-survival`.
 - 😀 [mixed-code-lockin] §8.3 — document and runtime-test `tar_cue(depend = FALSE)` as a shard-pinning recipe plus the §8.4 forced-refresh loop. Ready (prereq `shard-atomic-rewrite` landed).
-- 🐢 [cleanup-lecuyer] Remove the L'Ecuyer-CMRG helpers and `_seed` shims once the public step functions are off the L'Ecuyer path. Blocked on `migrate-public-api` + `mixed-code-lockin`.
 - 😀⏳ [error-call-origin] Audit user-facing functions so validation errors report the calling function as the origin, never an internal frame. Proposed; independent.
 - 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Also establish `print()` methods for all objects. Independent.
 - 😀 [canonical-call-sites] Sweep the remaining public constructors (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments are passed in signature order, as the `ssd_define_scenario()` pass already did. Independent.
