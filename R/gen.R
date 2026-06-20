@@ -11,8 +11,7 @@
 
 #' Materialise Generator Datasets for a Simulation Scenario
 #'
-#' Accepts generator-style inputs - the same set the legacy
-#' [ssd_run_scenario()] dispatches over - and materialises each, once, to a
+#' Accepts generator-style inputs and materialises each, once, to a
 #' validated tibble with a numeric `Conc` column of `.n` rows. The four
 #' generator kinds are:
 #'
@@ -173,9 +172,9 @@ ssd_gen <- function(..., .n, .seed) {
 #' Returns `list(name = , fn = )` where `fn(n)` draws `n` values and `name` is
 #' the dataset name so far (the argument name, or - for the character form -
 #' the string itself, or the symbol-captured expression; `NULL` when none is
-#' derivable). Dispatch is most-specific-first (`tmbfit` before `fitdists`,
-#' matching the legacy `ssd_sim_data()` S3 methods); a `data.frame` is
-#' rejected with a pointer to `ssd_scenario_data()`. Aborts in the context of
+#' derivable). Dispatch is most-specific-first (`tmbfit` before `fitdists`); a
+#' `data.frame` is rejected with a pointer to `ssd_scenario_data()`. Aborts in
+#' the context of
 #' `call` (the user-facing function).
 #' @noRd
 classify_gen <- function(value, expr, name, env, call = rlang::caller_env()) {
