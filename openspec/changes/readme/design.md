@@ -43,18 +43,19 @@ already-exported functions and existing deps in examples.
   `R/` edit is a roxygen wording fix in `cost-estimate.R`).
 - Not rewriting the (correct) technical content of the existing vignettes —
   only navigation, links, framing, and the specific nits.
-- Not removing the legacy functions themselves (that is
-  `migrate-public-api`/`cleanup-lecuyer`); this change stops *documenting* them.
+- Not removing the legacy functions themselves — already done by `#196`
+  (`cleanup-lecuyer`, which folded in the former `migrate-public-api`).
 - No new figures/plots.
 
 ## Decisions
 
-- **Document only the declarative + `targets` path; treat legacy as gone.**
-  Eliminates the README's exposure to `migrate-public-api`'s numeric churn (the
-  declarative path is already on dqrng) and makes the README consistent with the
-  vignettes, which already use it. Alternative — keep a legacy quick-start and
-  re-knit after the engine swap — was rejected as documenting a doomed surface
-  and inviting a second pass.
+- **Document only the declarative + `targets` path.** The legacy step functions
+  and the L'Ecuyer-CMRG RNG were retired in `#196`, leaving one runner family on
+  dqrng; `#196` also moved the README quick-start onto the declarative path and
+  removed the legacy "Simulation pipeline" group from `_pkgdown.yml`. This change
+  builds on that final state — no legacy quick-start to re-knit, no engine-swap
+  exposure — and makes the README's *framing* (overview, install, capability
+  map, on-ramp) match the declarative vignettes.
 - **`vignettes/ssdsims.qmd` as the get-started article.** pkgdown treats a
   vignette named after the package as the navbar "Get started" link, so
   `vignette("ssdsims")` becomes the natural entry point. It is an *overview/map*,
@@ -77,18 +78,11 @@ already-exported functions and existing deps in examples.
 
 ## Risks / Trade-offs
 
-- **Legacy functions still exist when this lands** (migrate/cleanup not yet
-  archived) → dropping the "Simulation pipeline" reference group from
-  `_pkgdown.yml` while the functions are still exported would trip
-  `pkgdown::check_pkgdown()` (undocumented exports). Mitigation: keep the
-  reference *index* complete until the functions are removed; this change only
-  stops *featuring* legacy in narrative/examples. Final removal of the reference
-  group is coordinated with `cleanup-lecuyer`.
-- **Roadmap "blocked by migrate-public-api"** → with legacy undocumented, the
-  README no longer depends on the engine swap's numerics. The residual coupling
-  is conceptual (legacy should be gone), so the block can be relaxed to a soft
-  ordering note. Mitigation: flag in the roadmap thread rather than silently
-  diverging.
+- **Roadmap is stale post-`#196`** → `cleanup-lecuyer` is implemented but not
+  archived, and `ROADMAP.md` still shows it in-flight with `readme` "blocked by
+  cleanup-lecuyer". The blocker's code has landed, so `readme` is effectively
+  unblocked. Mitigation: archive `cleanup-lecuyer` and update the roadmap
+  (offered separately; not bundled into this change).
 - **Cross-link conversion churns all seven vignettes** → larger diff, but
   mechanical and low-risk; verify with a full site render that every
   `vignette()`/reference link resolves.
@@ -105,10 +99,7 @@ verify links and output.
 
 ## Open Questions
 
-- **When to drop the legacy "Simulation pipeline" reference group from
-  `_pkgdown.yml`** — now (risking `check_pkgdown()` while functions still exist)
-  or deferred to `cleanup-lecuyer`. Leaning deferred; this change stops
-  featuring legacy but leaves the reference index intact until removal.
-- **Whether to update `ROADMAP.md` line 44** to relax the
-  `migrate-public-api` block given the legacy-gone framing. Offer to the user;
-  not done unilaterally.
+- **Archiving `cleanup-lecuyer` and refreshing `ROADMAP.md`** (lines 40–41:
+  move `cleanup-lecuyer` to Done, unblock `readme`). The implementation landed
+  in `#196`; these are housekeeping for a separate step, offered to the user
+  rather than bundled here.

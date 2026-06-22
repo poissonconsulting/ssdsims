@@ -89,11 +89,16 @@ The vignettes are otherwise accurate and current (all on the declarative
   `vignettes/ssdsims.qmd` (new), all seven existing `vignettes/*.qmd` (cross-link
   conversion + review fixes), `_pkgdown.yml` (add `ssdsims` first in `articles:`),
   `R/cost-estimate.R` + `man/` (roxygen wording fix for the leaked phrasing).
-- **Assumes the legacy step functions are gone** (coordinated with
-  `migrate-public-api` / `cleanup-lecuyer`): no example or narrative documents
-  `ssd_sim_data()` / `ssd_fit_dists_sims()` / `ssd_hc_sims()` /
-  `ssd_run_scenario()`. This removes the README's dependency on
-  `migrate-public-api`'s numeric output churn — see `design.md`.
+- **The legacy step functions have been retired** (`#196`, `cleanup-lecuyer`,
+  which folded in the former `migrate-public-api`): `ssd_sim_data()` /
+  `ssd_fit_dists_sims()` / `ssd_hc_sims()` / `ssd_run_scenario()` and the
+  L'Ecuyer-CMRG RNG are gone, leaving one runner family
+  (`ssd_run_scenario_baseline()` / `ssd_run_scenario_shards()`) on dqrng. `#196`
+  already moved the README quick-start onto the declarative path and removed the
+  legacy "Simulation pipeline" group from `_pkgdown.yml`; this change supplies
+  the substance still missing (overview framing, real install, capability map,
+  the `vignette("ssdsims")` on-ramp, and the vignette review/links). No example
+  or narrative documents the retired functions.
 - No exported API or behaviour changes; no new dependencies. Example code uses
   already-exported declarative/targets functions and `Suggests` packages
   (`ssddata`) already used by the vignettes.

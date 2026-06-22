@@ -1,5 +1,11 @@
 ## 1. Rewrite README.Rmd (declarative path)
 
+> Note: `#196` already moved the README quick-start onto the declarative path
+> (`ssd_define_scenario()` + `ssd_run_scenario_baseline()`) and removed the
+> legacy `_pkgdown.yml` group, so this group is now refinement, not a from-scratch
+> rewrite — the example still sits under a mislabelled `## Installation` heading
+> with no real install, overview, capability map, or `vignette("ssdsims")` link.
+
 - [ ] 1.1 Keep the YAML header, the `<!-- README.md is generated from README.Rmd -->` provenance comment, the `knitr::opts_chunk$set(...)` setup chunk, the `# ssdsims` title, and the badges block.
 - [ ] 1.2 Rewrite the overview to describe the declarative scenario, expansion into per-step `sample`/`fit`/`hc` task tables, and the `targets`-based, Hive-partitioned shard pipeline (consistent with `DESCRIPTION`).
 - [ ] 1.3 Add a real `## Installation` section (`pak::pak("poissonconsulting/ssdsims")` plus a `remotes::install_github(...)` alternative), removing the example mislabelled as "Installation".
