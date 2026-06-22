@@ -118,16 +118,15 @@ air format .
 
 ### RNG Discipline
 
-The package uses two RNG paths:
+The package uses a single RNG path:
 
-1. **L'Ecuyer-CMRG** (legacy, will be removed) — `with_lecuyer_cmrg_seed()`, `local_lecuyer_cmrg_state()`.
-2. **dqrng + hash** (new targets-based path) — `dqrng::dqset.seed(seed, stream)` with task-derived primers. The `pcg64` backend is scenario-scoped via `local_dqrng_backend()`, which is **reentrant**: a nested call is a no-op (detected via `RNGkind()[1] == "user-supplied"`), so only the outermost scope activates and resets the backend and the RNG stream is identical with or without nesting. See `R/dqrng-backend.R` and `openspec/changes/dqrng-init/design.md`.
+- **dqrng + hash** (the targets-based path) — `dqrng::dqset.seed(seed, stream)` with task-derived primers. The `pcg64` backend is scenario-scoped via `local_dqrng_backend()`, which is **reentrant**: a nested call is a no-op (detected via `RNGkind()[1] == "user-supplied"`), so only the outermost scope activates and resets the backend and the RNG stream is identical with or without nesting. See `R/dqrng-backend.R` and `openspec/changes/dqrng-init/design.md`.
 
 When touching RNG-consuming code:
 - Do **not** assume a fixed global `.Random.seed` across function calls.
-- Use `local_lecuyer_cmrg_seed()` / `local_lecuyer_cmrg_state()` / `local_dqrng_backend()` / `withr::local_seed()` to scope RNG changes.
+- Use `local_dqrng_backend()` / `local_dqrng_state()` / `withr::local_seed()` to scope RNG changes.
 - On exit, RNG state **must** be restored (use `on.exit()` or withr scoping helpers).
-- Test for `.Random.seed` being unchanged before and after (see `tests/testthat/test-lecuyer-cmrg-seed.R` for examples).
+- For code on the dqrng path, test that `get_dqrng_state()` is unchanged before and after (see `tests/testthat/test-task-shards.R` for examples); where base R RNG must be untouched, test `.Random.seed`.
 
 ### Testing
 
@@ -165,8 +164,7 @@ live in `openspec/specs/` — that directory is the authoritative list.
 - **chk** — Input validation.
 - **withr** — Scoped side-effects (RNG, options).
 - **rlang** — Hashing (task primers in new design), quoting.
-- **dqrng** — New RNG backend (targets path).
-- **parallel** — L'Ecuyer-CMRG sub-streams (legacy path).
+- **dqrng** — RNG backend (targets path).
 - **duckplyr** — Parquet I/O and off-cluster querying (targets path). **Interact with Parquet files through `duckplyr` (DuckDB)** — `duckplyr::read_parquet_duckdb()` for reads, `duckplyr::compute_parquet()` for writes — **not `arrow`**. This is the team preference; confine the call sites behind the `ssd_read_parquet()` / `ssd_write_parquet()` internals.
 
 See `DESCRIPTION` for versions and imports.
@@ -194,7 +192,7 @@ See `DESCRIPTION` for versions and imports.
   The description must capture the
 change's *current* state, not a revision/process log.
 - **Escape function, object, and file names in backticks** in PR titles and
-  descriptions (e.g. `local_dqrng_backend()`, `run_scenario()`, `DESCRIPTION`).
+  descriptions (e.g. `local_dqrng_backend()`, `ssd_run_scenario_baseline()`, `DESCRIPTION`).
 - **Reference the related issue** in the title where one exists (e.g. `(#64)`)
   so it carries through to the changelog.
 - Keep the PR title and description in sync with the change as it evolves; the
@@ -216,7 +214,7 @@ See `.github/workflows/` for pipeline configs.
 
 ### The targets redesign
 
-The package is transitioning from immediate `ssd_run_scenario()` execution to a cluster-based targets pipeline. Key shifts:
+The package runs scenarios through a cluster-based targets pipeline rather than immediate in-memory execution. Key shifts:
 
 - **Scenario object** (`ssd_define_scenario()`) — Declarative, construction-time, contains only `seed`, scenario options, dataset names, and arg grids.
 - **Per-task RNG** — Each task gets a primer derived from `rlang::hash(task_params)`, seeded via `dqrng::dqset.seed(seed, stream = primer)`.

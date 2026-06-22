@@ -137,10 +137,11 @@ The most consequential design choices, with section refs:
   with a Mermaid DAG showing where branches open. Two ground-up
   entries — `ssd-define-scenario` and the `task-list-loop-baseline`
   runner — land before any RNG / dqrng machinery so the data shape is
-  settled first. `migrate-public-api` is a cosmetic rename that the
-  targets-only plumbing no longer waits on (trusting the design), and
-  datasets / `min_pmix` are materialised on the scenario and reached by
-  name through `scenario-accessors` — no registry.
+  settled first. Retiring the legacy public API is the terminal
+  `cleanup-lecuyer` step (which folds in the former `migrate-public-api`):
+  the targets-only plumbing never waited on it, and datasets / `min_pmix`
+  are materialised on the scenario and reached by name through
+  `scenario-accessors` — no registry.
 
 ---
 
@@ -451,19 +452,18 @@ Function-valued parameters (`min_pmix`) are referenced **by name**
 state; the hash is over the name, not the function value.
 
 The restart property (`dqset.seed(seed, state) → same sequence`)
-is exercised in `scripts/experiment-dqrng-hash.R`; the older
-sub-stream restart check
-`scripts/experiment-substream-restart.R` documents the L'Ecuyer
-property that motivated the previous design and is kept for
-reference.
+is exercised in `scripts/experiment-dqrng-hash.R`. The previous
+design relied on the analogous L'Ecuyer sub-stream restart property;
+that lattice (and its exploratory scripts) was retired with the
+legacy RNG path.
 
 ---
 
 ## 3. Local run
 
 ```r
-scenario <- ssd_scenario(
-  ssddata::ccme_boron,
+scenario <- ssd_define_scenario(
+  ssd_scenario_data(ssddata::ccme_boron),
   nsim       = 100L,
   nrow       = c(5L, 10L, 50L),
   proportion = c(0.01, 0.05),
@@ -471,31 +471,30 @@ scenario <- ssd_scenario(
   seed       = 42
 )
 
-ssd_run_scenario(scenario)                  # sequential, in-process
-ssd_run_scenario(scenario, plan = "mirai")  # in-process parallel
+ssd_run_scenario_baseline(scenario)  # sequential, in-process
 ```
 
-`ssd_scenario()` stores the scenario inputs (seed, dataset names,
+`ssd_define_scenario()` stores the scenario inputs (seed, dataset names,
 fit/hc arg grids). It is purely declarative — it does **not** expand
 the task tables. Expansion is `ssd_scenario_tasks(scenario)`, called
-either by `ssd_run_scenario()` (local) or, in the cluster pipeline
-(§4), while `_targets.R` is sourced to build the per-shard task tables
-that `tar_map` fans out over (§6).
+either by `ssd_run_scenario_baseline()` (local) or, in the cluster
+pipeline (§4), while `_targets.R` is sourced to build the per-shard task
+tables that `tar_map` fans out over (§6).
 
 ```
-   ssd_scenario(...) ──▶ ssdsims_scenario   (declarative; carries seed)
+   ssd_define_scenario(...) ──▶ ssdsims_scenario  (declarative; carries seed)
                               │
                               ▼
                      ssd_scenario_tasks(scenario)
                               │
                               ▼
                      three task tables (sample, fit, hc tasks; see §5),
-                     each row = one task carrying its (seed, state) pair (§2)
+                     each row = one task carrying its (seed, primer) pair (§2)
                               │
             ┌─────────────────┴─────────────────┐
             ▼                                   ▼
-   ssd_run_scenario(scenario)         tar_target(...) feeds the
-   sequential or in-process parallel  cluster pipeline (§4)
+   ssd_run_scenario_baseline(scenario)  tar_target(...) feeds the
+   in-process baseline runner          cluster pipeline (§4)
 ```
 
 ---
@@ -553,7 +552,7 @@ parallel; none is downstream of the others. Roles:
   `seed`, dataset names, fit/hc argument vectors. (The optional cloud
   `upload` is a **runner argument** of `ssd_scenario_targets()`, not a
   scenario field — §6.1.) Already exercised
-  locally with `ssd_run_scenario()` (§3) so the only remaining
+  locally with `ssd_run_scenario_baseline()` (§3) so the only remaining
   unknown when assembling the three is the cluster wiring itself.
 
 Only the controller and resource specs (from B) change between
@@ -2010,7 +2009,7 @@ behavior changes.
 
 ### `dqrng::register_methods()` is scoped per scenario execution
 
-Each scenario execution (via `ssd_run_scenario()` or a cluster step)
+Each scenario execution (via `ssd_run_scenario_baseline()` or a cluster step)
 installs dqrng as the base R RNG backend at entry and restores on exit
 via `on.exit(restore_methods())`. Tests and helper scripts that touch
 the methods mid-session (not inside a scenario runner) use the same
@@ -2277,9 +2276,10 @@ Completed steps that have landed and been archived (full artifacts under `opensp
   bootstrap-free, point-estimate mode — a scenario-wide either/or, not
   combinable with `TRUE`.
   Removing `ci` from the primer shifts the hc bootstrap stream, so CIs
-  re-baseline (estimates unchanged); acceptable pre-release. Cross-references
-  `migrate-public-api` (whichever lands second drops `ci` from the hc
-  primer-identity enumeration). Surfaced verifying the `ci` axis against
+  re-baseline (estimates unchanged); acceptable pre-release. The legacy
+  public `ssd_hc_sims()` primer this once had to reconcile against is removed
+  outright by `cleanup-lecuyer` (which folds in the former
+  `migrate-public-api`). Surfaced verifying the `ci` axis against
   `ssdtools`. Independent tidy-up with no dependants; not on the dependency
   DAG.
 - **`blob-storage-format`** — Evaluated how the `fit` step's non-tabular
@@ -2528,8 +2528,10 @@ bullets above, no Mermaid nodes).
 The **not-yet-landed** steps are no longer drawn in this DAG. Their dependency
 shape: `shard-failure-survival` is unblocked by `cluster-pipeline`, and
 `mixed-code-lockin` by `shard-atomic-rewrite`; `replay-helper` is unblocked
-(`task-tables` + `manifest` archived); `scenario-input-types` and
-`migrate-public-api` carry artifacts but are unimplemented;
-`shard-completeness-assert` waits on `shard-failure-survival`, and
-`cleanup-lecuyer` on `migrate-public-api` + `mixed-code-lockin`. Priorities and
-queue position for all of these live in [`ROADMAP.md`](ROADMAP.md).
+(`task-tables` + `manifest` archived); `shard-completeness-assert` waits on
+`shard-failure-survival`, and `cleanup-lecuyer` — which retires the legacy
+public API and folds in the former `migrate-public-api` — carries artifacts
+and is unblocked (the replacement surface is shipped; the removed code is in
+no shard's command closure, so no `mixed-code-lockin` pin is needed).
+Priorities and queue position for all of these live in
+[`ROADMAP.md`](ROADMAP.md).

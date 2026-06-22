@@ -245,7 +245,7 @@ ssd_define_scenario <- function(
 
   # `partition_by`/`bundle` are validated and normalised below.
 
-  # --- fit-grid validation (mirrors ssd_fit_dists_sims) ------------------
+  # --- fit-grid validation ----------------------------------------------
   # `dists` is an `ssd_distset()` collection (validated by value at
   # construction): a bare character vector or plain list aborts loudly, pointing
   # the caller to the constructor (no expression-archaeology for set names). The
@@ -289,7 +289,7 @@ ssd_define_scenario <- function(
   chk::chk_all(range_shape2, chk::chk_length, upper = 2L)
   chk::chk_unique(range_shape2)
 
-  # --- hc-grid validation (mirrors ssd_hc_sims) --------------------------
+  # --- hc-grid validation -----------------------------------------------
   chk::chk_numeric(proportion)
   chk::chk_not_any_na(proportion)
   chk::chk_range(proportion, c(0, 1))

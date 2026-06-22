@@ -1,10 +1,8 @@
 # dqrng-path scoped state installation.
 #
-# The dqrng analogue of `local_lecuyer_cmrg_state()` (see
-# `R/lecuyer-cmrg-seed.R`): a `withr`-style wrapper that installs a per-task
-# `(seed, primer)` starting point as the running dqrng RNG state and restores
-# the prior state on frame exit. See
-# `openspec/changes/local-dqrng-state/design.md`.
+# A `withr`-style wrapper that installs a per-task `(seed, primer)` starting
+# point as the running dqrng RNG state and restores the prior state on frame
+# exit. See `openspec/changes/local-dqrng-state/design.md`.
 
 # Capture the active dqrng generator state. dqrng (>= 0.4.1, the version pinned
 # in DESCRIPTION) exposes `dqrng_get_state()` (the generator kind plus its state
@@ -32,11 +30,9 @@ set_dqrng_state <- function(state) {
 #' `TARGETS-DESIGN.md` §2 and the GLOSSARY); the `_state` suffix marks that the
 #' wrapper installs that primer as the running RNG state.
 #'
-#' These are the dqrng-path analogues of [local_lecuyer_cmrg_state()] /
-#' [with_lecuyer_cmrg_state()]. Like those helpers they snapshot the RNG state
-#' on entry (via `dqrng::dqrng_get_state()`) and `withr::defer()` a restore (via
-#' `dqrng::dqrng_set_state()`), so a call leaves the surrounding RNG stream
-#' undisturbed, including on error.
+#' They snapshot the RNG state on entry (via `dqrng::dqrng_get_state()`) and
+#' `withr::defer()` a restore (via `dqrng::dqrng_set_state()`), so a call leaves
+#' the surrounding RNG stream undisturbed, including on error.
 #'
 #' Both require an active dqrng backend: they abort unless a
 #' [local_dqrng_backend()] scope is open. This fails fast rather than silently
@@ -51,8 +47,7 @@ set_dqrng_state <- function(state) {
 #' @inheritParams withr::with_seed
 #' @return `local_dqrng_state()` invisibly returns `primer`; `with_dqrng_state()`
 #'   returns the value of `code`.
-#' @seealso [withr::local_seed()], [local_dqrng_backend()],
-#'   [local_lecuyer_cmrg_state()].
+#' @seealso [withr::local_seed()], [local_dqrng_backend()].
 #' @export
 #' @examples
 #'
