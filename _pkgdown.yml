@@ -18,16 +18,6 @@ reference:
   - ssd_run_scenario_baseline
   - ssd_run_scenario_shards
 
-- title: Simulation pipeline
-  desc: >
-    The immediate (non-targets) pipeline: simulate data, fit distributions, and
-    estimate hazard concentrations across simulations, end to end.
-  contents:
-  - ssd_sim_data
-  - ssd_fit_dists_sims
-  - ssd_hc_sims
-  - ssd_run_scenario
-
 - title: Targets pipeline
   desc: >
     Group a step's tasks into per-shard tables keyed by `partition_by`, run a
@@ -104,17 +94,14 @@ reference:
 
 - title: Reproducible RNG
   desc: >
-    Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash
-    backend (targets path) and L'Ecuyer-CMRG sub-streams (legacy path).
+    Parallel-safe seeding helpers for the dqrng + hash backend: a per-task
+    primer derived from the scenario seed, scoped backend activation, and
+    scoped state installation.
   contents:
   - task_primer
   - local_dqrng_backend
   - local_dqrng_state
   - with_dqrng_state
-  - local_lecuyer_cmrg_seed
-  - with_lecuyer_cmrg_seed
-  - local_lecuyer_cmrg_state
-  - with_lecuyer_cmrg_state
 
 - title: Package
   contents:

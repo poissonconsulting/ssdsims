@@ -22,8 +22,7 @@ An \code{ssdsims_gen} object: a named list of validated \code{Conc} tibbles
 of \code{.n} rows, for use within (or splicing into) \code{\link[=ssd_scenario_data]{ssd_scenario_data()}}.
 }
 \description{
-Accepts generator-style inputs - the same set the legacy
-\code{\link[=ssd_run_scenario]{ssd_run_scenario()}} dispatches over - and materialises each, once, to a
+Accepts generator-style inputs and materialises each, once, to a
 validated tibble with a numeric \code{Conc} column of \code{.n} rows. The four
 generator kinds are:
 }

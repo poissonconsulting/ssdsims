@@ -35,11 +35,9 @@ is the per-task primer (the value handed to dqrng's \code{stream} argument, per
 wrapper installs that primer as the running RNG state.
 }
 \details{
-These are the dqrng-path analogues of \code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}} /
-\code{\link[=with_lecuyer_cmrg_state]{with_lecuyer_cmrg_state()}}. Like those helpers they snapshot the RNG state
-on entry (via \code{dqrng::dqrng_get_state()}) and \code{withr::defer()} a restore (via
-\code{dqrng::dqrng_set_state()}), so a call leaves the surrounding RNG stream
-undisturbed, including on error.
+They snapshot the RNG state on entry (via \code{dqrng::dqrng_get_state()}) and
+\code{withr::defer()} a restore (via \code{dqrng::dqrng_set_state()}), so a call leaves
+the surrounding RNG stream undisturbed, including on error.
 
 Both require an active dqrng backend: they abort unless a
 \code{\link[=local_dqrng_backend]{local_dqrng_backend()}} scope is open. This fails fast rather than silently
@@ -54,6 +52,5 @@ runif(3)
 with_dqrng_state(42, c(1L, 2L), runif(3))
 }
 \seealso{
-\code{\link[withr:local_seed]{withr::local_seed()}}, \code{\link[=local_dqrng_backend]{local_dqrng_backend()}},
-\code{\link[=local_lecuyer_cmrg_state]{local_lecuyer_cmrg_state()}}.
+\code{\link[withr:local_seed]{withr::local_seed()}}, \code{\link[=local_dqrng_backend]{local_dqrng_backend()}}.
 }

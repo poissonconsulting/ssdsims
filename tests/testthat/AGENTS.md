@@ -89,8 +89,8 @@ here; keep test guidance in this file rather than there.
 ## RNG
 
 - Pin the seed for any RNG-touching test (`withr::with_seed()` /
-  `local_lecuyer_cmrg_seed()` / `local_dqrng_backend()`).
-- Assert `.Random.seed` is unchanged where a function is meant to be free of
-  RNG side effects (see `test-lecuyer-cmrg-seed.R`). For code on the dqrng path,
-  also assert `get_dqrng_state()` is unchanged (the package's actual draw path),
-  as in `test-task-shards.R`.
+  `local_dqrng_backend()`).
+- Assert `get_dqrng_state()` is unchanged where a function on the dqrng path is
+  meant to be free of RNG side effects (the package's actual draw path), as in
+  `test-task-shards.R`. Where base R RNG must be untouched, assert
+  `.Random.seed` is unchanged.

@@ -523,11 +523,6 @@ add_task_ids <- function(tbl, step) {
 #   * seed-and-run wrappers -- `*_data_task_primer()` -- install a per-task
 #     `(seed, primer)` once via `local_dqrng_state()` (assuming an active
 #     `local_dqrng_backend()`), then call the matching op.
-#
-# These supersede the legacy L'Ecuyer `slice_sample_state()` /
-# `fit_dists_state()` / `hc_state()` in `R/internal.R`, which keep their names
-# (and back the old `ssd_run_scenario()` path) until `cleanup-lecuyer`. dqrng is
-# the path forward; the legacy `*_state` family is removed in `cleanup-lecuyer`.
 
 sample_data_task <- function(data, n_max, replace) {
   dplyr::slice_sample(data, n = n_max, replace = replace)

@@ -98,7 +98,14 @@ test_that("dqrng-backend: scenario execution leaves base R RNG unchanged", {
   set.seed(1)
   pre <- runif(3)
 
-  suppressWarnings(ssd_run_scenario("rlnorm", nsim = 1))
+  scenario <- ssd_define_scenario(
+    ssd_scenario_data(ssddata::ccme_boron),
+    nsim = 1L,
+    seed = 42L,
+    nrow = 6L,
+    dists = ssd_distset(lnorm = "lnorm")
+  )
+  ssd_run_scenario_baseline(scenario)
 
   set.seed(1)
   post <- runif(3)

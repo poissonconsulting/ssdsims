@@ -2,8 +2,8 @@
 #
 # Package load is intentionally inert: ssdsims does NOT register the dqrng
 # RNG backend on `.onLoad()`. Instead, the backend is activated for the
-# duration of a scenario run and reset on exit (see `run_scenario()`), so
-# the caller's session RNG behaviour is left untouched outside of scenario
+# duration of a scenario run and reset on exit (via `local_dqrng_backend()`),
+# so the caller's session RNG behaviour is left untouched outside of scenario
 # execution. See `openspec/changes/dqrng-init/design.md`.
 
 # Activate the dqrng pcg64 backend for the current process.

@@ -28,8 +28,8 @@ library(ssdsims)
 
 ## Why a declarative scenario?
 
-ssdsims is moving from running a simulation study *immediately* (the legacy
-`ssd_run_scenario()`) to a cluster-friendly [targets](https://docs.ropensci.org/targets/)
+ssdsims runs a simulation study from a declarative description rather than
+immediately, feeding a cluster-friendly [targets](https://docs.ropensci.org/targets/)
 pipeline. The root of that pipeline is a **scenario**: a small, purely
 declarative description of the study you want to run. It contains only the
 scenario options --- a seed, the number of simulations, the sample sizes, the
@@ -86,7 +86,7 @@ explicit name.
 ### Generated datasets with `ssd_gen()`
 
 Each dataset can also be *generated* rather than observed. `ssd_gen()` accepts
-the same generator inputs the legacy `ssd_run_scenario()` dispatches over ---
+generator inputs ---
 a generator function, a function-name string, or a `fitdists`/`tmbfit` object
 (drawn from the matching `ssd_r<dist>` with the fit's estimates) --- and
 materialises each, **once**, to a `Conc` tibble of `.n` rows. The result
