@@ -5,7 +5,9 @@ Authors@R: c(
     person("Joe", "Thorley", , "joe@poissonconsulting.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7683-4592")),
     person("Rebecca", "Fisher", , "R.Fisher@aims.gov.au", role = "aut",
-           comment = c(ORCID = "0000-0001-5148-6731"))
+           comment = c(ORCID = "0000-0001-5148-6731")),
+    person("Kirill", "Müller", , "kirill@cynkra.com", role = "aut",
+           comment = c(ORCID = "0000-0002-1416-3412"))
   )
 Description: Runs reproducible simulation studies for species sensitivity
     distribution (SSD) models built on the 'ssdtools' package. Expands a
