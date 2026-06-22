@@ -23,6 +23,7 @@ Authors:
 \itemize{
   \item Joe Thorley \email{joe@poissonconsulting.ca} (\href{https://orcid.org/0000-0002-7683-4592}{ORCID})
   \item Rebecca Fisher \email{R.Fisher@aims.gov.au} (\href{https://orcid.org/0000-0001-5148-6731}{ORCID})
+  \item Kirill Müller \email{kirill@cynkra.com} (\href{https://orcid.org/0000-0002-1416-3412}{ORCID})
 }
 
 }
