@@ -32,7 +32,15 @@
 #' @noRd
 ssd_write_parquet <- function(df, path) {
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-  duckplyr::compute_parquet(duckplyr::as_duckdb_tibble(df), path)
+  # An already-`duckplyr` frame keeps its own prudence: a stingy fan-in frame
+  # must not be silently downgraded to `lavish` at the write seam, which would
+  # let an untranslatable verb fall back to dplyr (materialising into R) instead
+  # of erroring. A plain R tibble is wrapped `stingy` so the write itself cannot
+  # fall back.
+  if (!inherits(df, "duckplyr_df")) {
+    df <- duckplyr::as_duckdb_tibble(df, prudence = "stingy")
+  }
+  duckplyr::compute_parquet(df, path)
   path
 }
 
@@ -46,10 +54,16 @@ ssd_write_parquet <- function(df, path) {
 #' for addressing/pushdown, not for reconstructing columns here.
 #' @noRd
 ssd_read_parquet <- function(path) {
-  tibble::as_tibble(dplyr::collect(duckplyr::read_parquet_duckdb(
+  # Stingy read, explicit collect: R genuinely needs these rows (callers decode
+  # `fit` objects from them), so the rows reach R only through this deliberate
+  # `collect()` - nothing materialises implicitly along the way.
+  duckplyr::read_parquet_duckdb(
     path,
-    options = list(hive_partitioning = FALSE)
-  )))
+    options = list(hive_partitioning = FALSE),
+    prudence = "stingy"
+  ) |>
+    dplyr::collect() |>
+    tibble::as_tibble()
 }
 
 #' Serialise an arbitrary R object to an ASCII string (Parquet-storable).
@@ -601,7 +615,8 @@ ssd_summarise <- function(
   glob <- file.path(dir_hc, "**", "part.parquet")
   hc_shards <- duckplyr::read_parquet_duckdb(
     glob,
-    options = list(hive_partitioning = FALSE)
+    options = list(hive_partitioning = FALSE),
+    prudence = "stingy"
   )
   # Project out the `dists`/`samples` list-columns at the DuckDB level (so the
   # potentially-large retained `samples` draws are never pulled into R): the

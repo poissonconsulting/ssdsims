@@ -234,6 +234,12 @@ ssd_upload_shard <- function(path, upload) {
 #'   `"summary"` (the uploaded compact summary), or `"summary_samples"` (the
 #'   uploaded full summary retaining the `dists`/`samples` list-columns,
 #'   shipped only when the scenario set `samples = TRUE`).
+#' @param prudence The duckplyr prudence of the returned table (default
+#'   `"stingy"`): `"stingy"` keeps it lazy and composable but makes an implicit
+#'   materialisation (e.g. `nrow()`/`$`) against the remote glob error rather
+#'   than triggering an unbounded download/scan; `"lavish"` restores automatic
+#'   materialisation on first access. `dplyr::collect()` and
+#'   `duckplyr::compute_parquet()` work under either.
 #' @return A lazy, `dplyr`-composable table over the uploaded results.
 #' @seealso [ssd_upload_shard()], [ssd_test_upload()].
 #' @export
@@ -242,7 +248,7 @@ ssd_upload_shard <- function(path, upload) {
 #' upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
 #' ssd_open_uploaded(upload, "hc") |> dplyr::count()
 #' }
-ssd_open_uploaded <- function(upload, step) {
+ssd_open_uploaded <- function(upload, step, prudence = "stingy") {
   UseMethod("ssd_open_uploaded")
 }
 
@@ -284,7 +290,12 @@ ssd_open_uploaded <- function(upload, step) {
 #' ssd_summarise_uploaded(upload, "hc")
 #' ssd_summarise_uploaded(upload, "hc", drop_samples = FALSE) # keep samples
 #' }
-ssd_summarise_uploaded <- function(upload, step = "hc", drop_samples = TRUE) {
+ssd_summarise_uploaded <- function(
+  upload,
+  step = "hc",
+  drop_samples = TRUE,
+  prudence = "stingy"
+) {
   UseMethod("ssd_summarise_uploaded")
 }
 
@@ -301,7 +312,7 @@ ssd_upload_shard.default <- function(path, upload) {
 }
 
 #' @export
-ssd_open_uploaded.default <- function(upload, step) {
+ssd_open_uploaded.default <- function(upload, step, prudence = "stingy") {
   abort_unknown_upload(upload, call = rlang::caller_env())
 }
 
@@ -309,7 +320,8 @@ ssd_open_uploaded.default <- function(upload, step) {
 ssd_summarise_uploaded.default <- function(
   upload,
   step = "hc",
-  drop_samples = TRUE
+  drop_samples = TRUE,
+  prudence = "stingy"
 ) {
   abort_unknown_upload(upload, call = rlang::caller_env())
 }
@@ -336,7 +348,11 @@ ssd_upload_shard.ssdsims_upload_dryrun <- function(path, upload) {
 }
 
 #' @export
-ssd_open_uploaded.ssdsims_upload_dryrun <- function(upload, step) {
+ssd_open_uploaded.ssdsims_upload_dryrun <- function(
+  upload,
+  step,
+  prudence = "stingy"
+) {
   chk::abort_chk(
     "A dry-run upload ships nothing, so there is nothing to read back. ",
     "Read the local shards directly (e.g. with `ssd_summarise()` or ",
@@ -349,7 +365,8 @@ ssd_open_uploaded.ssdsims_upload_dryrun <- function(upload, step) {
 ssd_summarise_uploaded.ssdsims_upload_dryrun <- function(
   upload,
   step = "hc",
-  drop_samples = TRUE
+  drop_samples = TRUE,
+  prudence = "stingy"
 ) {
   chk::abort_chk(
     "A dry-run upload ships nothing, so there is nothing to summarise. ",
@@ -400,7 +417,11 @@ ssd_upload_shard.ssdsims_upload_azure_blob <- function(path, upload) {
 }
 
 #' @export
-ssd_open_uploaded.ssdsims_upload_azure_blob <- function(upload, step) {
+ssd_open_uploaded.ssdsims_upload_azure_blob <- function(
+  upload,
+  step,
+  prudence = "stingy"
+) {
   step <- rlang::arg_match0(
     step,
     c("sample", "fit", "hc", "summary", "summary_samples")
@@ -410,7 +431,8 @@ ssd_open_uploaded.ssdsims_upload_azure_blob <- function(upload, step) {
   azure_load_duckdb_extension(creds, upload$account, call = rlang::caller_env())
   duckplyr::read_parquet_duckdb(
     azure_glob(upload, step),
-    options = list(hive_partitioning = FALSE)
+    options = list(hive_partitioning = FALSE),
+    prudence = prudence
   )
 }
 
@@ -418,7 +440,8 @@ ssd_open_uploaded.ssdsims_upload_azure_blob <- function(upload, step) {
 ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   upload,
   step = "hc",
-  drop_samples = TRUE
+  drop_samples = TRUE,
+  prudence = "stingy"
 ) {
   step <- rlang::arg_match0(
     step,
@@ -454,7 +477,8 @@ ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   # `dplyr` verbs and the read/projection run inside DuckDB.
   tbl <- duckplyr::read_parquet_duckdb(
     azure_glob(upload, step),
-    options = list(hive_partitioning = FALSE)
+    options = list(hive_partitioning = FALSE),
+    prudence = prudence
   )
   if (drop_samples) {
     tbl <- dplyr::select(tbl, -dplyr::any_of(c("dists", "samples")))

@@ -328,7 +328,8 @@ ssd_summarise_design <- function(summaries, path) {
   parts <- purrr::imap(existing, function(p, nm) {
     tbl <- duckplyr::read_parquet_duckdb(
       p,
-      options = list(hive_partitioning = FALSE)
+      options = list(hive_partitioning = FALSE),
+      prudence = "stingy"
     )
     dplyr::mutate(tbl, scenario = nm)
   })
@@ -374,7 +375,8 @@ ssd_summarise_member <- function(
   glob <- file.path(dir_hc, "**", "part.parquet")
   hc_shards <- duckplyr::read_parquet_duckdb(
     glob,
-    options = list(hive_partitioning = FALSE)
+    options = list(hive_partitioning = FALSE),
+    prudence = "stingy"
   )
   hc <- dplyr::filter(hc_shards, hc_id %in% hc_ids)
   keep_prop <- proportion

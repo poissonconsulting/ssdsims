@@ -4,7 +4,12 @@
 \alias{ssd_summarise_uploaded}
 \title{Summarise Uploaded Results, In Place (the cloud \code{ssd_summarise()})}
 \usage{
-ssd_summarise_uploaded(upload, step = "hc", drop_samples = TRUE)
+ssd_summarise_uploaded(
+  upload,
+  step = "hc",
+  drop_samples = TRUE,
+  prudence = "stingy"
+)
 }
 \arguments{
 \item{upload}{An upload destination from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or
@@ -18,6 +23,13 @@ shipped only when the scenario set \code{samples = TRUE}).}
 \item{drop_samples}{Flag (default \code{TRUE}): project away the heavy
 \code{dists}/\code{samples} list-columns for the analysis-ready summary. Pass \code{FALSE}
 to keep them (e.g. when the in-flight bootstrap \code{samples} are needed).}
+
+\item{prudence}{The duckplyr prudence of the returned table (default
+\code{"stingy"}): \code{"stingy"} keeps it lazy and composable but makes an implicit
+materialisation (e.g. \code{nrow()}/\code{$}) against the remote glob error rather
+than triggering an unbounded download/scan; \code{"lavish"} restores automatic
+materialisation on first access. \code{dplyr::collect()} and
+\code{duckplyr::compute_parquet()} work under either.}
 }
 \value{
 A \strong{lazy} \code{duckplyr}/DuckDB tibble over the unioned, uploaded \code{step}

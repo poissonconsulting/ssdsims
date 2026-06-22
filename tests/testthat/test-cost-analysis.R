@@ -224,3 +224,30 @@ test_that("cost-analysis: analysis and comparison print is informative", {
   )
   expect_snapshot(print(comparison))
 })
+
+# ---- in-engine per-task duration (dd$ epoch) --------------------------------
+
+test_that("cost-analysis: per-task seconds computed in DuckDB match difftime", {
+  dir <- withr::local_tempdir()
+  t0 <- as.POSIXct("2026-01-01 00:00:00", tz = "UTC")
+  # Two `hc_id`s: "a" repeats (must collapse to one distinct timing row), "b"
+  # once; sub-second gaps prove `dd$epoch` is not truncating to whole seconds.
+  timings <- tibble::tibble(
+    hc_id = c("a", "a", "b"),
+    proportion = c(0.05, 0.1, 0.05),
+    .start = rep(t0, 3L),
+    .end = t0 + c(1.25, 1.25, 2.5),
+    .host = "Test CPU"
+  )
+  ssd_write_parquet(timings, file.path(dir, "hc", "sim=1", "part.parquet"))
+
+  out <- read_step_timings(dir, "hc", "hc_id")
+  expect_true(attr(out, "timed"))
+  out <- out[order(out$hc_id), ]
+  expect_identical(nrow(out), 2L)
+  expect_equal(
+    out$seconds,
+    as.numeric(difftime(out$.end, out$.start, units = "secs"))
+  )
+  expect_equal(out$seconds, c(1.25, 2.5))
+})

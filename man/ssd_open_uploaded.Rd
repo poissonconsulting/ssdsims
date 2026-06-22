@@ -4,7 +4,7 @@
 \alias{ssd_open_uploaded}
 \title{Open Uploaded Results for Querying, In Place}
 \usage{
-ssd_open_uploaded(upload, step)
+ssd_open_uploaded(upload, step, prudence = "stingy")
 }
 \arguments{
 \item{upload}{An upload destination from \code{\link[=ssd_upload_azure]{ssd_upload_azure()}} or
@@ -14,6 +14,13 @@ ssd_open_uploaded(upload, step)
 \code{"summary"} (the uploaded compact summary), or \code{"summary_samples"} (the
 uploaded full summary retaining the \code{dists}/\code{samples} list-columns,
 shipped only when the scenario set \code{samples = TRUE}).}
+
+\item{prudence}{The duckplyr prudence of the returned table (default
+\code{"stingy"}): \code{"stingy"} keeps it lazy and composable but makes an implicit
+materialisation (e.g. \code{nrow()}/\code{$}) against the remote glob error rather
+than triggering an unbounded download/scan; \code{"lavish"} restores automatic
+materialisation on first access. \code{dplyr::collect()} and
+\code{duckplyr::compute_parquet()} work under either.}
 }
 \value{
 A lazy, \code{dplyr}-composable table over the uploaded results.

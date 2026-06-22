@@ -630,3 +630,33 @@ test_that("cloud-upload: the summary ships and re-ships only when its bytes chan
   reran <- progress$name[progress$progress %in% c("completed", "started")]
   expect_false("upload_summary" %in% reran)
 })
+
+# ---- read-back prudence (stingy default + lavish opt-out) -------------------
+
+test_that("cloud-upload: read-back generics thread prudence (stingy default, lavish opt-out)", {
+  upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
+  seen <- character()
+  # Reach the read without credentials/network, and spy on the prudence passed.
+  local_mocked_bindings(
+    resolve_azure_credentials = function(...) list(),
+    azure_load_duckdb_extension = function(...) invisible(NULL)
+  )
+  testthat::local_mocked_bindings(
+    read_parquet_duckdb = function(
+      path,
+      ...,
+      prudence = c("thrifty", "lavish", "stingy")
+    ) {
+      seen <<- c(seen, if (missing(prudence)) "thrifty" else prudence)
+      duckplyr::duckdb_tibble(est = 1)
+    },
+    .package = "duckplyr"
+  )
+
+  ssd_open_uploaded(upload, "hc")
+  ssd_summarise_uploaded(upload, "hc")
+  ssd_open_uploaded(upload, "hc", prudence = "lavish")
+  ssd_summarise_uploaded(upload, "hc", prudence = "lavish")
+
+  expect_identical(seen, c("stingy", "stingy", "lavish", "lavish"))
+})

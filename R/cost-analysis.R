@@ -21,12 +21,15 @@
 # so the distinct `<id>` row is the per-task timing. Returns `NULL` when the glob
 # matches no shard (an unrun step), and carries no timing columns flag when the
 # shards predate the instrumentation.
+#' @autoglobal
+#' @noRd
 read_step_timings <- function(root, step, id, keep_ids = NULL) {
   glob <- file.path(root, step, "**", "part.parquet")
   rel <- tryCatch(
     duckplyr::read_parquet_duckdb(
       glob,
-      options = list(hive_partitioning = FALSE)
+      options = list(hive_partitioning = FALSE),
+      prudence = "stingy"
     ),
     error = function(e) NULL
   )
@@ -37,20 +40,33 @@ read_step_timings <- function(root, step, id, keep_ids = NULL) {
   # task ids (the `ssd_summarise_member()` projection), filtered at the DuckDB
   # level before anything is pulled into R.
   if (!is.null(keep_ids)) {
-    rel <- dplyr::filter(rel, .data[[id]] %in% keep_ids)
+    # Inject the id column as a bare symbol rather than the `.data[[id]]`
+    # pronoun: duckplyr cannot translate the dynamic `.data[[...]]` form and
+    # would fall back to dplyr (forbidden under the stingy read), whereas
+    # `<col> %in% keep_ids` translates and stays in DuckDB.
+    rel <- dplyr::filter(rel, !!rlang::sym(id) %in% keep_ids)
   }
   cols <- colnames(rel)
   if (!all(c(".start", ".end", ".host") %in% cols)) {
     # Pre-timing shards: return the ids only, flagged as carrying no timings.
-    out <- tibble::as_tibble(dplyr::collect(dplyr::distinct(
-      dplyr::select(rel, dplyr::all_of(id))
-    )))
+    out <- rel |>
+      dplyr::select(dplyr::all_of(id)) |>
+      dplyr::distinct() |>
+      dplyr::collect() |>
+      tibble::as_tibble()
     attr(out, "timed") <- FALSE
     return(out)
   }
-  out <- dplyr::select(rel, dplyr::all_of(c(id, ".start", ".end", ".host")))
-  out <- tibble::as_tibble(dplyr::collect(dplyr::distinct(out)))
-  out$seconds <- as.numeric(difftime(out$.end, out$.start, units = "secs"))
+  # Compute the per-task duration in DuckDB via the `dd$` escape hatch:
+  # `dd$epoch()` on a `TIMESTAMP` yields fractional seconds since the epoch, so
+  # the difference matches `difftime(units = "secs")` sub-second-exact. The
+  # duration math stays in the engine, ahead of the explicit collect.
+  out <- rel |>
+    dplyr::select(dplyr::all_of(c(id, ".start", ".end", ".host"))) |>
+    dplyr::distinct() |>
+    dplyr::mutate(seconds = dd$epoch(.end) - dd$epoch(.start)) |>
+    dplyr::collect() |>
+    tibble::as_tibble()
   attr(out, "timed") <- TRUE
   out
 }
@@ -834,6 +850,8 @@ format_design_breakdown <- function(breakdown, total, longest, n_contributing) {
 # of `scenario`, `hc_id`, timing and `seconds`, distinct per `(scenario, hc_id)`.
 # `NULL` when the file is absent or lacks the `scenario`/timing columns (the
 # caller then falls back to per-member shard reads).
+#' @autoglobal
+#' @noRd
 design_fast_hc <- function(path) {
   if (!file.exists(path)) {
     return(NULL)
@@ -841,7 +859,8 @@ design_fast_hc <- function(path) {
   rel <- tryCatch(
     duckplyr::read_parquet_duckdb(
       path,
-      options = list(hive_partitioning = FALSE)
+      options = list(hive_partitioning = FALSE),
+      prudence = "stingy"
     ),
     error = function(e) NULL
   )
@@ -853,13 +872,16 @@ design_fast_hc <- function(path) {
   ) {
     return(NULL)
   }
-  out <- dplyr::distinct(dplyr::select(
-    rel,
-    dplyr::all_of(c("scenario", "hc_id", ".start", ".end", ".host"))
-  ))
-  out <- tibble::as_tibble(dplyr::collect(out))
-  out$seconds <- as.numeric(difftime(out$.end, out$.start, units = "secs"))
-  out
+  # Per-task duration computed in DuckDB via the `dd$` escape hatch (see
+  # `read_step_timings()`), ahead of the explicit collect.
+  rel |>
+    dplyr::select(
+      dplyr::all_of(c("scenario", "hc_id", ".start", ".end", ".host"))
+    ) |>
+    dplyr::distinct() |>
+    dplyr::mutate(seconds = dd$epoch(.end) - dd$epoch(.start)) |>
+    dplyr::collect() |>
+    tibble::as_tibble()
 }
 
 # One member's hc timings: from the combined-summary fast path (filtered to the
