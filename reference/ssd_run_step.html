@@ -170,7 +170,7 @@ per-member summary then filters.</p></li>
 <span class="r-in"><span><span class="va">shards</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_sample_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">ssd_run_sample_step</span><span class="op">(</span><span class="va">shards</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>, <span class="va">scenario</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmps3PsuV/file1b7391d4a57/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmppd2XHZ/file1b6d50c0fe4d/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span></span>
@@ -186,14 +186,14 @@ per-member summary then filters.</p></li>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmps3PsuV/file1b731075b02d/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmppd2XHZ/file1b6d3d0cb973/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
 <span class="r-in"><span><span class="fu">ssd_run_fit_step</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_fit_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmps3PsuV/file1b731075b02d/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmppd2XHZ/file1b6d3d0cb973/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span></span>
@@ -210,21 +210,21 @@ per-member summary then filters.</p></li>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmps3PsuV/file1b73379cd4a9/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmppd2XHZ/file1b6d4e3d169b/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"</span>
 <span class="r-in"><span><span class="fu">ssd_run_fit_step</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_fit_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"sample"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmps3PsuV/file1b73379cd4a9/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmppd2XHZ/file1b6d4e3d169b/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"</span>
 <span class="r-in"><span><span class="fu">ssd_run_hc_step</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="ssd_scenario_shards.html">ssd_scenario_hc_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span><span class="op">$</span><span class="va">tasks</span><span class="op">[[</span><span class="fl">1L</span><span class="op">]</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  <span class="va">scenario</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"fit"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"hc"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmps3PsuV/file1b73379cd4a9/hc/dataset=ccme_boron/sim=1/part.parquet"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "/tmp/Rtmppd2XHZ/file1b6d4e3d169b/hc/dataset=ccme_boron/sim=1/part.parquet"</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
@@ -233,7 +233,7 @@ per-member summary then filters.</p></li>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Joe Thorley, Rebecca Fisher.</p>
+  <p>Developed by Joe Thorley, Rebecca Fisher, Kirill Müller.</p>
 </div>
 
 <div class="pkgdown-footer-right">

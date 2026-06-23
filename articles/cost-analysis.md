@@ -58,11 +58,11 @@ breakdown by `ci_method` × `nboot` keyed exactly like the estimate’s:
 analysis <- ssd_analyse_cost(scenario, root = run$dir)
 analysis
 #> <ssdsims_cost_analysis>  (observed, serial-equivalent; measured)
-#>   total compute:  16.2 s
-#>   longest task:   3.7 s
+#>   total compute:  17.3 s
+#>   longest task:   4.0 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples       nboot   1000     4 tasks  14.1 s
-#>     weighted_samples       nboot    100     4 tasks  2.1 s
+#>     weighted_samples       nboot   1000     4 tasks  15.1 s
+#>     weighted_samples       nboot    100     4 tasks  2.2 s
 #>   host(s):        AMD EPYC 9V74 80-Core Processor
 ```
 
@@ -102,8 +102,8 @@ reality:
 
 ssd_compare_cost(scenario, root = run$dir)
 #> <ssdsims_cost_comparison>  (predicted vs observed)
-#>   total compute:  predicted 22.4 s | observed 16.2 s | obs/pred 0.72x
-#>   longest task:   predicted 6.7 s | observed 3.7 s | obs/pred 0.55x
+#>   total compute:  predicted 22.4 s | observed 17.3 s | obs/pred 0.77x
+#>   longest task:   predicted 6.7 s | observed 4.0 s | obs/pred 0.61x
 ```
 
 A ratio far from `1` means the shipped default calibration does not
@@ -128,11 +128,11 @@ from_run <- ssd_calibrate_cost_from_run(scenario, root = run$dir)
 # The run-derived calibration drives the estimator like any other.
 ssd_estimate_cost(scenario, calibration = from_run)
 #> <ssdsims_cost_estimate>  (ballpark, serial)
-#>   total compute:  16.2 s
-#>   longest task:   2.0 s
+#>   total compute:  17.3 s
+#>   longest task:   2.2 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples   nboot   1000     4 tasks  8.1 s
-#>     weighted_samples   nboot    100     4 tasks  8.1 s
+#>     weighted_samples   nboot   1000     4 tasks  8.7 s
+#>     weighted_samples   nboot    100     4 tasks  8.6 s
 #>   calibration:    AMD EPYC 9V74 80-Core Processor | R 4.6.0 | ssdtools 2.6.0.9002 | 2026-06-23
 #>   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.
 ```

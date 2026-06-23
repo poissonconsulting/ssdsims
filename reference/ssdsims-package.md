@@ -27,3 +27,6 @@ Authors:
 
 - Rebecca Fisher <R.Fisher@aims.gov.au>
   ([ORCID](https://orcid.org/0000-0001-5148-6731))
+
+- Kirill Müller <kirill@cynkra.com>
+  ([ORCID](https://orcid.org/0000-0002-1416-3412))
