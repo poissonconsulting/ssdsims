@@ -43,8 +43,21 @@ expect_snapshot_data <- function(x, name, digits = 6) {
 # Gate the tests that actually drive a `targets` pipeline: they spawn a worker
 # that `library(ssdsims)`, so the package must be installed (true under R CMD
 # check, not under a bare `devtools::test()`), and they are slow.
+#
+# Also skip under coverage. `covr` rewrites every function body to add its
+# per-line counters, which changes the deparsed bytes a `targets` command hashes
+# over. A step slice carries the package functions a shard runs with (e.g. the
+# `fit` slice's `min_pmix_fns`), so the instrumented bodies leak into the shard
+# target's dependency hash - breaking the "hash by name, not by body" identity
+# contract that `scenario_step_slice()` documents and that the standalone ->
+# design cache-reuse test asserts. The pipeline build also runs in a dedicated
+# `callr` session `covr` does not instrument, so these tests add no coverage.
 skip_targets <- function() {
   testthat::skip_on_cran()
+  testthat::skip_if(
+    identical(Sys.getenv("R_COVR"), "true"),
+    "On covr (instrumented bodies perturb `targets` dependency hashes)"
+  )
   testthat::skip_if_not_installed("targets")
   testthat::skip_if_not_installed("tarchetypes")
   testthat::skip_if_not_installed("duckplyr")
