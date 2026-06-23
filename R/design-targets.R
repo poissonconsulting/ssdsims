@@ -378,7 +378,14 @@ ssd_summarise_member <- function(
     options = list(hive_partitioning = FALSE),
     prudence = "stingy"
   )
-  hc <- dplyr::filter(hc_shards, hc_id %in% hc_ids)
+  # Use `semi_join` instead of `filter(.., %in% ...)`: DuckDB translates a join
+  # natively regardless of the number of ids, whereas `%in%` hits a query-size
+  # threshold at ~105 ids and fails under stingy prudence (no dplyr fallback).
+  hc <- dplyr::semi_join(
+    hc_shards,
+    data.frame(hc_id = hc_ids),
+    by = "hc_id"
+  )
   keep_prop <- proportion
   keep_em <- est_method
   if (!is.null(keep_prop)) {
