@@ -101,6 +101,17 @@ behaviour for callers who want it. *Alternative:* keep upload at `thrifty`
 (internal-only stingy). Rejected per the chosen scope — but the opt-out is the
 concession that keeps the published contract usable.
 
+Both generics place a `...` **before** the optional arguments
+(`ssd_open_uploaded(upload, step, ..., prudence)`;
+`ssd_summarise_uploaded(upload, step, ..., drop_samples, prudence)`), so
+`drop_samples`/`prudence` are keyword-only, mirroring `ssd_upload_azure()`'s
+`...`-before-`prefix` convention. The concrete (Azure) methods open with
+`rlang::check_dots_empty()` so a mis-positioned argument aborts loudly rather
+than being silently swallowed into the dots (a `lavish` passed positionally
+must not vanish). *Alternative:* trailing `prudence` with no dots. Rejected —
+it invites brittle positional calls and silent arg drift as the signature
+grows.
+
 ### D6. Pipe style on touched sites only
 Reshape the deeply nested touched calls (e.g.
 `as_tibble(collect(distinct(select(rel, ...))))`) into native `|>` chains —

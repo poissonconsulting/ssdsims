@@ -10,7 +10,12 @@ catchable error rather than triggering an unbounded download/scan. Passing
 `prudence = "lavish"` SHALL restore automatic materialisation (the prior
 behaviour) for callers who want the returned table to compute on first access.
 The `prudence` value SHALL be threaded into the underlying
-`read_parquet_duckdb()` read.
+`read_parquet_duckdb()` read. The optional arguments SHALL be **keyword-only**:
+each generic SHALL place a `...` before its optional arguments
+(`prudence` for `ssd_open_uploaded()`; `drop_samples` and `prudence` for
+`ssd_summarise_uploaded()`), and a positional or otherwise unexpected extra
+argument SHALL be rejected with a catchable error rather than silently
+absorbed.
 
 #### Scenario: Stingy default avoids accidental remote materialisation
 - **WHEN** `ssd_open_uploaded(upload, step)` is called with the default
@@ -30,3 +35,9 @@ The `prudence` value SHALL be threaded into the underlying
   `dplyr::collect()` or `duckplyr::compute_parquet()`
 - **THEN** it SHALL materialise/serialise the rows regardless of the `prudence`
   setting
+
+#### Scenario: Optional arguments are keyword-only
+- **WHEN** `ssd_open_uploaded()` or `ssd_summarise_uploaded()` is called with a
+  positional extra argument (one that would land in `...`)
+- **THEN** the call SHALL raise a catchable error (the dots are checked empty),
+  so `drop_samples`/`prudence` must be supplied by name

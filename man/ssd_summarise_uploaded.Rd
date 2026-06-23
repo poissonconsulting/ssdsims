@@ -7,6 +7,7 @@
 ssd_summarise_uploaded(
   upload,
   step = "hc",
+  ...,
   drop_samples = TRUE,
   prudence = "stingy"
 )
@@ -19,6 +20,10 @@ ssd_summarise_uploaded(
 \code{"summary"} (the uploaded compact summary), or \code{"summary_samples"} (the
 uploaded full summary retaining the \code{dists}/\code{samples} list-columns,
 shipped only when the scenario set \code{samples = TRUE}).}
+
+\item{...}{Unused; must be empty. Its presence forces \code{drop_samples} and
+\code{prudence} to be passed \strong{by name} (\code{rlang::check_dots_empty()} aborts on
+a positional or named extra arg).}
 
 \item{drop_samples}{Flag (default \code{TRUE}): project away the heavy
 \code{dists}/\code{samples} list-columns for the analysis-ready summary. Pass \code{FALSE}

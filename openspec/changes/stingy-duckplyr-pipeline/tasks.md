@@ -41,6 +41,11 @@
 - [x] 4.3 Update the roxygen for both generics: document `prudence`, the
   stingy default, the `"lavish"` opt-out, and that `collect()`/
   `compute_parquet()` are unaffected.
+- [x] 4.4 Make the optional arguments keyword-only: place a `...` before
+  `prudence` (`ssd_open_uploaded()`) and before `drop_samples`
+  (`ssd_summarise_uploaded()`) across the generic and every method, document
+  `@param ...`, and guard the concrete (Azure) methods with
+  `rlang::check_dots_empty()` so a mis-positioned argument aborts loudly.
 
 ## 5. Optional pipe drive-by
 
@@ -59,7 +64,8 @@
   equal the previous `difftime(units = "secs")` result (sub-second exact).
 - [x] 6.4 Add a test for the upload generics: the default returns a stingy
   table (implicit access errors; `collect()` works) and
-  `prudence = "lavish"` restores auto-materialisation.
+  `prudence = "lavish"` restores auto-materialisation. Also assert a positional
+  extra argument is rejected (the dots are checked empty).
 - [x] 6.5 Run the `NOT_CRAN=true` fan-in suites
   (`test-design-targets`, `test-run-scenario`, `test-cost-analysis`,
   `test-upload`) and confirm no new failures beyond the known baseline.

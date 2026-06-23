@@ -234,6 +234,9 @@ ssd_upload_shard <- function(path, upload) {
 #'   `"summary"` (the uploaded compact summary), or `"summary_samples"` (the
 #'   uploaded full summary retaining the `dists`/`samples` list-columns,
 #'   shipped only when the scenario set `samples = TRUE`).
+#' @param ... Unused; must be empty. Its presence forces `prudence` to be
+#'   passed **by name** (`rlang::check_dots_empty()` aborts on a positional or
+#'   named extra arg).
 #' @param prudence The duckplyr prudence of the returned table (default
 #'   `"stingy"`): `"stingy"` keeps it lazy and composable but makes an implicit
 #'   materialisation (e.g. `nrow()`/`$`) against the remote glob error rather
@@ -248,7 +251,7 @@ ssd_upload_shard <- function(path, upload) {
 #' upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
 #' ssd_open_uploaded(upload, "hc") |> dplyr::count()
 #' }
-ssd_open_uploaded <- function(upload, step, prudence = "stingy") {
+ssd_open_uploaded <- function(upload, step, ..., prudence = "stingy") {
   UseMethod("ssd_open_uploaded")
 }
 
@@ -275,6 +278,9 @@ ssd_open_uploaded <- function(upload, step, prudence = "stingy") {
 #' (an unknown destination) and the dry-run method both abort.
 #'
 #' @inheritParams ssd_open_uploaded
+#' @param ... Unused; must be empty. Its presence forces `drop_samples` and
+#'   `prudence` to be passed **by name** (`rlang::check_dots_empty()` aborts on
+#'   a positional or named extra arg).
 #' @param drop_samples Flag (default `TRUE`): project away the heavy
 #'   `dists`/`samples` list-columns for the analysis-ready summary. Pass `FALSE`
 #'   to keep them (e.g. when the in-flight bootstrap `samples` are needed).
@@ -293,6 +299,7 @@ ssd_open_uploaded <- function(upload, step, prudence = "stingy") {
 ssd_summarise_uploaded <- function(
   upload,
   step = "hc",
+  ...,
   drop_samples = TRUE,
   prudence = "stingy"
 ) {
@@ -312,7 +319,7 @@ ssd_upload_shard.default <- function(path, upload) {
 }
 
 #' @export
-ssd_open_uploaded.default <- function(upload, step, prudence = "stingy") {
+ssd_open_uploaded.default <- function(upload, step, ..., prudence = "stingy") {
   abort_unknown_upload(upload, call = rlang::caller_env())
 }
 
@@ -320,6 +327,7 @@ ssd_open_uploaded.default <- function(upload, step, prudence = "stingy") {
 ssd_summarise_uploaded.default <- function(
   upload,
   step = "hc",
+  ...,
   drop_samples = TRUE,
   prudence = "stingy"
 ) {
@@ -351,6 +359,7 @@ ssd_upload_shard.ssdsims_upload_dryrun <- function(path, upload) {
 ssd_open_uploaded.ssdsims_upload_dryrun <- function(
   upload,
   step,
+  ...,
   prudence = "stingy"
 ) {
   chk::abort_chk(
@@ -365,6 +374,7 @@ ssd_open_uploaded.ssdsims_upload_dryrun <- function(
 ssd_summarise_uploaded.ssdsims_upload_dryrun <- function(
   upload,
   step = "hc",
+  ...,
   drop_samples = TRUE,
   prudence = "stingy"
 ) {
@@ -420,8 +430,10 @@ ssd_upload_shard.ssdsims_upload_azure_blob <- function(path, upload) {
 ssd_open_uploaded.ssdsims_upload_azure_blob <- function(
   upload,
   step,
+  ...,
   prudence = "stingy"
 ) {
+  rlang::check_dots_empty()
   step <- rlang::arg_match0(
     step,
     c("sample", "fit", "hc", "summary", "summary_samples")
@@ -440,9 +452,11 @@ ssd_open_uploaded.ssdsims_upload_azure_blob <- function(
 ssd_summarise_uploaded.ssdsims_upload_azure_blob <- function(
   upload,
   step = "hc",
+  ...,
   drop_samples = TRUE,
   prudence = "stingy"
 ) {
+  rlang::check_dots_empty()
   step <- rlang::arg_match0(
     step,
     c("sample", "fit", "hc", "summary", "summary_samples")
