@@ -16,13 +16,15 @@
 # which is lossy - see `duckplyr_memory_limit_restore()` for the
 # round-trip-exact restore value.
 duckplyr_current_settings <- function() {
-  settings <- tibble::as_tibble(dplyr::collect(duckplyr::read_sql_duckdb(
+  settings <- duckplyr::read_sql_duckdb(
     paste0(
       "SELECT current_setting('threads') AS threads, ",
       "current_setting('memory_limit') AS memory_limit, ",
       "current_setting('preserve_insertion_order') AS preserve_insertion_order"
     )
-  )))
+  ) |>
+    dplyr::collect() |>
+    tibble::as_tibble()
   list(
     threads = as.integer(settings$threads[[1L]]),
     memory_limit = settings$memory_limit[[1L]],

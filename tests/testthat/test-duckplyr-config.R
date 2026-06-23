@@ -390,3 +390,66 @@ test_that("constrained configuration leaves results byte-identical", {
   rownames(full1) <- rownames(full2) <- NULL
   expect_identical(full2, full1)
 })
+
+# ---- stingy pipeline frames and the write seam ------------------------------
+
+test_that("ssd_write_parquet wraps a plain tibble stingy, leaves a frame's prudence", {
+  dir <- withr::local_tempdir()
+  seen <- "NOT CALLED"
+  orig <- duckplyr::as_duckdb_tibble
+  testthat::local_mocked_bindings(
+    as_duckdb_tibble = function(
+      x,
+      ...,
+      prudence = c("lavish", "thrifty", "stingy")
+    ) {
+      seen <<- if (missing(prudence)) "lavish" else prudence
+      orig(x, ..., prudence = prudence)
+    },
+    .package = "duckplyr"
+  )
+  # A plain R tibble is wrapped with prudence = "stingy" before the write.
+  p1 <- file.path(dir, "plain.parquet")
+  ssd_write_parquet(tibble::tibble(x = 1:3), p1)
+  expect_identical(seen, "stingy")
+  expect_identical(ssd_read_parquet(p1)$x, 1:3)
+
+  # An already-`duckplyr` frame is NOT re-wrapped (so a stingy fan-in frame is
+  # not silently downgraded to lavish at the seam): `as_duckdb_tibble` untouched.
+  seen <- "NOT CALLED"
+  stingy <- orig(tibble::tibble(x = 4:6), prudence = "stingy")
+  expect_s3_class(stingy, "prudent_duckplyr_df")
+  p2 <- file.path(dir, "frame.parquet")
+  ssd_write_parquet(stingy, p2)
+  expect_identical(seen, "NOT CALLED")
+  expect_identical(ssd_read_parquet(p2)$x, 4:6)
+})
+
+test_that("ssd_summarise reads its shards with prudence = stingy", {
+  dir <- withr::local_tempdir()
+  dc_write_hc_layer(dir, n = 20L, cell = 2L)
+  seen <- character()
+  orig <- duckplyr::read_parquet_duckdb
+  testthat::local_mocked_bindings(
+    read_parquet_duckdb = function(
+      ...,
+      prudence = c("thrifty", "lavish", "stingy")
+    ) {
+      if (!missing(prudence)) {
+        seen <<- c(seen, prudence)
+      }
+      orig(..., prudence = prudence)
+    },
+    .package = "duckplyr"
+  )
+  ssd_summarise(
+    file.path(dir, "sample"),
+    file.path(dir, "fit"),
+    file.path(dir, "hc"),
+    file.path(dir, "summary.parquet")
+  )
+  # The fan-in read of the hc shards (the first read) is stingy; later reads are
+  # duckplyr's own write-back internals and are not asserted here.
+  expect_gte(length(seen), 1L)
+  expect_identical(seen[[1L]], "stingy")
+})

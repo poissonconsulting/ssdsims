@@ -417,3 +417,30 @@ test_that("scenario-combine: distset-coverage members share sample and fit", {
   expect_equal(nrow(m), nrow(oracle))
   expect_equal(m$est_design, m$est_alone)
 })
+
+# ---- semi_join hc_ids filter (large id sets) --------------------------------
+
+test_that("ssd_summarise_member uses semi_join to handle >105 hc_ids in DuckDB", {
+  # Regression for #201/#203: `filter(hc_id %in% hc_ids)` with >~105 ids
+  # exceeds DuckDB's IN-list threshold under stingy prudence and errors.
+  # `semi_join` translates natively regardless of set size.
+  dir <- withr::local_tempdir()
+  n_ids <- 200L
+  hc <- tibble::tibble(
+    proportion = 0.05,
+    est = as.double(seq_len(n_ids)),
+    hc_id = sprintf("hc-%04d", seq_len(n_ids)),
+    fit_id = sprintf("fit-%04d", seq_len(n_ids))
+  )
+  ssd_write_parquet(hc, file.path(dir, "hc", "sim=1", "part.parquet"))
+  out_path <- file.path(dir, "summary.parquet")
+  # Must complete without error, collecting all 200 ids via semi_join in DuckDB.
+  ssd_summarise_member(
+    dir_hc = file.path(dir, "hc"),
+    hc_ids = hc$hc_id,
+    path = out_path
+  )
+  result <- ssd_read_parquet(out_path)
+  expect_identical(nrow(result), n_ids)
+  expect_setequal(result$hc_id, hc$hc_id)
+})

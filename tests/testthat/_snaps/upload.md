@@ -193,3 +193,25 @@
       Error in `ssd_scenario_targets()`:
       ! `upload` must be `NULL` or an upload destination from `ssd_upload_azure()` or `ssd_upload_dryrun()`.
 
+# cloud-upload: the dots force prudence/drop_samples to be passed by name
+
+    Code
+      ssd_open_uploaded(upload, "hc", "stingy")
+    Condition
+      Error in `ssd_open_uploaded()`:
+      ! `...` must be empty.
+      x Problematic argument:
+      * ..1 = "stingy"
+      i Did you forget to name an argument?
+
+---
+
+    Code
+      ssd_summarise_uploaded(upload, "hc", TRUE)
+    Condition
+      Error in `ssd_summarise_uploaded()`:
+      ! `...` must be empty.
+      x Problematic argument:
+      * ..1 = TRUE
+      i Did you forget to name an argument?
+
