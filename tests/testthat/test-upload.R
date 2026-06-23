@@ -665,9 +665,10 @@ test_that("cloud-upload: the dots force prudence/drop_samples to be passed by na
   upload <- ssd_upload_azure("https://acct.blob.core.windows.net", "results")
   # A positional extra lands in `...`; `rlang::check_dots_empty()` rejects it
   # before any credential/extension work.
-  expect_error(ssd_open_uploaded(upload, "hc", "stingy"), "empty|dots|named")
-  expect_error(
-    ssd_summarise_uploaded(upload, "hc", TRUE),
-    "empty|dots|named"
-  )
+  expect_snapshot(error = TRUE, {
+    ssd_open_uploaded(upload, "hc", "stingy")
+  })
+  expect_snapshot(error = TRUE, {
+    ssd_summarise_uploaded(upload, "hc", TRUE)
+  })
 })

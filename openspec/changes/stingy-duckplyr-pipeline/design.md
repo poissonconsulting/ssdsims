@@ -108,9 +108,11 @@ Both generics place a `...` **before** the optional arguments
 `...`-before-`prefix` convention. The concrete (Azure) methods open with
 `rlang::check_dots_empty()` so a mis-positioned argument aborts loudly rather
 than being silently swallowed into the dots (a `lavish` passed positionally
-must not vanish). *Alternative:* trailing `prudence` with no dots. Rejected —
-it invites brittle positional calls and silent arg drift as the signature
-grows.
+must not vanish), and the `...` is documented via
+`@inheritParams rlang::args_dots_empty` (rlang's standard stub) and its
+error message is captured as a snapshot. *Alternative:* trailing `prudence`
+with no dots. Rejected — it invites brittle positional calls and silent arg
+drift as the signature grows.
 
 ### D6. Pipe style on touched sites only
 Reshape the deeply nested touched calls (e.g.

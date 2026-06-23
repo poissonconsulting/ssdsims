@@ -21,9 +21,7 @@ ssd_summarise_uploaded(
 uploaded full summary retaining the \code{dists}/\code{samples} list-columns,
 shipped only when the scenario set \code{samples = TRUE}).}
 
-\item{...}{Unused; must be empty. Its presence forces \code{drop_samples} and
-\code{prudence} to be passed \strong{by name} (\code{rlang::check_dots_empty()} aborts on
-a positional or named extra arg).}
+\item{...}{These dots are for future extensions and must be empty.}
 
 \item{drop_samples}{Flag (default \code{TRUE}): project away the heavy
 \code{dists}/\code{samples} list-columns for the analysis-ready summary. Pass \code{FALSE}

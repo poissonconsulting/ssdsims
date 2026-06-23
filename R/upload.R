@@ -230,13 +230,11 @@ ssd_upload_shard <- function(path, upload) {
 #' be read directly.
 #'
 #' @inheritParams ssd_test_upload
+#' @inheritParams rlang::args_dots_empty
 #' @param step One of `"sample"`, `"fit"`, `"hc"` (the step layer to read),
 #'   `"summary"` (the uploaded compact summary), or `"summary_samples"` (the
 #'   uploaded full summary retaining the `dists`/`samples` list-columns,
 #'   shipped only when the scenario set `samples = TRUE`).
-#' @param ... Unused; must be empty. Its presence forces `prudence` to be
-#'   passed **by name** (`rlang::check_dots_empty()` aborts on a positional or
-#'   named extra arg).
 #' @param prudence The duckplyr prudence of the returned table (default
 #'   `"stingy"`): `"stingy"` keeps it lazy and composable but makes an implicit
 #'   materialisation (e.g. `nrow()`/`$`) against the remote glob error rather
@@ -278,9 +276,7 @@ ssd_open_uploaded <- function(upload, step, ..., prudence = "stingy") {
 #' (an unknown destination) and the dry-run method both abort.
 #'
 #' @inheritParams ssd_open_uploaded
-#' @param ... Unused; must be empty. Its presence forces `drop_samples` and
-#'   `prudence` to be passed **by name** (`rlang::check_dots_empty()` aborts on
-#'   a positional or named extra arg).
+#' @inheritParams rlang::args_dots_empty
 #' @param drop_samples Flag (default `TRUE`): project away the heavy
 #'   `dists`/`samples` list-columns for the analysis-ready summary. Pass `FALSE`
 #'   to keep them (e.g. when the in-flight bootstrap `samples` are needed).
