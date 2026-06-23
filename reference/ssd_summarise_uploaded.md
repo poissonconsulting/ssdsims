@@ -26,7 +26,13 @@ destination) and the dry-run method both abort.
 ## Usage
 
 ``` r
-ssd_summarise_uploaded(upload, step = "hc", drop_samples = TRUE)
+ssd_summarise_uploaded(
+  upload,
+  step = "hc",
+  ...,
+  drop_samples = TRUE,
+  prudence = "stingy"
+)
 ```
 
 ## Arguments
@@ -45,11 +51,28 @@ ssd_summarise_uploaded(upload, step = "hc", drop_samples = TRUE)
   (the uploaded full summary retaining the `dists`/`samples`
   list-columns, shipped only when the scenario set `samples = TRUE`).
 
+- ...:
+
+  These dots are for future extensions and must be empty.
+
 - drop_samples:
 
   Flag (default `TRUE`): project away the heavy `dists`/`samples`
   list-columns for the analysis-ready summary. Pass `FALSE` to keep them
   (e.g. when the in-flight bootstrap `samples` are needed).
+
+- prudence:
+
+  The duckplyr prudence of the returned table (default `"stingy"`):
+  `"stingy"` keeps it lazy and composable but makes an implicit
+  materialisation (e.g.
+  [`nrow()`](https://rdrr.io/r/base/nrow.html)/`$`) against the remote
+  glob error rather than triggering an unbounded download/scan;
+  `"lavish"` restores automatic materialisation on first access.
+  [`dplyr::collect()`](https://dplyr.tidyverse.org/reference/compute.html)
+  and
+  [`duckplyr::compute_parquet()`](https://duckplyr.tidyverse.org/reference/compute_parquet.html)
+  work under either.
 
 ## Value
 

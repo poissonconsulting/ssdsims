@@ -22,7 +22,7 @@ so the local shards should be read directly.
 ## Usage
 
 ``` r
-ssd_open_uploaded(upload, step)
+ssd_open_uploaded(upload, step, ..., prudence = "stingy")
 ```
 
 ## Arguments
@@ -40,6 +40,23 @@ ssd_open_uploaded(upload, step)
   `"summary"` (the uploaded compact summary), or `"summary_samples"`
   (the uploaded full summary retaining the `dists`/`samples`
   list-columns, shipped only when the scenario set `samples = TRUE`).
+
+- ...:
+
+  These dots are for future extensions and must be empty.
+
+- prudence:
+
+  The duckplyr prudence of the returned table (default `"stingy"`):
+  `"stingy"` keeps it lazy and composable but makes an implicit
+  materialisation (e.g.
+  [`nrow()`](https://rdrr.io/r/base/nrow.html)/`$`) against the remote
+  glob error rather than triggering an unbounded download/scan;
+  `"lavish"` restores automatic materialisation on first access.
+  [`dplyr::collect()`](https://dplyr.tidyverse.org/reference/compute.html)
+  and
+  [`duckplyr::compute_parquet()`](https://duckplyr.tidyverse.org/reference/compute_parquet.html)
+  work under either.
 
 ## Value
 
