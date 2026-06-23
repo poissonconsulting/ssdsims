@@ -7,16 +7,15 @@ library(ssdsims)
 
 ## Why a declarative scenario?
 
-ssdsims is moving from running a simulation study *immediately* (the
-legacy
-[`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md))
-to a cluster-friendly [targets](https://docs.ropensci.org/targets/)
-pipeline. The root of that pipeline is a **scenario**: a small, purely
-declarative description of the study you want to run. It contains only
-the scenario options — a seed, the number of simulations, the sample
-sizes, the dataset *names*, and the fit/hc argument grids. It draws
-**no** random numbers, expands **no** tasks, writes **nothing**, and has
-**no** dependency on `targets`.
+ssdsims runs a simulation study from a declarative description rather
+than immediately, feeding a cluster-friendly
+[targets](https://docs.ropensci.org/targets/) pipeline. The root of that
+pipeline is a **scenario**: a small, purely declarative description of
+the study you want to run. It contains only the scenario options — a
+seed, the number of simulations, the sample sizes, the dataset *names*,
+and the fit/hc argument grids. It draws **no** random numbers, expands
+**no** tasks, writes **nothing**, and has **no** dependency on
+`targets`.
 
 Keeping the scenario declarative buys two things:
 
@@ -111,11 +110,9 @@ name.
 
 Each dataset can also be *generated* rather than observed.
 [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
-accepts the same generator inputs the legacy
-[`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-dispatches over — a generator function, a function-name string, or a
-`fitdists`/`tmbfit` object (drawn from the matching `ssd_r<dist>` with
-the fit’s estimates) — and materialises each, **once**, to a `Conc`
+accepts generator inputs — a generator function, a function-name string,
+or a `fitdists`/`tmbfit` object (drawn from the matching `ssd_r<dist>`
+with the fit’s estimates) — and materialises each, **once**, to a `Conc`
 tibble of `.n` rows. The result composes with the data frames in
 [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md),
 either as an unnamed argument or spliced with `!!!` (the two are

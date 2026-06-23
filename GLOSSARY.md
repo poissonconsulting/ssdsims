@@ -15,52 +15,33 @@ Terminology used throughout `ssdsims`.
   axis** or a **scenario setting** (below). Its canonical call-site slot
   is third, immediately after `nsim` and before any `...` scenario
   option (e.g. `nrow`).
-- **state**: The full internal state of an RNG. For L’Ecuyer-CMRG, the
-  state is a length-7 integer vector assignable to `.Random.seed` (it
-  cannot be passed to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html)). For dqrng, the
-  state is opaque to user code but accessible via
+- **state**: The full internal state of an RNG. For dqrng, the state is
+  opaque to user code but accessible via
   [`dqrng::dqrng_get_state()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html)
-  / `dqrng_set_state()`. ssdsims function names ending in `_state`
-  (e.g. `with_lecuyer_cmrg_state`, `slice_sample_state`,
-  `fit_dists_state`, `hc_state`) take a `state` argument that, in the
-  new design, holds a **primer** (see below) — the function installs it
-  as the running RNG state before executing its body.
+  / `dqrng_set_state()`. The dqrng-path helpers ending in `_state`
+  (e.g. [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
+  /
+  [`with_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md))
+  take a **primer** (see below) and install it as the running RNG state
+  before executing their body.
 - **stream**: An independent sequence of pseudo-random numbers within an
-  RNG family. For L’Ecuyer-CMRG, streams are advanced via
-  [`parallel::nextRNGStream()`](https://rdrr.io/r/parallel/RngStream.html)
-  (~2^127 jump per stream); the L’Ecuyer stream selector IS a state
-  vector. For dqrng, `stream` is a separate argument to `dqset.seed()`
-  (independent of `seed`); same `seed` and different `stream` give
-  statistically independent sequences.
-- **sub-stream**: A finer subdivision within an L’Ecuyer-CMRG stream,
-  advanced via
-  [`parallel::nextRNGSubStream()`](https://rdrr.io/r/parallel/RngStream.html).
-  ssdsims’s current package convention assigns one sub-stream per
-  simulation index (`sim`). The dqrng-based design (TARGETS-DESIGN.md
-  §2) does not use sub-streams; each task gets its own dqrng stream
-  selected by its **primer**.
+  RNG family. For dqrng, `stream` is a separate argument to
+  `dqset.seed()` (independent of `seed`); the same `seed` and a
+  different `stream` give statistically independent sequences.
 - **primer**: The value that, *together with* `seed`, fully initializes
   an RNG instance to a known starting point — i.e. picks which
-  independent sequence to consume. Concrete type depends on the RNG
-  family:
-  - **dqrng PCG64**: a 64-bit integer packed as a length-2 integer
-    vector (hi32, lo32). The primer is the value passed to the `stream`
-    argument of
-    [`dqrng::dqset.seed()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html).
-  - **L’Ecuyer-CMRG**: a length-7 integer state vector assignable to
-    `.Random.seed`. In TARGETS-DESIGN.md, the per-task primer is the
-    64-bit
-    [`rlang::hash()`](https://rlang.r-lib.org/reference/hash.html) of
-    the task’s parameters via `task_primer(p)` (§2). The dqrng-path
-    seed-and-run wrappers carry it under the corrected naming — the
-    `primer =` argument of the `_primer` functions
-    `sample_data_task_primer()` / `fit_data_task_primer()` /
-    `hc_data_task_primer()`, which install `(seed, primer)` once via
-    [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md).
-    The legacy L’Ecuyer `slice_sample_state()` / `fit_dists_state()` /
-    `hc_state()` keep the older `state =` spelling of the same primer (a
-    historical misnomer) until `cleanup-lecuyer` removes them.
+  independent sequence to consume. For dqrng’s PCG64 it is a 64-bit
+  integer packed as a length-2 integer vector (hi32, lo32), passed to
+  the `stream` argument of
+  [`dqrng::dqset.seed()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html).
+  In TARGETS-DESIGN.md, the per-task primer is the 64-bit
+  [`rlang::hash()`](https://rlang.r-lib.org/reference/hash.html) of the
+  task’s parameters via `task_primer(p)` (§2). The dqrng-path
+  seed-and-run wrappers carry it under the `primer =` argument of the
+  `_primer` functions `sample_data_task_primer()` /
+  `fit_data_task_primer()` / `hc_data_task_primer()`, which install
+  `(seed, primer)` once via
+  [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md).
 
 ## Pipeline terms
 
@@ -200,8 +181,8 @@ Terminology used throughout `ssdsims`.
   the primer, or results.
 
 - **step**: One of the three RNG-touching stages of the pipeline:
-  **data** (`slice_sample_state()`), **fit** (`fit_dists_state()`),
-  **hc** (`hc_state`). Each step has its own task table (`data_tasks` /
+  **data** (`sample_data_task()`), **fit** (`fit_data_task()`), **hc**
+  (`hc_data_task()`). Each step has its own task table (`data_tasks` /
   `fit_tasks` / `hc_tasks`), its own grid, its own `partition_by` axes,
   its own dynamic-branched target (`data_step` / `fit_step` /
   `hc_step`), and its own shard directory. The word “step” is reserved

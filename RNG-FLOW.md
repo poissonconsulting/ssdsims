@@ -13,10 +13,9 @@ hcs  <- ssd_hc_sims(fits)
 and answers four questions:
 
 1.  Where does stochasticity enter, and how is it handled?
-2.  Is the L’Ecuyer-CMRG state that
-    [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md),
-    `fit_dists_seed()` and `hc_seed()` each derive for a given `sim`
-    actually the *same* state?
+2.  Is the L’Ecuyer-CMRG state that `ssd_sim_data()`, `fit_dists_seed()`
+    and `hc_seed()` each derive for a given `sim` actually the *same*
+    state?
 3.  What is a *stream*, and is it used for in-package parallelism?
 4.  What does the PoC in **PR \#59** add, and what is still missing for
     the goal of “parallel + reproducible + extensible”?
@@ -136,8 +135,7 @@ helpers (`fit_dists_seed()`, `hc_seed()`) use this single-row form.
 **Claim (from the user’s question):** the `sim` column on every row of
 the nested tibble identifies a unique L’Ecuyer-CMRG substream, and for a
 fixed `(seed, stream, sim)` the *same* state is used by
-[`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md),
-`fit_dists_seed()` and `hc_seed()`.
+`ssd_sim_data()`, `fit_dists_seed()` and `hc_seed()`.
 
 **Verdict — design intent: confirmed.** All three call sites pass the
 same `(seed, stream, sim)` triple through
@@ -244,13 +242,8 @@ L’Ecuyer-CMRG defines two levels of advancement:
 
 **Is the stream concept used for parallelism inside `ssdsims`?**
 No. There is no `parallel`/`furrr`/`mirai` call in the package. Every
-call to
-[`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
-/
-[`ssd_fit_dists_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.md)
-/
-[`ssd_hc_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md)
-uses a single scalar `stream` (default `1L`, overridable via the
+call to `ssd_sim_data()` / `ssd_fit_dists_sims()` / `ssd_hc_sims()` uses
+a single scalar `stream` (default `1L`, overridable via the
 `ssdsims.stream` option or the explicit argument). The package iterates
 with [`purrr::pmap()`](https://purrr.tidyverse.org/reference/pmap.html),
 sequentially.
@@ -475,9 +468,8 @@ RNG is unaffected. The `state` is a precomputed L’Ecuyer-CMRG substream,
 keyed by `(seed, stream, sim)`.
 
 > *Is the `sim` column unique per slice, and does the same `sim` yield
-> the same state across
-> [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md),
-> `fit_dists_seed()` and `hc_seed()`?*
+> the same state across `ssd_sim_data()`, `fit_dists_seed()` and
+> `hc_seed()`?*
 
 Yes by design and yes in practice — verified empirically — but the
 *current* code has a latent bug where the RNGkind side-effect from

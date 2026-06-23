@@ -46,12 +46,12 @@
 
 <p>This note traces what happens when <code>scripts/example.R</code> runs the three-step pipeline</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sims</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ssd_sim_data.html">ssd_sim_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
-<span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ssd_fit_dists_sims.html">ssd_fit_dists_sims</a></span><span class="op">(</span><span class="va">sims</span><span class="op">)</span></span>
-<span><span class="va">hcs</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/ssd_hc_sims.html">ssd_hc_sims</a></span><span class="op">(</span><span class="va">fits</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">sims</span> <span class="op">&lt;-</span> <span class="fu">ssd_sim_data</span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<span><span class="va">fits</span> <span class="op">&lt;-</span> <span class="fu">ssd_fit_dists_sims</span><span class="op">(</span><span class="va">sims</span><span class="op">)</span></span>
+<span><span class="va">hcs</span>  <span class="op">&lt;-</span> <span class="fu">ssd_hc_sims</span><span class="op">(</span><span class="va">fits</span><span class="op">)</span></span></code></pre></div>
 <p>and answers four questions:</p>
 <ol style="list-style-type: decimal"><li>Where does stochasticity enter, and how is it handled?</li>
-<li>Is the L’Ecuyer-CMRG state that <code><a href="reference/ssd_sim_data.html">ssd_sim_data()</a></code>, <code>fit_dists_seed()</code> and <code>hc_seed()</code> each derive for a given <code>sim</code> actually the <em>same</em> state?</li>
+<li>Is the L’Ecuyer-CMRG state that <code>ssd_sim_data()</code>, <code>fit_dists_seed()</code> and <code>hc_seed()</code> each derive for a given <code>sim</code> actually the <em>same</em> state?</li>
 <li>What is a <em>stream</em>, and is it used for in-package parallelism?</li>
 <li>What does the PoC in <strong>PR #59</strong> add, and what is still missing for the goal of “parallel + reproducible + extensible”?</li>
 </ol><p>References below are to current <code>main</code> (commit at time of writing) unless prefixed with <code>[PoC]</code>, which points at PR #59.</p>
@@ -143,7 +143,7 @@
 <div class="section level2">
 <h2 id="id_3-the-sim-column-identity-claim--confirmed-with-a-caveat">3. The <code>sim</code> column identity claim — confirmed <em>with a caveat</em>
 <a class="anchor" aria-label="anchor" href="#id_3-the-sim-column-identity-claim--confirmed-with-a-caveat"></a></h2>
-<p><strong>Claim (from the user’s question):</strong> the <code>sim</code> column on every row of the nested tibble identifies a unique L’Ecuyer-CMRG substream, and for a fixed <code>(seed, stream, sim)</code> the <em>same</em> state is used by <code><a href="reference/ssd_sim_data.html">ssd_sim_data()</a></code>, <code>fit_dists_seed()</code> and <code>hc_seed()</code>.</p>
+<p><strong>Claim (from the user’s question):</strong> the <code>sim</code> column on every row of the nested tibble identifies a unique L’Ecuyer-CMRG substream, and for a fixed <code>(seed, stream, sim)</code> the <em>same</em> state is used by <code>ssd_sim_data()</code>, <code>fit_dists_seed()</code> and <code>hc_seed()</code>.</p>
 <p><strong>Verdict — design intent: confirmed.</strong> All three call sites pass the same <code>(seed, stream, sim)</code> triple through <code>get_lecuyer_cmrg_stream_state{,s}()</code>, and that helper is a pure function of those three inputs.</p>
 <p>Empirical check (Rscript against current <code>main</code>, with <code>seed = 42</code>):</p>
 <pre><code>fit_seed(sim=1)         == hc_seed(sim=1)             TRUE
@@ -212,11 +212,11 @@ sim=3   ●                      ●                    ●</code></pre>
 <td>
 <code>sim</code> (1, 2, …, <code>nsim</code>)</td>
 <td>Replicate index within a batch</td>
-</tr></tbody></table><p><strong>Is the stream concept used for parallelism inside <code>ssdsims</code>?</strong> No. There is no <code>parallel</code>/<code>furrr</code>/<code>mirai</code> call in the package. Every call to <code><a href="reference/ssd_sim_data.html">ssd_sim_data()</a></code> / <code><a href="reference/ssd_fit_dists_sims.html">ssd_fit_dists_sims()</a></code> / <code><a href="reference/ssd_hc_sims.html">ssd_hc_sims()</a></code> uses a single scalar <code>stream</code> (default <code>1L</code>, overridable via the <code>ssdsims.stream</code> option or the explicit argument). The package iterates with <code><a href="https://purrr.tidyverse.org/reference/pmap.html" class="external-link">purrr::pmap()</a></code>, sequentially.</p>
+</tr></tbody></table><p><strong>Is the stream concept used for parallelism inside <code>ssdsims</code>?</strong> No. There is no <code>parallel</code>/<code>furrr</code>/<code>mirai</code> call in the package. Every call to <code>ssd_sim_data()</code> / <code>ssd_fit_dists_sims()</code> / <code>ssd_hc_sims()</code> uses a single scalar <code>stream</code> (default <code>1L</code>, overridable via the <code>ssdsims.stream</code> option or the explicit argument). The package iterates with <code><a href="https://purrr.tidyverse.org/reference/pmap.html" class="external-link">purrr::pmap()</a></code>, sequentially.</p>
 <p><strong>What is <code>stream</code> actually for, then?</strong> It is a <em>user-facing extensibility hook</em>. By calling</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">sims1</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ssd_sim_data.html">ssd_sim_data</a></span><span class="op">(</span><span class="va">data</span>, seed <span class="op">=</span> <span class="fl">42</span>, stream <span class="op">=</span> <span class="fl">1L</span>, nsim <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>   <span class="co"># batch A</span></span>
-<span><span class="va">sims2</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ssd_sim_data.html">ssd_sim_data</a></span><span class="op">(</span><span class="va">data</span>, seed <span class="op">=</span> <span class="fl">42</span>, stream <span class="op">=</span> <span class="fl">2L</span>, nsim <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>   <span class="co"># batch B</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">sims1</span> <span class="op">&lt;-</span> <span class="fu">ssd_sim_data</span><span class="op">(</span><span class="va">data</span>, seed <span class="op">=</span> <span class="fl">42</span>, stream <span class="op">=</span> <span class="fl">1L</span>, nsim <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>   <span class="co"># batch A</span></span>
+<span><span class="va">sims2</span> <span class="op">&lt;-</span> <span class="fu">ssd_sim_data</span><span class="op">(</span><span class="va">data</span>, seed <span class="op">=</span> <span class="fl">42</span>, stream <span class="op">=</span> <span class="fl">2L</span>, nsim <span class="op">=</span> <span class="fl">100</span><span class="op">)</span>   <span class="co"># batch B</span></span></code></pre></div>
 <p>the user gets two batches whose substreams do not overlap (they are separated by <code>nextRNGStream</code>, i.e. ~2^127 draws), but both batches are reproducible from the <em>same</em> master seed. In other words, <code>stream</code> is the existing “I want to add more sims without disturbing the ones I already have” axis — exactly the lever the user’s goal #3 (extensibility) wants to push on. It just hasn’t been wired into a workflow yet.</p>
 <hr></div>
 <div class="section level2">
@@ -321,7 +321,7 @@ sim=3   ●                      ●                    ●</code></pre>
 </blockquote>
 <p>Three places — data resample, fit start values, HC bootstrap — each opened inside <code>with_lecuyer_cmrg_state(state, { … })</code> so that the global RNG is unaffected. The <code>state</code> is a precomputed L’Ecuyer-CMRG substream, keyed by <code>(seed, stream, sim)</code>.</p>
 <blockquote>
-<p><em>Is the <code>sim</code> column unique per slice, and does the same <code>sim</code> yield the same state across <code><a href="reference/ssd_sim_data.html">ssd_sim_data()</a></code>, <code>fit_dists_seed()</code> and <code>hc_seed()</code>?</em></p>
+<p><em>Is the <code>sim</code> column unique per slice, and does the same <code>sim</code> yield the same state across <code>ssd_sim_data()</code>, <code>fit_dists_seed()</code> and <code>hc_seed()</code>?</em></p>
 </blockquote>
 <p>Yes by design and yes in practice — verified empirically — but the <em>current</em> code has a latent bug where the RNGkind side-effect from <code>get_lecuyer_cmrg_state()</code> can leak across calls when <code>.Random.seed</code> didn’t exist on entry, breaking reproducibility. The PoC fixes this by pinning <code>RNGkind("Mersenne-Twister")</code> before <code>set.seed(seed)</code>. The PoC also changes the design so that data, fit and HC use <em>independent</em> substreams of the same master rather than all starting from the same state.</p>
 <blockquote>

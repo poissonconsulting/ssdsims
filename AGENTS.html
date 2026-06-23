@@ -144,12 +144,10 @@
 </div>
 <div class="section level3">
 <h3 id="rng-discipline">RNG Discipline<a class="anchor" aria-label="anchor" href="#rng-discipline"></a></h3>
-<p>The package uses two RNG paths:</p>
-<ol style="list-style-type: decimal"><li>
-<strong>L’Ecuyer-CMRG</strong> (legacy, will be removed) — <code><a href="reference/local_lecuyer_cmrg_seed.html">with_lecuyer_cmrg_seed()</a></code>, <code><a href="reference/local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code>.</li>
-<li>
-<strong>dqrng + hash</strong> (new targets-based path) — <code>dqrng::dqset.seed(seed, stream)</code> with task-derived primers. The <code>pcg64</code> backend is scenario-scoped via <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code>, which is <strong>reentrant</strong>: a nested call is a no-op (detected via <code>RNGkind()[1] == "user-supplied"</code>), so only the outermost scope activates and resets the backend and the RNG stream is identical with or without nesting. See <code>R/dqrng-backend.R</code> and <code>openspec/changes/dqrng-init/design.md</code>.</li>
-</ol><p>When touching RNG-consuming code: - Do <strong>not</strong> assume a fixed global <code>.Random.seed</code> across function calls. - Use <code><a href="reference/local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code> / <code><a href="reference/local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code> / <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> / <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::local_seed()</a></code> to scope RNG changes. - On exit, RNG state <strong>must</strong> be restored (use <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code> or withr scoping helpers). - Test for <code>.Random.seed</code> being unchanged before and after (see <code>tests/testthat/test-lecuyer-cmrg-seed.R</code> for examples).</p>
+<p>The package uses a single RNG path:</p>
+<ul><li>
+<strong>dqrng + hash</strong> (the targets-based path) — <code>dqrng::dqset.seed(seed, stream)</code> with task-derived primers. The <code>pcg64</code> backend is scenario-scoped via <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code>, which is <strong>reentrant</strong>: a nested call is a no-op (detected via <code>RNGkind()[1] == "user-supplied"</code>), so only the outermost scope activates and resets the backend and the RNG stream is identical with or without nesting. See <code>R/dqrng-backend.R</code> and <code>openspec/changes/dqrng-init/design.md</code>.</li>
+</ul><p>When touching RNG-consuming code: - Do <strong>not</strong> assume a fixed global <code>.Random.seed</code> across function calls. - Use <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code> / <code><a href="reference/local_dqrng_state.html">local_dqrng_state()</a></code> / <code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::local_seed()</a></code> to scope RNG changes. - On exit, RNG state <strong>must</strong> be restored (use <code><a href="https://rdrr.io/r/base/on.exit.html" class="external-link">on.exit()</a></code> or withr scoping helpers). - For code on the dqrng path, test that <code>get_dqrng_state()</code> is unchanged before and after (see <code>tests/testthat/test-task-shards.R</code> for examples); where base R RNG must be untouched, test <code>.Random.seed</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="testing">Testing<a class="anchor" aria-label="anchor" href="#testing"></a></h3>
@@ -194,9 +192,7 @@
 <li>
 <strong>rlang</strong> — Hashing (task primers in new design), quoting.</li>
 <li>
-<strong>dqrng</strong> — New RNG backend (targets path).</li>
-<li>
-<strong>parallel</strong> — L’Ecuyer-CMRG sub-streams (legacy path).</li>
+<strong>dqrng</strong> — RNG backend (targets path).</li>
 <li>
 <strong>duckplyr</strong> — Parquet I/O and off-cluster querying (targets path). <strong>Interact with Parquet files through <code>duckplyr</code> (DuckDB)</strong> — <code><a href="https://duckplyr.tidyverse.org/reference/read_parquet_duckdb.html" class="external-link">duckplyr::read_parquet_duckdb()</a></code> for reads, <code><a href="https://duckplyr.tidyverse.org/reference/compute_parquet.html" class="external-link">duckplyr::compute_parquet()</a></code> for writes — <strong>not <code>arrow</code></strong>. This is the team preference; confine the call sites behind the <code>ssd_read_parquet()</code> / <code>ssd_write_parquet()</code> internals.</li>
 </ul><p>See <code>DESCRIPTION</code> for versions and imports.</p>
@@ -216,7 +212,7 @@
 <ul><li>
 <strong>Always update PR title and description</strong> when opening the PR and after committing. The description must capture the change’s <em>current</em> state, not a revision/process log.</li>
 <li>
-<strong>Escape function, object, and file names in backticks</strong> in PR titles and descriptions (e.g. <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code>, <code>run_scenario()</code>, <code>DESCRIPTION</code>).</li>
+<strong>Escape function, object, and file names in backticks</strong> in PR titles and descriptions (e.g. <code><a href="reference/local_dqrng_backend.html">local_dqrng_backend()</a></code>, <code><a href="reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code>, <code>DESCRIPTION</code>).</li>
 <li>
 <strong>Reference the related issue</strong> in the title where one exists (e.g. <code>(#64)</code>) so it carries through to the changelog.</li>
 <li>Keep the PR title and description in sync with the change as it evolves; the description should capture the <em>current</em> state, not a revision log.</li>
@@ -232,7 +228,7 @@
 <h2 id="architectural-notes">Architectural Notes<a class="anchor" aria-label="anchor" href="#architectural-notes"></a></h2>
 <div class="section level3">
 <h3 id="the-targets-redesign">The targets redesign<a class="anchor" aria-label="anchor" href="#the-targets-redesign"></a></h3>
-<p>The package is transitioning from immediate <code><a href="reference/ssd_run_scenario.html">ssd_run_scenario()</a></code> execution to a cluster-based targets pipeline. Key shifts:</p>
+<p>The package runs scenarios through a cluster-based targets pipeline rather than immediate in-memory execution. Key shifts:</p>
 <ul><li>
 <strong>Scenario object</strong> (<code><a href="reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>) — Declarative, construction-time, contains only <code>seed</code>, scenario options, dataset names, and arg grids.</li>
 <li>

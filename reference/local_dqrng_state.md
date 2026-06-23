@@ -51,11 +51,7 @@ returns the value of `code`.
 
 ## Details
 
-These are the dqrng-path analogues of
-[`local_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md)
-/
-[`with_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md).
-Like those helpers they snapshot the RNG state on entry (via
+They snapshot the RNG state on entry (via
 [`dqrng::dqrng_get_state()`](https://daqana.github.io/dqrng/reference/dqrng-functions.html))
 and [`withr::defer()`](https://withr.r-lib.org/reference/defer.html) a
 restore (via
@@ -71,8 +67,7 @@ Mersenne-Twister.
 ## See also
 
 [`withr::local_seed()`](https://withr.r-lib.org/reference/with_seed.html),
-[`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md),
-[`local_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md).
+[`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md).
 
 ## Examples
 

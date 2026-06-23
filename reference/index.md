@@ -35,21 +35,6 @@ builds on, with a baseline loop runner.
 - [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
   : Run a Scenario over Hive-partitioned Parquet Shards (single core)
 
-## Simulation pipeline
-
-The immediate (non-targets) pipeline: simulate data, fit distributions,
-and estimate hazard concentrations across simulations, end to end.
-
-- [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
-  : Generate Data for Simulations
-- [`ssd_fit_dists_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.md)
-  : Fit SSD Distributions to Simulated Data
-- [`ssd_hc_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md)
-  : Estimate hazard concentrations for multiple simulations using
-  bootstrapping
-- [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-  : Run Scenario
-
 ## Targets pipeline
 
 Group a step’s tasks into per-shard tables keyed by `partition_by`, run
@@ -172,8 +157,9 @@ resolve a name back to the value carried on the scenario for execution.
 
 ## Reproducible RNG
 
-Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash
-backend (targets path) and L’Ecuyer-CMRG sub-streams (legacy path).
+Parallel-safe seeding helpers for the dqrng + hash backend: a per-task
+primer derived from the scenario seed, scoped backend activation, and
+scoped state installation.
 
 - [`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md)
   : Derive a Per-task Primer from its Parameters
@@ -182,12 +168,6 @@ backend (targets path) and L’Ecuyer-CMRG sub-streams (legacy path).
 - [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
   [`with_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md)
   : Local/With dqrng State
-- [`local_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
-  [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
-  : Local/With L'Ecuyer-CMRG Seed
-- [`local_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md)
-  [`with_lecuyer_cmrg_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_state.md)
-  : Local/With L'Ecuyer-CMRG State
 
 ## Package
 

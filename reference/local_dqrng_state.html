@@ -102,19 +102,16 @@ returns the value of <code>code</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>These are the dqrng-path analogues of <code><a href="local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code> /
-<code><a href="local_lecuyer_cmrg_state.html">with_lecuyer_cmrg_state()</a></code>. Like those helpers they snapshot the RNG state
-on entry (via <code><a href="https://daqana.github.io/dqrng/reference/dqrng-functions.html" class="external-link">dqrng::dqrng_get_state()</a></code>) and <code><a href="https://withr.r-lib.org/reference/defer.html" class="external-link">withr::defer()</a></code> a restore (via
-<code><a href="https://daqana.github.io/dqrng/reference/dqrng-functions.html" class="external-link">dqrng::dqrng_set_state()</a></code>), so a call leaves the surrounding RNG stream
-undisturbed, including on error.</p>
+    <p>They snapshot the RNG state on entry (via <code><a href="https://daqana.github.io/dqrng/reference/dqrng-functions.html" class="external-link">dqrng::dqrng_get_state()</a></code>) and
+<code><a href="https://withr.r-lib.org/reference/defer.html" class="external-link">withr::defer()</a></code> a restore (via <code><a href="https://daqana.github.io/dqrng/reference/dqrng-functions.html" class="external-link">dqrng::dqrng_set_state()</a></code>), so a call leaves
+the surrounding RNG stream undisturbed, including on error.</p>
 <p>Both require an active dqrng backend: they abort unless a
 <code><a href="local_dqrng_backend.html">local_dqrng_backend()</a></code> scope is open. This fails fast rather than silently
 seeding base R's Mersenne-Twister.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::local_seed()</a></code>, <code><a href="local_dqrng_backend.html">local_dqrng_backend()</a></code>,
-<code><a href="local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code>.</p></div>
+    <div class="dont-index"><p><code><a href="https://withr.r-lib.org/reference/with_seed.html" class="external-link">withr::local_seed()</a></code>, <code><a href="local_dqrng_backend.html">local_dqrng_backend()</a></code>.</p></div>
     </div>
 
     <div class="section level2">

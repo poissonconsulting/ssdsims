@@ -353,10 +353,8 @@
 
 ### Bug fixes
 
-- Fix
-  [`ssd_run_scenario.tmbfit()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-  to pass fitted estimates to the rng call
-  ([\#64](https://github.com/poissonconsulting/ssdsims/issues/64)).
+- Fix `ssd_run_scenario.tmbfit()` to pass fitted estimates to the rng
+  call ([\#64](https://github.com/poissonconsulting/ssdsims/issues/64)).
 
 ### Features
 
@@ -368,18 +366,13 @@
 - Add input validation to `*_lecuyer_cmrg_*` seed functions
   ([\#63](https://github.com/poissonconsulting/ssdsims/issues/63)).
 
-- Forward
-  [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
-  to
-  [`local_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md).
+- Forward `with_lecuyer_cmrg_seed()` to `local_lecuyer_cmrg_seed()`.
 
 ### Testing
 
 - Replace
   [`withr::with_seed()`](https://withr.r-lib.org/reference/with_seed.html)
-  with
-  [`with_lecuyer_cmrg_seed()`](https://poissonconsulting.github.io/ssdsims/reference/local_lecuyer_cmrg_seed.md)
-  in tests
+  with `with_lecuyer_cmrg_seed()` in tests
   ([\#60](https://github.com/poissonconsulting/ssdsims/issues/60)).
 
 - Remove spurious `.Random.seed` warning.
@@ -494,8 +487,7 @@
 
 ### Documentation
 
-- Fix title for
-  [`?ssd_hc_sims`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md)
+- Fix title for `?ssd_hc_sims`
   ([\#43](https://github.com/poissonconsulting/ssdsims/issues/43)).
 
 ### Uncategorized
@@ -510,14 +502,12 @@
 
 ## ssdsims 0.0.0.9004
 
-- Vectorize
-  [`ssd_fit_dists_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.md).
+- Vectorize `ssd_fit_dists_sims()`.
 
 ## ssdsims 0.0.0.9003
 
 - Vectorize `ssd_hc_sims(ci_method)`.
-- Vectorize
-  [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
+- Vectorize `ssd_sim_data()`
 
 ## ssdsims 0.0.0.9002
 
@@ -531,8 +521,7 @@
 
 - Merge branch ‘main’ of github.com:poissonconsulting/ssdsims.
 
-- Pass … through
-  [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md).
+- Pass … through `ssd_run_scenario()`.
 
 - Add .progress = FALSE argument.
 

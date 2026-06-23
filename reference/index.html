@@ -107,43 +107,6 @@
         </dt>
         <dd>Run a Scenario over Hive-partitioned Parquet Shards (single core)</dd>
       </dl></div><div class="section level2">
-      <h2 id="simulation-pipeline">Simulation pipeline<a class="anchor" aria-label="anchor" href="#simulation-pipeline"></a></h2>
-
-      <div class="section-desc"><p>The immediate (non-targets) pipeline: simulate data, fit distributions, and estimate hazard concentrations across simulations, end to end.</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="ssd_sim_data.html">ssd_sim_data()</a></code>
-
-        </dt>
-        <dd>Generate Data for Simulations</dd>
-
-        <dt>
-
-          <code><a href="ssd_fit_dists_sims.html">ssd_fit_dists_sims()</a></code>
-
-        </dt>
-        <dd>Fit SSD Distributions to Simulated Data</dd>
-
-        <dt>
-
-          <code><a href="ssd_hc_sims.html">ssd_hc_sims()</a></code>
-
-        </dt>
-        <dd>Estimate hazard concentrations for multiple simulations using bootstrapping</dd>
-
-        <dt>
-
-          <code><a href="ssd_run_scenario.html">ssd_run_scenario()</a></code>
-
-        </dt>
-        <dd>Run Scenario</dd>
-      </dl></div><div class="section level2">
       <h2 id="targets-pipeline">Targets pipeline<a class="anchor" aria-label="anchor" href="#targets-pipeline"></a></h2>
 
       <div class="section-desc"><p>Group a step’s tasks into per-shard tables keyed by <code>partition_by</code>, run a shard with the per-task RNG primitives writing one Parquet per shard, and fan in a summary - the building blocks of the static-branching <code>targets</code> pipeline (see the <code>inst/targets-templates/small/_targets.R</code> template).</p></div>
@@ -368,7 +331,7 @@
       </dl></div><div class="section level2">
       <h2 id="reproducible-rng">Reproducible RNG<a class="anchor" aria-label="anchor" href="#reproducible-rng"></a></h2>
 
-      <div class="section-desc"><p>Parallel-safe seeding helpers for the two RNG paths: the dqrng + hash backend (targets path) and L’Ecuyer-CMRG sub-streams (legacy path).</p></div>
+      <div class="section-desc"><p>Parallel-safe seeding helpers for the dqrng + hash backend: a per-task primer derived from the scenario seed, scoped backend activation, and scoped state installation.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -395,20 +358,6 @@
 
         </dt>
         <dd>Local/With dqrng State</dd>
-
-        <dt>
-
-          <code><a href="local_lecuyer_cmrg_seed.html">local_lecuyer_cmrg_seed()</a></code> <code><a href="local_lecuyer_cmrg_seed.html">with_lecuyer_cmrg_seed()</a></code>
-
-        </dt>
-        <dd>Local/With L'Ecuyer-CMRG Seed</dd>
-
-        <dt>
-
-          <code><a href="local_lecuyer_cmrg_state.html">local_lecuyer_cmrg_state()</a></code> <code><a href="local_lecuyer_cmrg_state.html">with_lecuyer_cmrg_state()</a></code>
-
-        </dt>
-        <dd>Local/With L'Ecuyer-CMRG State</dd>
       </dl></div><div class="section level2">
       <h2 id="package">Package<a class="anchor" aria-label="anchor" href="#package"></a></h2>
 

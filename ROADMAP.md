@@ -44,13 +44,8 @@ artifacts yet is also queued, ready to propose.
 ## Now
 
 - ❗️⏳ \[cleanup-lecuyer\] Retire the legacy public API and remove the
-  dead code behind it: drop the monolith runners
-  ([`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-  /
-  [`ssd_sim_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_sim_data.md)
-  families,
-  [`ssd_fit_dists_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_fit_dists_sims.md),
-  [`ssd_hc_sims()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_hc_sims.md))
+  dead code behind it: drop the monolith runners (`ssd_run_scenario()` /
+  `ssd_sim_data()` families, `ssd_fit_dists_sims()`, `ssd_hc_sims()`)
   and the L’Ecuyer-CMRG RNG (`lecuyer-cmrg-seed.R` + the
   `*_state`/`*_seed` shims), leaving one RNG path (dqrng) and one runner
   family
@@ -162,12 +157,11 @@ artifacts yet is also queued, ready to propose.
   reduction and `ci`-routing, instead of aborting. No ssdtools refactor.
 - ✅ 2026-06-14 \[scenario-input-types\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-14-scenario-input-types/)
-  — Accept the generator inputs
-  [`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-  handles (`fitdists`, `tmbfit`, a generator function, a function-name
-  string) in the declarative path via a new `ssd_gen(..., .n, .seed)`
-  that materialises each once to a reproducible `Conc` tibble (name as
-  the dqrng stream, required `.seed`/`.n`); `ssd_data()` is renamed
+  — Accept the generator inputs `ssd_run_scenario()` handles
+  (`fitdists`, `tmbfit`, a generator function, a function-name string)
+  in the declarative path via a new `ssd_gen(..., .n, .seed)` that
+  materialises each once to a reproducible `Conc` tibble (name as the
+  dqrng stream, required `.seed`/`.n`); `ssd_data()` is renamed
   [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
   (escaping the `ssdtools::ssd_data(x)` clash) and
   [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)

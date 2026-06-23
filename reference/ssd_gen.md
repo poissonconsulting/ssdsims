@@ -1,9 +1,8 @@
 # Materialise Generator Datasets for a Simulation Scenario
 
-Accepts generator-style inputs - the same set the legacy
-[`ssd_run_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario.md)
-dispatches over - and materialises each, once, to a validated tibble
-with a numeric `Conc` column of `.n` rows. The four generator kinds are:
+Accepts generator-style inputs and materialises each, once, to a
+validated tibble with a numeric `Conc` column of `.n` rows. The four
+generator kinds are:
 
 ## Usage
 
