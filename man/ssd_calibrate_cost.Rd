@@ -44,8 +44,7 @@ a reference dataset (\code{ssddata::ccme_boron} by default) and times with base
 because the \code{nboot} values are tiny (the slope and floor are estimable from
 small bootstraps). The one-time research that discovered the model's \emph{form}
 (which axes are free, the \code{max(nboot, n0)} shape, the non-monotonic \code{nrow}
-factor) is preserved under the change's \verb{exploration/} directory; it is not
-rerun here.
+factor) is illustrative and is not rerun here.
 }
 \examples{
 \dontrun{

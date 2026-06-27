@@ -180,5 +180,13 @@ to plot the broad sweep and the zoom together.
   comparison axis; differing or changing it across members is undefined
   behaviour for shard sharing.
 
-See ["Running a Sharded Pipeline"](sharded-pipeline.html) for the shard/results
-layout a design builds on.
+## See also
+
+- [`vignette("sharded-pipeline")`](sharded-pipeline.html) --- the shard/results
+  layout a design builds on.
+- [`vignette("defining-a-scenario")`](defining-a-scenario.html) --- the scenario
+  object each design member is.
+- [`vignette("cost-analysis")`](cost-analysis.html) --- roll observed compute up
+  across a design's members.
+- [`ssd_design()`](../reference/ssd_design.html),
+  [`ssd_design_targets()`](../reference/ssd_design_targets.html).
