@@ -178,7 +178,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/Rtmp6SCUW5/ssdsims-shards-20125abd4dfe/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/Rtmpd0162m/ssdsims-shards-249433ac7c59/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 

@@ -108,12 +108,12 @@
 <code class="sourceCode R"><span><span class="va">analysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_analyse_cost.html">ssd_analyse_cost</a></span><span class="op">(</span><span class="va">scenario</span>, root <span class="op">=</span> <span class="va">run</span><span class="op">$</span><span class="va">dir</span><span class="op">)</span></span>
 <span><span class="va">analysis</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_cost_analysis&gt;  (observed, serial-equivalent; measured)</span></span>
-<span><span class="co">#&gt;   total compute:  16.1 s</span></span>
-<span><span class="co">#&gt;   longest task:   3.6 s</span></span>
+<span><span class="co">#&gt;   total compute:  16.6 s</span></span>
+<span><span class="co">#&gt;   longest task:   3.9 s</span></span>
 <span><span class="co">#&gt;   breakdown (ci_method x nboot, by total cost):</span></span>
-<span><span class="co">#&gt;     weighted_samples       nboot   1000     4 tasks  13.9 s</span></span>
-<span><span class="co">#&gt;     weighted_samples       nboot    100     4 tasks  2.2 s</span></span>
-<span><span class="co">#&gt;   host(s):        AMD EPYC 7763 64-Core Processor</span></span></code></pre></div>
+<span><span class="co">#&gt;     weighted_samples       nboot   1000     4 tasks  14.5 s</span></span>
+<span><span class="co">#&gt;     weighted_samples       nboot    100     4 tasks  2.1 s</span></span>
+<span><span class="co">#&gt;   host(s):        AMD EPYC 9V74 80-Core Processor</span></span></code></pre></div>
 </div>
 <p>The observed <strong>total is serial-equivalent compute</strong> — the sum of the per-task durations — <em>not</em> elapsed wall time. Under <code>n</code> parallel workers the wall time is roughly <code>max(longest_task, total / n)</code>, so the longest single task is the irreducible floor regardless of how many workers you add.</p>
 <section class="level3"><h3 id="the-shard-envelope">The shard envelope<a class="anchor" aria-label="anchor" href="#the-shard-envelope"></a>
@@ -131,8 +131,8 @@
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ssd_compare_cost.html">ssd_compare_cost</a></span><span class="op">(</span><span class="va">scenario</span>, root <span class="op">=</span> <span class="va">run</span><span class="op">$</span><span class="va">dir</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_cost_comparison&gt;  (predicted vs observed)</span></span>
-<span><span class="co">#&gt;   total compute:  predicted 22.4 s | observed 16.1 s | obs/pred 0.72x</span></span>
-<span><span class="co">#&gt;   longest task:   predicted 6.7 s | observed 3.6 s | obs/pred 0.55x</span></span></code></pre></div>
+<span><span class="co">#&gt;   total compute:  predicted 22.4 s | observed 16.6 s | obs/pred 0.74x</span></span>
+<span><span class="co">#&gt;   longest task:   predicted 6.7 s | observed 3.9 s | obs/pred 0.58x</span></span></code></pre></div>
 </div>
 <p>A ratio far from <code>1</code> means the shipped default calibration does not match this machine — which is exactly what recalibration fixes.</p>
 </section><section class="level2"><h2 id="recalibrating-from-the-run">Recalibrating from the run<a class="anchor" aria-label="anchor" href="#recalibrating-from-the-run"></a>
@@ -145,12 +145,12 @@
 <span><span class="co"># The run-derived calibration drives the estimator like any other.</span></span>
 <span><span class="fu"><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost</a></span><span class="op">(</span><span class="va">scenario</span>, calibration <span class="op">=</span> <span class="va">from_run</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_cost_estimate&gt;  (ballpark, serial)</span></span>
-<span><span class="co">#&gt;   total compute:  16.1 s</span></span>
-<span><span class="co">#&gt;   longest task:   2.0 s</span></span>
+<span><span class="co">#&gt;   total compute:  16.6 s</span></span>
+<span><span class="co">#&gt;   longest task:   2.1 s</span></span>
 <span><span class="co">#&gt;   breakdown (ci_method x nboot, by total cost):</span></span>
-<span><span class="co">#&gt;     weighted_samples   nboot   1000     4 tasks  8.1 s</span></span>
-<span><span class="co">#&gt;     weighted_samples   nboot    100     4 tasks  8.0 s</span></span>
-<span><span class="co">#&gt;   calibration:    AMD EPYC 7763 64-Core Processor | R 4.6.0 | ssdtools 2.6.0.9002 | 2026-06-23</span></span>
+<span><span class="co">#&gt;     weighted_samples   nboot   1000     4 tasks  8.3 s</span></span>
+<span><span class="co">#&gt;     weighted_samples   nboot    100     4 tasks  8.3 s</span></span>
+<span><span class="co">#&gt;   calibration:    AMD EPYC 9V74 80-Core Processor | R 4.6.1 | ssdtools 2.6.0.9002 | 2026-06-27</span></span>
 <span><span class="co">#&gt;   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.</span></span></code></pre></div>
 </div>
 <p>Because the calibration is <strong>architecture-specific</strong>, <code><a href="../reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code> never silently pools timings from different CPUs: a run whose shards span more than one <code>.host</code> (a cluster of mixed node types) requires an explicit <code>host =</code>, or the function aborts listing the hosts it found. The result’s provenance records that it was derived from a run.</p>
