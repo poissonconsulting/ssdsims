@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![R-CMD-check](https://github.com/poissonconsulting/ssdsims/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/poissonconsulting/ssdsims/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/poissonconsulting/ssdsims/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/poissonconsulting/ssdsims/actions/workflows/R-CMD-check.yml)
 <!-- badges: end -->
 
 ssdsims runs reproducible simulation studies for species sensitivity
