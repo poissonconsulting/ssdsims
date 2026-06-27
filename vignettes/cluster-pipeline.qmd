@@ -25,12 +25,11 @@ knitr::opts_chunk$set(eval = evaluate)
 library(ssdsims)
 ```
 
-The ["Running a Sharded Pipeline"](sharded-pipeline.html) vignette runs a
+The [`vignette("sharded-pipeline")`](sharded-pipeline.html) article runs a
 scenario's shards through a `targets` pipeline on a single machine. This vignette
 takes that **same pipeline to a SLURM cluster** — and the only thing that
-changes is the `crew` controller (`TARGETS-DESIGN.md` §4). The per-task
-`sample`/`fit`/`hc` results are byte-identical to the local run; the cluster is
-just a faster backend.
+changes is the `crew` controller. The per-task `sample`/`fit`/`hc` results are
+byte-identical to the local run; the cluster is just a faster backend.
 
 You do **not** need to know `crew` or `targets` to follow this guide — only your
 cluster's own (non-R) usage instructions. It is four steps: map your site's SLURM
@@ -51,7 +50,7 @@ cluster-specific**:
 | **B — backend** | the SLURM `crew` controller (queue, modules, scratch, workers, walltime) | the **one editable block** in `controller.R` |
 | **C — content** | the scenario (seed, datasets, grids) | the inline `scenario` block in `_targets.R` |
 
-It is just four files — separating only what cannot be inlined:
+It is just five files — separating only what cannot be inlined:
 
 ```{r}
 #| label: template-files
@@ -61,8 +60,9 @@ list.files(system.file("targets-templates", "cluster", package = "ssdsims"))
 `controller.R` (the **one editable controller block**, sourced by both the
 pipeline and the preflight), `_targets.R` (the clean pipeline: controller + the
 inline scenario + factory), `preflight.R` (the standalone
-connectivity/prerequisite check, kept out of the pipeline), and `run.R` (the
-driver: preflight then `tar_make()`). Copy them to your project root:
+connectivity/prerequisite check, kept out of the pipeline), `run.R` (the
+driver: preflight then `tar_make()`), and a `README.md` copy of this guide. Copy
+them to your project root:
 
 ```{r}
 #| label: get-template
@@ -206,7 +206,7 @@ is your first running cluster job, end to end.
 prerequisite. To run the **same study off a cluster** (no scheduler), use the
 `large` template — it builds the identical pipeline (same factory + scenario)
 under a `crew::crew_controller_local()` controller, and its `run-serial.R`
-asserts the results are byte-identical.
+checks (with `all.equal()`) that the single-core and targets estimates match.
 :::
 
 ## Step 4 — Swap in your own scenario
@@ -294,13 +294,12 @@ controller packs several shards into one worker's lifetime — "many-to-one";
 
 ## See also
 
-- The template's own `README.md` (the same guide, alongside the files) and
-  `TARGETS-DESIGN.md` §4 (from local to a cluster), §11 (open questions), §12
-  (`cluster-pipeline`).
-- [`?ssd_scenario_targets`](../reference/ssd_scenario_targets.html),
+- [`vignette("sharded-pipeline")`](sharded-pipeline.html) — the
+  `small`/`large`/`cluster` template trio and the single-machine `targets`
+  pipeline.
+- [`vignette("cloud-upload")`](cloud-upload.html) — ship the cluster's shards to
+  an object store (the `upload = ssd_upload_azure(...)` line in this template's
+  `_targets.R`) and read them back in place.
+- [`ssd_scenario_targets()`](../reference/ssd_scenario_targets.html),
   `?crew.cluster::crew_controller_slurm`.
-- The ["Running a Sharded Pipeline"](sharded-pipeline.html) vignette — the
-  `small`/`large`/`cluster` template trio.
-- ["Uploading Shards to Cloud Storage"](cloud-upload.html) — ship the cluster's
-  shards to an object store (the `upload = ssd_upload_azure(...)` line in this
-  template's `_targets.R`) and read them back in place.
+- The template's own `README.md` ships the same guide alongside the files.

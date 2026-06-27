@@ -29,9 +29,11 @@ library(ssdsims)
 
 ## Prediction, then measurement
 
-[`ssd_estimate_cost()`](cost-estimation.html) predicts a scenario's compute cost
-*before* a run, from a cost model calibrated by a synthetic micro-benchmark. Once
-a run has happened it leaves **ground truth** behind: every `fit` and `hc` task's
+[`ssd_estimate_cost()`](../reference/ssd_estimate_cost.html) predicts a
+scenario's compute cost *before* a run (see
+[`vignette("cost-estimation")`](cost-estimation.html)), from a cost model
+calibrated by a synthetic micro-benchmark. Once a run has happened it leaves
+**ground truth** behind: every `fit` and `hc` task's
 body is bracketed with a UTC `.start`/`.end` and tagged with the `.host` CPU, and
 those land as columns of the shard Parquets themselves. `ssd_analyse_cost()` reads
 them back and attributes the *observed* compute to the same `ci_method` × `nboot`
@@ -115,8 +117,9 @@ machine --- which is exactly what recalibration fixes.
 
 `ssd_calibrate_cost_from_run()` re-fits the per-task cost model from the run's
 **measured** hc task durations (and a measured fit addend), returning the same
-`ssdsims_cost_calibration` object [`ssd_calibrate_cost()`](cost-estimation.html)
-produces --- so it drops straight back into `ssd_estimate_cost()`, now grounded in
+`ssdsims_cost_calibration` object
+[`ssd_calibrate_cost()`](../reference/ssd_calibrate_cost.html) produces --- so it
+drops straight back into `ssd_estimate_cost()`, now grounded in
 real measurements from this scenario rather than a synthetic sweep:
 
 ```{r}
@@ -135,8 +138,9 @@ that it was derived from a run.
 
 ## Across a design
 
-A [design](scenario-to-design.html) (`ssd_design()`) runs several scenarios as one
-pipeline. The same three functions accept a design and **roll the observed cost up
+A design (`ssd_design()`; see
+[`vignette("scenario-to-design")`](scenario-to-design.html)) runs several
+scenarios as one pipeline. The same three functions accept a design and **roll the observed cost up
 across its members**: `ssd_analyse_cost(design, root = ...)` returns a breakdown
 with a leading `scenario` column and design totals, `ssd_compare_cost(design)`
 places the design's summed prediction beside it, and
@@ -186,3 +190,13 @@ ssd_estimate_cost(next_scenario, calibration = better)          # predict the ne
 Each larger scenario is then sized from the measured cost of the last, rather
 than a synthetic micro-benchmark --- the estimate improves every time the loop
 turns.
+
+## See also
+
+- [`vignette("cost-estimation")`](cost-estimation.html) --- the complement:
+  *predict* a scenario's cost before running it.
+- [`vignette("sharded-pipeline")`](sharded-pipeline.html) --- the shard runs
+  whose per-task timings this reads back.
+- [`ssd_analyse_cost()`](../reference/ssd_analyse_cost.html),
+  [`ssd_compare_cost()`](../reference/ssd_compare_cost.html),
+  [`ssd_calibrate_cost_from_run()`](../reference/ssd_calibrate_cost_from_run.html).
