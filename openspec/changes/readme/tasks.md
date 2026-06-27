@@ -21,8 +21,8 @@
 
 ## 3. Convert cross-links to vignette()-style (package-wide)
 
-- [x] 3.1 Convert every vignette-to-vignette link in all seven existing vignettes (and the new overview and README) from `.html`/absolute URLs to `vignette("name")`-style links.
-- [x] 3.2 Point function-name links at the function reference, not at article pages (fixes the `cost-analysis` links to `ssd_estimate_cost()` / `ssd_calibrate_cost()`).
+- [x] 3.1 In the vignettes (incl. the overview), write cross-references as bare inline `vignette("name")` / `fn()` code so pkgdown auto-links them; phrase each as a clean standalone call. In the README, use explicit Markdown links to the pkgdown URLs (GitHub does not auto-link).
+- [x] 3.2 Reference functions as bare `fn()` (auto-linked to their reference page), not as links to article pages, and not as `?fn` (which does not auto-link).
 
 ## 4. Apply the per-vignette review fixes
 

@@ -21,19 +21,25 @@ the `_pkgdown.yml` `articles:` list.
   NOT use the legacy step functions
 
 ### Requirement: vignette()-style cross-links
-Cross-references between vignettes SHALL use `vignette("name")`-style links, and
-references to package functions SHALL link to the function reference (not to an
-article page). This applies to all vignettes and the README.
+Cross-references SHALL use the `vignette("name")` call form for articles and the
+`fn()` call form for functions. In the vignettes, these SHALL be written as bare
+inline code (no surrounding `[...](...)` link) so pkgdown's downlit auto-links
+them to the article / reference page; each reference SHALL be phrased as a clean
+standalone call expression (e.g. `vignette("sharded-pipeline")`, `ssd_summarise()`)
+so auto-linking applies. The README, which also renders on GitHub where
+auto-linking does not occur, SHALL instead use explicit Markdown links to the
+pkgdown article/reference URLs while keeping the `vignette("...")` / `fn()` text.
 
-#### Scenario: Vignette-to-vignette links use vignette()
-- **WHEN** one vignette refers a reader to another
-- **THEN** the link SHALL be a `vignette("name")`-style link rather than a
-  hardcoded `.html` or absolute site URL
+#### Scenario: Vignette cross-references are auto-linked
+- **WHEN** one vignette refers a reader to another article or to a function
+- **THEN** the reference SHALL be a bare inline `vignette("name")` or `fn()` code
+  expression (not a hardcoded `.html`/absolute-URL link), relying on pkgdown
+  auto-linking, and SHALL NOT use `?fn` (which does not auto-link)
 
-#### Scenario: Function mentions link to the reference
-- **WHEN** a vignette presents a package function as a link
-- **THEN** the link SHALL resolve to that function's reference page, not to an
-  article
+#### Scenario: README links are explicit
+- **WHEN** the README references an article or function
+- **THEN** it SHALL use an explicit Markdown link to the pkgdown URL (so it is
+  clickable on GitHub), with the `vignette("...")` / `fn()` call as the link text
 
 ### Requirement: Navigable, non-orphan vignette set
 Every vignette SHALL carry a "See also" / navigation section linking the

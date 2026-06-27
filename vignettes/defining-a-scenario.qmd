@@ -364,12 +364,12 @@ storage hand-off the cluster `targets` pipeline uses.
 
 ## See also
 
-- [`vignette("sharded-pipeline")`](sharded-pipeline.html) --- the same scenario
+- `vignette("sharded-pipeline")` --- the same scenario
   as Parquet shards and a `targets` pipeline; the single-core
   `ssd_run_scenario_shards()` is byte-identical to this baseline runner.
-- [`vignette("scenario-to-design")`](scenario-to-design.html) --- union several
+- `vignette("scenario-to-design")` --- union several
   scenarios into one ragged design that shares overlapping shards.
-- [`vignette("cost-estimation")`](cost-estimation.html) --- size a scenario's
+- `vignette("cost-estimation")` --- size a scenario's
   compute before launching it.
-- [`vignette("ssdsims")`](ssdsims.html) --- the overview and a recommended
+- `vignette("ssdsims")` --- the overview and a recommended
   reading order.

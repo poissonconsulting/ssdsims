@@ -203,10 +203,10 @@ demonstrates it.
 
 ## See also
 
-- [`vignette("cost-analysis")`](cost-analysis.html) --- the complement: measure a
+- `vignette("cost-analysis")` --- the complement: measure a
   finished run's *observed* cost and recalibrate from it.
-- [`vignette("defining-a-scenario")`](defining-a-scenario.html) --- the scenario
+- `vignette("defining-a-scenario")` --- the scenario
   axes whose fan-out this estimate reads.
-- [`ssd_estimate_cost()`](../reference/ssd_estimate_cost.html),
-  [`ssd_calibrate_cost()`](../reference/ssd_calibrate_cost.html),
-  [`ssd_cost_calibration()`](../reference/ssd_cost_calibration.html).
+- `ssd_estimate_cost()`,
+  `ssd_calibrate_cost()`,
+  `ssd_cost_calibration()`.

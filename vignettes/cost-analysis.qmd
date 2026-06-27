@@ -29,9 +29,9 @@ library(ssdsims)
 
 ## Prediction, then measurement
 
-[`ssd_estimate_cost()`](../reference/ssd_estimate_cost.html) predicts a
+`ssd_estimate_cost()` predicts a
 scenario's compute cost *before* a run (see
-[`vignette("cost-estimation")`](cost-estimation.html)), from a cost model
+`vignette("cost-estimation")`), from a cost model
 calibrated by a synthetic micro-benchmark. Once a run has happened it leaves
 **ground truth** behind: every `fit` and `hc` task's
 body is bracketed with a UTC `.start`/`.end` and tagged with the `.host` CPU, and
@@ -46,7 +46,7 @@ pipeline, fit a distribution, draw a random number, or write a file.
 ## A small worked run
 
 Any run leaves timings behind --- the serial baseline, the single-core
-[`ssd_run_scenario_shards()`](../reference/ssd_run_scenario_shards.html), or the
+`ssd_run_scenario_shards()`, or the
 `targets` pipeline. Here we materialise a small scenario single-core so the
 vignette is self-contained:
 
@@ -118,7 +118,7 @@ machine --- which is exactly what recalibration fixes.
 `ssd_calibrate_cost_from_run()` re-fits the per-task cost model from the run's
 **measured** hc task durations (and a measured fit addend), returning the same
 `ssdsims_cost_calibration` object
-[`ssd_calibrate_cost()`](../reference/ssd_calibrate_cost.html) produces --- so it
+`ssd_calibrate_cost()` produces --- so it
 drops straight back into `ssd_estimate_cost()`, now grounded in
 real measurements from this scenario rather than a synthetic sweep:
 
@@ -139,7 +139,7 @@ that it was derived from a run.
 ## Across a design
 
 A design (`ssd_design()`; see
-[`vignette("scenario-to-design")`](scenario-to-design.html)) runs several
+`vignette("scenario-to-design")`) runs several
 scenarios as one pipeline. The same three functions accept a design and **roll the observed cost up
 across its members**: `ssd_analyse_cost(design, root = ...)` returns a breakdown
 with a leading `scenario` column and design totals, `ssd_compare_cost(design)`
@@ -193,10 +193,10 @@ turns.
 
 ## See also
 
-- [`vignette("cost-estimation")`](cost-estimation.html) --- the complement:
+- `vignette("cost-estimation")` --- the complement:
   *predict* a scenario's cost before running it.
-- [`vignette("sharded-pipeline")`](sharded-pipeline.html) --- the shard runs
+- `vignette("sharded-pipeline")` --- the shard runs
   whose per-task timings this reads back.
-- [`ssd_analyse_cost()`](../reference/ssd_analyse_cost.html),
-  [`ssd_compare_cost()`](../reference/ssd_compare_cost.html),
-  [`ssd_calibrate_cost_from_run()`](../reference/ssd_calibrate_cost_from_run.html).
+- `ssd_analyse_cost()`,
+  `ssd_compare_cost()`,
+  `ssd_calibrate_cost_from_run()`.

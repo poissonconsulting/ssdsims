@@ -25,7 +25,7 @@ knitr::opts_chunk$set(eval = evaluate)
 library(ssdsims)
 ```
 
-The [`vignette("sharded-pipeline")`](sharded-pipeline.html) article runs a
+The `vignette("sharded-pipeline")` article runs a
 scenario's shards through a `targets` pipeline on a single machine. This vignette
 takes that **same pipeline to a SLURM cluster** — and the only thing that
 changes is the `crew` controller. The per-task `sample`/`fit`/`hc` results are
@@ -279,7 +279,7 @@ controller <- crew.cluster::crew_controller_sge(
 )
 ```
 
-See `?crew.cluster::crew_controller_sge` (and the `_pbs` / `_lsf` equivalents)
+See `crew.cluster::crew_controller_sge()` (and the `_pbs` / `_lsf` equivalents)
 for the exact arguments. Everything else in this guide — the preflight, the
 minimal first job, swapping in your scenario — is unchanged.
 
@@ -294,12 +294,12 @@ controller packs several shards into one worker's lifetime — "many-to-one";
 
 ## See also
 
-- [`vignette("sharded-pipeline")`](sharded-pipeline.html) — the
+- `vignette("sharded-pipeline")` — the
   `small`/`large`/`cluster` template trio and the single-machine `targets`
   pipeline.
-- [`vignette("cloud-upload")`](cloud-upload.html) — ship the cluster's shards to
+- `vignette("cloud-upload")` — ship the cluster's shards to
   an object store (the `upload = ssd_upload_azure(...)` line in this template's
   `_targets.R`) and read them back in place.
-- [`ssd_scenario_targets()`](../reference/ssd_scenario_targets.html),
-  `?crew.cluster::crew_controller_slurm`.
+- `ssd_scenario_targets()`,
+  `crew.cluster::crew_controller_slurm()`.
 - The template's own `README.md` ships the same guide alongside the files.

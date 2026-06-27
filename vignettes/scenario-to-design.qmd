@@ -182,11 +182,11 @@ to plot the broad sweep and the zoom together.
 
 ## See also
 
-- [`vignette("sharded-pipeline")`](sharded-pipeline.html) --- the shard/results
+- `vignette("sharded-pipeline")` --- the shard/results
   layout a design builds on.
-- [`vignette("defining-a-scenario")`](defining-a-scenario.html) --- the scenario
+- `vignette("defining-a-scenario")` --- the scenario
   object each design member is.
-- [`vignette("cost-analysis")`](cost-analysis.html) --- roll observed compute up
+- `vignette("cost-analysis")` --- roll observed compute up
   across a design's members.
-- [`ssd_design()`](../reference/ssd_design.html),
-  [`ssd_design_targets()`](../reference/ssd_design_targets.html).
+- `ssd_design()`,
+  `ssd_design_targets()`.
