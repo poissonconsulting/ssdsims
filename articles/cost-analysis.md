@@ -7,12 +7,13 @@ library(ssdsims)
 
 ## Prediction, then measurement
 
-[`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.md)
-predicts a scenario’s compute cost *before* a run, from a cost model
-calibrated by a synthetic micro-benchmark. Once a run has happened it
-leaves **ground truth** behind: every `fit` and `hc` task’s body is
-bracketed with a UTC `.start`/`.end` and tagged with the `.host` CPU,
-and those land as columns of the shard Parquets themselves.
+[`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md)
+predicts a scenario’s compute cost *before* a run (see
+[`vignette("cost-estimation")`](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.md)),
+from a cost model calibrated by a synthetic micro-benchmark. Once a run
+has happened it leaves **ground truth** behind: every `fit` and `hc`
+task’s body is bracketed with a UTC `.start`/`.end` and tagged with the
+`.host` CPU, and those land as columns of the shard Parquets themselves.
 [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md)
 reads them back and attributes the *observed* compute to the same
 `ci_method` × `nboot` axes the estimate uses — closing the loop from
@@ -58,12 +59,12 @@ breakdown by `ci_method` × `nboot` keyed exactly like the estimate’s:
 analysis <- ssd_analyse_cost(scenario, root = run$dir)
 analysis
 #> <ssdsims_cost_analysis>  (observed, serial-equivalent; measured)
-#>   total compute:  16.6 s
-#>   longest task:   3.9 s
+#>   total compute:  15.9 s
+#>   longest task:   3.6 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples       nboot   1000     4 tasks  14.5 s
-#>     weighted_samples       nboot    100     4 tasks  2.1 s
-#>   host(s):        AMD EPYC 9V74 80-Core Processor
+#>     weighted_samples       nboot   1000     4 tasks  13.7 s
+#>     weighted_samples       nboot    100     4 tasks  2.2 s
+#>   host(s):        AMD EPYC 7763 64-Core Processor
 ```
 
 The observed **total is serial-equivalent compute** — the sum of the
@@ -102,8 +103,8 @@ reality:
 
 ssd_compare_cost(scenario, root = run$dir)
 #> <ssdsims_cost_comparison>  (predicted vs observed)
-#>   total compute:  predicted 22.4 s | observed 16.6 s | obs/pred 0.74x
-#>   longest task:   predicted 6.7 s | observed 3.9 s | obs/pred 0.58x
+#>   total compute:  predicted 22.4 s | observed 15.9 s | obs/pred 0.71x
+#>   longest task:   predicted 6.7 s | observed 3.6 s | obs/pred 0.54x
 ```
 
 A ratio far from `1` means the shipped default calibration does not
@@ -115,7 +116,7 @@ match this machine — which is exactly what recalibration fixes.
 re-fits the per-task cost model from the run’s **measured** hc task
 durations (and a measured fit addend), returning the same
 `ssdsims_cost_calibration` object
-[`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.md)
+[`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md)
 produces — so it drops straight back into
 [`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md),
 now grounded in real measurements from this scenario rather than a
@@ -128,12 +129,12 @@ from_run <- ssd_calibrate_cost_from_run(scenario, root = run$dir)
 # The run-derived calibration drives the estimator like any other.
 ssd_estimate_cost(scenario, calibration = from_run)
 #> <ssdsims_cost_estimate>  (ballpark, serial)
-#>   total compute:  16.6 s
-#>   longest task:   2.1 s
+#>   total compute:  15.9 s
+#>   longest task:   2.0 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples   nboot   1000     4 tasks  8.3 s
-#>     weighted_samples   nboot    100     4 tasks  8.3 s
-#>   calibration:    AMD EPYC 9V74 80-Core Processor | R 4.6.1 | ssdtools 2.6.0.9002 | 2026-06-27
+#>     weighted_samples   nboot   1000     4 tasks  8.0 s
+#>     weighted_samples   nboot    100     4 tasks  7.9 s
+#>   calibration:    AMD EPYC 7763 64-Core Processor | R 4.6.1 | ssdtools 2.6.0.9002 | 2026-06-29
 #>   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.
 ```
 
@@ -146,9 +147,10 @@ The result’s provenance records that it was derived from a run.
 
 ## Across a design
 
-A
-[design](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md)
-([`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md))
+A design
+([`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md);
+see
+[`vignette("scenario-to-design")`](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md))
 runs several scenarios as one pipeline. The same three functions accept
 a design and **roll the observed cost up across its members**:
 `ssd_analyse_cost(design, root = ...)` returns a breakdown with a
@@ -200,3 +202,13 @@ ssd_estimate_cost(next_scenario, calibration = better)          # predict the ne
 Each larger scenario is then sized from the measured cost of the last,
 rather than a synthetic micro-benchmark — the estimate improves every
 time the loop turns.
+
+## See also
+
+- [`vignette("cost-estimation")`](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.md)
+  — the complement: *predict* a scenario’s cost before running it.
+- [`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+  — the shard runs whose per-task timings this reads back.
+- [`ssd_analyse_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_analyse_cost.md),
+  [`ssd_compare_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_compare_cost.md),
+  [`ssd_calibrate_cost_from_run()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost_from_run.md).

@@ -1,9 +1,38 @@
 # ssdsims
 
-The goal of ssdsims is to facilitate simulation studies with species
-sensitivity distribution data.
+ssdsims runs reproducible simulation studies for species sensitivity
+distribution (SSD) models built on the
+[ssdtools](https://bcgov.github.io/ssdtools/) package. You describe a
+study **declaratively** as a *scenario*; ssdsims expands it into
+per-step task tables, draws the data, fits the distributions, and
+estimates the hazard concentrations. The same scenario runs three ways
+over one execution core — an in-memory baseline, single-core
+Hive-partitioned Parquet *shards*, and a
+[targets](https://docs.ropensci.org/targets/)-based shard pipeline for
+running in parallel or on a cluster — with byte-identical, reproducible
+per-task results throughout.
+
+New here? Start with
+[`vignette("ssdsims")`](https://poissonconsulting.github.io/ssdsims/articles/ssdsims.html)
+for the overview and a recommended reading order.
 
 ## Installation
+
+Install the development version from [GitHub](https://github.com/) with:
+
+``` r
+
+# install.packages("pak")
+pak::pak("poissonconsulting/ssdsims")
+
+# or
+# install.packages("remotes")
+remotes::install_github("poissonconsulting/ssdsims")
+```
+
+## Usage
+
+Assemble the data, declare a scenario, and run the in-memory baseline:
 
 ``` r
 
@@ -97,3 +126,26 @@ ssd_run_scenario_baseline(scenario)
 #> #   ci_method <chr>, parametric <lgl>, distset <chr>, hc_id <chr>,
 #> #   fit_id <chr>, hc <list>, .start <dttm>, .end <dttm>, .host <chr>
 ```
+
+The scenario is purely declarative — it draws no random numbers and
+depends on no `targets` — so the same object drives every runner. See
+[`vignette("defining-a-scenario")`](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.html)
+for the scenario object and
+[`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.html)
+for the shard and `targets` pipeline.
+
+## Capability map
+
+| Area | Article |
+|----|----|
+| Define a scenario and expand it into `sample`/`fit`/`hc` task tables | [`vignette("defining-a-scenario")`](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.html) |
+| Run as Hive-partitioned Parquet shards and a `targets` pipeline | [`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.html) |
+| Combine several scenarios into one ragged design | [`vignette("scenario-to-design")`](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.html) |
+| Run on a SLURM (or other) cluster | [`vignette("cluster-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.html) |
+| Ship shards to cloud object storage | [`vignette("cloud-upload")`](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.html) |
+| Estimate compute cost before a run | [`vignette("cost-estimation")`](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.html) |
+| Analyse observed compute cost after a run | [`vignette("cost-analysis")`](https://poissonconsulting.github.io/ssdsims/articles/cost-analysis.html) |
+
+Reproducible per-task RNG (the dqrng `pcg64` backend with per-task
+primers) underpins all of the above; see
+[`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.html).

@@ -31,17 +31,18 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/ssdsims.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -78,8 +79,8 @@
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://poissonconsulting.github.io/ssdsims/">ssdsims</a></span><span class="op">)</span></span></code></pre></div>
 </div>
-<p>The <a href="sharded-pipeline.html">“Running a Sharded Pipeline”</a> vignette materialises each step as Hive-partitioned Parquet shards, and the <a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a> vignette runs that same pipeline on a cluster. This vignette covers the last link: shipping each shard to an <strong>object store</strong> as it is produced, so the results are readable <strong>from outside the cluster</strong> — analysis notebooks, dashboards, downstream R/Python (<code>TARGETS-DESIGN.md</code> §6.1).</p>
-<p>The model is simple: <strong>upload is a runner argument</strong>, the remote-destination sibling of <code>root</code>. You pass an <code>upload</code> object to the <a href="../reference/ssd_scenario_targets.html"><code>ssd_scenario_targets()</code></a> factory and it pairs each step shard with an <code>upload_&lt;step&gt;</code> target. There are three modes:</p>
+<p>The <code><a href="../articles/sharded-pipeline.html">vignette("sharded-pipeline")</a></code> article materialises each step as Hive-partitioned Parquet shards, and <code><a href="../articles/cluster-pipeline.html">vignette("cluster-pipeline")</a></code> runs that same pipeline on a cluster. This vignette covers the last link: shipping each shard to an <strong>object store</strong> as it is produced, so the results are readable <strong>from outside the cluster</strong> — analysis notebooks, dashboards, downstream R/Python.</p>
+<p>The model is simple: <strong>upload is a runner argument</strong>, the remote-destination sibling of <code>root</code>. You pass an <code>upload</code> object to the <code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code> factory and it pairs each step shard with an <code>upload_&lt;step&gt;</code> target. There are three modes:</p>
 <ul>
 <li>
 <code>upload = NULL</code> (the default) — <strong>no</strong> upload targets; the clean DAG.</li>
@@ -188,13 +189,13 @@
 <span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/ssd_upload_shard.html">ssd_upload_shard</a></span><span class="op">(</span><span class="va">shard</span>, <span class="va">dryrun</span><span class="op">)</span>, <span class="va">shard</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dry-run upload: skipped</span></span>
-<span><span class="co">#&gt; "/tmp/Rtmpd0162m/ssdsims-shards-249433ac7c59/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
+<span><span class="co">#&gt; "/tmp/Rtmp7WKZ5E/ssdsims-shards-20fb1031e8a8/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
 <p>That is the whole upload DAG — the probe, the paired <code>upload_&lt;step&gt;</code> targets, and the per-shard ship — exercised end to end with no network and no credentials.</p>
 </section><section class="level2"><h2 id="extend-the-same-call-to-azure-on-a-cluster">Extend the same call to Azure on a cluster<a class="anchor" aria-label="anchor" href="#extend-the-same-call-to-azure-on-a-cluster"></a>
 </h2>
-<p>To ship to a real Azure container, swap <code><a href="../reference/ssd_upload_azure.html">ssd_upload_dryrun()</a></code> for <code>ssd_upload_azure(url, container)</code> in the <strong>cluster</strong> template’s <code>_targets.R</code> (<a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a>). It is the same factory call — one line changes:</p>
+<p>To ship to a real Azure container, swap <code><a href="../reference/ssd_upload_azure.html">ssd_upload_dryrun()</a></code> for <code>ssd_upload_azure(url, container)</code> in the <strong>cluster</strong> template’s <code>_targets.R</code> (see <code><a href="../articles/cluster-pipeline.html">vignette("cluster-pipeline")</a></code>). It is the same factory call — one line changes:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets</a></span><span class="op">(</span></span>
@@ -258,13 +259,11 @@
 </h2>
 <ul>
 <li>
-<a href="sharded-pipeline.html">“Running a Sharded Pipeline”</a> — materialising the shards this vignette uploads.</li>
+<code><a href="../articles/sharded-pipeline.html">vignette("sharded-pipeline")</a></code> — materialising the shards this vignette uploads.</li>
 <li>
-<a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a> — the cluster template whose <code>_targets.R</code> gains the <code>upload = ssd_upload_azure(...)</code> line.</li>
+<code><a href="../articles/cluster-pipeline.html">vignette("cluster-pipeline")</a></code> — the cluster template whose <code>_targets.R</code> gains the <code>upload = ssd_upload_azure(...)</code> line.</li>
 <li>
-<code>TARGETS-DESIGN.md</code> §6.1 (the cloud-upload hook).</li>
-<li>
-<a href="../reference/ssd_upload_azure.html"><code>?ssd_upload_azure</code></a>, <a href="../reference/ssd_test_upload.html"><code>?ssd_test_upload</code></a>, <a href="../reference/ssd_upload_shard.html"><code>?ssd_upload_shard</code></a>, <a href="../reference/ssd_open_uploaded.html"><code>?ssd_open_uploaded</code></a>. ```</li>
+<code><a href="../reference/ssd_upload_azure.html">ssd_upload_azure()</a></code>, <code><a href="../reference/ssd_test_upload.html">ssd_test_upload()</a></code>, <code><a href="../reference/ssd_upload_shard.html">ssd_upload_shard()</a></code>, <code><a href="../reference/ssd_open_uploaded.html">ssd_open_uploaded()</a></code>.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

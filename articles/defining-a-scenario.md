@@ -25,10 +25,8 @@ Keeping the scenario declarative buys two things:
 - The set of work a pipeline expands to is a **pure function of the
   scenario**, so the same scenario always describes the same study.
 
-This vignette walks the stages that work *today*, in order. It is
-intended to grow: as roadmap features land (per-task seeding, shards,
-the `targets` backend), new sections will document them here. See
-`TARGETS-DESIGN.md` for the north-star design.
+This vignette walks the four stages in order; the runner, design, and
+pipeline vignettes linked at the end build on them.
 
 The four stages this vignette covers:
 
@@ -601,19 +599,24 @@ hcs[c("dataset", "sim", "nrow", "hc_est_method", "hc_proportion", "hc_est")]
 #> # ℹ 86 more rows
 ```
 
-## Next: shards and the targets pipeline
+## Next: shards, designs, and the targets pipeline
 
 The baseline runner threads results in memory. The next layer
 materialises each step as **Hive-partitioned Parquet shards** grouped by
 the scenario’s `partition_by` axes, and links steps by reading parent
 shards back — the storage hand-off the cluster `targets` pipeline uses.
-The [“Running a sharded
-pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
-vignette covers that: the single-core
-[`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
-(byte-identical to the baseline runner) and the shipped `targets`
-template.
 
-Still ahead on the roadmap (`TARGETS-DESIGN.md` §12): a per-scenario
-manifest, cloud upload, shard-completeness assertions, and the
-crew/SLURM controller. As each lands, the vignettes grow to cover it.
+## See also
+
+- [`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+  — the same scenario as Parquet shards and a `targets` pipeline; the
+  single-core
+  [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)
+  is byte-identical to this baseline runner.
+- [`vignette("scenario-to-design")`](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md)
+  — union several scenarios into one ragged design that shares
+  overlapping shards.
+- [`vignette("cost-estimation")`](https://poissonconsulting.github.io/ssdsims/articles/cost-estimation.md)
+  — size a scenario’s compute before launching it.
+- [`vignette("ssdsims")`](https://poissonconsulting.github.io/ssdsims/articles/ssdsims.md)
+  — the overview and a recommended reading order.

@@ -31,17 +31,18 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/ssdsims.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -80,7 +81,7 @@
 </div>
 <section class="level2"><h2 id="why-estimate-cost">Why estimate cost?<a class="anchor" aria-label="anchor" href="#why-estimate-cost"></a>
 </h2>
-<p>A scenario is <em>declarative</em>: a few scenario axes can fan out into a multi-day run with no warning. The motivating example in <code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code>’s docs — 10 simulations × 4 sample sizes × 7 <code>ci_method</code>s × 4 <code>nboot</code> values (up to 50 000), with <code>ci = TRUE</code> — was measured at roughly <strong>430 single-core hours</strong> (about 18 days), dominated by the hazard-concentration (hc) bootstrap, with a single <code>multi_free</code> + <code>nboot = 50 000</code> task taking about 44 minutes on its own.</p>
+<p>A scenario is <em>declarative</em>: a few scenario axes can fan out into a multi-day run with no warning. A benchmark of the example scenario below — 10 simulations × 4 sample sizes × 7 <code>ci_method</code>s × 4 <code>nboot</code> values (up to 50 000), with <code>ci = TRUE</code> — measured roughly <strong>400+ single-core hours</strong> (the better part of three weeks), dominated by the hazard-concentration (hc) bootstrap, with a single <code>multi_*</code> + <code>nboot = 50 000</code> task taking on the order of an hour on its own.</p>
 <p>Before launching such a run you want two numbers:</p>
 <ul>
 <li>the <strong>total</strong> compute it costs (to size a budget), and</li>
@@ -103,7 +104,7 @@
 <strong>A bounded, non-monotonic <code>nrow</code> factor.</strong> Sample size has a weak, data-dependent effect — cheap at <code>nrow = 5</code> (where most <code>bcanz</code> distributions fail to fit), peaking around 10–20, easing again at 50. It is captured as a bounded lookup, <strong>not</strong> extrapolated as a linear term, and is the least precise part of the model.</li>
 </ul>
 <p>The per-<code>ci_method</code> slopes span roughly 9× — <code>weighted_samples</code> is the cheapest, the <code>multi_*</code> methods the most expensive — so the <code>ci_method</code> grid is by far the dominant cost driver.</p>
-<p>The one-time research that <em>discovered</em> this model’s form (which axes are free, the <code>max(nboot, n0)</code> shape, the non-monotonic <code>nrow</code> factor) is preserved under the change’s <code>exploration/</code> directory. Those scripts are illustrative; you never rerun them. Recalibrating for a new machine is a single function call, described below.</p>
+<p>The one-time research that <em>discovered</em> this model’s form (which axes are free, the <code>max(nboot, n0)</code> shape, the non-monotonic <code>nrow</code> factor) is illustrative — you never rerun it. Recalibrating for a new machine is a single function call, described below.</p>
 </section><section class="level2"><h2 id="the-calibration-object">The calibration object<a class="anchor" aria-label="anchor" href="#the-calibration-object"></a>
 </h2>
 <p>The coefficients are <strong>architecture-specific</strong> — a slope measured on one CPU will not match another. The package therefore ships both a <em>default</em> calibration (fitted during development) and a <em>method</em> to re-measure it. The default is returned by <code><a href="../reference/ssd_cost_calibration.html">ssd_cost_calibration()</a></code>:</p>
@@ -227,7 +228,7 @@
 <span><span class="co"># Pass it to the estimator for trustworthy, machine-specific numbers.</span></span>
 <span><span class="fu"><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost</a></span><span class="op">(</span><span class="va">scenario</span>, calibration <span class="op">=</span> <span class="va">my_calibration</span><span class="op">)</span></span></code></pre></div>
 </div>
-<p>The shipped default (<code>data-raw/cost_calibration.R</code>) is produced by exactly this call — the function <em>is</em> the reproducibility mechanism, and this vignette only documents and demonstrates it.</p>
+<p>The shipped default calibration is produced by exactly this call — the function <em>is</em> the reproducibility mechanism, and this vignette only documents and demonstrates it.</p>
 </section><section class="level2"><h2 id="caveats">Caveats<a class="anchor" aria-label="anchor" href="#caveats"></a>
 </h2>
 <ul>
@@ -235,6 +236,15 @@
 <li>The <code>nrow</code> factor is the least precise part of the model (real, but weak and data-dependent).</li>
 <li>
 <code>ssdtools</code> performance can change across versions; the calibration’s provenance records the version it was measured against, and recalibration corrects drift.</li>
+</ul></section><section class="level2"><h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/cost-analysis.html">vignette("cost-analysis")</a></code> — the complement: measure a finished run’s <em>observed</em> cost and recalibrate from it.</li>
+<li>
+<code><a href="../articles/defining-a-scenario.html">vignette("defining-a-scenario")</a></code> — the scenario axes whose fan-out this estimate reads.</li>
+<li>
+<code><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost()</a></code>, <code><a href="../reference/ssd_calibrate_cost.html">ssd_calibrate_cost()</a></code>, <code><a href="../reference/ssd_cost_calibration.html">ssd_cost_calibration()</a></code>.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

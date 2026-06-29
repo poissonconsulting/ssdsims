@@ -8,13 +8,12 @@ library(ssdsims)
 ## Why estimate cost?
 
 A scenario is *declarative*: a few scenario axes can fan out into a
-multi-day run with no warning. The motivating example in
-[`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)’s
-docs — 10 simulations × 4 sample sizes × 7 `ci_method`s × 4 `nboot`
-values (up to 50 000), with `ci = TRUE` — was measured at roughly **430
-single-core hours** (about 18 days), dominated by the
-hazard-concentration (hc) bootstrap, with a single `multi_free` +
-`nboot = 50 000` task taking about 44 minutes on its own.
+multi-day run with no warning. A benchmark of the example scenario below
+— 10 simulations × 4 sample sizes × 7 `ci_method`s × 4 `nboot` values
+(up to 50 000), with `ci = TRUE` — measured roughly **400+ single-core
+hours** (the better part of three weeks), dominated by the
+hazard-concentration (hc) bootstrap, with a single `multi_*` +
+`nboot = 50 000` task taking on the order of an hour on its own.
 
 Before launching such a run you want two numbers:
 
@@ -60,9 +59,8 @@ grid is by far the dominant cost driver.
 
 The one-time research that *discovered* this model’s form (which axes
 are free, the `max(nboot, n0)` shape, the non-monotonic `nrow` factor)
-is preserved under the change’s `exploration/` directory. Those scripts
-are illustrative; you never rerun them. Recalibrating for a new machine
-is a single function call, described below.
+is illustrative — you never rerun it. Recalibrating for a new machine is
+a single function call, described below.
 
 ## The calibration object
 
@@ -228,9 +226,9 @@ my_calibration <- ssd_calibrate_cost()
 ssd_estimate_cost(scenario, calibration = my_calibration)
 ```
 
-The shipped default (`data-raw/cost_calibration.R`) is produced by
-exactly this call — the function *is* the reproducibility mechanism, and
-this vignette only documents and demonstrates it.
+The shipped default calibration is produced by exactly this call — the
+function *is* the reproducibility mechanism, and this vignette only
+documents and demonstrates it.
 
 ## Caveats
 
@@ -243,3 +241,14 @@ this vignette only documents and demonstrates it.
 - `ssdtools` performance can change across versions; the calibration’s
   provenance records the version it was measured against, and
   recalibration corrects drift.
+
+## See also
+
+- [`vignette("cost-analysis")`](https://poissonconsulting.github.io/ssdsims/articles/cost-analysis.md)
+  — the complement: measure a finished run’s *observed* cost and
+  recalibrate from it.
+- [`vignette("defining-a-scenario")`](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
+  — the scenario axes whose fan-out this estimate reads.
+- [`ssd_estimate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_estimate_cost.md),
+  [`ssd_calibrate_cost()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_calibrate_cost.md),
+  [`ssd_cost_calibration()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_cost_calibration.md).

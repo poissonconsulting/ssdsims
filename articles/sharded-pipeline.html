@@ -31,17 +31,18 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/ssdsims.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -78,7 +79,7 @@
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://poissonconsulting.github.io/ssdsims/">ssdsims</a></span><span class="op">)</span></span></code></pre></div>
 </div>
-<p>The <a href="defining-a-scenario.html">“Defining a Scenario”</a> vignette ends with the in-memory baseline runner, which threads each step’s results forward in memory. This vignette covers the next layer: materialising each step as <strong>Hive-partitioned Parquet shards</strong> and linking the steps by reading parent shards back from disk — the storage hand-off the cluster <a href="https://docs.ropensci.org/targets/" class="external-link">targets</a> pipeline is built on (<code>TARGETS-DESIGN.md</code> §5/§6).</p>
+<p>The <code><a href="../articles/defining-a-scenario.html">vignette("defining-a-scenario")</a></code> article ends with the in-memory baseline runner, which threads each step’s results forward in memory. This vignette covers the next layer: materialising each step as <strong>Hive-partitioned Parquet shards</strong> and linking the steps by reading parent shards back from disk — the storage hand-off the cluster <a href="https://docs.ropensci.org/targets/" class="external-link">targets</a> pipeline is built on.</p>
 <p>The key idea is <strong>two drivers over one execution core</strong>. The per-task work (draw, fit, hazard concentration) and its reproducible per-task RNG are shared; only the <em>I/O and granularity</em> differ:</p>
 <ul>
 <li>
@@ -190,7 +191,7 @@
 <code class="sourceCode R"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="va">run</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_shard_run&gt;</span></span>
-<span><span class="co">#&gt;   dir: /tmp/RtmpCnLI8K/ssdsims-shards-25633f6a7800</span></span>
+<span><span class="co">#&gt;   dir: /tmp/RtmpHWv8vN/ssdsims-shards-21c83870bb95</span></span>
 <span><span class="co">#&gt;   sample shards: 2</span></span>
 <span><span class="co">#&gt;   fit    shards: 8</span></span>
 <span><span class="co">#&gt;   hc     shards: 2</span></span></code></pre></div>
@@ -213,7 +214,7 @@
 <span><span class="co">#&gt; [7] "dataset=ccme_boron/sim=2/nrow=5/rescale=FALSE/part.parquet" </span></span>
 <span><span class="co">#&gt; [8] "dataset=ccme_boron/sim=2/nrow=5/rescale=TRUE/part.parquet"</span></span></code></pre></div>
 </div>
-<p>One file per <code>partition_by</code> path cell — here <code>2 (sim) x 2 (nrow) x 2 (rescale) = 8</code> fit shards — not one per task. Each file carries the step’s inner axes and the per-task results as columns.</p>
+<p>One file per <code>partition_by</code> path cell — here <code>1 (dataset) x 2 (sim) x 2 (nrow) x 2 (rescale) = 8</code> fit shards — not one per task. Each file carries the step’s inner axes and the per-task results as columns.</p>
 <section class="level3"><h3 id="results-match-the-in-memory-runner">Results match the in-memory runner<a class="anchor" aria-label="anchor" href="#results-match-the-in-memory-runner"></a>
 </h3>
 <p><code>partition_by</code> is a free re-layout, so the sharded run’s per-task results equal the in-memory baseline’s. The <code>hc</code> estimates, read back from the shards, line up with <code><a href="../reference/ssd_run_scenario_baseline.html">ssd_run_scenario_baseline()</a></code> joined on the task identity:</p>
@@ -237,13 +238,13 @@
 <p><code><a href="../reference/ssd_summarise.html">ssd_summarise()</a></code> fans the <code>hc</code> layer in across shards (via duckplyr) into a single <code>summary.parquet</code> — the analysis-ready table — without recomputing anything. It projects the <code>dists</code>/<code>samples</code> list-columns out at the DuckDB level, so the (potentially large) retained bootstrap draws are never pulled into R. Pass <code>path_with_samples =</code> to <strong>also</strong> write a full summary that keeps those columns; that write stays lazy in DuckDB, so the draws never materialise in R there either. In the <code>targets</code> pipeline the full <code>summary-samples.parquet</code> is written automatically when the scenario set <code>samples = TRUE</code> (the case where the retained draws carry information the compact summary cannot).</p>
 </section></section><section class="level2"><h2 id="scaling-up-the-targets-pipeline">Scaling up: the <code>targets</code> pipeline<a class="anchor" aria-label="anchor" href="#scaling-up-the-targets-pipeline"></a>
 </h2>
-<p>The sharded runner is single core. To run shards <strong>in parallel</strong> (or on a cluster), the same building blocks plug into a static-branching <code>targets</code> pipeline: <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_map.html" class="external-link">tarchetypes::tar_map()</a></code> mints one named target per shard, so <code>targets</code> caches, invalidates, and reruns each shard independently. Three ready example projects ship with the package — a minimal <code>small</code> one, a fuller <code>large</code> one (adapted from <code>scripts/example.R</code>, sweeping <code>nrow</code>, <code>proportion</code>, and the estimation / CI methods), and a <code>cluster</code> one for SLURM. The <code>large</code> project parallelises its shards across local workers with a mirai-backed <code>crew</code> controller (<code>tar_option_set(controller = crew::crew_controller_local())</code>); the <code>cluster</code> project is the same pipeline under a <code><a href="https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html" class="external-link">crew.cluster::crew_controller_slurm()</a></code> controller, with a connectivity + worker-prerequisite preflight — see the <a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a> vignette, a “zero to a running cluster job” guide that maps your site’s own SLURM instructions onto the controller:</p>
+<p>The sharded runner is single core. To run shards <strong>in parallel</strong> (or on a cluster), the same building blocks plug into a static-branching <code>targets</code> pipeline: <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_map.html" class="external-link">tarchetypes::tar_map()</a></code> mints one named target per shard, so <code>targets</code> caches, invalidates, and reruns each shard independently. Three ready example projects ship with the package — a minimal <code>small</code> one, a fuller <code>large</code> one (adapted from <code>scripts/example.R</code>, sweeping <code>nrow</code>, <code>proportion</code>, and the estimation / CI methods), and a <code>cluster</code> one for SLURM. The <code>large</code> project parallelises its shards across local workers with a mirai-backed <code>crew</code> controller (<code>tar_option_set(controller = crew::crew_controller_local())</code>); the <code>cluster</code> project is the same pipeline under a <code><a href="https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html" class="external-link">crew.cluster::crew_controller_slurm()</a></code> controller, with a connectivity + worker-prerequisite preflight — see <code><a href="../articles/cluster-pipeline.html">vignette("cluster-pipeline")</a></code>, a “zero to a running cluster job” guide that maps your site’s own SLURM instructions onto the controller:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"targets-templates"</span>, <span class="st">"small"</span>, package <span class="op">=</span> <span class="st">"ssdsims"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "_targets.R"   "run-serial.R" "run.R"        "scenario.R"</span></span></code></pre></div>
 </div>
-<p>The <code>small</code> and <code>large</code> directories each hold <code>scenario.R</code> (the study, shared by both drivers), <code>_targets.R</code> (the pipeline), <code>run.R</code> (the <strong>targets</strong> driver), and <code>run-serial.R</code> (the <strong>single-core</strong> driver); the <code>cluster</code> directory is a minimal four-file variant (the scenario is inline in <code>_targets.R</code>, and a separate <code>controller.R</code> holds the SLURM controller). The whole <code>_targets.R</code> is just <em>build a scenario and call the <code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code> factory</em> —</p>
+<p>The <code>small</code> and <code>large</code> directories each hold <code>scenario.R</code> (the study, shared by both drivers), <code>_targets.R</code> (the pipeline), <code>run.R</code> (the <strong>targets</strong> driver), and <code>run-serial.R</code> (the <strong>single-core</strong> driver); the <code>cluster</code> directory instead inlines the scenario in <code>_targets.R</code> and adds a <code>controller.R</code> (the SLURM controller), a <code>preflight.R</code> (connectivity check), a <code>run.R</code> driver, and a <code>README.md</code> guide. The whole <code>_targets.R</code> is just <em>build a scenario and call the <code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code> factory</em> —</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://docs.ropensci.org/targets/" class="external-link">targets</a></span><span class="op">)</span></span>
@@ -263,14 +264,14 @@
 <span><span class="co"># or, from a shell:  Rscript run.R</span></span>
 <span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/source.html" class="external-link">source</a></span><span class="op">(</span><span class="st">"run-serial.R"</span><span class="op">)</span> <span class="co"># single core via ssd_run_scenario_shards() -&gt; results-serial/</span></span>
-<span><span class="co"># ...and, if results/ exists, it asserts the two drivers' estimates are identical</span></span></code></pre></div>
+<span><span class="co"># ...and, if results/ exists, it checks (and prints) whether the two drivers' estimates match</span></span></code></pre></div>
 </div>
 <p><code><a href="../reference/ssd_scenario_targets.html">ssd_scenario_targets()</a></code> mints one <code>format = "file"</code> target per shard (targets passes the shard <em>path</em>, not its value, between steps) with <code>error = "null"</code> (a failing whole shard records its error and goes <code>NULL</code> without aborting the run — the rest still build and the summary unions the survivors), and wires step ordering with <code><a href="https://docs.ropensci.org/tarchetypes/reference/tar_combine.html" class="external-link">tar_combine()</a></code> barriers (a directory read carries no automatic dependency edge).</p>
 <p>Because a shard’s Hive-path depth depends on <code>partition_by</code>/<code>bundle</code>, replaying with a <em>changed</em> split must not leave stale-granularity shards beside the new ones (a <code>**</code> glob would union both). The two drivers handle this differently: <code>run.R</code> (targets) writes each layout under its own root, <code>scenario_results_dir(scenario)</code> = <code>results/seed=&lt;value&gt;/layout=&lt;hash&gt;/</code>, so a split change is a fresh tree; <code>run-serial.R</code> (single core) instead <strong>owns</strong> its <code>dir</code> and clears each step subtree on every run.</p>
-<p>Because both drivers <code>source("scenario.R")</code> — the same study — and <code>partition_by</code> is a free re-layout, <code>run-serial.R</code> finishes by reading back its own <code>summary.parquet</code> and the targets <code>scenario_results_dir(scenario)</code> summary and asserting the per-task estimates are byte-identical. Whatever the driver — baseline, single-core shards, or <code>targets</code> — the results are the same; choose the one that fits the run.</p>
+<p>Because both drivers <code>source("scenario.R")</code> — the same study — and <code>partition_by</code> is a free re-layout, <code>run-serial.R</code> finishes by reading back its own <code>summary.parquet</code> and the targets <code>scenario_results_dir(scenario)</code> summary and checking (with <code><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal()</a></code>) that the per-task estimates match. Whatever the driver — baseline, single-core shards, or <code>targets</code> — the results are the same; choose the one that fits the run.</p>
 </section><section class="level2"><h2 id="combining-scenarios-into-a-design">Combining scenarios into a design<a class="anchor" aria-label="anchor" href="#combining-scenarios-into-a-design"></a>
 </h2>
-<p>A single scenario is one <strong>regular</strong> grid. To explore finer detail over a <em>subset</em> of the axes — a coarse grid everywhere plus a dense refinement in one region — without computing the full cross-product, union several scenarios into a <strong>design</strong> and run them as one pipeline with <code><a href="../reference/ssd_design_targets.html">ssd_design_targets()</a></code>. Members sharing a <code>seed</code> share their coincident shards (computed once), and the design fans in one combined <code>summary.parquet</code> with a <code>scenario</code> identity column. Growing a one-off run into a design is a one-line switch; see <a href="scenario-to-design.html">“From a Single Scenario to a Design”</a>.</p>
+<p>A single scenario is one <strong>regular</strong> grid. To explore finer detail over a <em>subset</em> of the axes — a coarse grid everywhere plus a dense refinement in one region — without computing the full cross-product, union several scenarios into a <strong>design</strong> and run them as one pipeline with <code><a href="../reference/ssd_design_targets.html">ssd_design_targets()</a></code>. Members sharing a <code>seed</code> share their coincident shards (computed once), and the design fans in one combined <code>summary.parquet</code> with a <code>scenario</code> identity column. Growing a one-off run into a design is a one-line switch; see <code><a href="../articles/scenario-to-design.html">vignette("scenario-to-design")</a></code>.</p>
 <section class="level3"><h3 id="comparing-settings-in-one-design">Comparing settings in one design<a class="anchor" aria-label="anchor" href="#comparing-settings-in-one-design"></a>
 </h3>
 <p>A design also serves the <em>secondary</em> use of comparing <strong>settings</strong> at the same cells. Members of a seed group may differ in the four non-axis hc readouts (<code>proportion</code>, <code>est_method</code>, <code>ci</code>, <code>samples</code>) and in their fit <code>dists</code> union — only the layout-shaping <code>nrow_max</code> and <code>partition_by</code> must agree. Differing readouts are reconciled <strong>per shared hc cell</strong>: <code>proportion</code>/<code>est_method</code> are unioned and <code>ci</code>/<code>samples</code> reduced with <code><a href="https://rdrr.io/r/base/any.html" class="external-link">any()</a></code>, so the cell computes the maximal readout set in one shard and each member’s summary filters its own slice.</p>
@@ -284,15 +285,13 @@
 </h2>
 <ul>
 <li>
-<a href="scenario-to-design.html">“From a Single Scenario to a Design”</a> — union scenarios into one ragged pipeline that shares overlapping shards.</li>
+<code><a href="../articles/defining-a-scenario.html">vignette("defining-a-scenario")</a></code> — the scenario object and the baseline runner.</li>
 <li>
-<a href="defining-a-scenario.html">“Defining a Scenario”</a> — the scenario object and the baseline runner.</li>
+<code><a href="../articles/scenario-to-design.html">vignette("scenario-to-design")</a></code> — union scenarios into one ragged pipeline that shares overlapping shards.</li>
 <li>
-<a href="cluster-pipeline.html">“Running on a SLURM Cluster”</a> — the same pipeline on a cluster, and <a href="cloud-upload.html">“Uploading Shards to Cloud Storage”</a> — shipping the shards to an object store so they are readable off the cluster.</li>
+<code><a href="../articles/cluster-pipeline.html">vignette("cluster-pipeline")</a></code> — the same pipeline on a cluster, and <code><a href="../articles/cloud-upload.html">vignette("cloud-upload")</a></code> — shipping the shards to an object store so they are readable off the cluster.</li>
 <li>
-<code>TARGETS-DESIGN.md</code> §5 (tasks into shards), §6 (inter-shard linking, the Hive layout, the <code>targets</code> sketch).</li>
-<li>
-<code><a href="../reference/ssd_run_scenario_shards.html">?ssd_run_scenario_shards</a></code>, <code><a href="../reference/ssd_scenario_shards.html">?ssd_scenario_fit_shards</a></code>, <code><a href="../reference/ssd_run_step.html">?ssd_run_fit_step</a></code>, <code><a href="../reference/ssd_summarise.html">?ssd_summarise</a></code>.</li>
+<code><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code>, <code><a href="../reference/ssd_scenario_shards.html">ssd_scenario_fit_shards()</a></code>, <code><a href="../reference/ssd_run_step.html">ssd_run_fit_step()</a></code>, <code><a href="../reference/ssd_summarise.html">ssd_summarise()</a></code>.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);

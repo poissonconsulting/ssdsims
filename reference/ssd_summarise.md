@@ -97,10 +97,6 @@ preserving order, and only the global setting counts - the per-copy
 the same rows (address them by `hc_id`/`fit_id`), but their order and
 the file's bytes may differ. Under the default single thread, writes
 were observed in input order and byte-identical across runs regardless.
-Evidence: the `duckplyr-config` change's
-`exploration/experiment-summary-union.R`,
-`exploration/experiment-rgbytes.R`, and
-`exploration/experiment-preserve-order-copy-option.R`.
 
 ## Examples
 
@@ -122,6 +118,6 @@ ssd_summarise(
   file.path(run$dir, "hc"),
   file.path(run$dir, "summary.parquet")
 )
-#> [1] "/tmp/RtmpiEHuIc/ssdsims-shards-1f8a2d4d8599/summary.parquet"
+#> [1] "/tmp/RtmpSqXHfy/ssdsims-shards-1bd14db2e085/summary.parquet"
 # }
 ```

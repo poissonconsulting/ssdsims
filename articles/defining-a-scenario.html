@@ -31,17 +31,18 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/ssdsims.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -86,7 +87,7 @@
 <li>It <strong>serialises to a compact manifest</strong> — no data frames, no RNG state, no function bodies — so it can be shipped to a cluster and stored alongside results.</li>
 <li>The set of work a pipeline expands to is a <strong>pure function of the scenario</strong>, so the same scenario always describes the same study.</li>
 </ul>
-<p>This vignette walks the stages that work <em>today</em>, in order. It is intended to grow: as roadmap features land (per-task seeding, shards, the <code>targets</code> backend), new sections will document them here. See <code>TARGETS-DESIGN.md</code> for the north-star design.</p>
+<p>This vignette walks the four stages in order; the runner, design, and pipeline vignettes linked at the end build on them.</p>
 <p>The four stages this vignette covers:</p>
 <ol type="1">
 <li>
@@ -479,11 +480,21 @@
 <span><span class="co">#&gt; 10 boron       1    10 multi                  0.2   2.26 </span></span>
 <span><span class="co">#&gt; # ℹ 86 more rows</span></span></code></pre></div>
 </div>
-</section><section class="level2"><h2 id="next-shards-and-the-targets-pipeline">Next: shards and the targets pipeline<a class="anchor" aria-label="anchor" href="#next-shards-and-the-targets-pipeline"></a>
+</section><section class="level2"><h2 id="next-shards-designs-and-the-targets-pipeline">Next: shards, designs, and the targets pipeline<a class="anchor" aria-label="anchor" href="#next-shards-designs-and-the-targets-pipeline"></a>
 </h2>
-<p>The baseline runner threads results in memory. The next layer materialises each step as <strong>Hive-partitioned Parquet shards</strong> grouped by the scenario’s <code>partition_by</code> axes, and links steps by reading parent shards back — the storage hand-off the cluster <code>targets</code> pipeline uses. The <a href="sharded-pipeline.html">“Running a sharded pipeline”</a> vignette covers that: the single-core <code><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code> (byte-identical to the baseline runner) and the shipped <code>targets</code> template.</p>
-<p>Still ahead on the roadmap (<code>TARGETS-DESIGN.md</code> §12): a per-scenario manifest, cloud upload, shard-completeness assertions, and the crew/SLURM controller. As each lands, the vignettes grow to cover it.</p>
-</section><script id="quarto-html-after-body" type="application/javascript">
+<p>The baseline runner threads results in memory. The next layer materialises each step as <strong>Hive-partitioned Parquet shards</strong> grouped by the scenario’s <code>partition_by</code> axes, and links steps by reading parent shards back — the storage hand-off the cluster <code>targets</code> pipeline uses.</p>
+</section><section class="level2"><h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/sharded-pipeline.html">vignette("sharded-pipeline")</a></code> — the same scenario as Parquet shards and a <code>targets</code> pipeline; the single-core <code><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code> is byte-identical to this baseline runner.</li>
+<li>
+<code><a href="../articles/scenario-to-design.html">vignette("scenario-to-design")</a></code> — union several scenarios into one ragged design that shares overlapping shards.</li>
+<li>
+<code><a href="../articles/cost-estimation.html">vignette("cost-estimation")</a></code> — size a scenario’s compute before launching it.</li>
+<li>
+<code><a href="../articles/ssdsims.html">vignette("ssdsims")</a></code> — the overview and a recommended reading order.</li>
+</ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);

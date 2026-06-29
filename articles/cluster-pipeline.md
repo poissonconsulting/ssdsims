@@ -5,13 +5,13 @@
 library(ssdsims)
 ```
 
-The [“Running a Sharded
-Pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
-vignette runs a scenario’s shards through a `targets` pipeline on a
+The
+[`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+article runs a scenario’s shards through a `targets` pipeline on a
 single machine. This vignette takes that **same pipeline to a SLURM
-cluster** — and the only thing that changes is the `crew` controller
-(`TARGETS-DESIGN.md` §4). The per-task `sample`/`fit`/`hc` results are
-byte-identical to the local run; the cluster is just a faster backend.
+cluster** — and the only thing that changes is the `crew` controller.
+The per-task `sample`/`fit`/`hc` results are byte-identical to the local
+run; the cluster is just a faster backend.
 
 You do **not** need to know `crew` or `targets` to follow this guide —
 only your cluster’s own (non-R) usage instructions. It is four steps:
@@ -33,7 +33,7 @@ cluster-specific**:
 | **B — backend** | the SLURM `crew` controller (queue, modules, scratch, workers, walltime) | the **one editable block** in `controller.R` |
 | **C — content** | the scenario (seed, datasets, grids) | the inline `scenario` block in `_targets.R` |
 
-It is just four files — separating only what cannot be inlined:
+It is just five files — separating only what cannot be inlined:
 
 ``` r
 
@@ -45,9 +45,9 @@ list.files(system.file("targets-templates", "cluster", package = "ssdsims"))
 the pipeline and the preflight), `_targets.R` (the clean pipeline:
 controller + the inline scenario + factory), `preflight.R` (the
 standalone connectivity/prerequisite check, kept out of the pipeline),
-and `run.R` (the driver: preflight then
-[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)).
-Copy them to your project root:
+`run.R` (the driver: preflight then
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)),
+and a `README.md` copy of this guide. Copy them to your project root:
 
 ``` r
 
@@ -197,8 +197,9 @@ estimates. That is your first running cluster job, end to end.
 > cluster** (no scheduler), use the `large` template — it builds the
 > identical pipeline (same factory + scenario) under a
 > [`crew::crew_controller_local()`](https://wlandau.github.io/crew/reference/crew_controller_local.html)
-> controller, and its `run-serial.R` asserts the results are
-> byte-identical.
+> controller, and its `run-serial.R` checks (with
+> [`all.equal()`](https://rdrr.io/r/base/all.equal.html)) that the
+> single-core and targets estimates match.
 
 ## Step 4 — Swap in your own scenario
 
@@ -272,7 +273,7 @@ controller <- crew.cluster::crew_controller_sge(
 ```
 
 See
-[`?crew.cluster::crew_controller_sge`](https://wlandau.github.io/crew.cluster/reference/crew_controller_sge.html)
+[`crew.cluster::crew_controller_sge()`](https://wlandau.github.io/crew.cluster/reference/crew_controller_sge.html)
 (and the `_pbs` / `_lsf` equivalents) for the exact arguments.
 Everything else in this guide — the preflight, the minimal first job,
 swapping in your scenario — is unchanged.
@@ -289,16 +290,14 @@ lifetime — “many-to-one”; `tasks_max = 1L` gives one shard per job —
 
 ## See also
 
-- The template’s own `README.md` (the same guide, alongside the files)
-  and `TARGETS-DESIGN.md` §4 (from local to a cluster), §11 (open
-  questions), §12 (`cluster-pipeline`).
-- [`?ssd_scenario_targets`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md),
-  [`?crew.cluster::crew_controller_slurm`](https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html).
-- The [“Running a Sharded
-  Pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
-  vignette — the `small`/`large`/`cluster` template trio.
-- [“Uploading Shards to Cloud
-  Storage”](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.md)
+- [`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+  — the `small`/`large`/`cluster` template trio and the single-machine
+  `targets` pipeline.
+- [`vignette("cloud-upload")`](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.md)
   — ship the cluster’s shards to an object store (the
   `upload = ssd_upload_azure(...)` line in this template’s `_targets.R`)
   and read them back in place.
+- [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md),
+  [`crew.cluster::crew_controller_slurm()`](https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html).
+- The template’s own `README.md` ships the same guide alongside the
+  files.

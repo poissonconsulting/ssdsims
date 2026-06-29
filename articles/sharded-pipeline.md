@@ -5,14 +5,14 @@
 library(ssdsims)
 ```
 
-The [“Defining a
-Scenario”](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
-vignette ends with the in-memory baseline runner, which threads each
+The
+[`vignette("defining-a-scenario")`](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
+article ends with the in-memory baseline runner, which threads each
 step’s results forward in memory. This vignette covers the next layer:
 materialising each step as **Hive-partitioned Parquet shards** and
 linking the steps by reading parent shards back from disk — the storage
 hand-off the cluster [targets](https://docs.ropensci.org/targets/)
-pipeline is built on (`TARGETS-DESIGN.md` §5/§6).
+pipeline is built on.
 
 The key idea is **two drivers over one execution core**. The per-task
 work (draw, fit, hazard concentration) and its reproducible per-task RNG
@@ -169,7 +169,7 @@ shard paths per step.
 run <- ssd_run_scenario_shards(scenario)
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmpCnLI8K/ssdsims-shards-25633f6a7800
+#>   dir: /tmp/RtmpHWv8vN/ssdsims-shards-21c83870bb95
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
@@ -198,9 +198,9 @@ fit_files
 ```
 
 One file per `partition_by` path cell — here
-`2 (sim) x 2 (nrow) x 2 (rescale) = 8` fit shards — not one per task.
-Each file carries the step’s inner axes and the per-task results as
-columns.
+`1 (dataset) x 2 (sim) x 2 (nrow) x 2 (rescale) = 8` fit shards — not
+one per task. Each file carries the step’s inner axes and the per-task
+results as columns.
 
 ### Results match the in-memory runner
 
@@ -257,10 +257,9 @@ controller
 `cluster` project is the same pipeline under a
 [`crew.cluster::crew_controller_slurm()`](https://wlandau.github.io/crew.cluster/reference/crew_controller_slurm.html)
 controller, with a connectivity + worker-prerequisite preflight — see
-the [“Running on a SLURM
-Cluster”](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
-vignette, a “zero to a running cluster job” guide that maps your site’s
-own SLURM instructions onto the controller:
+[`vignette("cluster-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md),
+a “zero to a running cluster job” guide that maps your site’s own SLURM
+instructions onto the controller:
 
 ``` r
 
@@ -271,10 +270,10 @@ list.files(system.file("targets-templates", "small", package = "ssdsims"))
 The `small` and `large` directories each hold `scenario.R` (the study,
 shared by both drivers), `_targets.R` (the pipeline), `run.R` (the
 **targets** driver), and `run-serial.R` (the **single-core** driver);
-the `cluster` directory is a minimal four-file variant (the scenario is
-inline in `_targets.R`, and a separate `controller.R` holds the SLURM
-controller). The whole `_targets.R` is just *build a scenario and call
-the
+the `cluster` directory instead inlines the scenario in `_targets.R` and
+adds a `controller.R` (the SLURM controller), a `preflight.R`
+(connectivity check), a `run.R` driver, and a `README.md` guide. The
+whole `_targets.R` is just *build a scenario and call the
 [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
 factory* —
 
@@ -302,7 +301,7 @@ source("run.R") # targets: tar_make() -> one target per shard -> results/<step>/
 # or, from a shell:  Rscript run.R
 
 source("run-serial.R") # single core via ssd_run_scenario_shards() -> results-serial/
-# ...and, if results/ exists, it asserts the two drivers' estimates are identical
+# ...and, if results/ exists, it checks (and prints) whether the two drivers' estimates match
 ```
 
 [`ssd_scenario_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_targets.md)
@@ -326,10 +325,11 @@ each step subtree on every run.
 Because both drivers `source("scenario.R")` — the same study — and
 `partition_by` is a free re-layout, `run-serial.R` finishes by reading
 back its own `summary.parquet` and the targets
-`scenario_results_dir(scenario)` summary and asserting the per-task
-estimates are byte-identical. Whatever the driver — baseline,
-single-core shards, or `targets` — the results are the same; choose the
-one that fits the run.
+`scenario_results_dir(scenario)` summary and checking (with
+[`all.equal()`](https://rdrr.io/r/base/all.equal.html)) that the
+per-task estimates match. Whatever the driver — baseline, single-core
+shards, or `targets` — the results are the same; choose the one that
+fits the run.
 
 ## Combining scenarios into a design
 
@@ -342,8 +342,8 @@ with
 Members sharing a `seed` share their coincident shards (computed once),
 and the design fans in one combined `summary.parquet` with a `scenario`
 identity column. Growing a one-off run into a design is a one-line
-switch; see [“From a Single Scenario to a
-Design”](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md).
+switch; see
+[`vignette("scenario-to-design")`](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md).
 
 ### Comparing settings in one design
 
@@ -381,22 +381,17 @@ byte-identical to its standalone run.
 
 ## See also
 
-- [“From a Single Scenario to a
-  Design”](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md)
+- [`vignette("defining-a-scenario")`](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
+  — the scenario object and the baseline runner.
+- [`vignette("scenario-to-design")`](https://poissonconsulting.github.io/ssdsims/articles/scenario-to-design.md)
   — union scenarios into one ragged pipeline that shares overlapping
   shards.
-- [“Defining a
-  Scenario”](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
-  — the scenario object and the baseline runner.
-- [“Running on a SLURM
-  Cluster”](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
-  — the same pipeline on a cluster, and [“Uploading Shards to Cloud
-  Storage”](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.md)
+- [`vignette("cluster-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
+  — the same pipeline on a cluster, and
+  [`vignette("cloud-upload")`](https://poissonconsulting.github.io/ssdsims/articles/cloud-upload.md)
   — shipping the shards to an object store so they are readable off the
   cluster.
-- `TARGETS-DESIGN.md` §5 (tasks into shards), §6 (inter-shard linking,
-  the Hive layout, the `targets` sketch).
-- [`?ssd_run_scenario_shards`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md),
-  [`?ssd_scenario_fit_shards`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md),
-  [`?ssd_run_fit_step`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md),
-  [`?ssd_summarise`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md).
+- [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md),
+  [`ssd_scenario_fit_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_shards.md),
+  [`ssd_run_fit_step()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_step.md),
+  [`ssd_summarise()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_summarise.md).

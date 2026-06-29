@@ -31,17 +31,18 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/ssdsims.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
-    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
     <li><a class="dropdown-item" href="../articles/cloud-upload.html">Uploading Shards to Cloud Storage</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-estimation.html">Estimating a Scenario's Compute Cost</a></li>
+    <li><a class="dropdown-item" href="../articles/cost-analysis.html">Analysing a Run's Observed Compute Cost</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -80,11 +81,11 @@
 </div>
 <section class="level2"><h2 id="prediction-then-measurement">Prediction, then measurement<a class="anchor" aria-label="anchor" href="#prediction-then-measurement"></a>
 </h2>
-<p><a href="cost-estimation.html"><code>ssd_estimate_cost()</code></a> predicts a scenario’s compute cost <em>before</em> a run, from a cost model calibrated by a synthetic micro-benchmark. Once a run has happened it leaves <strong>ground truth</strong> behind: every <code>fit</code> and <code>hc</code> task’s body is bracketed with a UTC <code>.start</code>/<code>.end</code> and tagged with the <code>.host</code> CPU, and those land as columns of the shard Parquets themselves. <code><a href="../reference/ssd_analyse_cost.html">ssd_analyse_cost()</a></code> reads them back and attributes the <em>observed</em> compute to the same <code>ci_method</code> × <code>nboot</code> axes the estimate uses — closing the loop from predicted to measured.</p>
+<p><code><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost()</a></code> predicts a scenario’s compute cost <em>before</em> a run (see <code><a href="../articles/cost-estimation.html">vignette("cost-estimation")</a></code>), from a cost model calibrated by a synthetic micro-benchmark. Once a run has happened it leaves <strong>ground truth</strong> behind: every <code>fit</code> and <code>hc</code> task’s body is bracketed with a UTC <code>.start</code>/<code>.end</code> and tagged with the <code>.host</code> CPU, and those land as columns of the shard Parquets themselves. <code><a href="../reference/ssd_analyse_cost.html">ssd_analyse_cost()</a></code> reads them back and attributes the <em>observed</em> compute to the same <code>ci_method</code> × <code>nboot</code> axes the estimate uses — closing the loop from predicted to measured.</p>
 <p>Like the estimator, the analysis functions are strictly <strong>read-only</strong>: they read result Parquets (and, optionally, the run’s <code>targets</code> store), and never run the pipeline, fit a distribution, draw a random number, or write a file.</p>
 </section><section class="level2"><h2 id="a-small-worked-run">A small worked run<a class="anchor" aria-label="anchor" href="#a-small-worked-run"></a>
 </h2>
-<p>Any run leaves timings behind — the serial baseline, the single-core <a href="../reference/ssd_run_scenario_shards.html"><code>ssd_run_scenario_shards()</code></a>, or the <code>targets</code> pipeline. Here we materialise a small scenario single-core so the vignette is self-contained:</p>
+<p>Any run leaves timings behind — the serial baseline, the single-core <code><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards()</a></code>, or the <code>targets</code> pipeline. Here we materialise a small scenario single-core so the vignette is self-contained:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
@@ -108,12 +109,12 @@
 <code class="sourceCode R"><span><span class="va">analysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_analyse_cost.html">ssd_analyse_cost</a></span><span class="op">(</span><span class="va">scenario</span>, root <span class="op">=</span> <span class="va">run</span><span class="op">$</span><span class="va">dir</span><span class="op">)</span></span>
 <span><span class="va">analysis</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_cost_analysis&gt;  (observed, serial-equivalent; measured)</span></span>
-<span><span class="co">#&gt;   total compute:  16.6 s</span></span>
-<span><span class="co">#&gt;   longest task:   3.9 s</span></span>
+<span><span class="co">#&gt;   total compute:  15.9 s</span></span>
+<span><span class="co">#&gt;   longest task:   3.6 s</span></span>
 <span><span class="co">#&gt;   breakdown (ci_method x nboot, by total cost):</span></span>
-<span><span class="co">#&gt;     weighted_samples       nboot   1000     4 tasks  14.5 s</span></span>
-<span><span class="co">#&gt;     weighted_samples       nboot    100     4 tasks  2.1 s</span></span>
-<span><span class="co">#&gt;   host(s):        AMD EPYC 9V74 80-Core Processor</span></span></code></pre></div>
+<span><span class="co">#&gt;     weighted_samples       nboot   1000     4 tasks  13.7 s</span></span>
+<span><span class="co">#&gt;     weighted_samples       nboot    100     4 tasks  2.2 s</span></span>
+<span><span class="co">#&gt;   host(s):        AMD EPYC 7763 64-Core Processor</span></span></code></pre></div>
 </div>
 <p>The observed <strong>total is serial-equivalent compute</strong> — the sum of the per-task durations — <em>not</em> elapsed wall time. Under <code>n</code> parallel workers the wall time is roughly <code>max(longest_task, total / n)</code>, so the longest single task is the irreducible floor regardless of how many workers you add.</p>
 <section class="level3"><h3 id="the-shard-envelope">The shard envelope<a class="anchor" aria-label="anchor" href="#the-shard-envelope"></a>
@@ -131,13 +132,13 @@
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ssd_compare_cost.html">ssd_compare_cost</a></span><span class="op">(</span><span class="va">scenario</span>, root <span class="op">=</span> <span class="va">run</span><span class="op">$</span><span class="va">dir</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_cost_comparison&gt;  (predicted vs observed)</span></span>
-<span><span class="co">#&gt;   total compute:  predicted 22.4 s | observed 16.6 s | obs/pred 0.74x</span></span>
-<span><span class="co">#&gt;   longest task:   predicted 6.7 s | observed 3.9 s | obs/pred 0.58x</span></span></code></pre></div>
+<span><span class="co">#&gt;   total compute:  predicted 22.4 s | observed 15.9 s | obs/pred 0.71x</span></span>
+<span><span class="co">#&gt;   longest task:   predicted 6.7 s | observed 3.6 s | obs/pred 0.54x</span></span></code></pre></div>
 </div>
 <p>A ratio far from <code>1</code> means the shipped default calibration does not match this machine — which is exactly what recalibration fixes.</p>
 </section><section class="level2"><h2 id="recalibrating-from-the-run">Recalibrating from the run<a class="anchor" aria-label="anchor" href="#recalibrating-from-the-run"></a>
 </h2>
-<p><code><a href="../reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code> re-fits the per-task cost model from the run’s <strong>measured</strong> hc task durations (and a measured fit addend), returning the same <code>ssdsims_cost_calibration</code> object <a href="cost-estimation.html"><code>ssd_calibrate_cost()</code></a> produces — so it drops straight back into <code><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost()</a></code>, now grounded in real measurements from this scenario rather than a synthetic sweep:</p>
+<p><code><a href="../reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code> re-fits the per-task cost model from the run’s <strong>measured</strong> hc task durations (and a measured fit addend), returning the same <code>ssdsims_cost_calibration</code> object <code><a href="../reference/ssd_calibrate_cost.html">ssd_calibrate_cost()</a></code> produces — so it drops straight back into <code><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost()</a></code>, now grounded in real measurements from this scenario rather than a synthetic sweep:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">from_run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run</a></span><span class="op">(</span><span class="va">scenario</span>, root <span class="op">=</span> <span class="va">run</span><span class="op">$</span><span class="va">dir</span><span class="op">)</span></span>
@@ -145,18 +146,18 @@
 <span><span class="co"># The run-derived calibration drives the estimator like any other.</span></span>
 <span><span class="fu"><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost</a></span><span class="op">(</span><span class="va">scenario</span>, calibration <span class="op">=</span> <span class="va">from_run</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_cost_estimate&gt;  (ballpark, serial)</span></span>
-<span><span class="co">#&gt;   total compute:  16.6 s</span></span>
-<span><span class="co">#&gt;   longest task:   2.1 s</span></span>
+<span><span class="co">#&gt;   total compute:  15.9 s</span></span>
+<span><span class="co">#&gt;   longest task:   2.0 s</span></span>
 <span><span class="co">#&gt;   breakdown (ci_method x nboot, by total cost):</span></span>
-<span><span class="co">#&gt;     weighted_samples   nboot   1000     4 tasks  8.3 s</span></span>
-<span><span class="co">#&gt;     weighted_samples   nboot    100     4 tasks  8.3 s</span></span>
-<span><span class="co">#&gt;   calibration:    AMD EPYC 9V74 80-Core Processor | R 4.6.1 | ssdtools 2.6.0.9002 | 2026-06-27</span></span>
+<span><span class="co">#&gt;     weighted_samples   nboot   1000     4 tasks  8.0 s</span></span>
+<span><span class="co">#&gt;     weighted_samples   nboot    100     4 tasks  7.9 s</span></span>
+<span><span class="co">#&gt;   calibration:    AMD EPYC 7763 64-Core Processor | R 4.6.1 | ssdtools 2.6.0.9002 | 2026-06-29</span></span>
 <span><span class="co">#&gt;   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.</span></span></code></pre></div>
 </div>
 <p>Because the calibration is <strong>architecture-specific</strong>, <code><a href="../reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code> never silently pools timings from different CPUs: a run whose shards span more than one <code>.host</code> (a cluster of mixed node types) requires an explicit <code>host =</code>, or the function aborts listing the hosts it found. The result’s provenance records that it was derived from a run.</p>
 </section><section class="level2"><h2 id="across-a-design">Across a design<a class="anchor" aria-label="anchor" href="#across-a-design"></a>
 </h2>
-<p>A <a href="scenario-to-design.html">design</a> (<code><a href="../reference/ssd_design.html">ssd_design()</a></code>) runs several scenarios as one pipeline. The same three functions accept a design and <strong>roll the observed cost up across its members</strong>: <code>ssd_analyse_cost(design, root = ...)</code> returns a breakdown with a leading <code>scenario</code> column and design totals, <code>ssd_compare_cost(design)</code> places the design’s summed prediction beside it, and <code>ssd_calibrate_cost_from_run(design)</code> pools every member’s measured durations into one host-aware calibration.</p>
+<p>A design (<code><a href="../reference/ssd_design.html">ssd_design()</a></code>; see <code><a href="../articles/scenario-to-design.html">vignette("scenario-to-design")</a></code>) runs several scenarios as one pipeline. The same three functions accept a design and <strong>roll the observed cost up across its members</strong>: <code>ssd_analyse_cost(design, root = ...)</code> returns a breakdown with a leading <code>scenario</code> column and design totals, <code>ssd_compare_cost(design)</code> places the design’s summed prediction beside it, and <code>ssd_calibrate_cost_from_run(design)</code> pools every member’s measured durations into one host-aware calibration.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">design</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_design.html">ssd_design</a></span><span class="op">(</span>coarse <span class="op">=</span> <span class="va">scenario</span>, dense <span class="op">=</span> <span class="va">other_scenario</span><span class="op">)</span></span>
@@ -185,7 +186,16 @@
 <span><span class="fu"><a href="../reference/ssd_estimate_cost.html">ssd_estimate_cost</a></span><span class="op">(</span><span class="va">next_scenario</span>, calibration <span class="op">=</span> <span class="va">better</span><span class="op">)</span>          <span class="co"># predict the next, from truth</span></span></code></pre></div>
 </div>
 <p>Each larger scenario is then sized from the measured cost of the last, rather than a synthetic micro-benchmark — the estimate improves every time the loop turns.</p>
-</section><script id="quarto-html-after-body" type="application/javascript">
+</section><section class="level2"><h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
+</h2>
+<ul>
+<li>
+<code><a href="../articles/cost-estimation.html">vignette("cost-estimation")</a></code> — the complement: <em>predict</em> a scenario’s cost before running it.</li>
+<li>
+<code><a href="../articles/sharded-pipeline.html">vignette("sharded-pipeline")</a></code> — the shard runs whose per-task timings this reads back.</li>
+<li>
+<code><a href="../reference/ssd_analyse_cost.html">ssd_analyse_cost()</a></code>, <code><a href="../reference/ssd_compare_cost.html">ssd_compare_cost()</a></code>, <code><a href="../reference/ssd_calibrate_cost_from_run.html">ssd_calibrate_cost_from_run()</a></code>.</li>
+</ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);

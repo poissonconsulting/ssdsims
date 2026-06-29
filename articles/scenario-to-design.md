@@ -208,6 +208,13 @@ together.
   not a comparison axis; differing or changing it across members is
   undefined behaviour for shard sharing.
 
-See [“Running a Sharded
-Pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
-for the shard/results layout a design builds on.
+## See also
+
+- [`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+  — the shard/results layout a design builds on.
+- [`vignette("defining-a-scenario")`](https://poissonconsulting.github.io/ssdsims/articles/defining-a-scenario.md)
+  — the scenario object each design member is.
+- [`vignette("cost-analysis")`](https://poissonconsulting.github.io/ssdsims/articles/cost-analysis.md)
+  — roll observed compute up across a design’s members.
+- [`ssd_design()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design.md),
+  [`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md).

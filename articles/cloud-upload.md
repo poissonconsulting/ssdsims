@@ -5,15 +5,14 @@
 library(ssdsims)
 ```
 
-The [“Running a Sharded
-Pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
-vignette materialises each step as Hive-partitioned Parquet shards, and
-the [“Running on a SLURM
-Cluster”](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
-vignette runs that same pipeline on a cluster. This vignette covers the
-last link: shipping each shard to an **object store** as it is produced,
-so the results are readable **from outside the cluster** — analysis
-notebooks, dashboards, downstream R/Python (`TARGETS-DESIGN.md` §6.1).
+The
+[`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+article materialises each step as Hive-partitioned Parquet shards, and
+[`vignette("cluster-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
+runs that same pipeline on a cluster. This vignette covers the last
+link: shipping each shard to an **object store** as it is produced, so
+the results are readable **from outside the cluster** — analysis
+notebooks, dashboards, downstream R/Python.
 
 The model is simple: **upload is a runner argument**, the
 remote-destination sibling of `root`. You pass an `upload` object to the
@@ -178,7 +177,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/Rtmpd0162m/ssdsims-shards-249433ac7c59/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/Rtmp7WKZ5E/ssdsims-shards-20fb1031e8a8/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 
@@ -191,8 +190,8 @@ and no credentials.
 To ship to a real Azure container, swap
 [`ssd_upload_dryrun()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md)
 for `ssd_upload_azure(url, container)` in the **cluster** template’s
-`_targets.R` ([“Running on a SLURM
-Cluster”](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)).
+`_targets.R` (see
+[`vignette("cluster-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)).
 It is the same factory call — one line changes:
 
 ``` r
@@ -313,16 +312,12 @@ ssd_summarise_uploaded(upload, step = "summary_samples", drop_samples = FALSE)
 
 ## See also
 
-- [“Running a Sharded
-  Pipeline”](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
+- [`vignette("sharded-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/sharded-pipeline.md)
   — materialising the shards this vignette uploads.
-- [“Running on a SLURM
-  Cluster”](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
+- [`vignette("cluster-pipeline")`](https://poissonconsulting.github.io/ssdsims/articles/cluster-pipeline.md)
   — the cluster template whose `_targets.R` gains the
   `upload = ssd_upload_azure(...)` line.
-- `TARGETS-DESIGN.md` §6.1 (the cloud-upload hook).
-- [`?ssd_upload_azure`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md),
-  [`?ssd_test_upload`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md),
-  [`?ssd_upload_shard`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_shard.md),
-  [`?ssd_open_uploaded`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md).
-  \`\`\`
+- [`ssd_upload_azure()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_azure.md),
+  [`ssd_test_upload()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_test_upload.md),
+  [`ssd_upload_shard()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_upload_shard.md),
+  [`ssd_open_uploaded()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_open_uploaded.md).
