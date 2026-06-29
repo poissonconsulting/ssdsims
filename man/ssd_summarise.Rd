@@ -78,10 +78,7 @@ cannot substitute. The trade: the full summary's \strong{row order is not
 contractual} - re-summarising the same shards yields the same rows
 (address them by \code{hc_id}/\code{fit_id}), but their order and the file's bytes
 may differ. Under the default single thread, writes were observed in input
-order and byte-identical across runs regardless. Evidence: the
-\code{duckplyr-config} change's \code{exploration/experiment-summary-union.R},
-\code{exploration/experiment-rgbytes.R}, and
-\code{exploration/experiment-preserve-order-copy-option.R}.
+order and byte-identical across runs regardless.
 }
 
 \examples{

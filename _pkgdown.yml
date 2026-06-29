@@ -111,10 +111,11 @@ articles:
 - title: Articles
   navbar: ~
   contents:
+  - ssdsims
   - defining-a-scenario
-  - cost-estimation
-  - cost-analysis
   - sharded-pipeline
   - scenario-to-design
   - cluster-pipeline
   - cloud-upload
+  - cost-estimation
+  - cost-analysis

@@ -133,8 +133,7 @@ ssd_cost_calibration <- function() {
 #' because the `nboot` values are tiny (the slope and floor are estimable from
 #' small bootstraps). The one-time research that discovered the model's *form*
 #' (which axes are free, the `max(nboot, n0)` shape, the non-monotonic `nrow`
-#' factor) is preserved under the change's `exploration/` directory; it is not
-#' rerun here.
+#' factor) is illustrative and is not rerun here.
 #'
 #' @param nboot An integer vector of tiny bootstrap sizes to sweep (the slope and
 #'   floor are fit over these).

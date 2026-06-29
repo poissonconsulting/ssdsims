@@ -29,17 +29,16 @@ knitr::opts_chunk$set(eval = evaluate)
 library(ssdsims)
 ```
 
-The ["Running a Sharded Pipeline"](sharded-pipeline.html) vignette materialises
-each step as Hive-partitioned Parquet shards, and the
-["Running on a SLURM Cluster"](cluster-pipeline.html) vignette runs that same
-pipeline on a cluster. This vignette covers the last link: shipping each shard
-to an **object store** as it is produced, so the results are readable **from
-outside the cluster** --- analysis notebooks, dashboards, downstream R/Python
-(`TARGETS-DESIGN.md` §6.1).
+The `vignette("sharded-pipeline")` article materialises
+each step as Hive-partitioned Parquet shards, and
+`vignette("cluster-pipeline")` runs that same pipeline on
+a cluster. This vignette covers the last link: shipping each shard to an **object
+store** as it is produced, so the results are readable **from outside the
+cluster** --- analysis notebooks, dashboards, downstream R/Python.
 
 The model is simple: **upload is a runner argument**, the remote-destination
 sibling of `root`. You pass an `upload` object to the
-[`ssd_scenario_targets()`](../reference/ssd_scenario_targets.html) factory and it
+`ssd_scenario_targets()` factory and it
 pairs each step shard with an `upload_<step>` target. There are three modes:
 
 - `upload = NULL` (the default) --- **no** upload targets; the clean DAG.
@@ -180,8 +179,8 @@ credentials.
 
 To ship to a real Azure container, swap `ssd_upload_dryrun()` for
 `ssd_upload_azure(url, container)` in the **cluster** template's `_targets.R`
-(["Running on a SLURM Cluster"](cluster-pipeline.html)). It is the same factory
-call --- one line changes:
+(see `vignette("cluster-pipeline")`). It is the same
+factory call --- one line changes:
 
 ```{r}
 #| label: azure-targets
@@ -288,13 +287,11 @@ ssd_summarise_uploaded(upload, step = "summary_samples", drop_samples = FALSE)
 
 ## See also
 
-- ["Running a Sharded Pipeline"](sharded-pipeline.html) --- materialising the
+- `vignette("sharded-pipeline")` --- materialising the
   shards this vignette uploads.
-- ["Running on a SLURM Cluster"](cluster-pipeline.html) --- the cluster template
-  whose `_targets.R` gains the `upload = ssd_upload_azure(...)` line.
-- `TARGETS-DESIGN.md` §6.1 (the cloud-upload hook).
-- [`?ssd_upload_azure`](../reference/ssd_upload_azure.html),
-  [`?ssd_test_upload`](../reference/ssd_test_upload.html),
-  [`?ssd_upload_shard`](../reference/ssd_upload_shard.html),
-  [`?ssd_open_uploaded`](../reference/ssd_open_uploaded.html).
-```
+- `vignette("cluster-pipeline")` --- the cluster
+  template whose `_targets.R` gains the `upload = ssd_upload_azure(...)` line.
+- `ssd_upload_azure()`,
+  `ssd_test_upload()`,
+  `ssd_upload_shard()`,
+  `ssd_open_uploaded()`.

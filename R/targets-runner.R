@@ -556,10 +556,7 @@ ssd_run_hc_step <- function(tasks, scenario, fit_dir, out_dir) {
 #' contractual** - re-summarising the same shards yields the same rows
 #' (address them by `hc_id`/`fit_id`), but their order and the file's bytes
 #' may differ. Under the default single thread, writes were observed in input
-#' order and byte-identical across runs regardless. Evidence: the
-#' `duckplyr-config` change's `exploration/experiment-summary-union.R`,
-#' `exploration/experiment-rgbytes.R`, and
-#' `exploration/experiment-preserve-order-copy-option.R`.
+#' order and byte-identical across runs regardless.
 #'
 #' @param dir_sample The `sample` results root.
 #' @param dir_fit The `fit` results root.

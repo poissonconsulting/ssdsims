@@ -67,11 +67,16 @@ already-exported functions and existing deps in examples.
   README's quick-start is the 30-second on-ramp and links to `vignette("ssdsims")`;
   the overview carries the map and reading order and links back out to each
   track. Neither is the sole source; the overview is the hub.
-- **`vignette()`-style links package-wide.** Convert every vignette→vignette
-  link to `vignette("name")` and every function mention to its reference page.
-  This satisfies the roadmap and (unlike hardcoded `.html`/absolute URLs)
-  resolves in local builds and installed-package help. Done across all seven
-  vignettes, the overview, and the README.
+- **`vignette()`-style links, auto-linked in vignettes, explicit in the README.**
+  pkgdown's downlit auto-links bare inline `vignette("name")` and `fn()` code to
+  the article / reference page, so the vignettes use that bare form (no
+  `[...](...)` wrapper, which would fight the auto-linker) with careful phrasing
+  — each reference is a clean standalone call expression, and `?fn` is avoided
+  because it does not auto-link. The README is different: it also renders on
+  GitHub, where no auto-linking happens, so its navigation uses explicit Markdown
+  links to the pkgdown article/reference URLs with the `vignette("...")` / `fn()`
+  call as the link text (per the Copilot review). Both keep the roadmap's
+  `vignette(...)`-style call form as the visible text.
 - **Re-knit/re-render as the build step.** `devtools::build_readme()` for
   `README.md`; `pkgdown`/`quarto` for the site. Output is generated, not
   hand-edited.
