@@ -3,9 +3,7 @@
 ## Purpose
 
 Ship a scenario's per-shard Parquet results to cloud object storage (Azure Blob, with an open backend contract) as an opt-in runner concern. Upload destinations are typed, serialisable, credential-free S3 objects; a front-door probe verifies connectivity and fails loud on absent credentials; per-shard upload targets are content-hashed (so unchanged shards are not re-uploaded); and uploaded results are readable and summarisable **in place** via DuckDB's `azure` extension (`TARGETS-DESIGN.md` §6.1). (Upload sha256 / transfer-corruption hashing is deferred with the parked `manifest` — see `ROADMAP.md`.)
-
 ## Requirements
-
 ### Requirement: Typed, self-validating upload destination objects
 The package SHALL represent an upload destination as a classed S3 object rather than an untyped list. It SHALL provide `ssd_upload_azure(url, container, ..., prefix = NULL, domain = "blob.core.windows.net")` returning an object of class `c("ssdsims_upload_azure_blob", "ssdsims_upload")` and `ssd_upload_dryrun()` returning an object of class `c("ssdsims_upload_dryrun", "ssdsims_upload")`. The constructors SHALL validate their arguments at construction time — `ssd_upload_azure()` SHALL require `url` and `container` to be non-empty strings and abort, in the context of the user-facing call, with an informative error naming the offending argument when they are not. `ssd_upload_azure()` SHALL accept an optional `prefix` — a subdirectory (blob-name prefix) **within** the container under which the shards are written — that defaults to `NULL` (the container root); it SHALL sit after `...` so it (and `domain`) MUST be passed by name (`rlang::check_dots_empty()` aborting on a positional or misspelled argument). When supplied `prefix` SHALL be a non-empty string (validated as such, aborting otherwise), SHALL have leading and trailing slashes trimmed, and SHALL collapse to no prefix when it trims to empty. The storage **account name** SHALL be derived from `url` — the host label before `.<domain>` (so `https://acct.blob.core.windows.net` with the default `domain` yields account `"acct"`) — and construction SHALL abort when `url`'s host does not end with `.<domain>`; `domain` SHALL default to `"blob.core.windows.net"` and be overridable for a sovereign/non-public cloud. The account SHALL therefore **not** be a required environment variable. An upload object SHALL be a plain, serialisable value carrying only the destination (e.g. `url`, `container`, `prefix`, `domain`, and the derived `account`) and SHALL NOT carry credentials, secrets, open connections, or environments, so it travels unchanged to `crew` workers and through `targets`.
 
@@ -190,3 +188,46 @@ The cloud-upload vignette SHALL state that the summary Parquet file(s) ship alon
 #### Scenario: Vignette covers the summary path
 - **WHEN** a reader follows the cloud-upload vignette
 - **THEN** it SHALL show the `upload_summary` target in the dry-run pipeline and the `step = "summary"` / `step = "summary_samples"` read-back one-liners for an Azure destination
+
+### Requirement: Read-back generics default to stingy prudence with a lavish opt-out
+The upload read-back generics `ssd_open_uploaded()` and `ssd_summarise_uploaded()` SHALL accept a `prudence` argument that controls the returned duckplyr frame's automatic materialisation, defaulting to `"stingy"`.
+With the default, the returned table SHALL remain lazy and composable with
+`dplyr` verbs and SHALL be materialisable with an explicit `dplyr::collect()`
+or writable with `duckplyr::compute_parquet()`, but an implicit materialisation
+(for example `nrow()` or `$` access) against the remote glob SHALL raise a
+catchable error rather than triggering an unbounded download/scan. Passing
+`prudence = "lavish"` SHALL restore automatic materialisation (the prior
+behaviour) for callers who want the returned table to compute on first access.
+The `prudence` value SHALL be threaded into the underlying
+`read_parquet_duckdb()` read. The optional arguments SHALL be **keyword-only**:
+each generic SHALL place a `...` before its optional arguments
+(`prudence` for `ssd_open_uploaded()`; `drop_samples` and `prudence` for
+`ssd_summarise_uploaded()`), and a positional or otherwise unexpected extra
+argument SHALL be rejected with a catchable error rather than silently
+absorbed.
+
+#### Scenario: Stingy default avoids accidental remote materialisation
+- **WHEN** `ssd_open_uploaded(upload, step)` is called with the default
+  `prudence`
+- **THEN** the returned table SHALL be stingy — composable with `dplyr` verbs
+  and collectable explicitly, but an implicit `nrow()`/`$` access SHALL error
+  rather than scanning/downloading the remote Parquet
+
+#### Scenario: Lavish opt-out restores automatic materialisation
+- **WHEN** `ssd_open_uploaded(upload, step, prudence = "lavish")` (or
+  `ssd_summarise_uploaded(upload, ..., prudence = "lavish")`) is called
+- **THEN** the returned table SHALL materialise automatically on first access,
+  matching the behaviour before the stingy default
+
+#### Scenario: Explicit collection works under either prudence
+- **WHEN** the table returned by either generic is passed to
+  `dplyr::collect()` or `duckplyr::compute_parquet()`
+- **THEN** it SHALL materialise/serialise the rows regardless of the `prudence`
+  setting
+
+#### Scenario: Optional arguments are keyword-only
+- **WHEN** `ssd_open_uploaded()` or `ssd_summarise_uploaded()` is called with a
+  positional extra argument (one that would land in `...`)
+- **THEN** the call SHALL raise a catchable error (the dots are checked empty),
+  so `drop_samples`/`prudence` must be supplied by name
+
