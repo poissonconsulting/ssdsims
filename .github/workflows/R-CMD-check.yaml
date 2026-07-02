@@ -1,4 +1,4 @@
-name: test-coverage
+name: R-CMD-check
 on:
   push:
     branches: [main, master]
@@ -7,8 +7,11 @@ on:
 permissions:
   contents: read
 jobs:
-  test-coverage:
-    uses: poissonconsulting/.github/.github/workflows/test-coverage.yml@v1
+  R-CMD-check:
+    uses: poissonconsulting/.github/.github/workflows/R-CMD-check.yaml@v1
     with:
+      tier: important
+      jags: false
+      tex: false
       private: false
     secrets: inherit
