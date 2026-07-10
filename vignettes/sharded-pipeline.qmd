@@ -15,7 +15,8 @@ knitr:
 #| include: false
 # The live chunks materialise Parquet shards, so they need the fitting deps and
 # duckplyr. Skip evaluation gracefully on a minimal runner rather than failing.
-evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+evaluate <- requireNamespace("ssdsims", quietly = TRUE) &&
+  requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE) &&
   requireNamespace("duckplyr", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)

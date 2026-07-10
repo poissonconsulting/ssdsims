@@ -16,7 +16,8 @@ knitr:
 # The on-ramp exercises the live API, so it needs the optional fitting
 # dependencies. Skip evaluation gracefully if they are unavailable (e.g. on a
 # minimal CI runner) rather than failing the build.
-evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+evaluate <- requireNamespace("ssdsims", quietly = TRUE) &&
+  requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```

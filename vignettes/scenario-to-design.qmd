@@ -13,7 +13,8 @@ knitr:
 ```{r}
 #| label: setup
 #| include: false
-evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+evaluate <- requireNamespace("ssdsims", quietly = TRUE) &&
+  requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)
 ```

@@ -16,7 +16,8 @@ knitr:
 # The vignette runs a small scenario through the single-core shard runner and
 # reads its timings back, so it needs the fitting deps and duckplyr. Skip
 # evaluation gracefully on a minimal runner rather than failing the build.
-evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+evaluate <- requireNamespace("ssdsims", quietly = TRUE) &&
+  requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE) &&
   requireNamespace("duckplyr", quietly = TRUE)
 knitr::opts_chunk$set(eval = evaluate)

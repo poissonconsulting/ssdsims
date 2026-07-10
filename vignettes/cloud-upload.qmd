@@ -16,7 +16,8 @@ knitr:
 # The live chunks build local shards and a target list with a dry-run upload, so
 # they need the fitting deps, duckplyr, and targets/tarchetypes — but no network
 # and no credentials. Skip evaluation gracefully on a minimal runner.
-evaluate <- requireNamespace("ssddata", quietly = TRUE) &&
+evaluate <- requireNamespace("ssdsims", quietly = TRUE) &&
+  requireNamespace("ssddata", quietly = TRUE) &&
   requireNamespace("ssdtools", quietly = TRUE) &&
   requireNamespace("duckplyr", quietly = TRUE) &&
   requireNamespace("targets", quietly = TRUE) &&
