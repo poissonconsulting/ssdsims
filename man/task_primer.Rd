@@ -65,6 +65,13 @@ identity, so it is never a primer field (nor a task-row column).
 
 Function-valued parameters (e.g. \code{min_pmix}) MUST be referenced \strong{by name},
 not by function value, so a recompile or JIT does not move a task's primer.
+
+The primer is derived from \code{\link[rlang:hash]{rlang::hash()}}, whose digest is \strong{not stable
+across \code{rlang} versions} (a fast within-session identity hash, not a
+portable checksum). Primers -- and therefore simulation seeds -- can change
+when \code{rlang} is updated. Reproducibility is guaranteed by pinning the
+execution environment (including the \code{rlang} version) for a given simulation
+run, not by the digest being portable across versions.
 }
 \examples{
 task_primer(list(dataset = "boron", sim = 1L, replace = FALSE))
