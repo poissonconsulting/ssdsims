@@ -43,23 +43,6 @@ artifacts yet is also queued, ready to propose.
 
 ## Now
 
-- ❗️⏳ \[cleanup-lecuyer\] Retire the legacy public API and remove the
-  dead code behind it: drop the monolith runners (`ssd_run_scenario()` /
-  `ssd_sim_data()` families, `ssd_fit_dists_sims()`, `ssd_hc_sims()`)
-  and the L’Ecuyer-CMRG RNG (`lecuyer-cmrg-seed.R` + the
-  `*_state`/`*_seed` shims), leaving one RNG path (dqrng) and one runner
-  family
-  ([`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
-  /
-  [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)).
-  **Folds in the former `migrate-public-api`** (migration is moot once
-  the monolith is deleted, not ported). Proposed; independent — the
-  replacement surface is already shipped. Gates `readme`.
-- 📚⏳ \[readme\] **Blocked by cleanup-lecuyer**. Update README and
-  integrate in the rest of the documentation. Create vignette(“ssdsims”)
-  . Perform comprehensive review of all vignettes for content, output
-  artifacts, and style. Use vignette(…) style links everywhere.
-
 ## Next
 
 - ❗️ \[replay-helper\] `ssd_replay_task()` (§7) and `ssd_input_hash()`
@@ -133,6 +116,36 @@ artifacts yet is also queued, ready to propose.
 
 ## Done
 
+- ✅ 2026-06-30 \[stingy-duckplyr-pipeline\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-30-stingy-duckplyr-pipeline/)
+  — Adopt duckplyr `prudence = "stingy"` across the internal fan-in
+  reads and the upload read-back generics so the
+  union/filter/projection/write provably stay in DuckDB and any
+  un-translatable verb fails loudly instead of silently materialising
+  into R; compute cost-analysis timings in DuckDB via the `dd$` escape
+  hatch, stop `ssd_write_parquet()` downgrading frames to `lavish`, and
+  reshape touched call sites into native `|>` pipelines. BREAKING
+  (opt-out provided): the read-back generics default to
+  `prudence = "stingy"`.
+- ✅ 2026-06-30 \[cleanup-lecuyer\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-30-cleanup-lecuyer/)
+  — Retire the legacy public API and remove the dead code behind it:
+  drop the monolith runners (`ssd_run_scenario()` / `ssd_sim_data()`
+  families, `ssd_fit_dists_sims()`, `ssd_hc_sims()`) and the
+  L’Ecuyer-CMRG RNG (`lecuyer-cmrg-seed.R` + the `*_state`/`*_seed`
+  shims), leaving one RNG path (dqrng) and one runner family
+  ([`ssd_run_scenario_baseline()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_baseline.md)
+  /
+  [`ssd_run_scenario_shards()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_run_scenario_shards.md)).
+  **Folds in the former `migrate-public-api`** (migration is moot once
+  the monolith is deleted, not ported). Proposed; independent — the
+  replacement surface is already shipped. Gates `readme`.
+- ✅ 2026-06-30 \[readme\]
+  [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-30-readme/)
+  — **Blocked by cleanup-lecuyer**. Update README and integrate in the
+  rest of the documentation. Create vignette(“ssdsims”) . Perform
+  comprehensive review of all vignettes for content, output artifacts,
+  and style. Use vignette(…) style links everywhere.
 - ✅ 2026-06-19 \[azure-summary\]
   [🔗](https://poissonconsulting.github.io/ssdsims/openspec/changes/archive/2026-06-19-azure-summary/)
   — Conveniently access the summary Parquet files from Azure.
