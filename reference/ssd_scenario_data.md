@@ -30,7 +30,7 @@ An `ssdsims_data` object: a named list of validated tibbles.
 
 Names are taken from the argument names where supplied, otherwise
 derived from the argument expression by symbol capture (e.g.
-[`ssddata::ccme_boron`](https://rdrr.io/pkg/ssddata/man/ccme_boron.html)
+[`ssddata::ccme_boron`](https://open-aims.github.io/ssddata/reference/ccme_boron.html)
 becomes `"ccme_boron"`). A literal with no derivable name (e.g. a bare
 `data.frame(...)` call) must be given an explicit name. Names must be
 unique across the collection.
@@ -62,54 +62,54 @@ collection, indistinguishable downstream from a data-frame dataset.
 ``` r
 ssd_scenario_data(ssddata::ccme_boron)
 #> $ccme_boron
-#> # A tibble: 28 × 5
-#>    Chemical Species                  Conc Group        Units
-#>    <chr>    <chr>                   <dbl> <fct>        <chr>
-#>  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L 
-#>  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L 
-#>  3 Boron    Micropterus salmoides     4.1 Fish         mg/L 
-#>  4 Boron    Brachydanio rerio        10   Fish         mg/L 
-#>  5 Boron    Carassius auratus        15.6 Fish         mg/L 
-#>  6 Boron    Pimephales promelas      18.3 Fish         mg/L 
-#>  7 Boron    Daphnia magna             6   Invertebrate mg/L 
-#>  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L 
-#>  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L 
-#> 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L 
+#> # A tibble: 28 × 6
+#>    Chemical Species                  Conc Group        Units Medium    
+#>    <chr>    <chr>                   <dbl> <fct>        <chr> <chr>     
+#>  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L  Freshwater
+#>  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L  Freshwater
+#>  3 Boron    Micropterus salmoides     4.1 Fish         mg/L  Freshwater
+#>  4 Boron    Brachydanio rerio        10   Fish         mg/L  Freshwater
+#>  5 Boron    Carassius auratus        15.6 Fish         mg/L  Freshwater
+#>  6 Boron    Pimephales promelas      18.3 Fish         mg/L  Freshwater
+#>  7 Boron    Daphnia magna             6   Invertebrate mg/L  Freshwater
+#>  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L  Freshwater
+#>  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L  Freshwater
+#> 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L  Freshwater
 #> # ℹ 18 more rows
 #> 
 #> attr(,"class")
 #> [1] "ssdsims_data"
 ssd_scenario_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium)
 #> $boron
-#> # A tibble: 28 × 5
-#>    Chemical Species                  Conc Group        Units
-#>    <chr>    <chr>                   <dbl> <fct>        <chr>
-#>  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L 
-#>  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L 
-#>  3 Boron    Micropterus salmoides     4.1 Fish         mg/L 
-#>  4 Boron    Brachydanio rerio        10   Fish         mg/L 
-#>  5 Boron    Carassius auratus        15.6 Fish         mg/L 
-#>  6 Boron    Pimephales promelas      18.3 Fish         mg/L 
-#>  7 Boron    Daphnia magna             6   Invertebrate mg/L 
-#>  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L 
-#>  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L 
-#> 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L 
+#> # A tibble: 28 × 6
+#>    Chemical Species                  Conc Group        Units Medium    
+#>    <chr>    <chr>                   <dbl> <fct>        <chr> <chr>     
+#>  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L  Freshwater
+#>  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L  Freshwater
+#>  3 Boron    Micropterus salmoides     4.1 Fish         mg/L  Freshwater
+#>  4 Boron    Brachydanio rerio        10   Fish         mg/L  Freshwater
+#>  5 Boron    Carassius auratus        15.6 Fish         mg/L  Freshwater
+#>  6 Boron    Pimephales promelas      18.3 Fish         mg/L  Freshwater
+#>  7 Boron    Daphnia magna             6   Invertebrate mg/L  Freshwater
+#>  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L  Freshwater
+#>  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L  Freshwater
+#> 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L  Freshwater
 #> # ℹ 18 more rows
 #> 
 #> $cadmium
-#> # A tibble: 36 × 5
-#>    Chemical Species                   Conc Group Units
-#>    <chr>    <chr>                    <dbl> <fct> <chr>
-#>  1 Cadmium  Oncorhynchus mykiss       0.23 Fish  ug/L 
-#>  2 Cadmium  Salvelinus confluentus    0.83 Fish  ug/L 
-#>  3 Cadmium  Cottus bairdi             0.96 Fish  ug/L 
-#>  4 Cadmium  Salmo salar               0.99 Fish  ug/L 
-#>  5 Cadmium  Acipenser transmontanus   1.14 Fish  ug/L 
-#>  6 Cadmium  Prosopium williamsoni     1.25 Fish  ug/L 
-#>  7 Cadmium  Salmo trutta              1.36 Fish  ug/L 
-#>  8 Cadmium  Salvelinus fontinalis     2.23 Fish  ug/L 
-#>  9 Cadmium  Oncorhynchus tshawytscha  2.29 Fish  ug/L 
-#> 10 Cadmium  Pimephales promelas       2.36 Fish  ug/L 
+#> # A tibble: 36 × 6
+#>    Chemical Species                   Conc Group Units Medium    
+#>    <chr>    <chr>                    <dbl> <fct> <chr> <chr>     
+#>  1 Cadmium  Oncorhynchus mykiss       0.23 Fish  ug/L  Freshwater
+#>  2 Cadmium  Salvelinus confluentus    0.83 Fish  ug/L  Freshwater
+#>  3 Cadmium  Cottus bairdi             0.96 Fish  ug/L  Freshwater
+#>  4 Cadmium  Salmo salar               0.99 Fish  ug/L  Freshwater
+#>  5 Cadmium  Acipenser transmontanus   1.14 Fish  ug/L  Freshwater
+#>  6 Cadmium  Prosopium williamsoni     1.25 Fish  ug/L  Freshwater
+#>  7 Cadmium  Salmo trutta              1.36 Fish  ug/L  Freshwater
+#>  8 Cadmium  Salvelinus fontinalis     2.23 Fish  ug/L  Freshwater
+#>  9 Cadmium  Oncorhynchus tshawytscha  2.29 Fish  ug/L  Freshwater
+#> 10 Cadmium  Pimephales promelas       2.36 Fish  ug/L  Freshwater
 #> # ℹ 26 more rows
 #> 
 #> attr(,"class")

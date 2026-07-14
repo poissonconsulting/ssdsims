@@ -49,11 +49,12 @@ for the dataset counterpart.
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 scenario_min_pmix(scenario, "ssd_min_pmix")
-#> function(n) {
-#>   chk_whole_number(n)
-#>   chk_gt(n)
-#>   max(min(3 / n, 0.5), 0.1)
+#> function (n) 
+#> {
+#>     chk_whole_number(n)
+#>     chk_gt(n)
+#>     max(min(3/n, 0.5), 0.1)
 #> }
-#> <bytecode: 0x564ce44d2260>
+#> <bytecode: 0x5633df4f3230>
 #> <environment: namespace:ssdtools>
 ```

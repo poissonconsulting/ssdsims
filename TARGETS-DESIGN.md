@@ -810,7 +810,7 @@ neither is triggered by sharding.
 Concrete pipeline matching `scripts/example-expanded-grids.R`:
 `nsim = 2L`, `nrow = c(5L, 10L)`, `rescale = c(FALSE, TRUE)`,
 `est_method = c("arithmetic", "multi")`, `nboot = 10`, single dataset
-([`ssddata::ccme_boron`](https://rdrr.io/pkg/ssddata/man/ccme_boron.html)).
+([`ssddata::ccme_boron`](https://open-aims.github.io/ssddata/reference/ccme_boron.html)).
 Under the default `partition_by` (§5), tasks fan out as:
 
        step  | tasks (rows)                                      | shards (Parquets)

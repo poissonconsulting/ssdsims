@@ -106,46 +106,46 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span></span>
-<span>  boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
-<span>  cadmium <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_cadmium.html" class="external-link">ccme_cadmium</a></span></span>
+<span>  boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<span>  cadmium <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://open-aims.github.io/ssddata/reference/ccme_cadmium.html" class="external-link">ccme_cadmium</a></span></span>
 <span><span class="op">)</span></span>
 <span><span class="va">data</span></span>
 <span><span class="co">#&gt; $boron</span></span>
-<span><span class="co">#&gt; # A tibble: 28 × 5</span></span>
-<span><span class="co">#&gt;    Chemical Species                  Conc Group        Units</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;                   &lt;dbl&gt; &lt;fct&gt;        &lt;chr&gt;</span></span>
-<span><span class="co">#&gt;  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  3 Boron    Micropterus salmoides     4.1 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  4 Boron    Brachydanio rerio        10   Fish         mg/L </span></span>
-<span><span class="co">#&gt;  5 Boron    Carassius auratus        15.6 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  6 Boron    Pimephales promelas      18.3 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  7 Boron    Daphnia magna             6   Invertebrate mg/L </span></span>
-<span><span class="co">#&gt;  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L </span></span>
-<span><span class="co">#&gt;  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L </span></span>
-<span><span class="co">#&gt; 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L </span></span>
+<span><span class="co">#&gt; # A tibble: 28 × 6</span></span>
+<span><span class="co">#&gt;    Chemical Species                  Conc Group        Units Medium    </span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;                   &lt;dbl&gt; &lt;fct&gt;        &lt;chr&gt; &lt;chr&gt;     </span></span>
+<span><span class="co">#&gt;  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  3 Boron    Micropterus salmoides     4.1 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  4 Boron    Brachydanio rerio        10   Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  5 Boron    Carassius auratus        15.6 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  6 Boron    Pimephales promelas      18.3 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  7 Boron    Daphnia magna             6   Invertebrate mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L  Freshwater</span></span>
+<span><span class="co">#&gt; 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L  Freshwater</span></span>
 <span><span class="co">#&gt; # ℹ 18 more rows</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $cadmium</span></span>
-<span><span class="co">#&gt; # A tibble: 36 × 5</span></span>
-<span><span class="co">#&gt;    Chemical Species                   Conc Group Units</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;                    &lt;dbl&gt; &lt;fct&gt; &lt;chr&gt;</span></span>
-<span><span class="co">#&gt;  1 Cadmium  Oncorhynchus mykiss       0.23 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  2 Cadmium  Salvelinus confluentus    0.83 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  3 Cadmium  Cottus bairdi             0.96 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  4 Cadmium  Salmo salar               0.99 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  5 Cadmium  Acipenser transmontanus   1.14 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  6 Cadmium  Prosopium williamsoni     1.25 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  7 Cadmium  Salmo trutta              1.36 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  8 Cadmium  Salvelinus fontinalis     2.23 Fish  ug/L </span></span>
-<span><span class="co">#&gt;  9 Cadmium  Oncorhynchus tshawytscha  2.29 Fish  ug/L </span></span>
-<span><span class="co">#&gt; 10 Cadmium  Pimephales promelas       2.36 Fish  ug/L </span></span>
+<span><span class="co">#&gt; # A tibble: 36 × 6</span></span>
+<span><span class="co">#&gt;    Chemical Species                   Conc Group Units Medium    </span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;                    &lt;dbl&gt; &lt;fct&gt; &lt;chr&gt; &lt;chr&gt;     </span></span>
+<span><span class="co">#&gt;  1 Cadmium  Oncorhynchus mykiss       0.23 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  2 Cadmium  Salvelinus confluentus    0.83 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  3 Cadmium  Cottus bairdi             0.96 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  4 Cadmium  Salmo salar               0.99 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  5 Cadmium  Acipenser transmontanus   1.14 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  6 Cadmium  Prosopium williamsoni     1.25 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  7 Cadmium  Salmo trutta              1.36 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  8 Cadmium  Salvelinus fontinalis     2.23 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt;  9 Cadmium  Oncorhynchus tshawytscha  2.29 Fish  ug/L  Freshwater</span></span>
+<span><span class="co">#&gt; 10 Cadmium  Pimephales promelas       2.36 Fish  ug/L  Freshwater</span></span>
 <span><span class="co">#&gt; # ℹ 26 more rows</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; attr(,"class")</span></span>
 <span><span class="co">#&gt; [1] "ssdsims_data"</span></span></code></pre></div>
 </div>
-<p>Names come from the argument names where you supply them; otherwise they are derived from the argument expression by symbol capture (so a bare <code><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ssddata::ccme_boron</a></code> becomes <code>"ccme_boron"</code>). Names must be unique, and a literal with no derivable name (e.g. a bare <code>data.frame(...)</code>) must be given an explicit name.</p>
+<p>Names come from the argument names where you supply them; otherwise they are derived from the argument expression by symbol capture (so a bare <code><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ssddata::ccme_boron</a></code> becomes <code>"ccme_boron"</code>). Names must be unique, and a literal with no derivable name (e.g. a bare <code>data.frame(...)</code>) must be given an explicit name.</p>
 <section class="level3"><h3 id="generated-datasets-with-ssd_gen">Generated datasets with <code>ssd_gen()</code>
 <a class="anchor" aria-label="anchor" href="#generated-datasets-with-ssd_gen"></a>
 </h3>
@@ -153,39 +153,39 @@
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span></span>
-<span>  boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<span>  boron <span class="op">=</span> <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
 <span>  <span class="fu"><a href="../reference/ssd_gen.html">ssd_gen</a></span><span class="op">(</span>synth <span class="op">=</span> <span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_r.html" class="external-link">ssd_rlnorm</a></span>, .n <span class="op">=</span> <span class="fl">30</span>, .seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; $boron</span></span>
-<span><span class="co">#&gt; # A tibble: 28 × 5</span></span>
-<span><span class="co">#&gt;    Chemical Species                  Conc Group        Units</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;                   &lt;dbl&gt; &lt;fct&gt;        &lt;chr&gt;</span></span>
-<span><span class="co">#&gt;  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  3 Boron    Micropterus salmoides     4.1 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  4 Boron    Brachydanio rerio        10   Fish         mg/L </span></span>
-<span><span class="co">#&gt;  5 Boron    Carassius auratus        15.6 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  6 Boron    Pimephales promelas      18.3 Fish         mg/L </span></span>
-<span><span class="co">#&gt;  7 Boron    Daphnia magna             6   Invertebrate mg/L </span></span>
-<span><span class="co">#&gt;  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L </span></span>
-<span><span class="co">#&gt;  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L </span></span>
-<span><span class="co">#&gt; 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L </span></span>
+<span><span class="co">#&gt; # A tibble: 28 × 6</span></span>
+<span><span class="co">#&gt;    Chemical Species                  Conc Group        Units Medium    </span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;    &lt;chr&gt;                   &lt;dbl&gt; &lt;fct&gt;        &lt;chr&gt; &lt;chr&gt;     </span></span>
+<span><span class="co">#&gt;  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  3 Boron    Micropterus salmoides     4.1 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  4 Boron    Brachydanio rerio        10   Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  5 Boron    Carassius auratus        15.6 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  6 Boron    Pimephales promelas      18.3 Fish         mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  7 Boron    Daphnia magna             6   Invertebrate mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L  Freshwater</span></span>
+<span><span class="co">#&gt;  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L  Freshwater</span></span>
+<span><span class="co">#&gt; 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L  Freshwater</span></span>
 <span><span class="co">#&gt; # ℹ 18 more rows</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $synth</span></span>
 <span><span class="co">#&gt; # A tibble: 30 × 1</span></span>
 <span><span class="co">#&gt;     Conc</span></span>
 <span><span class="co">#&gt;    &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 1.05 </span></span>
-<span><span class="co">#&gt;  2 0.814</span></span>
-<span><span class="co">#&gt;  3 3.41 </span></span>
-<span><span class="co">#&gt;  4 3.16 </span></span>
-<span><span class="co">#&gt;  5 0.883</span></span>
-<span><span class="co">#&gt;  6 2.71 </span></span>
-<span><span class="co">#&gt;  7 0.741</span></span>
-<span><span class="co">#&gt;  8 0.457</span></span>
-<span><span class="co">#&gt;  9 5.49 </span></span>
-<span><span class="co">#&gt; 10 0.310</span></span>
+<span><span class="co">#&gt;  1 1.43 </span></span>
+<span><span class="co">#&gt;  2 0.229</span></span>
+<span><span class="co">#&gt;  3 1.77 </span></span>
+<span><span class="co">#&gt;  4 0.812</span></span>
+<span><span class="co">#&gt;  5 2.52 </span></span>
+<span><span class="co">#&gt;  6 0.421</span></span>
+<span><span class="co">#&gt;  7 2.89 </span></span>
+<span><span class="co">#&gt;  8 3.85 </span></span>
+<span><span class="co">#&gt;  9 0.643</span></span>
+<span><span class="co">#&gt; 10 0.962</span></span>
 <span><span class="co">#&gt; # ℹ 20 more rows</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; attr(,"class")</span></span>
@@ -255,7 +255,7 @@
 <p>Dataset input is accepted <strong>only</strong> as an <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code> collection — naming, validation, and (via <code><a href="../reference/ssd_gen.html">ssd_gen()</a></code>) generation all live there, so the constructor itself stays inert and draws no random numbers:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;ssdsims_scenario&gt;</span></span>
 <span><span class="co">#&gt;   seed:     1</span></span>
@@ -306,12 +306,12 @@
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/scenario_min_pmix.html">scenario_min_pmix</a></span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"ssd_min_pmix"</span><span class="op">)</span>, <span class="fu">ssdtools</span><span class="fu">::</span><span class="va"><a href="https://bcgov.github.io/ssdtools/reference/ssd_min_pmix.html" class="external-link">ssd_min_pmix</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/scenario_dataset.html">scenario_dataset</a></span><span class="op">(</span><span class="va">scenario</span>, <span class="st">"boron"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # A tibble: 3 × 5</span></span>
-<span><span class="co">#&gt;   Chemical Species                Conc Group Units</span></span>
-<span><span class="co">#&gt;   &lt;chr&gt;    &lt;chr&gt;                 &lt;dbl&gt; &lt;fct&gt; &lt;chr&gt;</span></span>
-<span><span class="co">#&gt; 1 Boron    Oncorhynchus mykiss     2.1 Fish  mg/L </span></span>
-<span><span class="co">#&gt; 2 Boron    Ictalurus punctatus     2.4 Fish  mg/L </span></span>
-<span><span class="co">#&gt; 3 Boron    Micropterus salmoides   4.1 Fish  mg/L</span></span></code></pre></div>
+<span><span class="co">#&gt; # A tibble: 3 × 6</span></span>
+<span><span class="co">#&gt;   Chemical Species                Conc Group Units Medium    </span></span>
+<span><span class="co">#&gt;   &lt;chr&gt;    &lt;chr&gt;                 &lt;dbl&gt; &lt;fct&gt; &lt;chr&gt; &lt;chr&gt;     </span></span>
+<span><span class="co">#&gt; 1 Boron    Oncorhynchus mykiss     2.1 Fish  mg/L  Freshwater</span></span>
+<span><span class="co">#&gt; 2 Boron    Ictalurus punctatus     2.4 Fish  mg/L  Freshwater</span></span>
+<span><span class="co">#&gt; 3 Boron    Micropterus salmoides   4.1 Fish  mg/L  Freshwater</span></span></code></pre></div>
 </div>
 <p>Because the <em>name</em> drives hashing while the <em>value</em> only rides along for execution, two scenarios with the same <code>min_pmix</code> name but different function bodies produce byte-identical task identities — the split that lets a cluster worker resolve <code>min_pmix</code> off the transported scenario with no shared interactive environment.</p>
 </section><section class="level3"><h3 id="dists-is-a-collection-of-distribution-sets">
@@ -361,7 +361,7 @@
 <p>When <code>ci = FALSE</code>, the bootstrap-only scenario options (<code>nboot</code>, <code>ci_method</code>, <code>parametric</code>) are meaningless, so passing any of them is an error — set <code>ci = TRUE</code> to enable the bootstrap, or omit the option:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span><span class="va">data</span>, nsim <span class="op">=</span> <span class="fl">2L</span>, seed <span class="op">=</span> <span class="fl">1L</span>, ci <span class="op">=</span> <span class="cn">FALSE</span>, nboot <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error in `ssd_define_scenario()`:</span></span>
 <span><span class="co">#&gt; ! Bootstrap-only scenario option ('nboot') cannot be set when `ci = FALSE`. Set `ci = TRUE` to enable bootstrap, or omit the option.</span></span></code></pre></div>
@@ -468,16 +468,16 @@
 <span><span class="co">#&gt; # A tibble: 96 × 6</span></span>
 <span><span class="co">#&gt;    dataset   sim  nrow hc_est_method hc_proportion hc_est</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;   &lt;int&gt; &lt;int&gt; &lt;chr&gt;                 &lt;dbl&gt;  &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 boron       1     5 multi                  0.05  2.11 </span></span>
-<span><span class="co">#&gt;  2 boron       1     5 multi                  0.2   3.29 </span></span>
-<span><span class="co">#&gt;  3 boron       1     5 multi                  0.05  1.19 </span></span>
-<span><span class="co">#&gt;  4 boron       1     5 multi                  0.2   3.26 </span></span>
-<span><span class="co">#&gt;  5 boron       1     5 multi                  0.05  2.11 </span></span>
-<span><span class="co">#&gt;  6 boron       1     5 multi                  0.2   3.29 </span></span>
-<span><span class="co">#&gt;  7 boron       1     5 multi                  0.05  1.19 </span></span>
-<span><span class="co">#&gt;  8 boron       1     5 multi                  0.2   3.26 </span></span>
-<span><span class="co">#&gt;  9 boron       1    10 multi                  0.05  0.734</span></span>
-<span><span class="co">#&gt; 10 boron       1    10 multi                  0.2   2.26 </span></span>
+<span><span class="co">#&gt;  1 boron       1     5 multi                  0.05   1.57</span></span>
+<span><span class="co">#&gt;  2 boron       1     5 multi                  0.2    2.41</span></span>
+<span><span class="co">#&gt;  3 boron       1     5 multi                  0.05   1.41</span></span>
+<span><span class="co">#&gt;  4 boron       1     5 multi                  0.2    3.49</span></span>
+<span><span class="co">#&gt;  5 boron       1     5 multi                  0.05   1.57</span></span>
+<span><span class="co">#&gt;  6 boron       1     5 multi                  0.2    2.41</span></span>
+<span><span class="co">#&gt;  7 boron       1     5 multi                  0.05   1.41</span></span>
+<span><span class="co">#&gt;  8 boron       1     5 multi                  0.2    3.49</span></span>
+<span><span class="co">#&gt;  9 boron       1    10 multi                  0.05   2.39</span></span>
+<span><span class="co">#&gt; 10 boron       1    10 multi                  0.2    6.57</span></span>
 <span><span class="co">#&gt; # ℹ 86 more rows</span></span></code></pre></div>
 </div>
 </section><section class="level2"><h2 id="next-shards-designs-and-the-targets-pipeline">Next: shards, designs, and the targets pipeline<a class="anchor" aria-label="anchor" href="#next-shards-designs-and-the-targets-pipeline"></a>
@@ -587,7 +587,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

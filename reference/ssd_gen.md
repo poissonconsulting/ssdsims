@@ -109,18 +109,18 @@ that consumes no randomness passes.
 ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 42)
 #> $synth
 #> # A tibble: 30 × 1
-#>     Conc
-#>    <dbl>
-#>  1 0.532
-#>  2 0.782
-#>  3 0.718
-#>  4 0.137
-#>  5 3.18 
-#>  6 1.70 
-#>  7 1.98 
-#>  8 0.627
-#>  9 0.788
-#> 10 2.40 
+#>      Conc
+#>     <dbl>
+#>  1  2.64 
+#>  2  0.399
+#>  3  0.799
+#>  4 17.7  
+#>  5 16.6  
+#>  6  2.65 
+#>  7  0.403
+#>  8  0.492
+#>  9  0.635
+#> 10  1.44 
 #> # ℹ 20 more rows
 #> 
 #> attr(,"class")
@@ -130,34 +130,34 @@ ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 42)
 ssd_gen(a = ssdtools::ssd_rlnorm, b = ssdtools::ssd_rlnorm, .n = 30, .seed = 42)
 #> $a
 #> # A tibble: 30 × 1
-#>     Conc
-#>    <dbl>
-#>  1 2.41 
-#>  2 0.914
-#>  3 1.48 
-#>  4 1.28 
-#>  5 1.33 
-#>  6 2.08 
-#>  7 1.51 
-#>  8 1.51 
-#>  9 4.19 
-#> 10 0.308
+#>      Conc
+#>     <dbl>
+#>  1 1.34  
+#>  2 0.359 
+#>  3 2.09  
+#>  4 0.883 
+#>  5 0.0975
+#>  6 0.412 
+#>  7 1.29  
+#>  8 8.49  
+#>  9 2.54  
+#> 10 3.48  
 #> # ℹ 20 more rows
 #> 
 #> $b
 #> # A tibble: 30 × 1
 #>     Conc
 #>    <dbl>
-#>  1 5.05 
-#>  2 2.96 
-#>  3 0.266
-#>  4 2.32 
-#>  5 2.29 
-#>  6 2.29 
-#>  7 4.16 
-#>  8 2.74 
-#>  9 0.242
-#> 10 1.33 
+#>  1 0.407
+#>  2 0.395
+#>  3 3.93 
+#>  4 0.936
+#>  5 0.729
+#>  6 0.297
+#>  7 1.29 
+#>  8 0.230
+#>  9 5.31 
+#> 10 5.87 
 #> # ℹ 20 more rows
 #> 
 #> attr(,"class")
@@ -169,35 +169,35 @@ ssd_scenario_data(
   ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 42)
 )
 #> $boron
-#> # A tibble: 28 × 5
-#>    Chemical Species                  Conc Group        Units
-#>    <chr>    <chr>                   <dbl> <fct>        <chr>
-#>  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L 
-#>  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L 
-#>  3 Boron    Micropterus salmoides     4.1 Fish         mg/L 
-#>  4 Boron    Brachydanio rerio        10   Fish         mg/L 
-#>  5 Boron    Carassius auratus        15.6 Fish         mg/L 
-#>  6 Boron    Pimephales promelas      18.3 Fish         mg/L 
-#>  7 Boron    Daphnia magna             6   Invertebrate mg/L 
-#>  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L 
-#>  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L 
-#> 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L 
+#> # A tibble: 28 × 6
+#>    Chemical Species                  Conc Group        Units Medium    
+#>    <chr>    <chr>                   <dbl> <fct>        <chr> <chr>     
+#>  1 Boron    Oncorhynchus mykiss       2.1 Fish         mg/L  Freshwater
+#>  2 Boron    Ictalurus punctatus       2.4 Fish         mg/L  Freshwater
+#>  3 Boron    Micropterus salmoides     4.1 Fish         mg/L  Freshwater
+#>  4 Boron    Brachydanio rerio        10   Fish         mg/L  Freshwater
+#>  5 Boron    Carassius auratus        15.6 Fish         mg/L  Freshwater
+#>  6 Boron    Pimephales promelas      18.3 Fish         mg/L  Freshwater
+#>  7 Boron    Daphnia magna             6   Invertebrate mg/L  Freshwater
+#>  8 Boron    Opercularia bimarginata  10   Invertebrate mg/L  Freshwater
+#>  9 Boron    Ceriodaphnia dubia       13.4 Invertebrate mg/L  Freshwater
+#> 10 Boron    Entosiphon sulcatum      15   Invertebrate mg/L  Freshwater
 #> # ℹ 18 more rows
 #> 
 #> $synth
 #> # A tibble: 30 × 1
-#>     Conc
-#>    <dbl>
-#>  1 0.532
-#>  2 0.782
-#>  3 0.718
-#>  4 0.137
-#>  5 3.18 
-#>  6 1.70 
-#>  7 1.98 
-#>  8 0.627
-#>  9 0.788
-#> 10 2.40 
+#>      Conc
+#>     <dbl>
+#>  1  2.64 
+#>  2  0.399
+#>  3  0.799
+#>  4 17.7  
+#>  5 16.6  
+#>  6  2.65 
+#>  7  0.403
+#>  8  0.492
+#>  9  0.635
+#> 10  1.44 
 #> # ℹ 20 more rows
 #> 
 #> attr(,"class")

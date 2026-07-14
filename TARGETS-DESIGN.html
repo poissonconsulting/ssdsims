@@ -225,7 +225,7 @@
 <h2 id="id_3-local-run">3. Local run<a class="anchor" aria-label="anchor" href="#id_3-local-run"></a></h2>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/ssd_define_scenario.html">ssd_define_scenario</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="reference/ssd_scenario_data.html">ssd_scenario_data</a></span><span class="op">(</span><span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ccme_boron</a></span><span class="op">)</span>,</span>
 <span>  nsim       <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>  nrow       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span>, <span class="fl">50L</span><span class="op">)</span>,</span>
 <span>  proportion <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.01</span>, <span class="fl">0.05</span><span class="op">)</span>,</span>
@@ -379,7 +379,7 @@
 </div>
 <div class="section level2">
 <h2 id="id_6-target-graph-small-example">6. Target graph (small example)<a class="anchor" aria-label="anchor" href="#id_6-target-graph-small-example"></a></h2>
-<p>Concrete pipeline matching <code>scripts/example-expanded-grids.R</code>: <code>nsim = 2L</code>, <code>nrow = c(5L, 10L)</code>, <code>rescale = c(FALSE, TRUE)</code>, <code>est_method = c("arithmetic", "multi")</code>, <code>nboot = 10</code>, single dataset (<code><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ssddata::ccme_boron</a></code>). Under the default <code>partition_by</code> (§5), tasks fan out as:</p>
+<p>Concrete pipeline matching <code>scripts/example-expanded-grids.R</code>: <code>nsim = 2L</code>, <code>nrow = c(5L, 10L)</code>, <code>rescale = c(FALSE, TRUE)</code>, <code>est_method = c("arithmetic", "multi")</code>, <code>nboot = 10</code>, single dataset (<code><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ssddata::ccme_boron</a></code>). Under the default <code>partition_by</code> (§5), tasks fan out as:</p>
 <pre><code>   step  | tasks (rows)                                      | shards (Parquets)
    ------+---------------------------------------------------+------------------
    data  | 1 dataset · 2 sim · 1 (nrow sub-trunc) · 1 replace =  2 |  2 (path: dataset, sim, replace)
@@ -465,7 +465,7 @@
 <span><span class="co"># tar_target. Everything downstream is a pure function of it, so the</span></span>
 <span><span class="co"># shard set is fixed before any target runs (static branching).</span></span>
 <span><span class="va">scenario</span> <span class="op">&lt;-</span> <span class="fu">ssd_scenario</span><span class="op">(</span></span>
-<span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/ssddata/man/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
+<span>  <span class="fu">ssddata</span><span class="fu">::</span><span class="va"><a href="https://open-aims.github.io/ssddata/reference/ccme_boron.html" class="external-link">ccme_boron</a></span>,</span>
 <span>  nsim <span class="op">=</span> <span class="fl">2L</span>,</span>
 <span>  nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span>, <span class="fl">10L</span><span class="op">)</span>,</span>
 <span>  rescale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">FALSE</span>, <span class="cn">TRUE</span><span class="op">)</span>,</span>
@@ -1209,7 +1209,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

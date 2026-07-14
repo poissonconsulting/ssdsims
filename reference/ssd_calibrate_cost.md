@@ -40,7 +40,7 @@ ssd_calibrate_cost(
 
   A reference data frame with a numeric `Conc` column to resample
   (default
-  [`ssddata::ccme_boron`](https://rdrr.io/pkg/ssddata/man/ccme_boron.html)).
+  [`ssddata::ccme_boron`](https://open-aims.github.io/ssddata/reference/ccme_boron.html)).
 
 - seed:
 
@@ -57,7 +57,7 @@ sweep grid).
 
 The sweep is self-contained and dependency-light: it draws data by
 resampling a reference dataset
-([`ssddata::ccme_boron`](https://rdrr.io/pkg/ssddata/man/ccme_boron.html)
+([`ssddata::ccme_boron`](https://open-aims.github.io/ssddata/reference/ccme_boron.html)
 by default) and times with base
 [`system.time()`](https://rdrr.io/r/base/system.time.html). It takes
 minutes - not the hours a real scenario costs - because the `nboot`

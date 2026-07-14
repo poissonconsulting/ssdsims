@@ -60,5 +60,5 @@ each run.
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 scenario_results_dir(scenario)
-#> [1] "results/seed=42/layout=b078bfa16655"
+#> [1] "results/seed=42/layout=4f953626e16a"
 ```

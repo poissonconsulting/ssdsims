@@ -83,6 +83,15 @@ Function-valued parameters (e.g. `min_pmix`) MUST be referenced **by
 name**, not by function value, so a recompile or JIT does not move a
 task's primer.
 
+The primer is derived from
+[`rlang::hash()`](https://rlang.r-lib.org/reference/hash.html), a fast
+within-session identity hash rather than a portable checksum, so its
+digest is not *guaranteed* stable across `rlang` versions. Such changes
+are rare and not anticipated, but have happened, and would shift primers
+– and therefore simulation seeds. Reproducibility is therefore anchored
+by pinning the execution environment (including the `rlang` version) for
+a given simulation run.
+
 ## See also
 
 [`local_dqrng_state()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_state.md),
@@ -92,5 +101,5 @@ task's primer.
 
 ``` r
 task_primer(list(dataset = "boron", sim = 1L, replace = FALSE))
-#> [1] -310630442 -782239665
+#> [1] -563099096 -147061236
 ```
