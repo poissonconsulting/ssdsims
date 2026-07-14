@@ -28,13 +28,21 @@ test_that("parallel-safe-seeding: hex8_to_int32 encoding", {
 
 test_that("parallel-safe-seeding: task_primer matches experiment smoke values", {
   # The validated reference (scripts/experiment-dqrng-hash.R, section 1).
+  #
+  # `task_primer()` derives the primer from `rlang::hash()`, whose digest is
+  # not guaranteed stable across `rlang` versions (it changed once; see issue
+  # #212). Such changes are rare and not anticipated, so these values are
+  # simply pinned to `rlang >= 1.3.0`; reproducibility for simulations is
+  # anchored by controlling the execution environment. Re-record with the
+  # current output if this test fails after a future `rlang` update.
+  skip_if_not_installed("rlang", "1.3.0")
   expect_identical(
     task_primer(list(sim = 1L, nrow = 5L, rescale = FALSE)),
-    c(1588052819L, 2019509379L)
+    c(-135494555L, 2078443361L)
   )
   expect_identical(
     task_primer(list(sim = 1L, nrow = 5L, rescale = TRUE)),
-    c(-477519926L, -980032388L)
+    c(222240734L, 1330859749L)
   )
 })
 
@@ -82,10 +90,13 @@ test_that("parallel-safe-seeding: sample primer is nrow-free, fit/hc primer is n
 })
 
 test_that("parallel-safe-seeding: task_primer matches a recorded primer", {
-  # Stability guard: catches an unexpected rlang::hash() change.
+  # Stability guard: catches an unexpected rlang::hash() change. The digest is
+  # not guaranteed stable across rlang versions (it changed once; issue #212),
+  # so this is pinned to `rlang >= 1.3.0`.
+  skip_if_not_installed("rlang", "1.3.0")
   expect_identical(
     task_primer(list(dataset = "boron", sim = 1L, replace = FALSE)),
-    c(-310630442L, -782239665L)
+    c(-563099096L, -147061236L)
   )
 })
 

@@ -96,6 +96,13 @@ normalize_task_row <- function(row) {
 #' Function-valued parameters (e.g. `min_pmix`) MUST be referenced **by name**,
 #' not by function value, so a recompile or JIT does not move a task's primer.
 #'
+#' The primer is derived from [rlang::hash()], a fast within-session identity
+#' hash rather than a portable checksum, so its digest is not *guaranteed*
+#' stable across `rlang` versions. Such changes are rare and not anticipated,
+#' but have happened, and would shift primers -- and therefore simulation
+#' seeds. Reproducibility is therefore anchored by pinning the execution
+#' environment (including the `rlang` version) for a given simulation run.
+#'
 #' @param params A plain named list of task parameters, or a single-row data
 #'   frame (one task-table row).
 #' @return An integer vector of length 2 -- the per-task primer -- to pass as
