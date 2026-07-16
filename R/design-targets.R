@@ -576,10 +576,7 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
   hc_dir <- file.path(sroot, "hc")
 
   step_map <- function(step, shards, command) {
-    nms <- tidyselect::all_of(c(
-      "seed",
-      scenario_partition_axes(ref, step)$path
-    ))
+    nms <- c("seed", scenario_partition_axes(ref, step)$path)
     step_target <- targets::tar_target_raw(
       paste0(step, "_step"),
       command,
@@ -590,7 +587,7 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
     if (is.null(upload)) {
       return(tarchetypes::tar_map(
         values = shards,
-        names = nms,
+        names = tidyselect::all_of(nms),
         descriptions = tidyselect::all_of(character(0)),
         step_target
       ))
@@ -607,7 +604,7 @@ design_group_targets <- function(members, ref, sroot, upload, cue) {
     )
     tarchetypes::tar_map(
       values = shards,
-      names = nms,
+      names = tidyselect::all_of(nms),
       descriptions = tidyselect::all_of(character(0)),
       step_target,
       upload_target
