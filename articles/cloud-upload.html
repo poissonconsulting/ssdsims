@@ -182,7 +182,7 @@
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">run</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ssd_run_scenario_shards.html">ssd_run_scenario_shards</a></span><span class="op">(</span><span class="va">scenario</span><span class="op">)</span></span>
 <span><span class="co">#&gt; duckdb is keeping downloaded extensions in a temporary directory:</span></span>
-<span><span class="co">#&gt; ℹ /tmp/RtmpYHB0G6/duckdb/extensions</span></span>
+<span><span class="co">#&gt; ℹ /tmp/Rtmp59Y5GD/duckdb/extensions</span></span>
 <span><span class="co">#&gt; This is removed when the R session ends, so extensions are re-downloaded each session.</span></span>
 <span><span class="co">#&gt; ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.</span></span>
 <span><span class="va">shard</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span></span>
@@ -193,7 +193,7 @@
 <span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/ssd_upload_shard.html">ssd_upload_shard</a></span><span class="op">(</span><span class="va">shard</span>, <span class="va">dryrun</span><span class="op">)</span>, <span class="va">shard</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Dry-run upload: skipped</span></span>
-<span><span class="co">#&gt; "/tmp/RtmpYHB0G6/ssdsims-shards-1f8b5b8f2039/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
+<span><span class="co">#&gt; "/tmp/Rtmp59Y5GD/ssdsims-shards-1f8a3daf0d6/hc/dataset=ccme_boron/sim=1/part.parquet".</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 </div>
 <p>That is the whole upload DAG — the probe, the paired <code>upload_&lt;step&gt;</code> targets, and the per-shard ship — exercised end to end with no network and no credentials.</p>

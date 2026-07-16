@@ -170,7 +170,7 @@ it with the dry-run destination:
 
 run <- ssd_run_scenario_shards(scenario)
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpYHB0G6/duckdb/extensions
+#> ℹ /tmp/Rtmp59Y5GD/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 shard <- list.files(
@@ -181,7 +181,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/RtmpYHB0G6/ssdsims-shards-1f8b5b8f2039/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/Rtmp59Y5GD/ssdsims-shards-1f8a3daf0d6/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 

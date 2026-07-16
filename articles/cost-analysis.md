@@ -46,7 +46,7 @@ scenario <- ssd_define_scenario(
 
 run <- ssd_run_scenario_shards(scenario)
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpJ0fY9X/duckdb/extensions
+#> ℹ /tmp/RtmpCssTpa/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 ```
@@ -63,11 +63,11 @@ breakdown by `ci_method` × `nboot` keyed exactly like the estimate’s:
 analysis <- ssd_analyse_cost(scenario, root = run$dir)
 analysis
 #> <ssdsims_cost_analysis>  (observed, serial-equivalent; measured)
-#>   total compute:  18.0 s
-#>   longest task:   4.1 s
+#>   total compute:  18.4 s
+#>   longest task:   4.2 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples       nboot   1000     4 tasks  15.9 s
-#>     weighted_samples       nboot    100     4 tasks  2.0 s
+#>     weighted_samples       nboot   1000     4 tasks  16.3 s
+#>     weighted_samples       nboot    100     4 tasks  2.1 s
 #>   host(s):        INTEL(R) XEON(R) PLATINUM 8573C
 ```
 
@@ -107,8 +107,8 @@ reality:
 
 ssd_compare_cost(scenario, root = run$dir)
 #> <ssdsims_cost_comparison>  (predicted vs observed)
-#>   total compute:  predicted 22.4 s | observed 18.0 s | obs/pred 0.80x
-#>   longest task:   predicted 6.7 s | observed 4.1 s | obs/pred 0.62x
+#>   total compute:  predicted 22.4 s | observed 18.4 s | obs/pred 0.82x
+#>   longest task:   predicted 6.7 s | observed 4.2 s | obs/pred 0.63x
 ```
 
 A ratio far from `1` means the shipped default calibration does not
@@ -133,11 +133,11 @@ from_run <- ssd_calibrate_cost_from_run(scenario, root = run$dir)
 # The run-derived calibration drives the estimator like any other.
 ssd_estimate_cost(scenario, calibration = from_run)
 #> <ssdsims_cost_estimate>  (ballpark, serial)
-#>   total compute:  18.0 s
+#>   total compute:  17.9 s
 #>   longest task:   2.3 s
 #>   breakdown (ci_method x nboot, by total cost):
-#>     weighted_samples   nboot   1000     4 tasks  9.0 s
-#>     weighted_samples   nboot    100     4 tasks  9.0 s
+#>     weighted_samples   nboot   1000     4 tasks  9.3 s
+#>     weighted_samples   nboot    100     4 tasks  8.6 s
 #>   calibration:    INTEL(R) XEON(R) PLATINUM 8573C | R 4.6.1 | ssdtools 2.6.0.9002 | 2026-07-16
 #>   Ballpark only - recalibrate with ssd_calibrate_cost() on the target machine.
 ```
