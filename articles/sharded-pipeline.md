@@ -168,12 +168,12 @@ shard paths per step.
 
 run <- ssd_run_scenario_shards(scenario)
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpRl9g7Z/duckdb/extensions
+#> ℹ /tmp/RtmpalCuDm/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 run
 #> <ssdsims_shard_run>
-#>   dir: /tmp/RtmpRl9g7Z/ssdsims-shards-206b50475136
+#>   dir: /tmp/RtmpalCuDm/ssdsims-shards-21325b3871b7
 #>   sample shards: 2
 #>   fit    shards: 8
 #>   hc     shards: 2
