@@ -54,7 +54,7 @@ is also queued, ready to propose.
 - ❗️ [shard-completeness-assert] §6.2 / §8.4 — a downstream `assert_<step>` target per shard comparing actual vs expected row counts, driving the fix-and-refresh loop. Blocked on `shard-failure-survival`.
 - 😀 [mixed-code-lockin] §8.3 — document and runtime-test `tar_cue(depend = FALSE)` as a shard-pinning recipe plus the §8.4 forced-refresh loop. Ready (prereq `shard-atomic-rewrite` landed).
 - 😀⏳ [error-call-origin] Audit user-facing functions so validation errors report the calling function as the origin, never an internal frame. Proposed; independent.
-- 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Also establish `print()` methods for all objects. Independent.
+- 😀 [tidyverse-rlang-alignment] Sweep the rest of `R/` to prefer rlang over base-R metaprogramming / `*apply()`, matching the migration `hive-partitioning` did for the factory. Also establish `print()` methods for all objects. Prefer `args_dots_empty` over bespoke docs. Error messages as snapshots everywhere. Independent.
 - 😀 [canonical-call-sites] Sweep the remaining public constructors (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments are passed in signature order, as the `ssd_define_scenario()` pass already did. Independent.
 - 😀⏳ [cleanup-as-ssd-data] Add a public `as_ssd_data()` coercing the already-named input forms into a validated `ssd_data()` collection. Proposed.
 
