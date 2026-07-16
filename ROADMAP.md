@@ -74,7 +74,8 @@ artifacts yet is also queued, ready to propose.
   rlang over base-R metaprogramming / `*apply()`, matching the migration
   `hive-partitioning` did for the factory. Also establish
   [`print()`](https://rdrr.io/r/base/print.html) methods for all
-  objects. Independent.
+  objects. Prefer `args_dots_empty` over bespoke docs. Error messages as
+  snapshots everywhere. Independent.
 - 😀 \[canonical-call-sites\] Sweep the remaining public constructors
   (`ssd_data()`, the `ssd_run_*` / `ssd_scenario_*` family) so arguments
   are passed in signature order, as the
