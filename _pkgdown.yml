@@ -113,6 +113,7 @@ articles:
   contents:
   - ssdsims
   - defining-a-scenario
+  - generating-data
   - sharded-pipeline
   - scenario-to-design
   - cluster-pipeline
