@@ -228,8 +228,13 @@ assembler draws no random numbers. Instead, an `ssd_gen()` collection passed to
 `ssd_scenario_data()` is *flattened in*: each already-validated member joins the
 collection under its own name, alongside the observed data frames.
 
+Names must be unique across the *entire* assembled collection, not merely within
+any one input: a generated member --- or a spliced-in list member --- whose name
+collides with another dataset, observed or generated, aborts.
+
 There are two equivalent ways to pass it, and an `ssd_gen()` collection must
-always be supplied **unnamed** (its members already carry their own names):
+always be supplied **unnamed** --- the automatic flatten is keyed on the
+collection's `ssdsims_gen` class, and its members already carry their own names:
 
 ```{r}
 #| label: data-gen-compose
@@ -248,6 +253,26 @@ ssd_scenario_data(
   !!!ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 1L)
 )
 ```
+
+### Passing an ordinary named list
+
+The unnamed shortcut above works because an `ssd_gen()` collection carries a
+class (`ssdsims_gen`) that marks it for flattening. An *ordinary* named list of
+datasets --- a hand-built list, or the collection returned by
+`ssddata::ssd_data_sets()` --- carries no such class, so it is not flattened when
+passed on its own. Splice it in with `!!!`, which spreads its members into named
+arguments, one per dataset:
+
+```{r}
+#| label: data-list-splice
+sets <- list(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium)
+ssd_scenario_data(!!!sets)
+```
+
+The same idiom brings in a whole packaged collection ---
+`ssd_scenario_data(!!!ssddata::ssd_data_sets())` --- each member entering under
+its list name. (Bare, unnamed passing of such a list is *not* supported: the
+automatic-flatten shortcut is specific to `ssd_gen()`'s classed collection.)
 
 ### The returned collection
 

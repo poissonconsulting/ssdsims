@@ -92,5 +92,7 @@ ssd_scenario_data(
 }
 \seealso{
 \code{\link[=ssd_scenario_data]{ssd_scenario_data()}}, \code{\link[=ssd_define_scenario]{ssd_define_scenario()}},
-\code{\link[=local_dqrng_backend]{local_dqrng_backend()}}, \code{\link[=task_primer]{task_primer()}}.
+\code{\link[=local_dqrng_backend]{local_dqrng_backend()}}, \code{\link[=task_primer]{task_primer()}}, and the
+"Generating and Assembling Datasets" vignette
+(\code{vignette("generating-data", package = "ssdsims")}).
 }
