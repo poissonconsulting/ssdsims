@@ -109,6 +109,10 @@ A materialised generator dataset is a *fixture the scenario resamples*: once
 inside the collection it is an ordinary tibble, indistinguishable from a
 data-frame dataset downstream (the generator code is its provenance).
 
+The ["Generating and Assembling Datasets"](generating-data.html) vignette is the
+fuller reference for this stage --- every `ssd_scenario_data()` and `ssd_gen()`
+argument, the accepted input forms, and how the two compose.
+
 ## Stage 2: declare the scenario
 
 `ssd_define_scenario()` is the constructor. Its required arguments are the
