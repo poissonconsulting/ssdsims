@@ -271,8 +271,26 @@ ssd_scenario_data(!!!sets)
 
 The same idiom brings in a whole packaged collection ---
 `ssd_scenario_data(!!!ssddata::ssd_data_sets())` --- each member entering under
-its list name. (Bare, unnamed passing of such a list is *not* supported: the
-automatic-flatten shortcut is specific to `ssd_gen()`'s classed collection.)
+its list name.
+
+For now, `!!!` is the way to pass a plain list of datasets --- an escape hatch
+rather than a first-class list interface. Passing the list *bare* (unspliced)
+currently errors: the automatic-flatten shortcut is keyed on `ssd_gen()`'s
+`ssdsims_gen` class, not on being a list of data frames. A more direct way to
+accept a list of data frames may be added later
+(see [#218](https://github.com/poissonconsulting/ssdsims/issues/218)); until
+then, splice with `!!!`.
+
+```{r}
+#| label: data-list-bare
+# `!!!` is the escape hatch: passing the list bare currently errors. This
+# check is self-invalidating --- if a future release accepts a bare list of
+# data frames (see #218), the assertion fails here and flags this section for
+# updating.
+err <- try(ssd_scenario_data(sets), silent = TRUE)
+stopifnot(inherits(err, "try-error"))
+cat(conditionMessage(attr(err, "condition")))
+```
 
 ### The returned collection
 
