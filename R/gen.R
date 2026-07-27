@@ -76,7 +76,9 @@
 #' @return An `ssdsims_gen` object: a named list of validated `Conc` tibbles
 #'   of `.n` rows, for use within (or splicing into) [ssd_scenario_data()].
 #' @seealso [ssd_scenario_data()], [ssd_define_scenario()],
-#'   [local_dqrng_backend()], [task_primer()].
+#'   [local_dqrng_backend()], [task_primer()], and the
+#'   "Generating and Assembling Datasets" vignette
+#'   (`vignette("generating-data", package = "ssdsims")`).
 #' @export
 #' @examples
 #' ssd_gen(synth = ssdtools::ssd_rlnorm, .n = 30, .seed = 42)

@@ -57,7 +57,9 @@
 #'   collections (unnamed, or spliced with `!!!`). Each data frame is
 #'   validated for a numeric `Conc` column.
 #' @return An `ssdsims_data` object: a named list of validated tibbles.
-#' @seealso [ssd_gen()], [ssd_define_scenario()].
+#' @seealso [ssd_gen()], [ssd_define_scenario()], and the
+#'   "Generating and Assembling Datasets" vignette
+#'   (`vignette("generating-data", package = "ssdsims")`).
 #' @export
 #' @examples
 #' ssd_scenario_data(ssddata::ccme_boron)

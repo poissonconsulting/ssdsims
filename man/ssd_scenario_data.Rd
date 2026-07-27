@@ -47,5 +47,7 @@ ssd_scenario_data(ssddata::ccme_boron)
 ssd_scenario_data(boron = ssddata::ccme_boron, cadmium = ssddata::ccme_cadmium)
 }
 \seealso{
-\code{\link[=ssd_gen]{ssd_gen()}}, \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}.
+\code{\link[=ssd_gen]{ssd_gen()}}, \code{\link[=ssd_define_scenario]{ssd_define_scenario()}}, and the
+"Generating and Assembling Datasets" vignette
+(\code{vignette("generating-data", package = "ssdsims")}).
 }
