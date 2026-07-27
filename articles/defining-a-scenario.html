@@ -37,6 +37,7 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/defining-a-scenario.html">Defining a Scenario</a></li>
+    <li><a class="dropdown-item" href="../articles/generating-data.html">Generating and Assembling Datasets</a></li>
     <li><a class="dropdown-item" href="../articles/sharded-pipeline.html">Running a Sharded Pipeline</a></li>
     <li><a class="dropdown-item" href="../articles/scenario-to-design.html">From a Single Scenario to a Design</a></li>
     <li><a class="dropdown-item" href="../articles/cluster-pipeline.html">Running on a SLURM Cluster</a></li>
@@ -193,6 +194,7 @@
 </div>
 <p>Both <code>.n</code> (the generated population size) and <code>.seed</code> are <strong>required</strong>, so unsized or irreproducible generation is impossible. Each generator draws under the dqrng <code>pcg64</code> backend on an independent stream keyed by its dataset <em>name</em> (with <code>.seed</code> as the base seed), so one <code>.seed</code> reproducibly fans out across all generators in a call; the global RNG state is untouched.</p>
 <p>A materialised generator dataset is a <em>fixture the scenario resamples</em>: once inside the collection it is an ordinary tibble, indistinguishable from a data-frame dataset downstream (the generator code is its provenance).</p>
+<p>The <a href="generating-data.html">“Generating and Assembling Datasets”</a> vignette is the fuller reference for this stage — every <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code> and <code><a href="../reference/ssd_gen.html">ssd_gen()</a></code> argument, the accepted input forms, and how the two compose.</p>
 </section></section><section class="level2"><h2 id="stage-2-declare-the-scenario">Stage 2: declare the scenario<a class="anchor" aria-label="anchor" href="#stage-2-declare-the-scenario"></a>
 </h2>
 <p><code><a href="../reference/ssd_define_scenario.html">ssd_define_scenario()</a></code> is the constructor. Its required arguments are the dataset input, <code>nsim</code> (the replicate count), and <code>seed</code> (the RNG root — it has no default because changing it fully re-roots every draw). Everything else is a scenario option with a sensible default.</p>

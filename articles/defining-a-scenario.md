@@ -170,6 +170,14 @@ once inside the collection it is an ordinary tibble, indistinguishable
 from a data-frame dataset downstream (the generator code is its
 provenance).
 
+The [“Generating and Assembling
+Datasets”](https://poissonconsulting.github.io/ssdsims/articles/generating-data.md)
+vignette is the fuller reference for this stage — every
+[`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md)
+and
+[`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md)
+argument, the accepted input forms, and how the two compose.
+
 ## Stage 2: declare the scenario
 
 [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md)

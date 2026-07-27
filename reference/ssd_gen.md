@@ -101,7 +101,9 @@ that consumes no randomness passes.
 [`ssd_scenario_data()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_scenario_data.md),
 [`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md),
 [`local_dqrng_backend()`](https://poissonconsulting.github.io/ssdsims/reference/local_dqrng_backend.md),
-[`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md).
+[`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md),
+and the "Generating and Assembling Datasets" vignette
+([`vignette("generating-data", package = "ssdsims")`](https://poissonconsulting.github.io/ssdsims/articles/generating-data.md)).
 
 ## Examples
 

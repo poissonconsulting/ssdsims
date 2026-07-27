@@ -55,7 +55,9 @@ collection, indistinguishable downstream from a data-frame dataset.
 ## See also
 
 [`ssd_gen()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_gen.md),
-[`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md).
+[`ssd_define_scenario()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_define_scenario.md),
+and the "Generating and Assembling Datasets" vignette
+([`vignette("generating-data", package = "ssdsims")`](https://poissonconsulting.github.io/ssdsims/articles/generating-data.md)).
 
 ## Examples
 

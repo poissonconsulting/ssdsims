@@ -78,9 +78,9 @@ scenario <- ssd_define_scenario(
 )
 run <- ssd_run_scenario_shards(scenario)
 #> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpCJDAhA/duckdb/extensions
+#> ℹ /tmp/RtmpSEEfuK/duckdb/extensions
 #> This is removed when the R session ends, so extensions are re-downloaded each session.
 #> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
 run$hc
-#> [1] "/tmp/RtmpCJDAhA/ssdsims-shards-1b1c4a7d43d/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/RtmpSEEfuK/ssdsims-shards-1d31906a786/hc/dataset=ccme_boron/sim=1/part.parquet"
 ```
