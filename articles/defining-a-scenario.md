@@ -594,12 +594,12 @@ hcs[c("dataset", "sim", "nrow", "hc_est_method", "hc_proportion", "hc_est")]
 #> # A tibble: 96 × 6
 #>    dataset   sim  nrow hc_est_method hc_proportion hc_est
 #>    <chr>   <int> <int> <chr>                 <dbl>  <dbl>
-#>  1 boron       1     5 multi                  0.05   1.57
-#>  2 boron       1     5 multi                  0.2    2.41
+#>  1 boron       1     5 multi                  0.05   1.21
+#>  2 boron       1     5 multi                  0.2    3.39
 #>  3 boron       1     5 multi                  0.05   1.41
 #>  4 boron       1     5 multi                  0.2    3.49
-#>  5 boron       1     5 multi                  0.05   1.57
-#>  6 boron       1     5 multi                  0.2    2.41
+#>  5 boron       1     5 multi                  0.05   1.21
+#>  6 boron       1     5 multi                  0.2    3.39
 #>  7 boron       1     5 multi                  0.05   1.41
 #>  8 boron       1     5 multi                  0.2    3.49
 #>  9 boron       1    10 multi                  0.05   2.39

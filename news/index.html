@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ssdsims</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9015</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9016</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,6 +44,150 @@
       <small>Source: <a href="https://github.com/poissonconsulting/ssdsims/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.0.0.9016" id="ssdsims-0009016">ssdsims 0.0.0.9016<a class="anchor" aria-label="anchor" href="#ssdsims-0009016"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-0-0-9016">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-0-0-9016"></a></h3>
+<ul><li>Silence tidyselect deprecation warnings from <code><a href="../reference/ssd_design_targets.html">ssd_design_targets()</a></code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/216" class="external-link">#216</a>).</li>
+</ul><div class="section level4">
+<h4 id="cost-analysis-0-0-0-9016">cost-analysis<a class="anchor" aria-label="anchor" href="#cost-analysis-0-0-0-9016"></a></h4>
+<ul><li>Weave seed into the resolver’s regenerated shard names (<a href="https://github.com/poissonconsulting/ssdsims/issues/175" class="external-link">#175</a>).</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="features-0-0-0-9016">Features<a class="anchor" aria-label="anchor" href="#features-0-0-0-9016"></a></h3>
+<ul><li><p>Run the duckplyr pipeline under <code>prudence = "stingy"</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/201" class="external-link">#201</a>, <a href="https://github.com/poissonconsulting/ssdsims/issues/203" class="external-link">#203</a>).</p></li>
+<li><p>Aggregate hc readouts per overlapping cell across design members (<a href="https://github.com/poissonconsulting/ssdsims/issues/182" class="external-link">#182</a>).</p></li>
+<li><p>Ship summary parquet files to upload destination (<a href="https://github.com/poissonconsulting/ssdsims/issues/161" class="external-link">#161</a>).</p></li>
+</ul><div class="section level4">
+<h4 id="cost-analysis-0-0-0-9016-1">cost-analysis<a class="anchor" aria-label="anchor" href="#cost-analysis-0-0-0-9016-1"></a></h4>
+<ul><li><p>Roll observed cost up across an <code>ssd_design</code> (group 9) (<a href="https://github.com/poissonconsulting/ssdsims/issues/176" class="external-link">#176</a>).</p></li>
+<li><p>Key the scenario results tree on seed for a cache-free design upgrade (<a href="https://github.com/poissonconsulting/ssdsims/issues/174" class="external-link">#174</a>).</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="cost-analysis-0-0-0-9016-2">cost-analysis<a class="anchor" aria-label="anchor" href="#cost-analysis-0-0-0-9016-2"></a></h4>
+<ul><li><p>Capture per-task timings and analyse observed run cost (<a href="https://github.com/poissonconsulting/ssdsims/issues/173" class="external-link">#173</a>).</p></li>
+<li><p>Add <code><a href="../reference/ssd_design.html">ssd_design()</a></code> and a combined design pipeline (<a href="https://github.com/poissonconsulting/ssdsims/issues/172" class="external-link">#172</a>).</p></li>
+<li><p>Breaking change: add <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> and require it for <code>min_pmix</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/170" class="external-link">#170</a>).</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="scenario-0-0-0-9016">scenario<a class="anchor" aria-label="anchor" href="#scenario-0-0-0-9016"></a></h4>
+<ul><li><p>Breaking change: require ssd_distset() and add the distset hc axis (<a href="https://github.com/poissonconsulting/ssdsims/issues/171" class="external-link">#171</a>).</p></li>
+<li><p>Add <code>nrow_max</code> draw-size setting and default <code>replace = TRUE</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/149" class="external-link">#149</a>).</p></li>
+<li><p>Add <code><a href="../reference/ssd_gen.html">ssd_gen()</a></code> generators and rename <code>ssd_data()</code> to <code><a href="../reference/ssd_scenario_data.html">ssd_scenario_data()</a></code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/150" class="external-link">#150</a>).</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="dqrng-0-0-0-9016">dqrng<a class="anchor" aria-label="anchor" href="#dqrng-0-0-0-9016"></a></h4>
+<ul><li><p>Per-task dqrng-integrity witness bracketing every task’s draws (<a href="https://github.com/poissonconsulting/ssdsims/issues/141" class="external-link">#141</a>).</p></li>
+<li><p>Scope single-thread, memory-capped, telemetry-silent duckplyr config to the pipeline (<a href="https://github.com/poissonconsulting/ssdsims/issues/151" class="external-link">#151</a>).</p></li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="chore-0-0-0-9016">Chore<a class="anchor" aria-label="anchor" href="#chore-0-0-0-9016"></a></h3>
+<ul><li>Update roadmap.</li>
+</ul><div class="section level4">
+<h4 id="openspec-0-0-0-9016">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016"></a></h4>
+<ul><li>Bulk-archive completed changes and sync specs (<a href="https://github.com/poissonconsulting/ssdsims/issues/208" class="external-link">#208</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-1">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-1"></a></h4>
+<ul><li><p>Archive three completed changes and sync specs (<a href="https://github.com/poissonconsulting/ssdsims/issues/193" class="external-link">#193</a>).</p></li>
+<li><p>Roadmap [ci skip].</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-2">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-2"></a></h4>
+<ul><li><p>Archive four completed changes and sync specs (<a href="https://github.com/poissonconsulting/ssdsims/issues/177" class="external-link">#177</a>).</p></li>
+<li><p>Roadmap [ci skip].</p></li>
+<li><p>Roadmap [ci skip].</p></li>
+<li><p>Roadmap [ci skip].</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-3">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-3"></a></h4>
+<ul><li><p>Archive nrow-max-setting and replace-default-true with spec sync (<a href="https://github.com/poissonconsulting/ssdsims/issues/166" class="external-link">#166</a>).</p></li>
+<li><p>Roadmap [ci skip].</p></li>
+<li><p>Roadmap [ci skip].</p></li>
+<li><p>Add roadmap-align skill and archive completed changes (<a href="https://github.com/poissonconsulting/ssdsims/issues/165" class="external-link">#165</a>).</p></li>
+<li><p>Reset task checklist to unchecked state (<a href="https://github.com/poissonconsulting/ssdsims/issues/163" class="external-link">#163</a>).</p></li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="continuous-integration-0-0-0-9016">Continuous integration<a class="anchor" aria-label="anchor" href="#continuous-integration-0-0-0-9016"></a></h3>
+<ul><li>Standardize CI (tier: unimportant) (<a href="https://github.com/poissonconsulting/ssdsims/issues/197" class="external-link">#197</a>, <a href="https://github.com/poissonconsulting/ssdsims/issues/198" class="external-link">#198</a>).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-0-0-0-9016">Documentation<a class="anchor" aria-label="anchor" href="#documentation-0-0-0-9016"></a></h3>
+<ul><li><p>Add vignette on generating and assembling datasets (<a href="https://github.com/beckyfisher" class="external-link">@beckyfisher</a>, <a href="https://github.com/poissonconsulting/ssdsims/issues/217" class="external-link">#217</a>).</p></li>
+<li><p>Rewrite README and overhaul the vignette set (<a href="https://github.com/poissonconsulting/ssdsims/issues/207" class="external-link">#207</a>).</p></li>
+</ul><div class="section level4">
+<h4 id="openspec-0-0-0-9016-4">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-4"></a></h4>
+<ul><li><p>Propose readme and vignette documentation overhaul (<a href="https://github.com/poissonconsulting/ssdsims/issues/191" class="external-link">#191</a>).</p></li>
+<li><p>Add Kirill Müller as author (<a href="https://github.com/poissonconsulting/ssdsims/issues/205" class="external-link">#205</a>).</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-5">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-5"></a></h4>
+<ul><li>Propose stingy-duckplyr-pipeline for stingy DuckDB execution (<a href="https://github.com/poissonconsulting/ssdsims/issues/202" class="external-link">#202</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-6">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-6"></a></h4>
+<ul><li>Propose cleanup-lecuyer to retire the legacy public API and L’Ecuyer RNG (<a href="https://github.com/poissonconsulting/ssdsims/issues/192" class="external-link">#192</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-7">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-7"></a></h4>
+<ul><li>
+<p>Propose scenario-option-vocabulary.</p>
+<p><a href="https://claude.ai/code/session_01BVVYtqwpuGwWm5bPcScXgB" class="external-link uri">https://claude.ai/code/session_01BVVYtqwpuGwWm5bPcScXgB</a></p>
+</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-8">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-8"></a></h4>
+<ul><li>Require ssd_pmix() for min_pmix, dropping string forms (<a href="https://github.com/poissonconsulting/ssdsims/issues/169" class="external-link">#169</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-9">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-9"></a></h4>
+<ul><li>Refine distset-hc-axis and add independent pmix-constructor (<a href="https://github.com/poissonconsulting/ssdsims/issues/167" class="external-link">#167</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-10">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-10"></a></h4>
+<ul><li>Propose distset hc-axis for multi-pool reuse (<a href="https://github.com/poissonconsulting/ssdsims/issues/162" class="external-link">#162</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-11">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-11"></a></h4>
+<ul><li>Add scenario-combine design and specification (<a href="https://github.com/poissonconsulting/ssdsims/issues/155" class="external-link">#155</a>).</li>
+</ul></div>
+<div class="section level4">
+<h4 id="openspec-0-0-0-9016-12">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-12"></a></h4>
+<ul><li><p>Propose cost-analysis-targets change (<a href="https://github.com/poissonconsulting/ssdsims/issues/152" class="external-link">#152</a>).</p></li>
+<li><p>Update roadmap.</p></li>
+<li><p>Add shard-granularity-benchmark roadmap item (<a href="https://github.com/poissonconsulting/ssdsims/issues/156" class="external-link">#156</a>).</p></li>
+<li><p>Specs for planned changes.</p></li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="refactoring-0-0-0-9016">Refactoring<a class="anchor" aria-label="anchor" href="#refactoring-0-0-0-9016"></a></h3>
+<ul><li><p>Breaking change: retire legacy public API and remove the L’Ecuyer-CMRG RNG (<a href="https://github.com/poissonconsulting/ssdsims/issues/196" class="external-link">#196</a>).</p></li>
+<li><p>Rename knob/simulation-setting vocabulary to scenario option/axis/setting (<a href="https://github.com/poissonconsulting/ssdsims/issues/181" class="external-link">#181</a>).</p></li>
+<li><p>Rename knob/simulation setting to scenario option/setting (<a href="https://github.com/poissonconsulting/ssdsims/issues/154" class="external-link">#154</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="testing-0-0-0-9016">Testing<a class="anchor" aria-label="anchor" href="#testing-0-0-0-9016"></a></h3>
+<ul><li><p>Pin <code><a href="../reference/task_primer.html">task_primer()</a></code> values to <code>rlang &gt;= 1.3.0</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/212" class="external-link">#212</a>, <a href="https://github.com/poissonconsulting/ssdsims/issues/213" class="external-link">#213</a>).</p></li>
+<li><p>Skip targets tests under covr to prevent hash perturbation (<a href="https://github.com/poissonconsulting/ssdsims/issues/204" class="external-link">#204</a>).</p></li>
+<li><p>Cut the slow tail of the targets and cost-estimation suites (<a href="https://github.com/poissonconsulting/ssdsims/issues/144" class="external-link">#144</a>).</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-0-0-0-9016">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-0-0-9016"></a></h3>
+<ul><li><p>Breaking change: retire legacy public API and remove the L’Ecuyer-CMRG RNG (<a href="https://github.com/poissonconsulting/ssdsims/issues/196" class="external-link">#196</a>).</p></li>
+<li><p>Breaking change: add <code><a href="../reference/ssd_pmix.html">ssd_pmix()</a></code> and require it for <code>min_pmix</code> (<a href="https://github.com/poissonconsulting/ssdsims/issues/170" class="external-link">#170</a>).</p></li>
+</ul><div class="section level4">
+<h4 id="scenario-0-0-0-9016-1">scenario<a class="anchor" aria-label="anchor" href="#scenario-0-0-0-9016-1"></a></h4>
+<ul><li>Breaking change: require ssd_distset() and add the distset hc axis (<a href="https://github.com/poissonconsulting/ssdsims/issues/171" class="external-link">#171</a>).</li>
+</ul></div>
+</div>
+<div class="section level3">
+<h3 id="openspec-0-0-0-9016-13">openspec<a class="anchor" aria-label="anchor" href="#openspec-0-0-0-9016-13"></a></h3>
+<ul><li>Default <code>replace</code> to TRUE in scenario definition (<a href="https://github.com/poissonconsulting/ssdsims/issues/160" class="external-link">#160</a>).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9015" id="ssdsims-0009015">ssdsims 0.0.0.9015<a class="anchor" aria-label="anchor" href="#ssdsims-0009015"></a></h2>
 <div class="section level3">

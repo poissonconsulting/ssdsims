@@ -169,10 +169,14 @@ it with the dry-run destination:
 ``` r
 
 run <- ssd_run_scenario_shards(scenario)
-#> duckdb is keeping downloaded extensions in a temporary directory:
-#> ℹ /tmp/RtmpnjC12R/duckdb/extensions
-#> This is removed when the R session ends, so extensions are re-downloaded each session.
-#> ℹ To keep them, point `options(duckdb.extension_directory =)` or the `DUCKDB_EXTENSION_DIRECTORY` environment variable at a permanent path.
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/RtmpZBpv7X/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 shard <- list.files(
   file.path(run$dir, "hc"),
   pattern = "part.parquet",
@@ -181,7 +185,7 @@ shard <- list.files(
 )[1]
 identical(ssd_upload_shard(shard, dryrun), shard)
 #> Dry-run upload: skipped
-#> "/tmp/RtmpnjC12R/ssdsims-shards-229737a730f9/hc/dataset=ccme_boron/sim=1/part.parquet".
+#> "/tmp/RtmpZBpv7X/ssdsims-shards-23a25fa15eec/hc/dataset=ccme_boron/sim=1/part.parquet".
 #> [1] TRUE
 ```
 
