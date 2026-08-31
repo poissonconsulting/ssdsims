@@ -1,5 +1,174 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9016
+
+## Bug fixes
+
+- Silence tidyselect deprecation warnings from `ssd_design_targets()` (#216).
+
+### cost-analysis
+
+- Weave seed into the resolver's regenerated shard names (#175).
+
+## Features
+
+- Run the duckplyr pipeline under `prudence = "stingy"` (#201, #203).
+
+- Aggregate hc readouts per overlapping cell across design members (#182).
+
+- Ship summary parquet files to upload destination (#161).
+
+### cost-analysis
+
+- Roll observed cost up across an `ssd_design` (group 9) (#176).
+
+- Key the scenario results tree on seed for a cache-free design upgrade (#174).
+
+### cost-analysis
+
+- Capture per-task timings and analyse observed run cost (#173).
+
+- Add `ssd_design()` and a combined design pipeline (#172).
+
+- Breaking change: add `ssd_pmix()` and require it for `min_pmix` (#170).
+
+### scenario
+
+- Breaking change: require ssd_distset() and add the distset hc axis (#171).
+
+- Add `nrow_max` draw-size setting and default `replace = TRUE` (#149).
+
+- Add `ssd_gen()` generators and rename `ssd_data()` to `ssd_scenario_data()` (#150).
+
+### dqrng
+
+- Per-task dqrng-integrity witness bracketing every task's draws (#141).
+
+- Scope single-thread, memory-capped, telemetry-silent duckplyr config to the pipeline (#151).
+
+## Chore
+
+- Update roadmap.
+
+### openspec
+
+- Bulk-archive completed changes and sync specs (#208).
+
+### openspec
+
+- Archive three completed changes and sync specs (#193).
+
+- Roadmap \[ci skip\].
+
+### openspec
+
+- Archive four completed changes and sync specs (#177).
+
+- Roadmap \[ci skip\].
+
+- Roadmap \[ci skip\].
+
+- Roadmap \[ci skip\].
+
+### openspec
+
+- Archive nrow-max-setting and replace-default-true with spec sync (#166).
+
+- Roadmap \[ci skip\].
+
+- Roadmap \[ci skip\].
+
+- Add roadmap-align skill and archive completed changes (#165).
+
+- Reset task checklist to unchecked state (#163).
+
+## Continuous integration
+
+- Standardize CI (tier: unimportant) (#197, #198).
+
+## Documentation
+
+- Add vignette on generating and assembling datasets (@beckyfisher, #217).
+
+- Rewrite README and overhaul the vignette set (#207).
+
+### openspec
+
+- Propose readme and vignette documentation overhaul (#191).
+
+- Add Kirill Müller as author (#205).
+
+### openspec
+
+- Propose stingy-duckplyr-pipeline for stingy DuckDB execution (#202).
+
+### openspec
+
+- Propose cleanup-lecuyer to retire the legacy public API and L'Ecuyer RNG (#192).
+
+### openspec
+
+- Propose scenario-option-vocabulary.
+
+  https://claude.ai/code/session_01BVVYtqwpuGwWm5bPcScXgB
+
+### openspec
+
+- Require ssd_pmix() for min_pmix, dropping string forms (#169).
+
+### openspec
+
+- Refine distset-hc-axis and add independent pmix-constructor (#167).
+
+### openspec
+
+- Propose distset hc-axis for multi-pool reuse (#162).
+
+### openspec
+
+- Add scenario-combine design and specification (#155).
+
+### openspec
+
+- Propose cost-analysis-targets change (#152).
+
+- Update roadmap.
+
+- Add shard-granularity-benchmark roadmap item (#156).
+
+- Specs for planned changes.
+
+## Refactoring
+
+- Breaking change: retire legacy public API and remove the L'Ecuyer-CMRG RNG (#196).
+
+- Rename knob/simulation-setting vocabulary to scenario option/axis/setting (#181).
+
+- Rename knob/simulation setting to scenario option/setting (#154).
+
+## Testing
+
+- Pin `task_primer()` values to `rlang >= 1.3.0` (#212, #213).
+
+- Skip targets tests under covr to prevent hash perturbation (#204).
+
+- Cut the slow tail of the targets and cost-estimation suites (#144).
+
+## Breaking changes
+
+- Breaking change: retire legacy public API and remove the L'Ecuyer-CMRG RNG (#196).
+
+- Breaking change: add `ssd_pmix()` and require it for `min_pmix` (#170).
+
+### scenario
+
+- Breaking change: require ssd_distset() and add the distset hc axis (#171).
+
+## openspec
+
+- Default `replace` to TRUE in scenario definition (#160).
+
+
 # ssdsims 0.0.0.9015
 
 ## Chore
