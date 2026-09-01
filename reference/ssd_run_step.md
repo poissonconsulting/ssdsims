@@ -120,7 +120,7 @@ scenario <- ssd_define_scenario(data, nsim = 1L, seed = 42L)
 shards <- ssd_scenario_sample_shards(scenario)
 dir <- tempfile()
 ssd_run_sample_step(shards$tasks[[1L]], scenario, file.path(dir, "sample"))
-#> [1] "/tmp/RtmpzR6r1z/file1e3d5cac789d/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
+#> [1] "/tmp/RtmpQUpH8q/file1f0529f9a84f/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 # \donttest{
 data <- ssd_scenario_data(ssddata::ccme_boron)
 scenario <- ssd_define_scenario(
@@ -136,14 +136,14 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/RtmpzR6r1z/file1e3d24f4be31/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
+#> [1] "/tmp/RtmpQUpH8q/file1f055642496a/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/RtmpzR6r1z/file1e3d24f4be31/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/RtmpQUpH8q/file1f055642496a/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 # }
 # \donttest{
 data <- ssd_scenario_data(ssddata::ccme_boron)
@@ -160,20 +160,20 @@ ssd_run_sample_step(
   scenario,
   file.path(dir, "sample")
 )
-#> [1] "/tmp/RtmpzR6r1z/file1e3d38b54c13/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
+#> [1] "/tmp/RtmpQUpH8q/file1f057a2d2d46/sample/dataset=ccme_boron/sim=1/replace=TRUE/part.parquet"
 ssd_run_fit_step(
   ssd_scenario_fit_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "sample"),
   file.path(dir, "fit")
 )
-#> [1] "/tmp/RtmpzR6r1z/file1e3d38b54c13/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
+#> [1] "/tmp/RtmpQUpH8q/file1f057a2d2d46/fit/dataset=ccme_boron/sim=1/nrow=6/rescale=FALSE/part.parquet"
 ssd_run_hc_step(
   ssd_scenario_hc_shards(scenario)$tasks[[1L]],
   scenario,
   file.path(dir, "fit"),
   file.path(dir, "hc")
 )
-#> [1] "/tmp/RtmpzR6r1z/file1e3d38b54c13/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/RtmpQUpH8q/file1f057a2d2d46/hc/dataset=ccme_boron/sim=1/part.parquet"
 # }
 ```

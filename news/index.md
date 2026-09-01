@@ -1,5 +1,96 @@
 # Changelog
 
+## ssdsims 0.0.0.9017
+
+### Bug fixes
+
+- Silence tidyselect deprecation warnings from
+  [`ssd_design_targets()`](https://poissonconsulting.github.io/ssdsims/reference/ssd_design_targets.md)
+  ([\#216](https://github.com/poissonconsulting/ssdsims/issues/216)).
+
+### Features
+
+- Run the duckplyr pipeline under `prudence = "stingy"`
+  ([\#201](https://github.com/poissonconsulting/ssdsims/issues/201),
+  [\#203](https://github.com/poissonconsulting/ssdsims/issues/203)).
+
+- Aggregate hc readouts per overlapping cell across design members
+  ([\#182](https://github.com/poissonconsulting/ssdsims/issues/182)).
+
+- Ship summary parquet files to upload destination
+  ([\#161](https://github.com/poissonconsulting/ssdsims/issues/161)).
+
+### Chore
+
+- Update roadmap.
+
+#### openspec
+
+- Bulk-archive completed changes and sync specs
+  ([\#208](https://github.com/poissonconsulting/ssdsims/issues/208)).
+
+#### openspec
+
+- Archive three completed changes and sync specs
+  ([\#193](https://github.com/poissonconsulting/ssdsims/issues/193)).
+
+### Continuous integration
+
+- Standardize CI (tier: unimportant)
+  ([\#197](https://github.com/poissonconsulting/ssdsims/issues/197),
+  [\#198](https://github.com/poissonconsulting/ssdsims/issues/198)).
+
+### Documentation
+
+- Add vignette on generating and assembling datasets
+  ([@beckyfisher](https://github.com/beckyfisher),
+  [\#217](https://github.com/poissonconsulting/ssdsims/issues/217)).
+
+- Rewrite README and overhaul the vignette set
+  ([\#207](https://github.com/poissonconsulting/ssdsims/issues/207)).
+
+#### openspec
+
+- Propose readme and vignette documentation overhaul
+  ([\#191](https://github.com/poissonconsulting/ssdsims/issues/191)).
+
+- Add Kirill Müller as author
+  ([\#205](https://github.com/poissonconsulting/ssdsims/issues/205)).
+
+#### openspec
+
+- Propose stingy-duckplyr-pipeline for stingy DuckDB execution
+  ([\#202](https://github.com/poissonconsulting/ssdsims/issues/202)).
+
+#### openspec
+
+- Propose cleanup-lecuyer to retire the legacy public API and L’Ecuyer
+  RNG
+  ([\#192](https://github.com/poissonconsulting/ssdsims/issues/192)).
+
+### Refactoring
+
+- Breaking change: retire legacy public API and remove the L’Ecuyer-CMRG
+  RNG
+  ([\#196](https://github.com/poissonconsulting/ssdsims/issues/196)).
+
+### Testing
+
+- Pin
+  [`task_primer()`](https://poissonconsulting.github.io/ssdsims/reference/task_primer.md)
+  values to `rlang >= 1.3.0`
+  ([\#212](https://github.com/poissonconsulting/ssdsims/issues/212),
+  [\#213](https://github.com/poissonconsulting/ssdsims/issues/213)).
+
+- Skip targets tests under covr to prevent hash perturbation
+  ([\#204](https://github.com/poissonconsulting/ssdsims/issues/204)).
+
+### Breaking changes
+
+- Breaking change: retire legacy public API and remove the L’Ecuyer-CMRG
+  RNG
+  ([\#196](https://github.com/poissonconsulting/ssdsims/issues/196)).
+
 ## ssdsims 0.0.0.9016
 
 ### Bug fixes
