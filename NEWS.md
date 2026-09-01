@@ -1,5 +1,70 @@
 <!-- NEWS.md is maintained by https://fledge.cynkra.com, contributors should not edit this file -->
 
+# ssdsims 0.0.0.9017
+
+## Bug fixes
+
+- Silence tidyselect deprecation warnings from `ssd_design_targets()` (#216).
+
+## Features
+
+- Run the duckplyr pipeline under `prudence = "stingy"` (#201, #203).
+
+- Aggregate hc readouts per overlapping cell across design members (#182).
+
+- Ship summary parquet files to upload destination (#161).
+
+## Chore
+
+- Update roadmap.
+
+### openspec
+
+- Bulk-archive completed changes and sync specs (#208).
+
+### openspec
+
+- Archive three completed changes and sync specs (#193).
+
+## Continuous integration
+
+- Standardize CI (tier: unimportant) (#197, #198).
+
+## Documentation
+
+- Add vignette on generating and assembling datasets (@beckyfisher, #217).
+
+- Rewrite README and overhaul the vignette set (#207).
+
+### openspec
+
+- Propose readme and vignette documentation overhaul (#191).
+
+- Add Kirill Müller as author (#205).
+
+### openspec
+
+- Propose stingy-duckplyr-pipeline for stingy DuckDB execution (#202).
+
+### openspec
+
+- Propose cleanup-lecuyer to retire the legacy public API and L'Ecuyer RNG (#192).
+
+## Refactoring
+
+- Breaking change: retire legacy public API and remove the L'Ecuyer-CMRG RNG (#196).
+
+## Testing
+
+- Pin `task_primer()` values to `rlang >= 1.3.0` (#212, #213).
+
+- Skip targets tests under covr to prevent hash perturbation (#204).
+
+## Breaking changes
+
+- Breaking change: retire legacy public API and remove the L'Ecuyer-CMRG RNG (#196).
+
+
 # ssdsims 0.0.0.9016
 
 ## Bug fixes
