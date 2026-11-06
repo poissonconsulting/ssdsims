@@ -78,7 +78,7 @@ scenario <- ssd_define_scenario(
 )
 run <- ssd_run_scenario_shards(scenario)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpWREu9N/duckdb
+#> ℹ /tmp/RtmpWm7AuB/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -86,5 +86,5 @@ run <- ssd_run_scenario_shards(scenario)
 #> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
 #> ℹ See ?duckdb_storage for details and alternatives.
 run$hc
-#> [1] "/tmp/RtmpWREu9N/ssdsims-shards-1c153db5c99f/hc/dataset=ccme_boron/sim=1/part.parquet"
+#> [1] "/tmp/RtmpWm7AuB/ssdsims-shards-19ef1e636065/hc/dataset=ccme_boron/sim=1/part.parquet"
 ```
